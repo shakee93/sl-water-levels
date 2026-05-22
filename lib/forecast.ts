@@ -67,6 +67,28 @@ function ratePerHour(readings: Reading[], hours: number): number | null {
   if (denom === 0) return null;
   return (n * sxy - sx * sy) / denom;
 }
+// Most recent reading-to-reading rate (units / hour), looking back ~2h.
+// Use to catch post-peak descents or sudden rises that a smoothed
+// regression misses.
+function recentMomentum(readings: Reading[]): number | null {
+  const cutoff = Date.now() - 2.5 * 3_600_000;
+  const pts = readings
+    .filter(
+      (r): r is { ts: number; water_level: number; rain_fall: number | null } =>
+        r.water_level != null &&
+        Number.isFinite(r.water_level) &&
+        r.water_level > -100 &&
+        r.water_level < 1000 &&
+        r.ts >= cutoff,
+    )
+    .sort((a, b) => a.ts - b.ts);
+  if (pts.length < 2) return null;
+  const a = pts[0];
+  const b = pts[pts.length - 1];
+  const dt = (b.ts - a.ts) / 3_600_000;
+  if (dt <= 0) return null;
+  return (b.water_level - a.water_level) / dt;
+}
 
 // Total rainfall in the last `hours` hours. Returns null if no rain_fall
 // values were ever reported (gauge has no rain sensor); 0 if the gauge
@@ -115,7 +137,12 @@ export function makeForecast(
   const me = ordered[myIdx];
   const upstream = ordered.slice(0, myIdx);
 
-  const localRate = ratePerHour(me.trend24h, 3);
+  const localSlope = ratePerHour(me.trend24h, 3);
+  const localMomentum = recentMomentum(me.trend24h);
+  const localRate =
+    localSlope != null && localMomentum != null
+      ? localMomentum * 0.6 + localSlope * 0.4
+      : (localMomentum ?? localSlope);
   const currentLevel = me.latest?.water_level ?? null;
 
   // rain at THIS station over the last 6h (often null at downstream/urban gauges)
@@ -132,9 +159,15 @@ export function makeForecast(
   };
   const upSignals: UpSignal[] = upstream.map((s) => {
     const distKm = haversineKm(me, s);
+    const slope = ratePerHour(s.trend24h, 3);
+    const momentum = recentMomentum(s.trend24h);
+    const blended =
+      slope != null && momentum != null
+        ? momentum * 0.6 + slope * 0.4
+        : (momentum ?? slope);
     return {
       station: s.station,
-      rate: ratePerHour(s.trend24h, 3),
+      rate: blended,
       rain: totalRain(s.trend24h, 6),
       weight: proximityWeight(distKm),
       distKm,
