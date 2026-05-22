@@ -104,6 +104,105 @@ export async function fetchStationData(stationName: string, days = 4): Promise<S
   };
 }
 
+export type BasinStation = {
+  station: string;
+  basin: string;
+  latitude: number;
+  longitude: number;
+  latest: Reading | null;
+  prior: Reading | null;
+  thresholds: { alert: number | null; minor: number | null; major: number | null };
+  trend24h: Reading[];
+};
+
+export async function fetchBasinSnapshot(basinName: string): Promise<BasinStation[]> {
+  const stationsRes = await arcgis<{
+    features: { attributes: { station: string; basin: string; latitude: number; longitude: number } }[];
+  }>("hydrostations/FeatureServer/0/query", {
+    where: `basin LIKE '${basinName.replace(/'/g, "''")}%'`,
+    outFields: "station,basin,latitude,longitude",
+    returnGeometry: "false",
+    resultRecordCount: "200",
+  });
+
+  const stationList = stationsRes.features
+    .map((f) => ({
+      station: (f.attributes.station || "").trim(),
+      basin: (f.attributes.basin || "").trim(),
+      latitude: f.attributes.latitude,
+      longitude: f.attributes.longitude,
+    }))
+    .filter((s) => s.station);
+
+  if (stationList.length === 0) return [];
+
+  const inList = stationList
+    .map((s) => `'${s.station.replace(/'/g, "''")}'`)
+    .join(",");
+
+  type Raw = {
+    gauge: string;
+    water_level: number | null;
+    rain_fall: number | null;
+    CreationDate: number;
+    alertpull: number | null;
+    minorpull: number | null;
+    majorpull: number | null;
+  };
+
+  const readingsRes = await arcgis<{ features: { attributes: Raw }[] }>(
+    "gauges_2_view/FeatureServer/0/query",
+    {
+      where: `gauge IN (${inList})`,
+      outFields: "gauge,water_level,rain_fall,CreationDate,alertpull,minorpull,majorpull",
+      orderByFields: "CreationDate DESC",
+      resultRecordCount: "4000",
+      returnGeometry: "false",
+    },
+  );
+
+  const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
+  const cutoff3hLow = Date.now() - 4 * 60 * 60 * 1000;
+  const cutoff3hHigh = Date.now() - 2 * 60 * 60 * 1000;
+
+  const byStation = new Map<string, Raw[]>();
+  for (const f of readingsRes.features) {
+    const k = f.attributes.gauge;
+    if (!byStation.has(k)) byStation.set(k, []);
+    byStation.get(k)!.push(f.attributes);
+  }
+
+  return stationList.map((s) => {
+    const rows = byStation.get(s.station) ?? [];
+    const sorted24 = rows.filter((r) => r.CreationDate >= cutoff24h).sort((a, b) => a.CreationDate - b.CreationDate);
+    const latest = rows[0] ?? null;
+    const prior = rows.find((r) => r.CreationDate >= cutoff3hLow && r.CreationDate <= cutoff3hHigh) ?? null;
+
+    return {
+      station: s.station,
+      basin: s.basin,
+      latitude: s.latitude,
+      longitude: s.longitude,
+      latest: latest
+        ? { ts: latest.CreationDate, water_level: latest.water_level, rain_fall: latest.rain_fall }
+        : null,
+      prior: prior
+        ? { ts: prior.CreationDate, water_level: prior.water_level, rain_fall: prior.rain_fall }
+        : null,
+      thresholds: {
+        alert: latest?.alertpull ?? null,
+        minor: latest?.minorpull ?? null,
+        major: latest?.majorpull ?? null,
+      },
+      trend24h: sorted24.map((r) => ({
+        ts: r.CreationDate,
+        water_level: r.water_level,
+        rain_fall: r.rain_fall,
+      })),
+    };
+  });
+}
+
 export function statusFor(level: number | null, t: StationData["thresholds"]) {
   if (level == null) return { label: "No data", tone: "neutral" as const };
   if (t.major != null && level >= t.major) return { label: "Major flood", tone: "red" as const };

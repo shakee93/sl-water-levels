@@ -4,6 +4,7 @@ import { fetchStations, type Station } from "@/lib/arcgis";
 import { StationPicker } from "./StationPicker";
 import { StationCard } from "./StationCard";
 import { StationCardSkeleton } from "./StationCardSkeleton";
+import { BasinFlow } from "./BasinFlow";
 
 export const revalidate = 60;
 
@@ -75,6 +76,13 @@ export default async function Home({
 
             <Suspense key={station} fallback={<StationCardSkeleton />}>
               <StationCard stationName={station} />
+            </Suspense>
+
+            <Suspense key={`flow-${station}`} fallback={null}>
+              <BasinFlow
+                basin={stations.find((s) => s.station === station)?.basin ?? ""}
+                selectedStation={station}
+              />
             </Suspense>
           </>
         )}
