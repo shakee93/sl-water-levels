@@ -72,7 +72,7 @@ export function LevelChart({
               y={thresholds.alert}
               stroke="#eab308"
               strokeDasharray="4 4"
-              label={{ value: `alert ${thresholds.alert}`, position: "insideTopRight", fontSize: 10, fill: "#eab308" }}
+              label={{ value: `alert ${thresholds.alert}`, position: "insideTopLeft", fontSize: 10, fill: "#eab308" }}
             />
           )}
           {thresholds.minor != null && (
@@ -80,7 +80,7 @@ export function LevelChart({
               y={thresholds.minor}
               stroke="#f97316"
               strokeDasharray="4 4"
-              label={{ value: `minor ${thresholds.minor}`, position: "insideTopRight", fontSize: 10, fill: "#f97316" }}
+              label={{ value: `minor ${thresholds.minor}`, position: "insideTopLeft", fontSize: 10, fill: "#f97316" }}
             />
           )}
           {thresholds.major != null && (
@@ -88,7 +88,7 @@ export function LevelChart({
               y={thresholds.major}
               stroke="#dc2626"
               strokeDasharray="4 4"
-              label={{ value: `major ${thresholds.major}`, position: "insideTopRight", fontSize: 10, fill: "#dc2626" }}
+              label={{ value: `major ${thresholds.major}`, position: "insideTopLeft", fontSize: 10, fill: "#dc2626" }}
             />
           )}
           <Line
