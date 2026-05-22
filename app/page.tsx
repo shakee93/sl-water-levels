@@ -5,6 +5,7 @@ import { StationPicker } from "./StationPicker";
 import { StationCard } from "./StationCard";
 import { StationCardSkeleton } from "./StationCardSkeleton";
 import { BasinFlow } from "./BasinFlow";
+import { Forecast } from "./Forecast";
 
 export const revalidate = 60;
 
@@ -76,6 +77,13 @@ export default async function Home({
 
             <Suspense key={station} fallback={<StationCardSkeleton />}>
               <StationCard stationName={station} />
+            </Suspense>
+
+            <Suspense key={`forecast-${station}`} fallback={null}>
+              <Forecast
+                basin={stations.find((s) => s.station === station)?.basin ?? ""}
+                selectedStation={station}
+              />
             </Suspense>
 
             <Suspense key={`flow-${station}`} fallback={null}>
