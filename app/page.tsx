@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { fetchStations, type Station } from "@/lib/arcgis";
 import { StationPicker } from "./StationPicker";
+import { StationFinder } from "./StationFinder";
 import { StationCard } from "./StationCard";
 import { StationCardSkeleton } from "./StationCardSkeleton";
 import { BasinFlow } from "./BasinFlow";
@@ -72,6 +73,9 @@ export default async function Home({
                 <div className="text-xs text-slate-500 dark:text-slate-400 sm:pb-2.5 tabular-nums">
                   {stations.length} stations · {basinCount} basins
                 </div>
+              </div>
+              <div className="mt-3">
+                <StationFinder stations={stations} />
               </div>
             </section>
 

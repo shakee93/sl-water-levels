@@ -3,6 +3,8 @@ const SERVICES = "https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/serv
 export type Station = {
   basin: string;
   station: string;
+  latitude: number;
+  longitude: number;
 };
 
 export type Reading = {
@@ -33,17 +35,20 @@ export async function fetchStations(): Promise<Station[]> {
     "hydrostations/FeatureServer/0/query",
     {
       where: "1=1",
-      outFields: "basin,station",
+      outFields: "basin,station,latitude,longitude",
       returnGeometry: "false",
       orderByFields: "basin ASC, station ASC",
       resultRecordCount: "2000",
     },
   );
   const seen = new Set<string>();
-  return data.features
+  type Raw = { basin?: string; station?: string; latitude?: number; longitude?: number };
+  return (data.features as { attributes: Raw }[])
     .map((f) => ({
       basin: (f.attributes.basin || "").trim(),
       station: (f.attributes.station || "").trim(),
+      latitude: Number(f.attributes.latitude),
+      longitude: Number(f.attributes.longitude),
     }))
     .filter((s) => {
       if (!s.station) return false;
