@@ -3,14 +3,57 @@
 // (east = mountains = upstream for most SL rivers).
 
 export const BASIN_ORDER: Record<string, string[]> = {
+  // Upstream → downstream order, hand-curated from JICA 2009 longitudinal
+  // profiles and Perera 2023 where available, basin geography otherwise.
   "Kelani Ganga": [
     "Norwood",
     "Kithulgala",
-    "Holombuwa",
-    "Deraniyagala",
+    "Holombuwa",     // on Gurugoda Oya tributary
+    "Deraniyagala",  // on Maguru Ganga tributary
     "Glencourse",
     "Hanwella",
     "Nagalagam Street",
+  ],
+  "Mahaweli Ganga": [
+    // South-west highlands → north-east through the dry zone to the sea
+    // near Trincomalee. Longitude alone is misleading here.
+    "Nawalapitiya",
+    "Peradeniya",
+    "Calidonia",
+    "Thaldena",
+    "Weraganthota",
+    "Manampitiya",
+  ],
+  "Kalu Ganga": [
+    // East-to-west to the sea at Kalutara. Kalawellawa is on the Kuda
+    // Ganga tributary; it joins the main stem between Magura and Putupaula.
+    "Rathnapura",
+    "Ellagawa",
+    "Magura",
+    "Kalawellawa (Millakanda)",
+    "Putupaula",
+  ],
+  "Nilwala Ganga": [
+    // South-flowing to the sea at Matara; longitude misleads, use known
+    // sub-watershed relationships from SLJOL 2023.
+    "Pitabeddara",
+    "Urawa",
+    "Panadugama",
+    "Thalgahagoda",
+  ],
+  "Kirindi Oya": [
+    // South-flowing; latitude is the right axis here.
+    "Wellawaya",
+    "Kuda Oya",
+    "Thanamalwila",
+  ],
+  "Gin Ganga": [
+    "Thawalama",
+    "Baddegama",
+  ],
+  "Maha Oya": [
+    "Giriulla",
+    "Badalgama",
   ],
 };
 

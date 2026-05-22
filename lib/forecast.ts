@@ -46,7 +46,12 @@ function ratePerHour(readings: Reading[], hours: number): number | null {
   const cutoff = Date.now() - hours * 3_600_000;
   const pts = readings.filter(
     (r): r is { ts: number; water_level: number; rain_fall: number | null } =>
-      r.water_level != null && r.ts >= cutoff,
+      r.water_level != null &&
+      Number.isFinite(r.water_level) &&
+      // drop common sentinel values (-9999, 9999) that poison regression
+      r.water_level > -100 &&
+      r.water_level < 1000 &&
+      r.ts >= cutoff,
   );
   if (pts.length < 2) return null;
 
@@ -174,6 +179,7 @@ export function makeForecast(
     (localRate ?? upstreamRate ?? 0) * localWeight +
     (upstreamRate ?? 0) * upWeight;
 
+  const notes: string[] = [];
   // rain modulation
   // total "rain signal" for modulating magnitude
   const rainTotal = (rainAtStation6h ?? 0) + (rainUpstream6h ?? 0);
@@ -189,7 +195,21 @@ export function makeForecast(
     if (rainTotal > 1) magnitudeFactor = 1 + rainBoost;
     else if (isDry) magnitudeFactor = 0.8;
   }
-  const predictedDelta = baseDelta * magnitudeFactor;
+  // Safety clamp: regression noise + tiny time windows can yield absurd
+  // rates. Cap |delta| to whichever is greater of an absolute floor of 0.5
+  // units or 30% of the current level (so dam levels in the 100s aren't
+  // forced into a tiny window, but a 0.05 reading can't be predicted to
+  // jump by 50).
+  const rawDelta = baseDelta * magnitudeFactor;
+  const cap = currentLevel != null
+    ? Math.max(0.5, Math.abs(currentLevel) * 0.3)
+    : 1;
+  const predictedDelta = Math.max(-cap, Math.min(cap, rawDelta));
+  if (predictedDelta !== rawDelta) {
+    notes.push(
+      `Trend slope (${rawDelta.toFixed(2)}/h) was clamped to ±${cap.toFixed(2)} as a sanity bound.`,
+    );
+  }
   const predictedLevel =
     currentLevel != null ? currentLevel + predictedDelta : null;
 
@@ -201,7 +221,7 @@ export function makeForecast(
         : "steady";
 
   // confidence
-  const notes: string[] = [];
+  // (notes declared above the clamp block to be in scope)
   let confidence: Forecast["confidence"];
   if (localRate == null) {
     confidence = "low";
