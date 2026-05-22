@@ -18,6 +18,29 @@ export type Forecast = {
   notes: string[];
 };
 
+// Great-circle distance in km between two lat/lon points.
+function haversineKm(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLon = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+// Smoothly decaying proximity weight by distance.
+// 0 km → 1.0, 10 km → 0.5, 30 km → 0.25, 100 km → ~0.09.
+function proximityWeight(distKm: number): number {
+  return 10 / (10 + Math.max(0, distKm));
+}
+
 // Linear regression slope (units / hour) on the last `hours` of readings.
 function ratePerHour(readings: Reading[], hours: number): number | null {
   const cutoff = Date.now() - hours * 3_600_000;
@@ -93,16 +116,23 @@ export function makeForecast(
   // rain at THIS station over the last 6h (often null at downstream/urban gauges)
   const rainAtStation6h = totalRain(me.trend24h, 6);
 
-  // upstream rate + upstream rain, both proximity-weighted
-  type UpSignal = { station: string; rate: number | null; rain: number | null; weight: number };
-  const upSignals: UpSignal[] = upstream.map((s, i) => {
-    const rank = upstream.length - i; // larger = further from selected
-    const weight = 1 / Math.max(1, rank);
+  // upstream rate + upstream rain, weighted by straight-line distance to
+  // the selected station (closer upstream gauges count for more).
+  type UpSignal = {
+    station: string;
+    rate: number | null;
+    rain: number | null;
+    weight: number;
+    distKm: number;
+  };
+  const upSignals: UpSignal[] = upstream.map((s) => {
+    const distKm = haversineKm(me, s);
     return {
       station: s.station,
       rate: ratePerHour(s.trend24h, 3),
       rain: totalRain(s.trend24h, 6),
-      weight,
+      weight: proximityWeight(distKm),
+      distKm,
     };
   });
 
