@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowDown, ArrowUp, Minus, TrendingUp } from "lucide-react";
 import { fetchBasinSnapshot, statusFor, type BasinStation } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 
@@ -58,10 +59,12 @@ function Sparkline({ readings }: { readings: BasinStation["trend24h"] }) {
 function Arrow({ rate }: { rate: number }) {
   const abs = Math.abs(rate);
   if (abs < 0.02) {
-    return <span className="text-slate-400" aria-label="steady">→</span>;
+    return <Minus className="size-3.5 text-slate-400" aria-label="steady" />;
   }
-  const cls = rate > 0 ? "text-orange-500" : "text-emerald-500";
-  return <span className={cls} aria-label={rate > 0 ? "rising" : "falling"}>{rate > 0 ? "↑" : "↓"}</span>;
+  if (rate > 0) {
+    return <ArrowUp className="size-3.5 text-orange-500" aria-label="rising" />;
+  }
+  return <ArrowDown className="size-3.5 text-emerald-500" aria-label="falling" />;
 }
 
 function buildWaveInsight(stations: BasinStation[], selectedStation: string) {
@@ -113,7 +116,7 @@ export async function BasinFlow({
 
       {insight && (
         <div className="mb-3 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-xs sm:text-sm flex items-start gap-2">
-          <span className="text-amber-600 dark:text-amber-400 text-base leading-none mt-0.5">▲</span>
+          <TrendingUp className="size-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <div className="text-amber-800 dark:text-amber-200">
             <strong>{insight.upstreamStation}</strong> upstream is rising at{" "}
             <span className="tabular-nums">{insight.rate.toFixed(2)}/h</span> — a pulse may reach{" "}
