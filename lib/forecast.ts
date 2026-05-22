@@ -11,6 +11,10 @@ export type Forecast = {
   upstreamRatePerH: number | null;
   upstreamLeader: { station: string; ratePerH: number } | null;
   upstreamCount: number;
+  // rain signals (mm over the last 6 hours)
+  rainAtStation6h: number | null;
+  rainUpstream6h: number | null;
+  rainContributors: string[];
   notes: string[];
 };
 
@@ -36,12 +40,40 @@ function ratePerHour(readings: Reading[], hours: number): number | null {
   return (n * sxy - sx * sy) / denom;
 }
 
-// 1-hour ahead prediction: local persistence + weighted upstream momentum.
+// Total rainfall in the last `hours` hours. Returns null if no rain_fall
+// values were ever reported (gauge has no rain sensor); 0 if the gauge
+// reports but it didn't rain.
+function totalRain(readings: Reading[], hours: number): number | null {
+  const cutoff = Date.now() - hours * 3_600_000;
+  let sum = 0;
+  let saw = false;
+  for (const r of readings) {
+    if (r.ts < cutoff) continue;
+    if (r.rain_fall == null) continue;
+    sum += r.rain_fall;
+    saw = true;
+  }
+  return saw ? sum : null;
+}
+
+// 1-hour ahead prediction: local persistence + weighted upstream momentum,
+// modulated by recent rainfall.
 //
-// - localRate gets 70% weight when upstream exists, 100% otherwise.
-// - upstream gets 30% weight, averaged across all upstream stations.
-//   Nearer-upstream gets more weight via 1/(1+rank) attenuation.
-// - confidence comes from signal agreement + magnitude.
+// Trend math:
+//   localRate gets 70% weight when upstream exists, 100% otherwise.
+//   upstream gets 30% weight, averaged across upstream stations,
+//   nearer-upstream weighted higher via 1/(1+rank).
+//
+// Rain modulation:
+//   - rainAtStation6h: rain in the gauge's own catchment in the last 6h.
+//     Reinforces a near-term rise (small magnitude boost).
+//   - rainUpstream6h: rain at upstream stations, weighted by the same
+//     proximity weights. Already showing up in upstream water-level
+//     trends, but reinforces confidence that the current trend has
+//     fuel behind it.
+//   - When the predicted direction is rising AND rain agrees, magnitude
+//     gets up to +30%. When rising but no rain anywhere, magnitude
+//     gets ×0.8 (rise will plateau soon).
 export function makeForecast(
   basin: string,
   snapshot: BasinStation[],
@@ -58,27 +90,49 @@ export function makeForecast(
   const localRate = ratePerHour(me.trend24h, 3);
   const currentLevel = me.latest?.water_level ?? null;
 
-  // weighted upstream rate, only counting upstream stations with valid data
-  const upstreamSignals: { station: string; rate: number; weight: number }[] = [];
-  upstream.forEach((s, i) => {
-    const r = ratePerHour(s.trend24h, 3);
-    if (r == null) return;
-    const rank = upstream.length - i; // i=0 most upstream, larger=further from selected
-    const proximity = 1 / Math.max(1, rank); // nearer upstream gets bigger weight
-    upstreamSignals.push({ station: s.station, rate: r, weight: proximity });
+  // rain at THIS station over the last 6h (often null at downstream/urban gauges)
+  const rainAtStation6h = totalRain(me.trend24h, 6);
+
+  // upstream rate + upstream rain, both proximity-weighted
+  type UpSignal = { station: string; rate: number | null; rain: number | null; weight: number };
+  const upSignals: UpSignal[] = upstream.map((s, i) => {
+    const rank = upstream.length - i; // larger = further from selected
+    const weight = 1 / Math.max(1, rank);
+    return {
+      station: s.station,
+      rate: ratePerHour(s.trend24h, 3),
+      rain: totalRain(s.trend24h, 6),
+      weight,
+    };
   });
 
-  const upWeightSum = upstreamSignals.reduce((a, b) => a + b.weight, 0);
+  const upRateSignals = upSignals.filter(
+    (s): s is UpSignal & { rate: number } => s.rate != null,
+  );
+  const upRateWeightSum = upRateSignals.reduce((a, b) => a + b.weight, 0);
   const upstreamRate =
-    upWeightSum > 0
-      ? upstreamSignals.reduce((a, b) => a + b.rate * b.weight, 0) / upWeightSum
+    upRateWeightSum > 0
+      ? upRateSignals.reduce((a, b) => a + b.rate * b.weight, 0) / upRateWeightSum
       : null;
-  const upstreamLeader =
-    upstreamSignals.length > 0
-      ? upstreamSignals.reduce((a, b) =>
-          Math.abs(a.rate) > Math.abs(b.rate) ? a : b,
-        )
+  const leaderRaw =
+    upRateSignals.length > 0
+      ? upRateSignals.reduce((a, b) => (Math.abs(a.rate) > Math.abs(b.rate) ? a : b))
       : null;
+  const upstreamLeader: { station: string; ratePerH: number } | null = leaderRaw
+    ? { station: leaderRaw.station, ratePerH: leaderRaw.rate }
+    : null;
+
+  const upRainSignals = upSignals.filter(
+    (s): s is UpSignal & { rain: number } => s.rain != null,
+  );
+  const upRainWeightSum = upRainSignals.reduce((a, b) => a + b.weight, 0);
+  const rainUpstream6h =
+    upRainWeightSum > 0
+      ? upRainSignals.reduce((a, b) => a + b.rain * b.weight, 0) / upRainWeightSum
+      : null;
+  const rainContributors = upRainSignals
+    .filter((s) => s.rain > 1)
+    .map((s) => `${s.station} ${s.rain.toFixed(1)}mm`);
 
   if (localRate == null && upstreamRate == null) {
     return emptyForecast(["Not enough recent readings to predict."]);
@@ -86,14 +140,29 @@ export function makeForecast(
 
   const localWeight = upstreamRate != null ? 0.7 : 1;
   const upWeight = upstreamRate != null ? 0.3 : 0;
-  const predictedDelta =
+  const baseDelta =
     (localRate ?? upstreamRate ?? 0) * localWeight +
     (upstreamRate ?? 0) * upWeight;
 
+  // rain modulation
+  // total "rain signal" for modulating magnitude
+  const rainTotal = (rainAtStation6h ?? 0) + (rainUpstream6h ?? 0);
+  // 0 mm => 1.0, 30 mm => 1.15, 80 mm => 1.3 (cap)
+  const rainBoost = Math.min(0.3, rainTotal / 200);
+  // dry-and-rising means the rise will plateau soon → dampen
+  const isRising = baseDelta > 0.02;
+  const isDry = rainAtStation6h != null && rainAtStation6h < 1 &&
+                (rainUpstream6h == null || rainUpstream6h < 1);
+
+  let magnitudeFactor = 1;
+  if (isRising) {
+    if (rainTotal > 1) magnitudeFactor = 1 + rainBoost;
+    else if (isDry) magnitudeFactor = 0.8;
+  }
+  const predictedDelta = baseDelta * magnitudeFactor;
   const predictedLevel =
     currentLevel != null ? currentLevel + predictedDelta : null;
 
-  // direction: anything within ±0.02 (units) of zero we call steady
   const direction: Forecast["direction"] =
     predictedDelta > 0.02
       ? "rising"
@@ -109,7 +178,8 @@ export function makeForecast(
     notes.push("No recent local readings — relying on upstream only.");
   } else if (upstreamRate == null) {
     confidence = upstream.length === 0 ? "medium" : "low";
-    if (upstream.length === 0) notes.push("Topmost station in basin; no upstream signal available.");
+    if (upstream.length === 0)
+      notes.push("Topmost station in basin; no upstream signal available.");
     else notes.push("Upstream readings missing; using local trend only.");
   } else {
     const sameDir = Math.sign(localRate) === Math.sign(upstreamRate);
@@ -122,9 +192,27 @@ export function makeForecast(
     }
   }
 
-  if (upstreamLeader && Math.abs(upstreamLeader.rate) >= 0.1) {
+  // rain-based confidence/note overlays
+  if (direction === "rising") {
+    if (rainTotal > 30) {
+      if (confidence === "medium") confidence = "high";
+      notes.push(
+        `Recent rain (${rainTotal.toFixed(0)}mm/6h) reinforces the rising trend.`,
+      );
+    } else if (isDry) {
+      if (confidence === "high") confidence = "medium";
+      notes.push("No recent rain — rise is likely to plateau soon.");
+    }
+  } else if (direction === "falling" && rainTotal > 30) {
+    if (confidence === "high") confidence = "medium";
     notes.push(
-      `${upstreamLeader.station} is ${upstreamLeader.rate > 0 ? "rising" : "falling"} at ${upstreamLeader.rate.toFixed(2)}/h.`,
+      `Recent rain (${rainTotal.toFixed(0)}mm/6h) may slow the decline.`,
+    );
+  }
+
+  if (upstreamLeader && Math.abs(upstreamLeader.ratePerH) >= 0.1) {
+    notes.push(
+      `${upstreamLeader.station} ${upstreamLeader.ratePerH > 0 ? "rising" : "falling"} at ${upstreamLeader.ratePerH.toFixed(2)}/h.`,
     );
   }
 
@@ -138,6 +226,9 @@ export function makeForecast(
     upstreamRatePerH: upstreamRate,
     upstreamLeader,
     upstreamCount: upstream.length,
+    rainAtStation6h,
+    rainUpstream6h,
+    rainContributors,
     notes,
   };
 }
@@ -153,6 +244,9 @@ function emptyForecast(notes: string[]): Forecast {
     upstreamRatePerH: null,
     upstreamLeader: null,
     upstreamCount: 0,
+    rainAtStation6h: null,
+    rainUpstream6h: null,
+    rainContributors: [],
     notes,
   };
 }

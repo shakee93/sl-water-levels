@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Minus, HelpCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, Minus, HelpCircle, CloudRain } from "lucide-react";
 import { fetchBasinSnapshot } from "@/lib/arcgis";
 import { makeForecast } from "@/lib/forecast";
 
@@ -36,6 +36,10 @@ const confidenceLabel: Record<string, string> = {
   none: "No signal",
 };
 
+function fmtRain(v: number | null) {
+  return v == null ? "n/a" : `${v.toFixed(1)}mm`;
+}
+
 export async function Forecast({
   basin,
   selectedStation,
@@ -56,6 +60,10 @@ export async function Forecast({
       : `${f.predictedDelta >= 0 ? "+" : ""}${f.predictedDelta.toFixed(2)}`;
   const predictedStr =
     f.predictedLevel != null ? f.predictedLevel.toFixed(2) : "—";
+
+  const totalRain =
+    (f.rainAtStation6h ?? 0) + (f.rainUpstream6h ?? 0);
+  const hasRain = totalRain > 1;
 
   return (
     <section className={`mt-6 rounded-xl border ${cfg.bg} p-4 sm:p-5`}>
@@ -80,26 +88,33 @@ export async function Forecast({
               {deltaStr} → {predictedStr}
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
-            <span>
-              Local trend:{" "}
-              <span className="tabular-nums font-medium text-slate-800 dark:text-slate-200">
-                {f.localRatePerH != null
-                  ? `${f.localRatePerH >= 0 ? "+" : ""}${f.localRatePerH.toFixed(2)}/h`
+
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs">
+            <Cell label="Local trend">
+              {f.localRatePerH != null
+                ? `${f.localRatePerH >= 0 ? "+" : ""}${f.localRatePerH.toFixed(2)}/h`
+                : "—"}
+            </Cell>
+            <Cell label="Upstream avg">
+              {f.upstreamRatePerH != null
+                ? `${f.upstreamRatePerH >= 0 ? "+" : ""}${f.upstreamRatePerH.toFixed(2)}/h`
+                : f.upstreamCount === 0
+                  ? "n/a (top)"
                   : "—"}
-              </span>
-            </span>
-            <span>
-              Upstream avg:{" "}
-              <span className="tabular-nums font-medium text-slate-800 dark:text-slate-200">
-                {f.upstreamRatePerH != null
-                  ? `${f.upstreamRatePerH >= 0 ? "+" : ""}${f.upstreamRatePerH.toFixed(2)}/h`
-                  : f.upstreamCount === 0
-                    ? "n/a (top)"
-                    : "—"}
-              </span>
-            </span>
+            </Cell>
+            <Cell label="Rain here (6h)">{fmtRain(f.rainAtStation6h)}</Cell>
+            <Cell label="Rain upstream (6h)">{fmtRain(f.rainUpstream6h)}</Cell>
           </div>
+
+          {hasRain && f.rainContributors.length > 0 && (
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+              <CloudRain className="size-3.5 shrink-0 text-sky-500" />
+              <span className="truncate">
+                {f.rainContributors.slice(0, 4).join(" · ")}
+              </span>
+            </div>
+          )}
+
           {f.notes.length > 0 && (
             <ul className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
               {f.notes.map((n, i) => (
@@ -110,5 +125,18 @@ export async function Forecast({
         </div>
       </div>
     </section>
+  );
+}
+
+function Cell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        {label}
+      </div>
+      <div className="tabular-nums font-medium text-slate-800 dark:text-slate-200">
+        {children}
+      </div>
+    </div>
   );
 }
