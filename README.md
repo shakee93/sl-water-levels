@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sri Lanka Water Levels
 
-## Getting Started
+Minimal Next.js dashboard that visualises realtime river-gauge readings from the
+Sri Lanka Department of Irrigation. Pick a station and see water level over the
+last 4 days plotted against the alert / minor-flood / major-flood thresholds.
 
-First, run the development server:
+## Data source
+
+The app reads directly from public ArcGIS feature services hosted by SL Dept of
+Irrigation:
+
+- Stations: `hydrostations/FeatureServer/0`
+- Readings: `gauges_2_view/FeatureServer/0`
+
+Both under `https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services`.
+No API key, no backend, no DB.
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3000>. Append `?station=Nagalagam%20Street` (or any other
+station name from the picker) to deep-link.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Push to GitHub and import the repo on Vercel — no env vars or build settings
+needed.
