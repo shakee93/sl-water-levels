@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-import { fetchStations, type Station } from "@/lib/arcgis";
+import type { Metadata } from "next";
+import { fetchStations, fetchStationData, statusFor, type Station } from "@/lib/arcgis";
 import { StationPicker } from "./StationPicker";
 import { StationFinder } from "./StationFinder";
 import { StationCard } from "./StationCard";
@@ -12,6 +13,57 @@ export const revalidate = 60;
 
 const DEFAULT_STATION = "Nagalagam Street";
 const STATION_COOKIE = "sl_station";
+
+const SITE = "https://sl-water-levels.vercel.app";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ station?: string }>;
+}): Promise<Metadata> {
+  const { station } = await searchParams;
+  if (!station) {
+    return {
+      alternates: { canonical: "/" },
+    };
+  }
+
+  try {
+    const data = await fetchStationData(station, 1);
+    const level = data.latest?.water_level;
+    const status = statusFor(level ?? null, data.thresholds);
+    const basin = data.basin || "Sri Lanka";
+
+    const titleBits = level != null ? `${station} water level (${level.toFixed(2)})` : `${station} water level`;
+    const descBits = level != null
+      ? `Live reading at ${station} on ${basin}: ${level.toFixed(2)} — ${status.label}. Alert ${data.thresholds.alert ?? "—"}, minor flood ${data.thresholds.minor ?? "—"}, major flood ${data.thresholds.major ?? "—"}. Includes next-hour forecast and upstream basin view.`
+      : `${station} river gauge on ${basin}, Sri Lanka. Live water-level readings from the Department of Irrigation with alert / minor-flood / major-flood thresholds and next-hour forecast.`;
+
+    const canonical = `/?station=${encodeURIComponent(station)}`;
+
+    return {
+      title: titleBits,
+      description: descBits,
+      alternates: { canonical },
+      openGraph: {
+        title: `${station} — Sri Lanka Water Levels`,
+        description: descBits,
+        url: `${SITE}${canonical}`,
+        type: "website",
+      },
+      twitter: {
+        card: "summary",
+        title: `${station} — Sri Lanka Water Levels`,
+        description: descBits,
+      },
+    };
+  } catch {
+    return {
+      title: `${station} water level`,
+      alternates: { canonical: `/?station=${encodeURIComponent(station)}` },
+    };
+  }
+}
 
 export default async function Home({
   searchParams,
@@ -42,6 +94,25 @@ export default async function Home({
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: "Sri Lanka Water Levels",
+              url: SITE,
+              description: "Live Sri Lanka river-gauge readings + next-hour flood forecast.",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: `${SITE}/?station={station}`,
+                "query-input": "required name=station",
+              },
+            }),
+          }}
+        />
+        
         <header className="mb-6 sm:mb-8">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
             <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
