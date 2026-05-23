@@ -25,9 +25,11 @@ function fmtTime(ts: number) {
 export function LevelChart({
   readings,
   thresholds,
+  unit,
 }: {
   readings: Reading[];
   thresholds: StationData["thresholds"];
+  unit?: "ft" | "m" | null;
 }) {
   if (readings.length === 0) {
     return (
@@ -57,13 +59,15 @@ export function LevelChart({
             tick={{ fontSize: 11 }}
             stroke="currentColor"
             strokeOpacity={0.5}
-            width={36}
+            width={unit ? 42 : 36}
+            tickFormatter={(v) => unit ? `${v}${unit}` : `${v}`}
           />
           <Tooltip
             labelFormatter={(v) => fmtTime(Number(v))}
             formatter={(v) => {
               const n = typeof v === "number" ? v : Number(v);
-              return [Number.isFinite(n) ? n.toFixed(2) : "—", "Water level"];
+              const label = unit ? `Water level (${unit})` : "Water level";
+              return [Number.isFinite(n) ? n.toFixed(2) : "—", label];
             }}
             contentStyle={{ fontSize: 12 }}
           />

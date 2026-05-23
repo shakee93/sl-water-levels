@@ -1,4 +1,5 @@
 import { fetchStationData, statusFor } from "@/lib/arcgis";
+import { detectUnit } from "@/lib/units";
 import { LevelChart } from "./LevelChart";
 
 const toneClass: Record<string, string> = {
@@ -31,6 +32,7 @@ function fmt(v: number | null | undefined) {
 export async function StationCard({ stationName }: { stationName: string }) {
   const data = await fetchStationData(stationName);
   const status = statusFor(data.latest?.water_level ?? null, data.thresholds);
+  const unit = detectUnit(data.thresholds);
 
   return (
     <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
@@ -68,38 +70,43 @@ export async function StationCard({ stationName }: { stationName: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-100 dark:bg-slate-800">
         <Stat
           label="Latest"
-          value={fmt(data.latest?.water_level)}
+          value={fmtWithUnit(data.latest?.water_level, unit)}
           sub={data.latest ? fmtTime(data.latest.ts) : "No readings"}
         />
         <Stat
           label="Alert"
-          value={fmt(data.thresholds.alert)}
+          value={fmtWithUnit(data.thresholds.alert, unit)}
           accent="text-yellow-600 dark:text-yellow-400"
         />
         <Stat
           label="Minor flood"
-          value={fmt(data.thresholds.minor)}
+          value={fmtWithUnit(data.thresholds.minor, unit)}
           accent="text-orange-600 dark:text-orange-400"
         />
         <Stat
           label="Major flood"
-          value={fmt(data.thresholds.major)}
+          value={fmtWithUnit(data.thresholds.major, unit)}
           accent="text-red-600 dark:text-red-400"
         />
       </div>
 
       <div className="p-4 sm:p-6">
-        <LevelChart readings={data.readings} thresholds={data.thresholds} />
+        <LevelChart readings={data.readings} thresholds={data.thresholds} unit={unit} />
         <p className="mt-3 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
           Last 4 days · {data.readings.length} readings · Asia/Colombo.{" "}
           <span className="text-slate-400 dark:text-slate-500">
-            Units are reported by the source as-is — Kelani Ganga stations are
-            in feet; other basins may differ.
+            Unit (ft or m) inferred from the gauge’s flood thresholds; shown only when confident.
           </span>
         </p>
       </div>
     </section>
   );
+}
+
+function fmtWithUnit(v: number | null | undefined, unit: import("@/lib/units").Unit) {
+  if (v == null) return "—";
+  const s = Number(v).toFixed(2);
+  return unit ? `${s} ${unit}` : s;
 }
 
 function Stat({
