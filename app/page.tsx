@@ -8,6 +8,7 @@ import { StationCard } from "./StationCard";
 import { StationCardSkeleton } from "./StationCardSkeleton";
 import { BasinFlow } from "./BasinFlow";
 import { Forecast } from "./Forecast";
+import { Anomaly } from "./Anomaly";
 
 export const revalidate = 60;
 
@@ -149,6 +150,13 @@ export default async function Home({
                 <StationFinder stations={stations} />
               </div>
             </section>
+
+            <Suspense key={`anomaly-${station}`} fallback={null}>
+              <Anomaly
+                basin={stations.find((s) => s.station === station)?.basin ?? ""}
+                selectedStation={station}
+              />
+            </Suspense>
 
             <Suspense key={station} fallback={<StationCardSkeleton />}>
               <StationCard stationName={station} />
