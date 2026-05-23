@@ -90,6 +90,42 @@ function buildWaveInsight(stations: BasinStation[], selectedStation: string) {
   };
 }
 
+type RelToneClass = {
+  red: string;
+  orange: string;
+  yellow: string;
+  neutral: string;
+};
+const relToneText: RelToneClass = {
+  red: "text-red-600 dark:text-red-400",
+  orange: "text-orange-600 dark:text-orange-400",
+  yellow: "text-yellow-600 dark:text-yellow-400",
+  neutral: "text-slate-500 dark:text-slate-500",
+};
+
+function relativeToThreshold(
+  level: number | null | undefined,
+  t: { alert: number | null; minor: number | null; major: number | null },
+): { label: string; tone: keyof RelToneClass } | null {
+  if (level == null) return null;
+  if (t.major != null && level >= t.major) {
+    return { label: `+${(level - t.major).toFixed(2)} above major`, tone: "red" };
+  }
+  if (t.minor != null && level >= t.minor) {
+    return { label: `+${(level - t.minor).toFixed(2)} above minor`, tone: "orange" };
+  }
+  if (t.alert != null && level >= t.alert) {
+    return { label: `+${(level - t.alert).toFixed(2)} above alert`, tone: "yellow" };
+  }
+  if (t.alert != null) {
+    return {
+      label: `${(t.alert - level).toFixed(2)} below alert`,
+      tone: "neutral",
+    };
+  }
+  return null;
+}
+
 export async function BasinFlow({
   basin,
   selectedStation,
@@ -157,6 +193,14 @@ export async function BasinFlow({
                       {i === 0 ? "upstream" : i === stations.length - 1 ? "downstream" : ""}
                     </div>
                   </div>
+                  {(() => {
+                    const rel = relativeToThreshold(s.latest?.water_level, s.thresholds);
+                    return rel ? (
+                      <div className={`text-[11px] mt-0.5 tabular-nums ${relToneText[rel.tone]}`}>
+                        {rel.label}
+                      </div>
+                    ) : null;
+                  })()}
                   {/* threshold bar */}
                   {alertPct != null && (
                     <div className="relative mt-1.5 h-1 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
