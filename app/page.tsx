@@ -7,6 +7,7 @@ import { StationFinder } from "./StationFinder";
 import { StationCard } from "./StationCard";
 import { StationCardSkeleton } from "./StationCardSkeleton";
 import { BasinFlow } from "./BasinFlow";
+import { BasinDams } from "./BasinDams";
 import { Forecast } from "./Forecast";
 import { Anomaly } from "./Anomaly";
 
@@ -173,6 +174,12 @@ export default async function Home({
               <BasinFlow
                 basin={stations.find((s) => s.station === station)?.basin ?? ""}
                 selectedStation={station}
+              />
+            </Suspense>
+
+            <Suspense key={`dams-${station}`} fallback={null}>
+              <BasinDams
+                basin={stations.find((s) => s.station === station)?.basin ?? ""}
               />
             </Suspense>
           </>
