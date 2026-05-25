@@ -53,6 +53,8 @@ export async function Header() {
                     <li key={b}>
                       <Link
                         href={basinPath(b)}
+                        data-umami-event="basin_nav_click"
+                        data-umami-event-basin={b.trim()}
                         className="block px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-sky-700 dark:hover:text-sky-300 transition"
                       >
                         {b}
@@ -66,6 +68,7 @@ export async function Header() {
 
           <Link
             href="/about"
+            data-umami-event="about_nav_click"
             className="rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             About
@@ -75,6 +78,7 @@ export async function Header() {
             href="https://github.com/shakee93/sl-water-levels"
             target="_blank"
             rel="noreferrer"
+            data-umami-event="github_click"
             className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition"
           >
             GitHub

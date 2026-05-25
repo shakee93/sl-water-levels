@@ -4,6 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { DAYS_OPTIONS, DEFAULT_DAYS } from "@/lib/range";
+import { trackEvent } from "@/lib/umami";
 
 const COOKIE = "sl_days";
 
@@ -19,6 +20,7 @@ export function RangePicker({ current }: { current: number }) {
 
   function select(value: number) {
     if (value === current) return;
+    trackEvent("range_change", { days: value });
     setCookie(COOKIE, String(value));
     const next = new URLSearchParams(params.toString());
     if (value === DEFAULT_DAYS) next.delete("days");

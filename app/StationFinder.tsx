@@ -5,6 +5,7 @@ import { useState } from "react";
 import { MapPin, Loader2, AlertCircle, X } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
+import { trackEvent } from "@/lib/umami";
 
 type StationWithCoords = Station & { latitude: number; longitude: number };
 
@@ -35,6 +36,7 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
   const [state, setState] = useState<State>({ kind: "idle" });
 
   function locate() {
+    trackEvent("find_nearest_clicked");
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setState({ kind: "error", message: "Geolocation isn't available in this browser." });
       return;
@@ -51,6 +53,10 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
           }))
           .sort((a, b) => a.km - b.km)
           .slice(0, 3);
+        trackEvent("find_nearest_success", {
+          nearest: ranked[0]?.station.station,
+          nearest_km: ranked[0] ? Number(ranked[0].km.toFixed(1)) : undefined,
+        });
         setState({ kind: "results", nearest: ranked });
       },
       (err) => {
@@ -60,6 +66,7 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
             : err.code === err.POSITION_UNAVAILABLE
               ? "Couldn't determine your location."
               : "Location request timed out.";
+        trackEvent("find_nearest_error", { code: err.code });
         setState({ kind: "error", message: reason });
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60_000 },
@@ -118,6 +125,13 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
               <li key={`${station.basin}|${station.station}`}>
                 <Link
                   href={stationPath(station.basin, station.station)}
+                  onClick={() =>
+                    trackEvent("nearest_station_clicked", {
+                      basin: station.basin?.trim() || "(unknown)",
+                      station: station.station,
+                      rank: i + 1,
+                    })
+                  }
                   className="flex items-baseline justify-between gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                 >
                   <div className="min-w-0">

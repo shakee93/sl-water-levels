@@ -5,6 +5,7 @@ import { useMemo, useTransition } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
+import { trackEvent } from "@/lib/umami";
 
 const STATION_COOKIE = "sl_station";
 
@@ -45,6 +46,7 @@ export function StationPicker({
     setCookie(STATION_COOKIE, value);
     const hit = byStation.get(value);
     if (!hit) return;
+    trackEvent("station_change", { basin: hit.basin?.trim() || "(unknown)", station: hit.station });
     // Preserve days= but drop legacy station= if present.
     const next = new URLSearchParams(params.toString());
     next.delete("station");

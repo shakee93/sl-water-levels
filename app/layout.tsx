@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
@@ -89,6 +90,11 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <Footer />
         </Suspense>
+        <Script
+          defer
+          src="https://analytics.freshpixl.com/script.js"
+          data-website-id="a15ed279-5a97-4e07-8aa6-3d7431957c94"
+        />
       </body>
     </html>
   );
