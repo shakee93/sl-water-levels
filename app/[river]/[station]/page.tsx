@@ -130,22 +130,39 @@ export default async function StationPage({
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {resolved && (
-          <script
-            type="application/ld+json"
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "Place",
-                name: `${station} river gauge`,
-                containedInPlace: {
+          <>
+            <script
+              type="application/ld+json"
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@type": "BreadcrumbList",
+                  itemListElement: [
+                    { "@type": "ListItem", position: 1, name: "All basins", item: SITE + "/" },
+                    { "@type": "ListItem", position: 2, name: basin, item: `${SITE}${basinPath(basin)}` },
+                    { "@type": "ListItem", position: 3, name: station, item: `${SITE}${canonical}` },
+                  ],
+                }),
+              }}
+            />
+            <script
+              type="application/ld+json"
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  "@context": "https://schema.org",
                   "@type": "Place",
-                  name: basin || "Sri Lanka",
-                },
-                url: `${SITE}${canonical}`,
-              }),
-            }}
-          />
+                  name: `${station} river gauge`,
+                  containedInPlace: {
+                    "@type": "Place",
+                    name: basin || "Sri Lanka",
+                  },
+                  url: `${SITE}${canonical}`,
+                }),
+              }}
+            />
+          </>
         )}
 
         {resolved && (

@@ -97,6 +97,20 @@ export default async function BasinPage({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "All basins", item: SITE + "/" },
+                { "@type": "ListItem", position: 2, name: basin, item: `${SITE}/${river}` },
+              ],
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
               "@type": "ItemList",
               name: `${basin} river gauges`,
               numberOfItems: onBasin.length,
