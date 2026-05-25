@@ -25,7 +25,7 @@ type Props = {
 // Bounds aspect (≈2.5°W × 4.4°H, portrait) is narrower than typical viewports,
 // so we set explicit center+zoom for the initial view instead of fitting the
 // bbox (which would pad horizontally and show Tamil Nadu).
-const SL_CENTER: [number, number] = [7.85, 80.77];
+const SL_CENTER: [number, number] = [7.6, 80.77];
 const SL_ZOOM = 8;
 const SL_BOUNDS: [[number, number], [number, number]] = [
   [5.7, 79.5],
