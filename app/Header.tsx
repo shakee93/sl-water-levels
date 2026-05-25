@@ -47,7 +47,7 @@ export async function Header() {
                 Basins
                 <ChevronDown className="size-3.5 text-slate-400 group-open:rotate-180 transition" aria-hidden />
               </summary>
-              <div className="absolute right-0 mt-1 w-56 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
+              <div className="absolute right-0 mt-1 w-56 z-50 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
                 <ul className="py-1 max-h-80 overflow-y-auto">
                   {basins.map((b) => (
                     <li key={b}>

@@ -70,3 +70,9 @@ body {
     color: rgb(125 211 252) !important;
   }
 }
+
+/* Clip Leaflet's high-z panes into the map's own stacking context so they
+   never paint over the sticky header dropdown or other site chrome. */
+.leaflet-container {
+  z-index: 0;
+}
