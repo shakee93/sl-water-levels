@@ -67,7 +67,7 @@ export default async function Home({
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
@@ -123,14 +123,11 @@ export default async function Home({
               </section>
             )}
 
-            <SriLankaMap stations={stations} />
-
-            <section className="mb-6 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <section className="mb-5 flex flex-wrap items-center gap-3 text-xs">
               <StationFinder stations={stations} />
-              <span className="tabular-nums">
-                {stations.length} stations · {basinCount} basins
-              </span>
             </section>
+
+            <SriLankaMap stations={stations} />
 
             <section>
               <h2 className="sr-only">River basins</h2>
