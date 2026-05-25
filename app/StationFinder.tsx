@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { MapPin, Loader2, AlertCircle, X } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
+import { stationPath } from "@/lib/slug";
 
 type StationWithCoords = Station & { latitude: number; longitude: number };
 
@@ -116,7 +117,7 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
             {state.nearest.map(({ station, km }, i) => (
               <li key={`${station.basin}|${station.station}`}>
                 <Link
-                  href={`/?station=${encodeURIComponent(station.station)}`}
+                  href={stationPath(station.basin, station.station)}
                   className="flex items-baseline justify-between gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                 >
                   <div className="min-w-0">

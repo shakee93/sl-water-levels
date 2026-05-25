@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowUp, Minus, TrendingUp } from "lucide-react";
 import { fetchBasinSnapshot, statusFor, type BasinStation } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
+import { stationPath } from "@/lib/slug";
 
 const dotForTone: Record<string, string> = {
   green: "bg-emerald-500",
@@ -172,7 +173,7 @@ export async function BasinFlow({
           return (
             <li key={s.station}>
               <Link
-                href={`/?station=${encodeURIComponent(s.station)}`}
+                href={stationPath(s.basin, s.station)}
                 className={`flex items-center gap-3 px-3 sm:px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
                   isSelected ? "bg-sky-50 dark:bg-sky-950/30" : ""
                 }`}

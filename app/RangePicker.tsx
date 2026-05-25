@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -22,6 +22,7 @@ function setCookie(name: string, value: string) {
 export function RangePicker({ current }: { current: number }) {
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
   function select(value: number) {
@@ -31,8 +32,9 @@ export function RangePicker({ current }: { current: number }) {
     if (value === DEFAULT_DAYS) next.delete("days");
     else next.set("days", String(value));
     const qs = next.toString();
+    const url = qs ? `${pathname}?${qs}` : pathname;
     startTransition(() => {
-      router.push(qs ? `/?${qs}` : "/");
+      router.push(url);
     });
   }
 

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useTransition } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
+import { stationPath } from "@/lib/slug";
 
 const STATION_COOKIE = "sl_station";
 
@@ -32,13 +33,25 @@ export function StationPicker({
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [stations]);
 
+  // Map station name -> canonical {basin, station} for path building.
+  const byStation = useMemo(() => {
+    const m = new Map<string, Station>();
+    for (const s of stations) m.set(s.station, s);
+    return m;
+  }, [stations]);
+
   function onChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const value = e.target.value;
     setCookie(STATION_COOKIE, value);
+    const hit = byStation.get(value);
+    if (!hit) return;
+    // Preserve days= but drop legacy station= if present.
     const next = new URLSearchParams(params.toString());
-    next.set("station", value);
+    next.delete("station");
+    const qs = next.toString();
+    const url = `${stationPath(hit.basin, hit.station)}${qs ? `?${qs}` : ""}`;
     startTransition(() => {
-      router.push(`/?${next.toString()}`);
+      router.push(url);
     });
   }
 
