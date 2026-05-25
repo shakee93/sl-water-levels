@@ -87,11 +87,11 @@ export function SriLankaMap({ stations }: { stations: Station[] }) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-0">
-          <div className="relative h-[440px] sm:h-[560px] lg:h-[720px]">
+          <div className="relative h-[560px] sm:h-[680px] lg:h-[820px]">
             <MapClient stations={valid} colorForBasin={colorForBasin} basinChains={basinChains} />
           </div>
 
-          <aside className="hidden lg:block border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/30 p-3 sm:p-4 lg:max-h-[720px] lg:overflow-y-auto">
+          <aside className="hidden lg:block border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/30 p-3 sm:p-4 lg:max-h-[820px] lg:overflow-y-auto">
             <h3 className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 font-medium mb-2">
               Basins · {basins.length}
             </h3>
