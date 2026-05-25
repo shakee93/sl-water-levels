@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Header } from "./Header";
+import { Footer } from "./Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,7 +81,21 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+        <Suspense fallback={<HeaderFallback />}>
+          <Header />
+        </Suspense>
+        <div className="flex-1">{children}</div>
+        <Suspense fallback={null}>
+          <Footer />
+        </Suspense>
+      </body>
     </html>
+  );
+}
+
+function HeaderFallback() {
+  return (
+    <div className="sticky top-0 z-40 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur h-14" />
   );
 }

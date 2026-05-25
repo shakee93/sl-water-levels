@@ -159,19 +159,6 @@ export default async function BasinPage({
         <Suspense key={`dams-${basin}`} fallback={null}>
           <BasinDams basin={basin} />
         </Suspense>
-
-        <footer className="mt-8 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          Source:{" "}
-          <a
-            className="underline decoration-slate-400/40 hover:text-slate-700 dark:hover:text-slate-200"
-            href="https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Sri Lanka Department of Irrigation ArcGIS feature service
-          </a>
-          .
-        </footer>
       </div>
     </main>
   );

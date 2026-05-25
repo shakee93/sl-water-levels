@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
@@ -7,9 +8,10 @@ import {
   statusFor,
   type Station,
 } from "@/lib/arcgis";
-import { basinSlug, resolveStation, stationSlug } from "@/lib/slug";
+import { basinPath, basinSlug, resolveStation, stationSlug } from "@/lib/slug";
+import { DEFAULT_DAYS, parseDays } from "@/lib/range";
 import { StationPicker } from "../../StationPicker";
-import { RangePicker, DEFAULT_DAYS } from "../../RangePicker";
+import { RangePicker } from "../../RangePicker";
 import { StationFinder } from "../../StationFinder";
 import { StationCard } from "../../StationCard";
 import { StationCardSkeleton } from "../../StationCardSkeleton";
@@ -119,12 +121,7 @@ export default async function StationPage({
   const station = resolved?.station ?? "";
   const basin = resolved?.basin ?? "";
 
-  const allowedDays = new Set([1, 4, 7, 14]);
-  const parsedDays = (() => {
-    const n = daysParam ? parseInt(daysParam, 10) : NaN;
-    return allowedDays.has(n) ? n : null;
-  })();
-  const days = parsedDays ?? DEFAULT_DAYS;
+  const days = parseDays(daysParam) ?? DEFAULT_DAYS;
 
   const basinCount = new Set(stations.map((s) => s.basin)).size;
   const canonical = `/${river}/${stationParam}`;
@@ -151,16 +148,32 @@ export default async function StationPage({
           />
         )}
 
-        <header className="mb-6 sm:mb-8">
+        {resolved && (
+          <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <Link href="/" className="hover:underline">
+              All basins
+            </Link>{" "}
+            <span aria-hidden>›</span>{" "}
+            <Link href={basinPath(basin)} className="hover:underline">
+              {basin}
+            </Link>{" "}
+            <span aria-hidden>›</span>{" "}
+            <span className="text-slate-700 dark:text-slate-300">{station}</span>
+          </nav>
+        )}
+
+        <header className="mb-5 sm:mb-7">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
             <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
-            Realtime
+            Realtime · {basin || "Sri Lanka"}
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
-            Sri Lanka Water Levels
+            {station || "Station"} water level
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-prose">
-            River-gauge readings from the Department of Irrigation, updated every minute.
+            Live reading from the Department of Irrigation, refreshed every minute.
+            Below: alert / minor-flood / major-flood thresholds, recent history,
+            next-hour forecast and the upstream → downstream basin view.
           </p>
         </header>
 
@@ -207,19 +220,6 @@ export default async function StationPage({
             </Suspense>
           </>
         )}
-
-        <footer className="mt-8 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          Source:{" "}
-          <a
-            className="underline decoration-slate-400/40 hover:text-slate-700 dark:hover:text-slate-200"
-            href="https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Sri Lanka Department of Irrigation ArcGIS feature service
-          </a>
-          .
-        </footer>
       </div>
     </main>
   );

@@ -3,17 +3,9 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { Loader2 } from "lucide-react";
+import { DAYS_OPTIONS, DEFAULT_DAYS } from "@/lib/range";
 
 const COOKIE = "sl_days";
-
-const OPTIONS: { value: number; label: string }[] = [
-  { value: 1, label: "24h" },
-  { value: 4, label: "4d" },
-  { value: 7, label: "7d" },
-  { value: 14, label: "14d" },
-];
-
-export const DEFAULT_DAYS = 4;
 
 function setCookie(name: string, value: string) {
   document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax`;
@@ -44,7 +36,7 @@ export function RangePicker({ current }: { current: number }) {
       aria-label="History range"
       className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm"
     >
-      {OPTIONS.map((opt) => {
+      {DAYS_OPTIONS.map((opt) => {
         const active = opt.value === current;
         return (
           <button
