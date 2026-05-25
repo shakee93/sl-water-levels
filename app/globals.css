@@ -24,3 +24,49 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Leaflet overrides: match the map to the surrounding UI. */
+.leaflet-container {
+  background: rgb(241 245 249); /* slate-100 */
+  font-family: inherit;
+}
+.leaflet-popup-content {
+  margin: 10px 14px;
+  line-height: 1.4;
+}
+@media (prefers-color-scheme: dark) {
+  .leaflet-container {
+    background: rgb(15 23 42); /* slate-900 */
+  }
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: rgb(30 41 59); /* slate-800 */
+    color: rgb(226 232 240); /* slate-200 */
+  }
+  .leaflet-popup-content-wrapper a {
+    color: rgb(125 211 252) !important; /* sky-300 */
+  }
+  .leaflet-tooltip {
+    background: rgb(30 41 59);
+    color: rgb(226 232 240);
+    border-color: rgb(51 65 85);
+  }
+  .leaflet-tooltip-top:before {
+    border-top-color: rgb(30 41 59);
+  }
+  .leaflet-bar a {
+    background: rgb(30 41 59);
+    color: rgb(226 232 240);
+    border-color: rgb(51 65 85);
+  }
+  .leaflet-bar a:hover {
+    background: rgb(51 65 85);
+  }
+  .leaflet-control-attribution {
+    background: rgb(15 23 42 / 0.8) !important;
+    color: rgb(148 163 184) !important;
+  }
+  .leaflet-control-attribution a {
+    color: rgb(125 211 252) !important;
+  }
+}
