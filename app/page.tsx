@@ -7,6 +7,7 @@ import { fetchStations, type Station } from "@/lib/arcgis";
 import { basinPath, stationPath } from "@/lib/slug";
 import { orderStations } from "@/lib/basinOrder";
 import { StationFinder } from "./StationFinder";
+import { SriLankaMap } from "./SriLankaMap";
 
 export const revalidate = 300;
 
@@ -121,6 +122,8 @@ export default async function Home({
                 </Link>
               </section>
             )}
+
+            <SriLankaMap stations={stations} />
 
             <section className="mb-6 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
               <StationFinder stations={stations} />
