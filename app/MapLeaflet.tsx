@@ -19,8 +19,12 @@ type Props = {
   colorForBasin: Record<string, string>;
 };
 
-// Tight bounds around Sri Lanka so the user can't pan/zoom out to India.
-// SW = south of Dondra Head; NE = north of Point Pedro & east of Trincomalee.
+// Tight bounds around Sri Lanka so the user can't pan or zoom out to India.
+// Bounds aspect (≈2.5°W × 4.4°H, portrait) is narrower than typical viewports,
+// so we set explicit center+zoom for the initial view instead of fitting the
+// bbox (which would pad horizontally and show Tamil Nadu).
+const SL_CENTER: [number, number] = [7.85, 80.77];
+const SL_ZOOM = 8;
 const SL_BOUNDS: [[number, number], [number, number]] = [
   [5.7, 79.5],
   [10.1, 82.0],
@@ -64,10 +68,11 @@ export function MapLeaflet({ stations, colorForBasin }: Props) {
 
   return (
     <MapContainer
-      bounds={SL_BOUNDS}
+      center={SL_CENTER}
+      zoom={SL_ZOOM}
       maxBounds={SL_BOUNDS}
       maxBoundsViscosity={1.0}
-      minZoom={7}
+      minZoom={SL_ZOOM}
       maxZoom={12}
       scrollWheelZoom={false}
       zoomControl={false}
