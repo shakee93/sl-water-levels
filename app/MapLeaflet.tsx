@@ -19,8 +19,12 @@ type Props = {
   colorForBasin: Record<string, string>;
 };
 
-const SL_CENTER: [number, number] = [7.85, 80.77];
-const SL_ZOOM = 7;
+// Tight bounds around Sri Lanka so the user can't pan/zoom out to India.
+// SW = south of Dondra Head; NE = north of Point Pedro & east of Trincomalee.
+const SL_BOUNDS: [[number, number], [number, number]] = [
+  [5.7, 79.5],
+  [10.1, 82.0],
+];
 
 // CartoDB Voyager (warm/light) for light mode; CartoDB Dark Matter for dark.
 // Both are free with attribution and far easier on the eye than OSM Standard,
@@ -37,11 +41,16 @@ const DARK_TILE = {
 };
 
 function useColorScheme(): "light" | "dark" {
-  const [scheme, setScheme] = useState<"light" | "dark">("light");
+  // Lazy initializer reads matchMedia synchronously on first render. MapLeaflet
+  // only renders in the browser (dynamic-imported with ssr:false), so this is
+  // safe — and it avoids the first-paint flash of light tiles in dark mode.
+  const [scheme, setScheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    setScheme(mq.matches ? "dark" : "light");
     const handler = (e: MediaQueryListEvent) => setScheme(e.matches ? "dark" : "light");
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
@@ -55,8 +64,11 @@ export function MapLeaflet({ stations, colorForBasin }: Props) {
 
   return (
     <MapContainer
-      center={SL_CENTER}
-      zoom={SL_ZOOM}
+      bounds={SL_BOUNDS}
+      maxBounds={SL_BOUNDS}
+      maxBoundsViscosity={1.0}
+      minZoom={7}
+      maxZoom={12}
       scrollWheelZoom={false}
       zoomControl={false}
       attributionControl={true}
