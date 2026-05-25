@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Station } from "@/lib/arcgis";
 import { basinPath } from "@/lib/slug";
+import { BASIN_ORDER } from "@/lib/basinOrder";
 import { MapClient } from "./MapClient";
 
 // Distinct, accessible colors (Tailwind v4 500-step values, hex).
@@ -52,6 +53,22 @@ export function SriLankaMap({ stations }: { stations: Station[] }) {
     (s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude),
   );
 
+  // Build upstream→downstream polylines for basins where we have a hand-curated
+  // station order. Each chain is the list of [lat, lon] for that basin's
+  // stations in BASIN_ORDER. Basins without an ordered chain (1-station basins
+  // or basins not in BASIN_ORDER) don't contribute a polyline.
+  const basinChains: Record<string, Array<[number, number]>> = {};
+  for (const [basin, order] of Object.entries(BASIN_ORDER)) {
+    const lookup = new Map(
+      valid.filter((s) => s.basin === basin).map((s) => [s.station, s] as const),
+    );
+    const chain = order
+      .map((name) => lookup.get(name))
+      .filter((s): s is Station => Boolean(s))
+      .map((s): [number, number] => [s.latitude, s.longitude]);
+    if (chain.length >= 2) basinChains[basin] = chain;
+  }
+
   return (
     <section className="mb-8">
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
@@ -71,10 +88,10 @@ export function SriLankaMap({ stations }: { stations: Station[] }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-0">
           <div className="relative h-[440px] sm:h-[560px] lg:h-[720px]">
-            <MapClient stations={valid} colorForBasin={colorForBasin} />
+            <MapClient stations={valid} colorForBasin={colorForBasin} basinChains={basinChains} />
           </div>
 
-          <aside className="border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/30 p-3 sm:p-4 lg:max-h-[720px] lg:overflow-y-auto">
+          <aside className="hidden lg:block border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-950/30 p-3 sm:p-4 lg:max-h-[720px] lg:overflow-y-auto">
             <h3 className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 font-medium mb-2">
               Basins · {basins.length}
             </h3>

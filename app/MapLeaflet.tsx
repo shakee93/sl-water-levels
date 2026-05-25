@@ -7,6 +7,7 @@ import {
   Tooltip,
   Popup,
   ZoomControl,
+  Polyline,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import Link from "next/link";
@@ -17,6 +18,7 @@ import { stationPath } from "@/lib/slug";
 type Props = {
   stations: Station[];
   colorForBasin: Record<string, string>;
+  basinChains: Record<string, Array<[number, number]>>;
 };
 
 // Tight bounds around Sri Lanka so the user can't pan or zoom out to India.
@@ -62,7 +64,7 @@ function useColorScheme(): "light" | "dark" {
   return scheme;
 }
 
-export function MapLeaflet({ stations, colorForBasin }: Props) {
+export function MapLeaflet({ stations, colorForBasin, basinChains }: Props) {
   const scheme = useColorScheme();
   const tile = scheme === "dark" ? DARK_TILE : LIGHT_TILE;
 
@@ -86,6 +88,23 @@ export function MapLeaflet({ stations, colorForBasin }: Props) {
         url={tile.url}
         maxZoom={18}
       />
+      {Object.entries(basinChains).map(([basin, chain]) => {
+        const color = colorForBasin[basin] || "#64748b";
+        return (
+          <Polyline
+            key={`chain-${basin}`}
+            positions={chain}
+            pathOptions={{
+              color,
+              weight: 3,
+              opacity: 0.65,
+              lineCap: "round",
+              lineJoin: "round",
+            }}
+            interactive={false}
+          />
+        );
+      })}
       {stations.map((s) => {
         const color = colorForBasin[s.basin] || "#64748b";
         const stroke = scheme === "dark" ? "#0f172a" : "#ffffff";

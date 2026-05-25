@@ -18,13 +18,19 @@ const MapLeaflet = dynamic(
 export function MapClient({
   stations,
   colorForBasin,
+  basinChains,
 }: {
   stations: Station[];
   colorForBasin: Record<string, string>;
+  basinChains: Record<string, Array<[number, number]>>;
 }) {
   return (
     <div className="relative w-full h-full min-h-[420px]">
-      <MapLeaflet stations={stations} colorForBasin={colorForBasin} />
+      <MapLeaflet
+        stations={stations}
+        colorForBasin={colorForBasin}
+        basinChains={basinChains}
+      />
     </div>
   );
 }
