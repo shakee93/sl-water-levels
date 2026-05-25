@@ -7,17 +7,30 @@ import { MapClient } from "./MapClient";
 // Up to 10 basins get unique colors; smaller basins cycle through —
 // Sri Lanka's basins are spatially separated, so a north/south repeat
 // doesn't visually collide on the map.
+// 20 distinct colors so every basin can have its own (Sri Lanka has ~21
+// basins in the feed; the last 1–2 cycle, but they're rare 1-station basins).
+// Picked for visual separation on both dark and light tiles.
 const PALETTE: ReadonlyArray<string> = [
-  "#0ea5e9", // sky
-  "#10b981", // emerald
-  "#f59e0b", // amber
-  "#f43f5e", // rose
-  "#8b5cf6", // violet
-  "#d946ef", // fuchsia
-  "#14b8a6", // teal
-  "#f97316", // orange
-  "#84cc16", // lime
-  "#6366f1", // indigo
+  "#0ea5e9", // sky-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#f43f5e", // rose-500
+  "#8b5cf6", // violet-500
+  "#d946ef", // fuchsia-500
+  "#14b8a6", // teal-500
+  "#f97316", // orange-500
+  "#84cc16", // lime-500
+  "#6366f1", // indigo-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#eab308", // yellow-500
+  "#3b82f6", // blue-500
+  "#a855f7", // purple-500
+  "#22c55e", // green-500
+  "#ef4444", // red-500
+  "#a16207", // amber-700 (darker)
+  "#0d9488", // teal-600 (darker)
+  "#7c3aed", // violet-600 (darker)
 ];
 
 export function SriLankaMap({ stations }: { stations: Station[] }) {
