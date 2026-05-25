@@ -29,8 +29,8 @@ function fmt(v: number | null | undefined) {
   return v == null ? "—" : Number(v).toFixed(2);
 }
 
-export async function StationCard({ stationName }: { stationName: string }) {
-  const data = await fetchStationData(stationName);
+export async function StationCard({ stationName, days = 4 }: { stationName: string; days?: number }) {
+  const data = await fetchStationData(stationName, days);
   const status = statusFor(data.latest?.water_level ?? null, data.thresholds);
   const unit = detectUnit(data.thresholds);
 
@@ -93,7 +93,7 @@ export async function StationCard({ stationName }: { stationName: string }) {
       <div className="p-4 sm:p-6">
         <LevelChart readings={data.readings} thresholds={data.thresholds} unit={unit} />
         <p className="mt-3 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-          Last 4 days · {data.readings.length} readings · Asia/Colombo.{" "}
+          Last {days === 1 ? "24 hours" : `${days} days`} · {data.readings.length} readings · Asia/Colombo.{" "}
           <span className="text-slate-400 dark:text-slate-500">
             Unit (ft or m) inferred from the gauge’s flood thresholds; shown only when confident.
           </span>

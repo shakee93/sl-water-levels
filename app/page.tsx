@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { fetchStations, fetchStationData, statusFor, type Station } from "@/lib/arcgis";
 import { StationPicker } from "./StationPicker";
+import { RangePicker, DEFAULT_DAYS } from "./RangePicker";
 import { StationFinder } from "./StationFinder";
 import { StationCard } from "./StationCard";
 import { StationCardSkeleton } from "./StationCardSkeleton";
@@ -21,7 +22,7 @@ const SITE = "https://sl-water-levels.vercel.app";
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ station?: string }>;
+  searchParams: Promise<{ station?: string; days?: string }>;
 }): Promise<Metadata> {
   const { station } = await searchParams;
   if (!station) {
@@ -70,11 +71,19 @@ export async function generateMetadata({
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ station?: string }>;
+  searchParams: Promise<{ station?: string; days?: string }>;
 }) {
-  const { station: stationParam } = await searchParams;
+  const { station: stationParam, days: daysParam } = await searchParams;
   const cookieStore = await cookies();
   const lastStation = cookieStore.get(STATION_COOKIE)?.value;
+  const lastDays = cookieStore.get("sl_days")?.value;
+  const allowedDays = new Set([1, 4, 7, 14]);
+  const parseDays = (v: string | undefined) => {
+    const n = v ? parseInt(v, 10) : NaN;
+    return allowedDays.has(n) ? n : null;
+  };
+  const days =
+    parseDays(daysParam) ?? parseDays(lastDays) ?? DEFAULT_DAYS;
 
   let stations: Station[] = [];
   let stationsError: string | null = null;
@@ -147,8 +156,9 @@ export default async function Home({
                   {stations.length} stations · {basinCount} basins
                 </div>
               </div>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 <StationFinder stations={stations} />
+                <RangePicker current={days} />
               </div>
             </section>
 
@@ -159,8 +169,8 @@ export default async function Home({
               />
             </Suspense>
 
-            <Suspense key={station} fallback={<StationCardSkeleton />}>
-              <StationCard stationName={station} />
+            <Suspense key={`${station}-${days}`} fallback={<StationCardSkeleton />}>
+              <StationCard stationName={station} days={days} />
             </Suspense>
 
             <Suspense key={`forecast-${station}`} fallback={null}>
