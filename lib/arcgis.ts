@@ -208,6 +208,84 @@ export async function fetchBasinSnapshot(basinName: string): Promise<BasinStatio
   });
 }
 
+export type SnapshotStation = {
+  station: string;
+  basin: string;
+  latest: Reading | null;
+  thresholds: { alert: number | null; minor: number | null; major: number | null };
+  trend: Reading[];
+};
+
+// Every gauge in the country in ONE query, instead of 21 per-basin round trips.
+//
+// `gauges_2_view` holds ~40 gauges on a roughly hourly cadence, so a 12h window
+// is ~480 rows — comfortably under the layer's 1000-row `maxRecordCount` while
+// still leaving enough history to derive a 3h trend. Widening much past 24h
+// would silently hit the cap.
+//
+// `orderByFields=CreationDate DESC` is load-bearing: if the feed ever does
+// exceed 1000 rows in the window the server truncates the OLDEST rows, so every
+// gauge keeps its latest reading and only trend resolution degrades.
+export async function fetchNationalSnapshot(hours = 12): Promise<SnapshotStation[]> {
+  type Raw = {
+    gauge: string;
+    basin: string;
+    water_level: number | null;
+    rain_fall: number | null;
+    CreationDate: number;
+    alertpull: number | null;
+    minorpull: number | null;
+    majorpull: number | null;
+  };
+
+  // ArcGIS TIMESTAMP literals on this service are interpreted as UTC.
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
+
+  const data = await arcgis<{ features: { attributes: Raw }[] }>(
+    "gauges_2_view/FeatureServer/0/query",
+    {
+      where: `CreationDate >= TIMESTAMP '${cutoff}'`,
+      outFields:
+        "gauge,basin,water_level,rain_fall,CreationDate,alertpull,minorpull,majorpull",
+      orderByFields: "CreationDate DESC",
+      resultRecordCount: "1000",
+      returnGeometry: "false",
+    },
+  );
+
+  const byStation = new Map<string, Raw[]>();
+  for (const f of data.features) {
+    const k = (f.attributes.gauge || "").trim();
+    if (!k) continue;
+    if (!byStation.has(k)) byStation.set(k, []);
+    byStation.get(k)!.push(f.attributes);
+  }
+
+  return [...byStation.entries()].map(([station, rows]) => {
+    // Rows arrive newest-first from the service: keep that for `latest`, and
+    // sort ascending for the trend series.
+    const latest = rows[0] ?? null;
+    return {
+      station,
+      basin: (latest?.basin || "").trim(),
+      latest: latest
+        ? { ts: latest.CreationDate, water_level: latest.water_level, rain_fall: latest.rain_fall }
+        : null,
+      thresholds: {
+        alert: latest?.alertpull ?? null,
+        minor: latest?.minorpull ?? null,
+        major: latest?.majorpull ?? null,
+      },
+      trend: [...rows]
+        .sort((a, b) => a.CreationDate - b.CreationDate)
+        .map((r) => ({ ts: r.CreationDate, water_level: r.water_level, rain_fall: r.rain_fall })),
+    };
+  });
+}
+
 export function statusFor(level: number | null, t: StationData["thresholds"]) {
   if (level == null) return { label: "No data", tone: "neutral" as const };
   if (t.major != null && level >= t.major) return { label: "Major flood", tone: "red" as const };
