@@ -13,21 +13,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const stamp = (ts: number | null | undefined) =>
     ts != null ? { lastModified: new Date(ts) } : {};
 
-  const basinLatest = new Map<string, { href: string; ts: number | null }>();
+  const basinLatest = new Map<string, { href: string; ts: number | null; count: number }>();
   let newest: number | null = null;
   for (const s of stations) {
     const ts = s.latest?.ts ?? null;
     if (ts != null && (newest == null || ts > newest)) newest = ts;
     const cur = basinLatest.get(s.basin);
-    if (!cur) basinLatest.set(s.basin, { href: s.basinHref, ts });
-    else if (ts != null && (cur.ts == null || ts > cur.ts)) cur.ts = ts;
+    if (!cur) basinLatest.set(s.basin, { href: s.basinHref, ts, count: 1 });
+    else {
+      cur.count++;
+      if (ts != null && (cur.ts == null || ts > cur.ts)) cur.ts = ts;
+    }
   }
 
   return [
     { url: SITE, ...stamp(newest) },
     { url: `${SITE}/help` },
     { url: `${SITE}/about` },
-    ...[...basinLatest.values()].map((b) => ({ url: `${SITE}${b.href}`, ...stamp(b.ts) })),
+    // One-gauge rivers 308 to their station page, so only list multi-gauge rivers.
+    ...[...basinLatest.values()].filter((b) => b.count > 1).map((b) => ({ url: `${SITE}${b.href}`, ...stamp(b.ts) })),
     ...stations.map((s) => ({ url: `${SITE}${s.href}`, ...stamp(s.latest?.ts) })),
   ];
 }

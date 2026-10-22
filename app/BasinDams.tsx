@@ -32,6 +32,8 @@ export async function BasinDams({ basin }: { basin: string }) {
   const dispatch = await fetchHydroGeneration(24);
   const live = currentByPlant(dispatch);
   const anyLiveMW = [...live.values()].some((p) => p.powerMW > 0);
+  // No live MW (PUCSL feed is all-null today): nothing worth showing, render nothing.
+  if (!anyLiveMW) return null;
 
   return (
     <section className="mt-8">
