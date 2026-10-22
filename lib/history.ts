@@ -46,7 +46,13 @@ export type HistoryData = {
   generatedAt: string;
   stations: HistoryStation[];
   gauge: { start: string; codes: DayCodes[]; levels: (number | null)[][] };
+  /**
+   * Estimated codes, blanked ("." ) from each gauge's first recorded day on:
+   * where we have real readings, the estimate is never shown alongside them.
+   */
   model: { start: string; codes: DayCodes[] };
+  /** Per station: first day with a recorded reading (ISO), or null if none. */
+  recordedFrom: (string | null)[];
 };
 
 function gaugeCode(level: number | null, t: Thresholds | null): string {
@@ -97,24 +103,40 @@ export async function getHistory(): Promise<HistoryData | null> {
     .sort((a, b) => a.basin.localeCompare(b.basin) || a.name.localeCompare(b.name));
 
   const empty = (n: number) => ".".repeat(n);
+  const levels = stations.map((s) => file.gauge.levels[s.station] ?? []);
+  const DAY = 86_400_000;
+  const gaugeStartMs = Date.parse(file.gauge.start + "T00:00:00Z");
+  const modelStartMs = Date.parse(file.model.start + "T00:00:00Z");
+
+  // Recorded beats estimated: once a gauge has readings, its estimate stops,
+  // so the page never shows a modelled "minor flood" next to a real reading
+  // that said otherwise. Before that day the estimate is all there is.
+  const firstRecorded = levels.map((lv) => lv.findIndex((v) => v != null));
+  const recordedFrom = firstRecorded.map((i) =>
+    i < 0 ? null : new Date(gaugeStartMs + i * DAY).toISOString().slice(0, 10),
+  );
+
   return {
     generatedAt: file.generatedAt,
     stations,
     gauge: {
       start: file.gauge.start,
-      codes: stations.map((s) => {
-        const lv = file.gauge.levels[s.station];
-        return lv ? lv.map((v) => gaugeCode(v, s.thresholds)).join("") : empty(file.gauge.days);
-      }),
-      levels: stations.map((s) => file.gauge.levels[s.station] ?? []),
+      codes: stations.map((s, i) =>
+        levels[i].length ? levels[i].map((v) => gaugeCode(v, s.thresholds)).join("") : empty(file.gauge.days),
+      ),
+      levels,
     },
     model: {
       start: file.model.start,
-      codes: stations.map((s) => {
+      codes: stations.map((s, i) => {
         const m = file.model.stations[s.station];
-        return m ? m.values.map((v) => modelCode(v, m.thresholds)).join("") : empty(file.model.days);
+        const codes = m ? m.values.map((v) => modelCode(v, m.thresholds)).join("") : empty(file.model.days);
+        if (firstRecorded[i] < 0) return codes;
+        const cut = Math.round((gaugeStartMs + firstRecorded[i] * DAY - modelStartMs) / DAY);
+        return cut <= 0 ? empty(codes.length) : codes.slice(0, cut) + empty(Math.max(0, codes.length - cut));
       }),
     },
+    recordedFrom,
   };
 }
 
