@@ -146,13 +146,22 @@ const nameOf: Record<ThresholdName, string> = { alert: "alert level", minor: "mi
 const SEVERITY: ThresholdName[] = ["alert", "minor", "major"];
 
 function whenPhrase(ts: number, now: number): string {
+  // Always pair the clock time with "in about N hours": a bare "8 am today" read
+  // just after midnight looks like it already passed. Part of day instead of
+  // "today", which is ambiguous late at night.
   const c = new Date(ts + COLOMBO_MS);
   const hr = c.getUTCHours();
   const clock = `${hr % 12 || 12} ${hr < 12 ? "am" : "pm"}`;
   const dd = Math.floor((ts + COLOMBO_MS) / 864e5) - Math.floor((now + COLOMBO_MS) / 864e5);
-  if (dd <= 0) return `around ${clock} ${hr >= 18 ? "tonight" : "today"}`;
-  if (dd === 1) return `around ${clock} ${hr < 5 ? "tonight" : "tomorrow"}`;
-  return `around ${clock} the day after tomorrow`;
+  const part = hr < 5 ? "tonight" : hr < 12 ? "morning" : hr < 18 ? "afternoon" : "evening";
+  const day =
+    dd <= 0
+      ? part === "tonight" ? "tonight" : `this ${part}`
+      : dd === 1
+        ? part === "tonight" ? "tonight" : `tomorrow ${part}`
+        : "the day after tomorrow";
+  const h = Math.max(1, Math.round((ts - now) / 3_600_000));
+  return `around ${clock} ${day} (in about ${h} hour${h === 1 ? "" : "s"})`;
 }
 
 function emptyResult(station: string, unit: Unit, headline: string, notes: string[], trend: TrendResult | null, level: number | null, asOfTs: number | null): Forecast {
