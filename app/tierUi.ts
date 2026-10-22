@@ -1,19 +1,13 @@
 import type { Tier } from "@/lib/arcgis";
+import type { TFn } from "@/lib/i18n/translate";
 
 // Shared tier vocabulary for the home page (list dots, favourites, map).
 // Worst first.
 export const TIER_ORDER: Tier[] = ["major", "minor", "alert", "watch", "normal", "none", "stale"];
 export const tierRank = (t: Tier) => TIER_ORDER.indexOf(t);
 
-export const TIER_TEXT: Record<Tier, string> = {
-  major: "Major flood",
-  minor: "Minor flood",
-  alert: "Alert",
-  watch: "Near alert",
-  normal: "Normal",
-  none: "No flood levels",
-  stale: "Not reporting",
-};
+/** Localised tier label: tierLabel(t, "major") -> "Major flood" / "ප්‍රධාන ගංවතුර". */
+export const tierLabel = (t: TFn, tier: Tier): string => t(`tier.${tier}` as const);
 
 export const TIER_DOT: Record<Tier, string> = {
   major: "bg-red-500",
@@ -64,27 +58,4 @@ export type HomeStation = {
 // Same threshold as lib/attention RISING_M_PER_H: below this a gauge is "steady".
 export const STEADY_M_PER_H = 0.006;
 
-export function formatAge(ts: number, now: number): string {
-  const min = Math.max(0, Math.round((now - ts) / 60_000));
-  if (min < 1) return "just now";
-  if (min < 60) return `${min} min ago`;
-  const h = Math.round(min / 60);
-  if (h < 48) return `${h} h ago`;
-  return `${Math.round(h / 24)} d ago`;
-}
-
-export function formatAgeShort(ts: number, now: number): string {
-  return formatAge(ts, now).replace(" ago", " old");
-}
-
-export function colomboTime(ts: number): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Colombo",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-    .format(new Date(ts))
-    .replace(" AM", " am")
-    .replace(" PM", " pm");
-}
+export { formatAge, clock as colomboTime } from "@/lib/i18n/format";

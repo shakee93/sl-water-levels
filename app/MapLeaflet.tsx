@@ -16,7 +16,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { matchLocation } from "@/lib/nearby";
-import { TIER_HEX, TIER_TEXT, type HomeStation } from "./tierUi";
+import { TIER_HEX, tierLabel, type HomeStation } from "./tierUi";
+import { useI18n } from "./LocaleProvider";
+import { riverName } from "@/lib/i18n/format";
 import { useLocation } from "./useLocation";
 
 type Props = {
@@ -91,6 +93,7 @@ function FitToUser({ points }: { points: Array<[number, number]> | null }) {
 
 export function MapLeaflet({ stations, basinChains }: Props) {
   const scheme = useColorScheme();
+  const { lang, t, p } = useI18n();
   // On phones the whole island only fits one zoom level further out.
   const [zoom] = useState(() =>
     typeof window !== "undefined" && window.innerWidth < 640 ? SL_ZOOM - 1 : SL_ZOOM,
@@ -166,20 +169,20 @@ export function MapLeaflet({ stations, basinChains }: Props) {
             <Tooltip direction="top" offset={[0, -6]} opacity={1}>
               <span className="font-medium">{stationDisplayName(s.station)}</span>
               <span className="text-slate-500">
-                {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {TIER_TEXT[s.tier]}
+                {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {tierLabel(t, s.tier)}
               </span>
             </Tooltip>
             <Popup>
               <div className="space-y-0.5">
-                <Link href={s.href} className="font-semibold text-sky-700 hover:underline block">
+                <Link href={p(s.href)} className="font-semibold text-sky-700 hover:underline block">
                   {stationDisplayName(s.station)}
                 </Link>
                 <div className="text-xs text-slate-500">
-                  {s.basin}
-                  {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {TIER_TEXT[s.tier]}
+                  {riverName(s.basin, lang)}
+                  {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {tierLabel(t, s.tier)}
                 </div>
-                <Link href={s.href} className="text-xs text-sky-600 hover:underline inline-block mt-1">
-                  Open station →
+                <Link href={p(s.href)} className="text-xs text-sky-600 hover:underline inline-block mt-1">
+                  {t("map.openStation")}
                 </Link>
               </div>
             </Popup>
@@ -200,8 +203,8 @@ export function MapLeaflet({ stations, basinChains }: Props) {
             pathOptions={{ fillColor: "#2563eb", fillOpacity: 1, color: scheme === "dark" ? "#0f172a" : "#ffffff", weight: 2.5, opacity: 1 }}
           >
             <Tooltip direction="top" offset={[0, -6]} opacity={1}>
-              <span className="font-medium">You are here</span>
-              <span className="text-slate-500"> · about 1 km</span>
+              <span className="font-medium">{t("map.you")}</span>
+              <span className="text-slate-500"> · {t("map.about1km")}</span>
             </Tooltip>
           </CircleMarker>
         </>

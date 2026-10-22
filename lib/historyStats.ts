@@ -3,6 +3,8 @@
 // always tell the same story. No server-only imports: safe in client bundles.
 
 import type { HistoryData } from "./history";
+import { monthsLong } from "./i18n/format";
+import type { TFn } from "./i18n/translate";
 
 // ---- dates (UTC calendar days; history data is already in Colombo days) ----
 
@@ -11,21 +13,7 @@ export const toMs = (iso: string) => Date.parse(iso + "T00:00:00Z");
 export const toIso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 export const addDays = (iso: string, n: number) => toIso(toMs(iso) + n * DAY_MS);
 export const diffDays = (a: string, b: string) => Math.round((toMs(a) - toMs(b)) / DAY_MS);
-export const fmtShort = (iso: string) =>
-  new Date(toMs(iso)).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
-
-export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-export const MONTHS_LONG = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-/** "21 Oct – 18 Nov 2023", "28 Nov 2025", "28 Dec 2024 – 3 Jan 2025". */
-export function fmtRange(from: string, to: string): string {
-  if (from === to) return `${fmtShort(from)} ${from.slice(0, 4)}`;
-  if (from.slice(0, 4) !== to.slice(0, 4)) return `${fmtShort(from)} ${from.slice(0, 4)} – ${fmtShort(to)} ${to.slice(0, 4)}`;
-  return `${fmtShort(from)} – ${fmtShort(to)} ${to.slice(0, 4)}`;
-}
+// Month names, "21 Oct – 18 Nov 2023" style ranges and other display text live in lib/i18n/format.ts.
 
 // ---- aggregation ----
 
@@ -201,16 +189,18 @@ export function floodSeasons(risk: number[]): { main: number[]; second: number[]
   return { main, second };
 }
 
-const monthSpan = (run: number[]) =>
-  run.length === 1
-    ? `in ${MONTHS_LONG[run[0]]}`
-    : `between ${MONTHS_LONG[run[0]]} and ${MONTHS_LONG[run[run.length - 1]]}`;
+const monthSpan = (run: number[], t: TFn) => {
+  const m = monthsLong(t);
+  return run.length === 1
+    ? t("hist.span.in", { month: m[run[0]] })
+    : t("hist.span.between", { a: m[run[0]], b: m[run[run.length - 1]] });
+};
 
 /** "mostly between October and December, with a smaller peak in May" */
-export function seasonPhrase(risk: number[]): string | null {
+export function seasonPhrase(risk: number[], t: TFn): string | null {
   const { main, second } = floodSeasons(risk);
   if (!main.length) return null;
-  return `mostly ${monthSpan(main)}${second ? `, with a smaller peak ${monthSpan(second)}` : ""}`;
+  return `${t("hist.season.mostly", { span: monthSpan(main, t) })}${second ? t("hist.season.smaller", { span: monthSpan(second, t) }) : ""}`;
 }
 
 /** Days with minor/major flooding per source, for headline counts. */
@@ -243,7 +233,7 @@ export type FloodSummary = {
   events: FloodEvent[];
 };
 
-export function summarize(data: HistoryData, idx: number[], nowMs = Date.now()): FloodSummary {
+export function summarize(data: HistoryData, idx: number[], t: TFn, nowMs = Date.now()): FloodSummary {
   const st = scopeStats(data, idx);
   const risk = monthRisk(seasonality(data, st));
   const { main, second } = floodSeasons(risk);
@@ -255,7 +245,7 @@ export function summarize(data: HistoryData, idx: number[], nowMs = Date.now()):
     risk,
     main,
     second,
-    season: seasonPhrase(risk),
+    season: seasonPhrase(risk, t),
     now: {
       month,
       phase: main.includes(month)
@@ -277,15 +267,14 @@ export function summarize(data: HistoryData, idx: number[], nowMs = Date.now()):
 }
 
 /** "5 gauges at major flood, 2 at minor" / "major flood" for a single gauge. */
-export function peakPhrase(a: Agg, scopeSize: number): string {
-  if (scopeSize === 1) return a.major ? "major flood" : a.minor ? "minor flood" : "alert";
+export function peakPhrase(a: Agg, scopeSize: number, t: TFn): string {
+  if (scopeSize === 1) return a.major ? t("hist.peak.major") : a.minor ? t("hist.peak.minor") : t("hist.peak.alert");
   const parts: string[] = [];
-  if (a.major) parts.push(`${a.major} ${a.major === 1 ? "gauge" : "gauges"} at major flood`);
-  if (a.minor) parts.push(`${a.minor} at minor flood`);
-  if (!parts.length && a.alert) parts.push(`${a.alert} at alert`);
+  if (a.major) parts.push(t(a.major === 1 ? "hist.peak.gaugesMajor1" : "hist.peak.gaugesMajorN", { n: a.major }));
+  if (a.minor) parts.push(t("hist.peak.minorN", { n: a.minor }));
+  if (!parts.length && a.alert) parts.push(t("hist.peak.alertN", { n: a.alert }));
   return parts.join(", ");
 }
-
 /** Gauges in scope at minor/major (else alert) on an event's peak day, worst first. */
 export function peakGauges(data: HistoryData, idx: number[], e: FloodEvent): { name: string; tier: "alert" | "minor" | "major" }[] {
   const src = e.source === "gauge" ? data.gauge : data.model;
@@ -300,9 +289,9 @@ export function peakGauges(data: HistoryData, idx: number[], e: FloodEvent): { n
 }
 
 /** "Hanwella, Glencourse +3 (major flood)" */
-export function peakGaugesPhrase(g: { name: string; tier: string }[], max = 2): string {
+export function peakGaugesPhrase(g: { name: string; tier: string }[], t: TFn, max = 2): string {
   if (!g.length) return "";
-  const worst = g[0].tier === "major" ? "major flood" : g[0].tier === "minor" ? "minor flood" : "alert";
+  const worst = g[0].tier === "major" ? t("hist.peak.major") : g[0].tier === "minor" ? t("hist.peak.minor") : t("hist.peak.alert");
   const names = g.slice(0, max).map((x) => x.name).join(", ");
   return `${names}${g.length > max ? ` +${g.length - max}` : ""} (${worst})`;
 }

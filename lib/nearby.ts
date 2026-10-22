@@ -1,6 +1,8 @@
 // Pure location matching. Runs in the browser only: coordinates never reach the server.
 import { PLACES, type Place } from "@/lib/places";
 import { DISTRICT_BY_STATION } from "@/lib/districts";
+import { formatKmT } from "@/lib/i18n/format";
+import type { TFn } from "@/lib/i18n/translate";
 
 export type LatLon = { lat: number; lon: number };
 export type GaugePoint = { station: string; basin: string; latitude: number; longitude: number; href: string };
@@ -20,7 +22,8 @@ export function distanceKm(a: LatLon, b: LatLon): number {
   return 12742 * Math.asin(Math.sqrt(h));
 }
 
-export function formatKm(km: number): string {
+export function formatKm(km: number, t?: TFn): string {
+  if (t) return formatKmT(km, t);
   if (km < 1) return "under 1 km";
   return `${km < 10 ? Math.round(km * 10) / 10 : Math.round(km)} km`;
 }

@@ -143,6 +143,8 @@ export type YearSummaryViewProps = {
   myLevel?: number | null;
   labels: YearSummaryLabels;
   locale: string;
+  /** Deterministic dates (no Intl, so server and browser always agree): month names + "{d} {mon}"-style pattern. */
+  dateFormat?: { months: string[]; pattern: string };
 };
 
 export function YearSummaryView(p: YearSummaryViewProps) {
@@ -153,10 +155,16 @@ export function YearSummaryView(p: YearSummaryViewProps) {
   const levelText = myLevel != null ? `${myLevel}${p.personal?.unit ? ` ${p.personal.unit}` : ""}` : "";
   const recordedYears = new Map(p.personal?.recorded.map((y) => [y.year, y]) ?? []);
 
+  const manual = (iso: string) =>
+    p.dateFormat!.pattern.replace("{d}", String(Number(iso.slice(8, 10)))).replace("{mon}", p.dateFormat!.months[Number(iso.slice(5, 7)) - 1]);
   const date = (iso: string) =>
-    new Date(iso + "T00:00:00Z").toLocaleDateString(p.locale, { day: "numeric", month: "short", timeZone: "UTC" });
+    p.dateFormat
+      ? manual(iso)
+      : new Date(iso + "T00:00:00Z").toLocaleDateString(p.locale, { day: "numeric", month: "short", timeZone: "UTC" });
   const dateY = (iso: string) =>
-    new Date(iso + "T00:00:00Z").toLocaleDateString(p.locale, {
+    p.dateFormat
+      ? `${manual(iso)} ${iso.slice(0, 4)}`
+      : new Date(iso + "T00:00:00Z").toLocaleDateString(p.locale, {
       day: "numeric",
       month: "short",
       year: "numeric",

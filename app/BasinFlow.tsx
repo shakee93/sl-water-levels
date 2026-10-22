@@ -4,6 +4,10 @@ import { fetchBasinSnapshot, statusFor, type BasinStation } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 import { stationPath } from "@/lib/slug";
 import { formatLevel, type Unit } from "@/lib/units";
+import { getI18n } from "@/lib/i18n/server";
+import { riverName } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
+import type { TFn } from "@/lib/i18n/translate";
 
 const dotForTone: Record<string, string> = {
   green: "bg-emerald-500",
@@ -21,9 +25,10 @@ function pct(level: number | null, threshold: number | null) {
 
 const STEADY_M_PER_H = 0.006;
 
-function fmtRate(rateM: number) {
+function fmtRate(rateM: number, t: TFn) {
   const cm = Math.abs(rateM) * 100;
-  return `${rateM > 0 ? "+" : "-"}${cm >= 100 ? `${(cm / 100).toFixed(1)} m` : `${Math.max(1, Math.round(cm))} cm`}/h`;
+  const v = cm >= 100 ? `${(cm / 100).toFixed(1)} ${t("unit.mPerH")}` : `${Math.max(1, Math.round(cm))} ${t("unit.cmPerH")}`;
+  return `${rateM > 0 ? "+" : "-"}${v}`;
 }
 
 function Sparkline({ readings }: { readings: BasinStation["trend24h"] }) {
@@ -57,14 +62,14 @@ function Sparkline({ readings }: { readings: BasinStation["trend24h"] }) {
   );
 }
 
-function Arrow({ rate }: { rate: number }) {
+function Arrow({ t, rate }: { t: TFn; rate: number }) {
   if (Math.abs(rate) < STEADY_M_PER_H) {
-    return <Minus className="size-4 text-slate-500" aria-label="steady" />;
+    return <Minus className="size-4 text-slate-500" aria-label={t("trend.steady")} />;
   }
   if (rate > 0) {
-    return <ArrowUp className="size-4 text-orange-600 dark:text-orange-400" aria-label="rising" />;
+    return <ArrowUp className="size-4 text-orange-600 dark:text-orange-400" aria-label={t("trend.rising")} />;
   }
-  return <ArrowDown className="size-4 text-emerald-600 dark:text-emerald-400" aria-label="falling" />;
+  return <ArrowDown className="size-4 text-emerald-600 dark:text-emerald-400" aria-label={t("trend.falling")} />;
 }
 
 function buildWaveInsight(stations: BasinStation[], selectedStation: string) {
@@ -96,23 +101,24 @@ const relToneText: RelToneClass = {
 };
 
 function relativeToThreshold(
+  tt: TFn,
   level: number | null | undefined,
   unit: Unit,
   t: { alert: number | null; minor: number | null; major: number | null },
 ): { label: string; tone: keyof RelToneClass } | null {
   if (level == null) return null;
   if (t.major != null && level >= t.major) {
-    return { label: `+${(level - t.major).toFixed(2)}${unit ? ` ${unit}` : ""} above major`, tone: "red" };
+    return { label: tt("flow.aboveMajor", { amount: `${(level - t.major).toFixed(2)}${unit ? ` ${unit}` : ""}` }), tone: "red" };
   }
   if (t.minor != null && level >= t.minor) {
-    return { label: `+${(level - t.minor).toFixed(2)}${unit ? ` ${unit}` : ""} above minor`, tone: "orange" };
+    return { label: tt("flow.aboveMinor", { amount: `${(level - t.minor).toFixed(2)}${unit ? ` ${unit}` : ""}` }), tone: "orange" };
   }
   if (t.alert != null && level >= t.alert) {
-    return { label: `+${(level - t.alert).toFixed(2)}${unit ? ` ${unit}` : ""} above alert`, tone: "yellow" };
+    return { label: tt("flow.aboveAlert", { amount: `${(level - t.alert).toFixed(2)}${unit ? ` ${unit}` : ""}` }), tone: "yellow" };
   }
   if (t.alert != null) {
     return {
-      label: `${(t.alert - level).toFixed(2)}${unit ? ` ${unit}` : ""} below alert`,
+      label: tt("flow.belowAlert", { amount: `${(t.alert - level).toFixed(2)}${unit ? ` ${unit}` : ""}` }),
       tone: "neutral",
     };
   }
@@ -120,13 +126,16 @@ function relativeToThreshold(
 }
 
 export async function BasinFlow({
+  lang,
   basin,
   selectedStation,
 }: {
+  lang: Locale;
   basin: string;
   selectedStation: string;
 }) {
   if (!basin) return null;
+  const { t, p } = getI18n(lang);
   const raw = await fetchBasinSnapshot(basin);
   if (raw.length <= 1) return null;
   const stations = orderStations(basin, raw);
@@ -136,7 +145,7 @@ export async function BasinFlow({
     <section className="mt-6">
       <div className="flex items-baseline justify-between mb-3">
         <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200">
-          Along the {basin.trim()}
+          {t("flow.along", { river: riverName(basin, lang) })}
         </h3>
       </div>
 
@@ -144,8 +153,7 @@ export async function BasinFlow({
         <div className="mb-3 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-sm flex items-start gap-2">
           <TrendingUp className="size-4 shrink-0 mt-0.5 text-amber-700 dark:text-amber-400" aria-hidden />
           <div className="text-amber-950 dark:text-amber-100">
-            <strong>{insight.upstreamStation}</strong> is rising {fmtRate(insight.rateM).replace("+", "")}. The rise may
-            reach {selectedStation} in the coming hours.
+            {t("flow.insight", { upstream: insight.upstreamStation, rate: fmtRate(insight.rateM, t).replace("+", ""), station: selectedStation })}
           </div>
         </div>
       )}
@@ -158,12 +166,12 @@ export async function BasinFlow({
           const rate = !stale ? s.rate3hM : null;
           const alertPct = stale ? null : pct(s.latest?.water_level ?? null, s.thresholds.alert);
           const majorPct = pct(s.thresholds.minor, s.thresholds.alert);
-          const rel = stale ? null : relativeToThreshold(s.latest?.water_level, s.unit, s.thresholds);
+          const rel = stale ? null : relativeToThreshold(t, s.latest?.water_level, s.unit, s.thresholds);
 
           return (
             <li key={s.station}>
               <Link
-                href={stationPath(s.basin, s.station)}
+                href={p(stationPath(s.basin, s.station))}
                 aria-current={isSelected ? "page" : undefined}
                 className={`flex items-center gap-3 px-3 sm:px-4 py-3 min-h-14 border-l-4 transition hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 ${
                   isSelected ? "bg-sky-50 dark:bg-sky-950/30 border-sky-500" : "border-transparent"
@@ -179,11 +187,11 @@ export async function BasinFlow({
                 <div className="flex-1 min-w-0">
                   <div className={`text-sm font-medium truncate ${isSelected ? "text-sky-800 dark:text-sky-300 font-semibold" : ""}`}>
                     {s.station}
-                    {isSelected && <span className="ml-2 text-xs font-normal">(this station)</span>}
+                    {isSelected && <span className="ml-2 text-xs font-normal">{t("station.thisStation")}</span>}
                   </div>
                   {stale ? (
                     <div className="text-xs mt-0.5 text-slate-600 dark:text-slate-400">
-                      {s.ageMin != null ? `Last reading ${Math.round(s.ageMin / 60)} h ago` : "Not reporting"}
+                      {s.ageMin != null ? t("flow.lastReading", { h: Math.round(s.ageMin / 60) }) : t("gauges.notReporting")}
                     </div>
                   ) : (
                     rel && (
@@ -217,10 +225,10 @@ export async function BasinFlow({
                 <div className="flex flex-col items-end shrink-0 min-w-[4.5rem]">
                   <div className={`text-sm font-semibold tabular-nums flex items-center gap-1 ${stale ? "text-slate-500 dark:text-slate-400" : ""}`}>
                     {formatLevel(s.latest?.water_level, s.unit)}
-                    {rate != null && <Arrow rate={rate} />}
+                    {rate != null && <Arrow t={t} rate={rate} />}
                   </div>
                   {rate != null && Math.abs(rate) >= STEADY_M_PER_H && (
-                    <div className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">{fmtRate(rate)}</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">{fmtRate(rate, t)}</div>
                   )}
                 </div>
 
@@ -234,7 +242,7 @@ export async function BasinFlow({
           );
         })}
       </ol>
-      <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">Arrows show the change over the last 3 hours.</p>
+      <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">{t("flow.arrows")}</p>
     </section>
   );
 }

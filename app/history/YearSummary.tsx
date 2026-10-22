@@ -25,6 +25,7 @@ export function YearSummary({
   myLevel,
   labels,
   locale = "en-GB",
+  dateFormat,
 }: {
   data: HistoryData;
   scope: Scope;
@@ -38,6 +39,7 @@ export function YearSummary({
   labels?: Partial<YearSummaryLabels>;
   /** BCP 47 locale for dates, e.g. "en-GB", "si-LK", "ta-LK". */
   locale?: string;
+  dateFormat?: { months: string[]; pattern: string };
 }) {
   const idx = scopeIndices(data, scope);
   if (!idx.length) return null;
@@ -75,6 +77,7 @@ export function YearSummary({
       myLevel={myLevel}
       labels={{ ...YEAR_SUMMARY_EN, ...labels }}
       locale={locale}
+      dateFormat={dateFormat}
     />
   );
 }

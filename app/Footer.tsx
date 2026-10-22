@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { fetchStations, type Station } from "@/lib/arcgis";
 import { basinPath } from "@/lib/slug";
+import { getI18n } from "@/lib/i18n/server";
+import { riverName } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
 
-export async function Footer() {
+export async function Footer({ lang }: { lang: Locale }) {
+  const { t, p } = getI18n(lang);
   let stations: Station[] = [];
   try {
     stations = await fetchStations();
@@ -23,31 +27,30 @@ export async function Footer() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 text-sm">
         <div className="space-y-2">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-            Sri Lanka Water Levels
+            {t("site.name")}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
-            Live river-gauge readings and next-hour flood forecasts for every
-            basin in Sri Lanka, updated every minute.
+            {t("footer.blurb")}
           </p>
         </div>
 
         <div className="space-y-2">
           <h4 className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            Basins
+            {t("footer.basins")}
           </h4>
           <ul className="space-y-1 max-h-44 overflow-y-auto pr-2">
             {basins.length === 0 ? (
               <li className="text-slate-400 dark:text-slate-500 text-xs">
-                Loading…
+                {t("footer.loading")}
               </li>
             ) : (
               basins.map((b) => (
                 <li key={b}>
                   <Link
-                    href={basinPath(b)}
+                    href={p(basinPath(b))}
                     className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
                   >
-                    {b}
+                    {riverName(b, lang)}
                   </Link>
                 </li>
               ))
@@ -57,31 +60,31 @@ export async function Footer() {
 
         <div className="space-y-2">
           <h4 className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            Site
+            {t("footer.site")}
           </h4>
           <ul className="space-y-1">
             <li>
               <Link
-                href="/"
+                href={p("/")}
                 className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
-                All basins & stations
+                {t("footer.allBasinsStations")}
               </Link>
             </li>
             <li>
               <Link
-                href="/about"
+                href={p("/about")}
                 className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
-                About & methodology
+                {t("footer.aboutMethod")}
               </Link>
             </li>
             <li>
               <Link
-                href="/help"
+                href={p("/help")}
                 className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
-                Flood help
+                {t("footer.floodHelp")}
               </Link>
             </li>
             <li>
@@ -91,7 +94,7 @@ export async function Footer() {
                 rel="noreferrer"
                 className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
-                Source on GitHub
+                {t("footer.source")}
               </a>
             </li>
           </ul>
@@ -99,29 +102,29 @@ export async function Footer() {
 
         <div className="space-y-2">
           <h4 className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-            Data
+            {t("footer.data")}
           </h4>
           <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-xs">
-            Readings from the{" "}
+            {t("footer.readingsPre")}
             <a
               className="underline decoration-slate-400/40 hover:text-slate-700 dark:hover:text-slate-200"
               href="https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0"
               target="_blank"
               rel="noreferrer"
             >
-              Sri Lanka Department of Irrigation
+              {t("footer.irrigation")}
             </a>
-            .
+            {t("footer.readingsPost")}
           </p>
           <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-xs">
-            Not an official warning service. In an emergency, call 117.
+            {t("footer.notOfficial")}
           </p>
         </div>
       </div>
 
       <div className="border-t border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <p>© {year} Sri Lanka Water Levels. Built in Sri Lanka.</p>
+          <p>{t("footer.copyright", { year })}</p>
         </div>
       </div>
     </footer>

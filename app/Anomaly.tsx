@@ -1,15 +1,20 @@
 import { AlertTriangle, Siren } from "lucide-react";
 import { fetchBasinSnapshot } from "@/lib/arcgis";
 import { detectAnomaly } from "@/lib/anomaly";
+import { getI18n } from "@/lib/i18n/server";
+import type { Locale } from "@/lib/i18n/config";
 
 export async function Anomaly({
+  lang,
   basin,
   selectedStation,
 }: {
+  lang: Locale;
   basin: string;
   selectedStation: string;
 }) {
   if (!basin) return null;
+  const { t } = getI18n(lang);
   const snapshot = await fetchBasinSnapshot(basin);
   if (snapshot.length === 0) return null;
   const a = detectAnomaly(basin, snapshot, selectedStation);
@@ -37,13 +42,13 @@ export async function Anomaly({
         <Icon className={`size-5 shrink-0 mt-0.5 ${iconColor}`} aria-hidden />
         <div className="flex-1 min-w-0">
           <h3 className={`text-base font-semibold ${titleColor}`}>
-            {isLikely ? "Likely upstream release" : "Unusual rise"}
+            {isLikely ? t("anomaly.likely") : t("anomaly.unusual")}
           </h3>
-          <p className={`mt-1 text-sm ${bodyColor}`}>{a.message}</p>
+          <p className={`mt-1 text-sm ${bodyColor}`} lang="en">{a.message}</p>
           {a.reasons.length > 0 && (
             <details className={`text-sm ${bodyColor}`}>
               <summary className="cursor-pointer min-h-11 inline-flex items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
-                Why?
+                {t("anomaly.why")}
               </summary>
               <ul className="space-y-1">
                 {a.reasons.map((r, i) => (

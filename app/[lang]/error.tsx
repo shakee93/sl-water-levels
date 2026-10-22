@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { useI18n } from "../LocaleProvider";
 
 export default function Error({
   error,
@@ -10,6 +11,7 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { t } = useI18n();
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -19,18 +21,18 @@ export default function Error({
       <div className="max-w-md w-full rounded-xl border border-red-200 dark:border-red-900 bg-white dark:bg-slate-900 p-6 shadow-sm">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-red-100 dark:bg-red-950/60 px-2.5 py-1 text-xs font-medium text-red-700 dark:text-red-300 mb-3">
           <AlertTriangle className="size-3.5" />
-          Something broke
+          {t("error.badge")}
         </div>
-        <h1 className="text-lg font-semibold mb-2">Could not load this station</h1>
+        <h1 className="text-lg font-semibold mb-2">{t("error.title")}</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          The river data didn&apos;t load. Try again in a moment.
+          {t("error.body")}
         </p>
         <button
           onClick={reset}
           className="inline-flex items-center gap-1.5 justify-center rounded-md bg-sky-600 hover:bg-sky-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition"
         >
           <RefreshCw className="size-3.5" />
-          Try again
+          {t("error.retry")}
         </button>
       </div>
     </main>

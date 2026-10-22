@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getNational } from "@/lib/arcgis";
 import { getHistory, historyPath } from "@/lib/history";
+import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
 const SITE = "https://sl-water-levels.vercel.app";
 
@@ -29,15 +30,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  // Every URL is listed once per locale (English unprefixed, /si, /ta), each carrying the
+  // full hreflang set, so the three versions point at each other.
+  const abs = (l: Locale, path: string) => {
+    const p = localePath(l, path);
+    return SITE + (p === "/" ? "" : p);
+  };
+  const entry = (path: string, ts?: number | null) =>
+    LOCALES.map((l) => ({
+      url: abs(l, path),
+      ...stamp(ts),
+      alternates: {
+        languages: {
+          en: abs("en", path),
+          si: abs("si", path),
+          ta: abs("ta", path),
+          "x-default": abs("en", path),
+        },
+      },
+    }));
+
   return [
-    { url: SITE, ...stamp(newest) },
-    { url: `${SITE}/help` },
-    { url: `${SITE}/about` },
-    { url: `${SITE}/history` },
-    ...[...new Set(history?.stations.map((s) => s.basin) ?? [])].map((b) => ({ url: `${SITE}${historyPath(b)}` })),
-    ...(history?.stations ?? []).map((s) => ({ url: `${SITE}${historyPath(s.basin, s.station)}` })),
+    ...entry("/", newest),
+    ...entry("/help"),
+    ...entry("/about"),
+    ...entry("/history"),
+    ...[...new Set(history?.stations.map((s) => s.basin) ?? [])].flatMap((b) => entry(historyPath(b))),
+    ...(history?.stations ?? []).flatMap((s) => entry(historyPath(s.basin, s.station))),
     // One-gauge rivers 308 to their station page, so only list multi-gauge rivers.
-    ...[...basinLatest.values()].filter((b) => b.count > 1).map((b) => ({ url: `${SITE}${b.href}`, ...stamp(b.ts) })),
-    ...stations.map((s) => ({ url: `${SITE}${s.href}`, ...stamp(s.latest?.ts) })),
+    ...[...basinLatest.values()].filter((b) => b.count > 1).flatMap((b) => entry(b.href, b.ts)),
+    ...stations.flatMap((s) => entry(s.href, s.latest?.ts)),
   ];
 }

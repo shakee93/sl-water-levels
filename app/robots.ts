@@ -4,10 +4,7 @@ const SITE = "https://sl-water-levels.vercel.app";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [
-      { userAgent: "*", allow: "/" },
-    ],
+    rules: [{ userAgent: "*", allow: "/" }],
     sitemap: `${SITE}/sitemap.xml`,
-    host: SITE,
   };
 }

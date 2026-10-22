@@ -6,6 +6,8 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
 import { trackEvent } from "@/lib/umami";
+import { useI18n } from "./LocaleProvider";
+import { riverName } from "@/lib/i18n/format";
 
 const STATION_COOKIE = "sl_station";
 
@@ -23,6 +25,7 @@ export function StationPicker({
   id?: string;
 }) {
   const router = useRouter();
+  const { lang, t, p } = useI18n();
   const [isPending, startTransition] = useTransition();
 
   const grouped = useMemo(() => {
@@ -52,7 +55,7 @@ export function StationPicker({
     const next = new URLSearchParams(window.location.search);
     next.delete("station");
     const qs = next.toString();
-    const url = `${stationPath(hit.basin, hit.station)}${qs ? `?${qs}` : ""}`;
+    const url = `${p(stationPath(hit.basin, hit.station))}${qs ? `?${qs}` : ""}`;
     startTransition(() => {
       router.push(url);
     });
@@ -69,7 +72,7 @@ export function StationPicker({
         className="w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 min-h-11 px-3.5 py-2.5 pr-10 text-base sm:text-sm font-medium text-slate-900 dark:text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {grouped.map(([basin, list]) => (
-          <optgroup key={basin} label={basin}>
+          <optgroup key={basin} label={riverName(basin, lang)}>
             {list.map((s) => (
               <option key={`${s.basin}|${s.station}`} value={s.station}>
                 {s.station}
@@ -80,7 +83,7 @@ export function StationPicker({
       </select>
       <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
         {isPending ? (
-          <Loader2 className="size-4 animate-spin text-sky-600 dark:text-sky-400" aria-label="Loading" />
+          <Loader2 className="size-4 animate-spin text-sky-600 dark:text-sky-400" aria-label={t("common.loading")} />
         ) : (
           <ChevronDown className="size-4 text-slate-400" aria-hidden="true" />
         )}

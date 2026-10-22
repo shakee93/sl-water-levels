@@ -14,26 +14,13 @@ import {
 } from "recharts";
 import type { Reading, StationData } from "@/lib/arcgis";
 import { useDays } from "./RangePicker";
+import { useI18n } from "./LocaleProvider";
+import { dayTick, fullStamp, hourTick } from "@/lib/i18n/format";
 
-const TZ = "Asia/Colombo";
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 const COLOMBO_MS = 5.5 * HOUR;
 
-function lower(s: string) {
-  return s.replace(/\s?(AM|PM)/, (_, m: string) => ` ${m.toLowerCase()}`);
-}
-const hourFmt = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", hour12: true });
-const dayFmt = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, weekday: "short", day: "numeric" });
-const fullFmt = new Intl.DateTimeFormat("en-GB", {
-  timeZone: TZ,
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  hour: "numeric",
-  minute: "2-digit",
-  hour12: true,
-});
 
 function niceTicks(from: number, to: number, days: number): number[] {
   const step = days <= 1 ? 4 * HOUR : DAY;
@@ -53,6 +40,7 @@ export function LevelChart({
   unit?: "ft" | "m" | null;
 }) {
   const days = useDays();
+  const { t } = useI18n();
 
   const { data, ticks, domain, last } = useMemo(() => {
     const valid = readings.filter((r) => r.water_level != null);
@@ -79,12 +67,12 @@ export function LevelChart({
   if (data.length === 0) {
     return (
       <div className="h-80 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-md">
-        No readings in this period.
+        {t("chart.none")}
       </div>
     );
   }
 
-  const tickFmt = (v: number) => (days <= 1 ? lower(hourFmt.format(v)) : dayFmt.format(v));
+  const tickFmt = (v: number) => (days <= 1 ? hourTick(v, t) : dayTick(v, t));
   const line = (y: number | null, label: string, color: string) =>
     y != null && (
       <ReferenceLine
@@ -99,7 +87,7 @@ export function LevelChart({
     <div
       className="h-[22rem] sm:h-80 w-full"
       role="img"
-      aria-label={`Water level over the last ${days} ${days === 1 ? "day" : "days"}; latest ${last?.level.toFixed(2)}${u}`}
+      aria-label={t("chart.aria", { days: t(days === 1 ? "range.day" : "range.days", { n: days }), level: `${last?.level.toFixed(2)}${u}` })}
     >
       <ResponsiveContainer>
         <LineChart data={data} margin={{ top: 12, right: 20, bottom: 0, left: 0 }}>
@@ -126,16 +114,16 @@ export function LevelChart({
             tickFormatter={(v) => `${v}${unit ?? ""}`}
           />
           <Tooltip
-            labelFormatter={(v) => lower(fullFmt.format(Number(v)))}
+            labelFormatter={(v) => fullStamp(Number(v), t)}
             formatter={(v) => {
               const n = typeof v === "number" ? v : Number(v);
-              return [Number.isFinite(n) ? `${n.toFixed(2)}${u}` : "—", "Water level"];
+              return [Number.isFinite(n) ? `${n.toFixed(2)}${u}` : "—", t("chart.level")];
             }}
             contentStyle={{ fontSize: 13 }}
           />
-          {line(thresholds.alert, "Alert", "#d97706")}
-          {line(thresholds.minor, "Minor flood", "#ea580c")}
-          {line(thresholds.major, "Major flood", "#dc2626")}
+          {line(thresholds.alert, t("mark.alert"), "#d97706")}
+          {line(thresholds.minor, t("mark.minor"), "#ea580c")}
+          {line(thresholds.major, t("mark.major"), "#dc2626")}
           <Line type="monotone" dataKey="level" stroke="#0ea5e9" strokeWidth={2} dot={false} isAnimationActive={false} />
           {last && (
             <ReferenceDot
@@ -146,7 +134,7 @@ export function LevelChart({
               stroke="#fff"
               strokeWidth={2}
               ifOverflow="visible"
-              label={{ value: "Now", position: "top", fontSize: 12, fill: "currentColor" }}
+              label={{ value: t("chart.now"), position: "top", fontSize: 12, fill: "currentColor" }}
             />
           )}
         </LineChart>

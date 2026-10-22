@@ -4,7 +4,10 @@ import type { NationalStation, Tier } from "@/lib/arcgis";
 import { stationDisplayName } from "@/lib/displayName";
 import { formatLevel } from "@/lib/units";
 import { TimeAgo } from "./TimeAgo";
-import { STEADY_M_PER_H, TIER_TEXT } from "./tierUi";
+import { STEADY_M_PER_H, tierLabel } from "./tierUi";
+import { getI18n } from "@/lib/i18n/server";
+import type { Locale } from "@/lib/i18n/config";
+import type { TFn } from "@/lib/i18n/translate";
 
 type Style = { pill: string; bar: string; line: string; dot: string };
 
@@ -24,7 +27,7 @@ const ROW_BORDER: Partial<Record<Tier, string>> = {
   watch: "border-yellow-300 dark:border-yellow-900 bg-yellow-50/60 dark:bg-yellow-950/20",
 };
 
-function Sparkline({ s, color }: { s: NationalStation; color: string }) {
+function Sparkline({ t, s, color }: { t: TFn; s: NationalStation; color: string }) {
   const vals = s.trend24h.map((r) => r.water_level).filter((v): v is number => v != null);
   if (vals.length < 3) return <span className="w-16 shrink-0" aria-hidden />;
   const min = Math.min(...vals);
@@ -36,27 +39,27 @@ function Sparkline({ s, color }: { s: NationalStation; color: string }) {
     .map((v, i) => `${((i / (vals.length - 1)) * W).toFixed(1)},${(H - 2 - ((v - min) / span) * (H - 4)).toFixed(1)}`)
     .join(" ");
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-16 h-[22px] shrink-0" role="img" aria-label="Last 24 hours">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-16 h-[22px] shrink-0" role="img" aria-label={t("gauges.last24")}>
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
 
-function ThresholdBar({ s, bar }: { s: NationalStation; bar: string }) {
+function ThresholdBar({ t, s, bar }: { t: TFn; s: NationalStation; bar: string }) {
   const level = s.latest?.water_level;
   const { alert, minor, major } = s.thresholds;
   const top = major ?? minor ?? (alert != null ? alert * 1.5 : null);
   if (level == null || top == null || top <= 0) return null;
   const scaleMax = Math.max(top, level * 1.05);
   const at = (v: number | null) => (v == null ? null : Math.max(0, Math.min(100, (v / scaleMax) * 100)));
-  const ticks = ([["Alert", alert], ["Minor flood", minor], ["Major flood", major]] as const)
+  const ticks = ([[t("mark.alert"), alert], [t("mark.minor"), minor], [t("mark.major"), major]] as const)
     .map(([label, v]) => ({ label, v, pos: at(v) }))
     .filter((t) => t.pos != null && t.pos > 0 && t.pos < 100);
   return (
     <div
       className="relative h-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden"
       role="img"
-      aria-label={`Level ${level} against alert ${alert ?? "n/a"}, minor ${minor ?? "n/a"}, major ${major ?? "n/a"}`}
+      aria-label={t("bar.aria", { level, alert: alert ?? t("common.na"), minor: minor ?? t("common.na"), major: major ?? t("common.na") })}
     >
       <div className={`absolute inset-y-0 left-0 rounded-full ${bar}`} style={{ width: `${at(level)}%` }} />
       {ticks.map((t) => (
@@ -71,19 +74,19 @@ function ThresholdBar({ s, bar }: { s: NationalStation; bar: string }) {
   );
 }
 
-function Trend({ s }: { s: NationalStation }) {
+function Trend({ t, s }: { t: TFn; s: NationalStation }) {
   if (s.rate3hM == null) return null;
   const cm = s.rate3hM * 100;
   if (Math.abs(s.rate3hM) < STEADY_M_PER_H) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
         <Minus className="size-3.5" aria-hidden />
-        Steady
+        {t("trend.steady")}
       </span>
     );
   }
   const rising = cm > 0;
-  const text = `${Math.abs(cm) < 10 ? Math.abs(cm).toFixed(1).replace(/\.0$/, "") : Math.round(Math.abs(cm))} cm/h`;
+  const text = `${Math.abs(cm) < 10 ? Math.abs(cm).toFixed(1).replace(/\.0$/, "") : Math.round(Math.abs(cm))} ${t("unit.cmPerH")}`;
   return (
     <span
       className={`inline-flex items-center gap-1 text-xs font-medium tabular-nums ${
@@ -91,12 +94,12 @@ function Trend({ s }: { s: NationalStation }) {
       }`}
     >
       {rising ? <ArrowUp className="size-3.5" aria-hidden /> : <ArrowDown className="size-3.5" aria-hidden />}
-      {rising ? "Rising" : "Falling"} {text}
+      {rising ? t("trend.rising") : t("trend.falling")} {text}
     </span>
   );
 }
 
-function Row({ s, serverNow }: { s: NationalStation; serverNow: number }) {
+function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: NationalStation; serverNow: number }) {
   const notReporting = s.latest == null;
   const stale = !notReporting && s.tier === "stale";
   // Stale readings keep their last-known tier, but muted.
@@ -108,7 +111,7 @@ function Row({ s, serverNow }: { s: NationalStation; serverNow: number }) {
 
   return (
     <Link
-      href={s.href}
+      href={p(s.href)}
       className={`block rounded-xl border px-3.5 py-3 min-h-[44px] transition hover:border-sky-400 dark:hover:border-sky-700 ${
         flagged && !muted
           ? ROW_BORDER[tier]
@@ -121,7 +124,7 @@ function Row({ s, serverNow }: { s: NationalStation; serverNow: number }) {
           {flagged && !muted && (
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shrink-0 ${st.pill}`}>
               {tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
-              {TIER_TEXT[tier]}
+              {tierLabel(t, tier)}
             </span>
           )}
         </span>
@@ -136,18 +139,18 @@ function Row({ s, serverNow }: { s: NationalStation; serverNow: number }) {
       </div>
 
       {notReporting ? (
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Not reporting</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("gauges.notReporting")}</p>
       ) : (
         <>
           <div className={`mt-1.5 flex items-center gap-3 ${stale ? "opacity-60" : ""}`}>
             <span className="text-xl font-semibold tabular-nums text-slate-900 dark:text-slate-100">
               {formatLevel(s.latest!.water_level, s.unit)}
             </span>
-            <span className="min-w-0 flex-1">{!stale && <Trend s={s} />}</span>
-            <Sparkline s={s} color={muted ? "#94a3b8" : st.line} />
+            <span className="min-w-0 flex-1">{!stale && <Trend t={t} s={s} />}</span>
+            <Sparkline t={t} s={s} color={muted ? "#94a3b8" : st.line} />
           </div>
           <div className={`mt-2 ${stale ? "opacity-60" : ""}`}>
-            <ThresholdBar s={s} bar={muted ? "bg-slate-400" : st.bar} />
+            <ThresholdBar t={t} s={s} bar={muted ? "bg-slate-400" : st.bar} />
           </div>
         </>
       )}
@@ -156,12 +159,13 @@ function Row({ s, serverNow }: { s: NationalStation; serverNow: number }) {
 }
 
 /** Upstream → downstream list with a thin connector showing flow direction. */
-export function RiverGauges({ stations, serverNow }: { stations: NationalStation[]; serverNow: number }) {
+export function RiverGauges({ lang, stations, serverNow }: { lang: Locale; stations: NationalStation[]; serverNow: number }) {
+  const { t, p } = getI18n(lang);
   const label = "text-[10px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 font-medium";
   const multi = stations.length > 1;
   return (
-    <section aria-label="Gauges, upstream to downstream">
-      {multi && <p className={`${label} pl-7 mb-1.5`}>Upstream</p>}
+    <section aria-label={t("gauges.aria")}>
+      {multi && <p className={`${label} pl-7 mb-1.5`}>{t("gauges.upstream")}</p>}
       <ul>
         {stations.map((s, i) => {
           const muted = s.latest == null || s.tier === "stale";
@@ -183,12 +187,12 @@ export function RiverGauges({ stations, serverNow }: { stations: NationalStation
                   />
                 </>
               )}
-              <Row s={s} serverNow={serverNow} />
+              <Row t={t} p={p} s={s} serverNow={serverNow} />
             </li>
           );
         })}
       </ul>
-      {multi && <p className={`${label} pl-7 mt-1.5`}>Downstream (sea)</p>}
+      {multi && <p className={`${label} pl-7 mt-1.5`}>{t("gauges.downstream")}</p>}
     </section>
   );
 }

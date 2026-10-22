@@ -9,16 +9,15 @@ import { statusFor } from "@/lib/status";
 import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { stationPath } from "@/lib/slug";
+import { getI18n } from "@/lib/i18n/server";
+import { clock, riverName } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
+import type { TFn } from "@/lib/i18n/translate";
 import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareButton";
 import { CALL, STEADY_M_PER_H, VERDICT, directionFor } from "./verdict";
 
-const TZ = "Asia/Colombo";
 const HOUR = 3_600_000;
-const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit", hour12: true });
-const lc = (m: string) => ` ${m.toLowerCase()}`;
-const clock = (ts: number) => timeFmt.format(ts).replace(/\s?(AM|PM)/, (_, m: string) => lc(m));
-const fmtTime = clock;
-const fmtRain = (v: number | null) => (v == null ? "n/a" : `${v.toFixed(1)} mm`);
+const fmtRain = (v: number | null, t: TFn) => (v == null ? t("common.na") : `${v.toFixed(1)} mm`);
 
 const ACTION: Partial<Record<VerdictTone, T3>> = {
   alert: { en: "Move valuables up, charge your phone", si: "ඔබේ භාණ්ඩ ඉහළට ගෙන යන්න, දුරකථනය චාජ් කරන්න", ta: "உடைமைகளை உயரத்தில் வையுங்கள், தொலைபேசியை சார்ஜ் செய்யுங்கள்" },
@@ -87,8 +86,10 @@ function upgrade(tier: VerdictTone, target: number): VerdictTone {
   return tier;
 }
 
-export async function Forecast({ basin, selectedStation }: { basin: string; selectedStation: string }) {
+export async function Forecast({ lang, basin, selectedStation }: { lang: Locale; basin: string; selectedStation: string }) {
   if (!basin) return null;
+  const { t, p } = getI18n(lang);
+  const fmtTime = (ts: number) => clock(ts, t);
   const warningsP = getOfficialWarnings(); // fails soft, never throws
   const snapshot = await fetchBasinSnapshot(basin);
   if (snapshot.length === 0) return null;
@@ -137,11 +138,19 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
   const name = stationDisplayName(selectedStation);
   const unit = me?.unit ?? null;
   const level = latest?.water_level ?? null;
-  const footer = latest ? `Updated ${clock(latest.ts)}` : "No reading";
+  const footer = latest ? t("common.updated", { time: clock(latest.ts, t) }) : t("common.noReading");
   const levelText = level != null ? formatLevel(level, unit) : null;
+  const rn = riverName(basin, lang);
   const shareText = stale
-    ? `${name} (${basin.trim()}): data delayed${level != null ? `, last reading ${formatLevel(level, unit)}` : ""}.`
-    : `${name} (${basin.trim()}): ${formatLevel(level, unit)}, ${VERDICT[tone].en}${direction ? `, ${direction.en.toLowerCase()}` : ""}. ${latest ? clock(latest.ts) : ""}.`;
+    ? t("share.stale", { name, river: rn, last: level != null ? t("share.staleLast", { level: formatLevel(level, unit) }) : "" })
+    : t("share.live", {
+        name,
+        river: rn,
+        level: formatLevel(level, unit),
+        verdict: VERDICT[tone][lang],
+        dir: direction ? `, ${direction[lang].toLowerCase()}` : "",
+        time: latest ? clock(latest.ts, t) : "",
+      });
 
   const w = warnings[0];
   const fu = f.unit ? ` ${f.unit}` : "";
@@ -156,7 +165,7 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
         >
           <TriangleAlert className="size-4 shrink-0 mt-0.5" aria-hidden />
           <span>
-            <span className="font-semibold">Official warning:</span> {w.summary}{" "}
+            <span className="font-semibold">{t("common.officialWarning")}</span> {w.summary}{lang !== "en" && <span className="opacity-80"> {t("common.englishNote")}</span>}{" "}
             <a
               href={w.url}
               target="_blank"
@@ -200,7 +209,7 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
               }
         }
         call={elevated ? CALL : null}
-        office={dc ? { label: `${dc.district} DMC office`, tel: dc.tel } : null}
+        office={dc ? { label: t("common.callDmcOffice", { district: dc.district }), tel: dc.tel } : null}
         footer={footer}
         level={levelText}
         gauge={
@@ -208,21 +217,21 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
             ? { tone, level, next24: f.horizons.find((h) => h.h === 24)?.level ?? null, unit, thresholds: me.thresholds }
             : null
         }
-        share={{ href: stationPath(basin, selectedStation), name: `${name} (${basin.trim()})`, text: shareText }}
+        share={{ href: p(stationPath(basin, selectedStation)), name: `${name} (${rn})`, text: shareText }}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
           <p className="font-medium">{f.headline}</p>
           {f.outlook === "elevated" && (
-              <p className="mb-2 text-orange-700 dark:text-orange-400">Elevated river-flow outlook this week.</p>
+              <p className="mb-2 text-orange-700 dark:text-orange-400">{t("fc.elevated")}</p>
             )}
             {f.horizons.length > 0 && (
               <table className="text-xs tabular-nums w-full max-w-md">
                 <thead>
                   <tr className="text-left text-slate-500 dark:text-slate-400">
-                    <th className="font-normal pb-1">In</th>
-                    <th className="font-normal pb-1">Level</th>
-                    <th className="font-normal pb-1">80% range</th>
-                    <th className="font-normal pb-1">At</th>
+                    <th className="font-normal pb-1">{t("fc.in")}</th>
+                    <th className="font-normal pb-1">{t("fc.level")}</th>
+                    <th className="font-normal pb-1">{t("fc.range80")}</th>
+                    <th className="font-normal pb-1">{t("fc.at")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -230,7 +239,7 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
                     <tr key={h.h}>
                       <td className="py-0.5">{h.h}h</td>
                       <td className="py-0.5 font-medium">{h.level.toFixed(2)}{fu}</td>
-                      <td className="py-0.5">{h.low != null && h.high != null ? `${h.low.toFixed(2)} to ${h.high.toFixed(2)}` : "n/a"}</td>
+                      <td className="py-0.5">{h.low != null && h.high != null ? `${h.low.toFixed(2)} ${t("fc.to")} ${h.high.toFixed(2)}` : t("common.na")}</td>
                       <td className="py-0.5">{fmtTime(h.ts)}</td>
                     </tr>
                   ))}
@@ -241,22 +250,27 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
               <ul className="mt-3 text-xs space-y-0.5">
                 {f.crossings.filter((c) => c.wording !== "already").map((c) => (
                   <li key={c.threshold}>
-                    {c.threshold} ({c.level}{fu}): {c.wording}, {Math.round(c.probability * 100)}% peak chance
-                    {c.etaTs ? `, from about ${fmtTime(c.etaTs)}` : ""}
+                    {t("fc.crossing", {
+                      threshold: t(`mark.${c.threshold}` as "mark.alert"),
+                      level: `${c.level}${fu}`,
+                      wording: t(`fc.w.${c.wording}` as "fc.w.likely"),
+                      p: Math.round(c.probability * 100),
+                      eta: c.etaTs ? t("fc.crossingEta", { time: fmtTime(c.etaTs) }) : "",
+                    })}
                   </li>
                 ))}
               </ul>
             )}
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-2 text-xs">
-              <Cell label="Local trend">{f.signals.localRatePerH != null ? `${f.signals.localRatePerH >= 0 ? "+" : ""}${f.signals.localRatePerH.toFixed(2)}/h` : "—"}</Cell>
-              <Cell label="Upstream avg">
+              <Cell label={t("fc.localTrend")}>{f.signals.localRatePerH != null ? `${f.signals.localRatePerH >= 0 ? "+" : ""}${f.signals.localRatePerH.toFixed(2)}/h` : "—"}</Cell>
+              <Cell label={t("fc.upstreamAvg")}>
                 {f.signals.upstreamRatePerH != null
                   ? `${f.signals.upstreamRatePerH >= 0 ? "+" : ""}${f.signals.upstreamRatePerH.toFixed(2)}/h`
-                  : f.signals.upstreamCount === 0 ? "n/a (top)" : "—"}
+                  : f.signals.upstreamCount === 0 ? t("fc.upstreamTop") : "—"}
               </Cell>
-              <Cell label="Rain here (6h)">{fmtRain(f.signals.rainAtStation6h)}</Cell>
-              <Cell label={f.rain ? "Rain upstream (6h, area avg)" : "Rain upstream (6h)"}>{fmtRain(f.signals.rainUpstream6h)}</Cell>
-              {f.rain && <Cell label="Rain upstream (next 24h)">{fmtRain(f.rain.next24hMm.det)}</Cell>}
+              <Cell label={t("fc.rainHere")}>{fmtRain(f.signals.rainAtStation6h, t)}</Cell>
+              <Cell label={f.rain ? t("fc.rainUpArea") : t("fc.rainUp")}>{fmtRain(f.signals.rainUpstream6h, t)}</Cell>
+              {f.rain && <Cell label={t("fc.rainNext")}>{fmtRain(f.rain.next24hMm.det, t)}</Cell>}
             </div>
             {hasRain && f.signals.rainContributors.length > 0 && (
               <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
@@ -271,7 +285,7 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
             )}
             {f.basis.length > 0 && (
               <ul className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                <li className="font-medium">How this is worked out</li>
+                <li className="font-medium">{t("fc.how")}</li>
                 {f.basis.map((n, i) => <li key={i}>· {n}</li>)}
               </ul>
             )}

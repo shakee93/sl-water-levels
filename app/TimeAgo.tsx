@@ -1,7 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { formatAge, formatAgeShort } from "./tierUi";
+import { formatAge } from "@/lib/i18n/format";
+import { useI18n } from "./LocaleProvider";
 
 function subscribe(cb: () => void) {
   const id = setInterval(cb, 30_000);
@@ -20,10 +21,11 @@ export function TimeAgo({
   serverNow: number;
   short?: boolean;
 }) {
+  const { t } = useI18n();
   const now = useSyncExternalStore(
     subscribe,
     () => Math.floor(Date.now() / 30_000) * 30_000,
     () => serverNow,
   );
-  return <>{short ? formatAgeShort(ts, now) : formatAge(ts, now)}</>;
+  return <>{formatAge(ts, now, t, short)}</>;
 }

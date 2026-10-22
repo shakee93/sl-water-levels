@@ -13,7 +13,6 @@ import type { NationalStation } from "@/lib/arcgis";
 import {
   buildAttention,
   RISING_M_PER_H,
-  TIER_LABEL,
   type AttentionTier,
   type BasinAttention,
   type StationAttention,
@@ -22,6 +21,13 @@ import { basinPath } from "@/lib/slug";
 import { detectUnit, formatLevel, type Unit } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { TimeAgo } from "./TimeAgo";
+import { getI18n } from "@/lib/i18n/server";
+import { riverName } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
+import type { TFn } from "@/lib/i18n/translate";
+
+const tierText = (t: TFn, tier: AttentionTier) => t(tier === "watch" ? "tier.watchLong" : (`tier.${tier}` as "tier.major"));
+const markText = (t: TFn, k: "major flood" | "minor flood" | "alert") => t(`gap.${k.split(" ")[0]}` as "gap.alert");
 
 type TierStyle = {
   card: string;
@@ -68,13 +74,13 @@ const TIER_STYLE: Record<AttentionTier, TierStyle> = {
 
 // Direction comes from the metre-normalised 3h rate so feet and metre gauges
 // share one "steady" cut-off; the printed number stays in the gauge's own unit.
-function Trend({ rateM, rate }: { rateM: number | null; rate: number | null }) {
+function Trend({ t, rateM, rate }: { t: TFn; rateM: number | null; rate: number | null }) {
   if (rateM == null || rate == null) return null;
   if (Math.abs(rateM) < RISING_M_PER_H) {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
         <Minus className="size-3" aria-hidden />
-        Steady
+        {t("trend.steady")}
       </span>
     );
   }
@@ -82,12 +88,12 @@ function Trend({ rateM, rate }: { rateM: number | null; rate: number | null }) {
   return rateM > 0 ? (
     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-orange-700 dark:text-orange-400 tabular-nums">
       <ArrowUp className="size-3" aria-hidden />
-      Rising {text}
+      {t("trend.rising")} {text}
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 tabular-nums">
       <ArrowDown className="size-3" aria-hidden />
-      Falling {text}
+      {t("trend.falling")} {text}
     </span>
   );
 }
@@ -96,7 +102,7 @@ function Trend({ rateM, rate }: { rateM: number | null; rate: number | null }) {
 // runs 0 → major (or a little past the current level when it has overtopped
 // major), so the ticks sit where the reader expects and the fill is comparable
 // across gauges with wildly different absolute ranges.
-function ThresholdBar({ s, style }: { s: StationAttention; style: TierStyle }) {
+function ThresholdBar({ t, s, style }: { t: TFn; s: StationAttention; style: TierStyle }) {
   const { alert, minor, major } = s.thresholds;
   const top = major ?? minor ?? (alert != null ? alert * 1.5 : null);
   if (top == null || top <= 0) return null;
@@ -107,9 +113,9 @@ function ThresholdBar({ s, style }: { s: StationAttention; style: TierStyle }) {
   const fill = at(s.level) ?? 0;
   const ticks: Array<{ pos: number; title: string }> = [];
   for (const [label, v] of [
-    ["Alert", alert],
-    ["Minor flood", minor],
-    ["Major flood", major],
+    [t("mark.alert"), alert],
+    [t("mark.minor"), minor],
+    [t("mark.major"), major],
   ] as const) {
     const pos = at(v);
     if (pos != null && pos > 0 && pos < 100) ticks.push({ pos, title: `${label} ${v}` });
@@ -119,7 +125,7 @@ function ThresholdBar({ s, style }: { s: StationAttention; style: TierStyle }) {
     <div
       className="relative mt-2.5 h-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden"
       role="img"
-      aria-label={`Level ${s.level} against alert ${alert ?? "n/a"}, minor ${minor ?? "n/a"}, major ${major ?? "n/a"}`}
+      aria-label={t("bar.aria", { level: s.level, alert: alert ?? t("common.na"), minor: minor ?? t("common.na"), major: major ?? t("common.na") })}
     >
       <div
         className={`absolute inset-y-0 left-0 rounded-full ${style.bar}`}
@@ -138,10 +144,16 @@ function ThresholdBar({ s, style }: { s: StationAttention; style: TierStyle }) {
 }
 
 function BasinCard({
+  t,
+  p,
+  lang,
   b,
   rateM,
   serverNow,
 }: {
+  t: TFn;
+  p: (path: string) => string;
+  lang: Locale;
   b: BasinAttention;
   rateM: number | null;
   serverNow: number;
@@ -155,7 +167,7 @@ function BasinCard({
   return (
     <li>
       <Link
-        href={single ? b.lead.href : basinPath(b.basin)}
+        href={p(single ? b.lead.href : basinPath(b.basin))}
         className={`group flex h-full flex-col rounded-xl border px-4 py-3.5 transition ${style.card}`}
       >
         <div className="flex items-center justify-between gap-2">
@@ -163,7 +175,7 @@ function BasinCard({
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${style.pill}`}
           >
             {b.tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
-            {TIER_LABEL[b.tier]}
+            {tierText(t, b.tier)}
           </span>
           <span className="inline-flex items-center gap-1 text-[11px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
             {b.lead.stale && <Clock className="size-3" aria-hidden />}
@@ -172,7 +184,7 @@ function BasinCard({
         </div>
 
         <h3 className="mt-2 text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100 truncate">
-          {b.basin}
+          {riverName(b.basin, lang)}
         </h3>
 
         <div className="mt-1.5 flex items-baseline justify-between gap-2">
@@ -187,18 +199,18 @@ function BasinCard({
         {b.lead.gap && (
           <div className={`mt-0.5 text-[11px] tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
             {b.lead.gap.crossed
-              ? `+${b.lead.gap.amount.toFixed(2)} above ${b.lead.gap.label}`
-              : `${b.lead.gap.amount.toFixed(2)} below ${b.lead.gap.label}`}
+              ? t("gap.above", { amount: b.lead.gap.amount.toFixed(2), mark: markText(t, b.lead.gap.label) })
+              : t("gap.below", { amount: b.lead.gap.amount.toFixed(2), mark: markText(t, b.lead.gap.label) })}
           </div>
         )}
 
-        <ThresholdBar s={b.lead} style={style} />
+        <ThresholdBar t={t} s={b.lead} style={style} />
 
         <div className="mt-2">
           {b.lead.stale ? (
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">Last known reading</span>
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">{t("needs.lastKnown")}</span>
           ) : (
-            <Trend rateM={rateM} rate={b.lead.ratePerHour} />
+            <Trend t={t} rateM={rateM} rate={b.lead.ratePerHour} />
           )}
         </div>
 
@@ -211,7 +223,7 @@ function BasinCard({
                     worst. Without this the list reads as "all at Alert". */}
                 <span
                   className={`size-1.5 rounded-full shrink-0 ${TIER_STYLE[o.tier].dot}`}
-                  title={TIER_LABEL[o.tier]}
+                  title={tierText(t, o.tier)}
                 />
                 <span className="truncate">{stationDisplayName(o.station)}</span>
               </li>
@@ -220,7 +232,7 @@ function BasinCard({
         )}
 
         <div className="mt-auto pt-3 inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition">
-          {single ? `View ${stationDisplayName(b.lead.station)}` : "View basin"}
+          {single ? t("needs.viewStation", { name: stationDisplayName(b.lead.station) }) : t("needs.viewBasin")}
           <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
         </div>
       </Link>
@@ -229,12 +241,15 @@ function BasinCard({
 }
 
 export function NeedsAttention({
+  lang,
   snapshot,
   serverNow,
 }: {
+  lang: Locale;
   snapshot: NationalStation[] | null;
   serverNow: number;
 }) {
+  const { t, p } = getI18n(lang);
   if (!snapshot) {
     return (
       <section className="mb-6">
@@ -242,10 +257,10 @@ export function NeedsAttention({
           <WifiOff className="size-5 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
           <div className="text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-200">
-              Latest data unavailable
+              {t("needs.unavailable")}
             </span>
             <span className="text-slate-500 dark:text-slate-400">
-              {" "}— can&rsquo;t tell if any river is at risk. Try again shortly.
+              {" "}{t("needs.unavailableHelp")}
             </span>
           </div>
         </div>
@@ -262,9 +277,9 @@ export function NeedsAttention({
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/25 px-4 py-3">
           <ShieldCheck className="size-5 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
           <div className="text-sm text-emerald-900 dark:text-emerald-200">
-            <span className="font-medium">All clear</span>
+            <span className="font-medium">{t("needs.allClear")}</span>
             <span className="text-emerald-800/80 dark:text-emerald-300/80">
-              {" "}— {reporting} gauges reporting, all below alert.
+              {" "}{t("needs.allClearHelp", { n: reporting })}
             </span>
           </div>
         </div>
@@ -279,16 +294,19 @@ export function NeedsAttention({
           id="needs-attention-heading"
           className="text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200"
         >
-          Needs attention
+          {t("needs.heading")}
         </h2>
         <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-          {flagged.length} of {reporting} gauges
+          {t("needs.count", { n: flagged.length, m: reporting })}
         </span>
       </div>
 
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {basins.map((b) => (
           <BasinCard
+            t={t}
+            p={p}
+            lang={lang}
             key={b.basin}
             b={b}
             rateM={rateByHref.get(b.lead.href) ?? null}

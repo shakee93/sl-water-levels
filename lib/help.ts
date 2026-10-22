@@ -175,12 +175,13 @@ export const DONATING_SAFELY: string[] = [
   "Be wary of links and numbers in messages; fake donation sites were reported in 2025.",
 ];
 export const HELP_CHECKED = "22 Oct 2026";
-export const HELP_SOURCES: { label: string; url: string }[] = [
-  { label: "Disaster Management Centre", url: "https://www.dmc.gov.lk" },
-  { label: "DMC district coordinating units (updated 15 Oct 2026)", url: DISTRICT_CONTACT_SOURCE.url },
-  { label: "Department of Meteorology", url: "https://www.meteo.gov.lk" },
-  { label: "Irrigation Department", url: "https://www.irrigation.gov.lk" },
-  { label: "Sri Lanka Red Cross", url: "https://www.redcross.lk" },
-  { label: "Central Bank of Sri Lanka", url: "https://www.cbsl.gov.lk" },
-  { label: "Police, ambulance and fire numbers: Telephone numbers in Sri Lanka", url: "https://en.wikipedia.org/wiki/Telephone_numbers_in_Sri_Lanka" },
+/** `key` is the suffix of the help.src.* dictionary entry that translates the label. */
+export const HELP_SOURCES: { key: string; label: string; url: string }[] = [
+  { key: "dmc", label: "Disaster Management Centre", url: "https://www.dmc.gov.lk" },
+  { key: "district", label: "DMC district coordinating units (updated 15 Oct 2026)", url: DISTRICT_CONTACT_SOURCE.url },
+  { key: "met", label: "Department of Meteorology", url: "https://www.meteo.gov.lk" },
+  { key: "irrigation", label: "Irrigation Department", url: "https://www.irrigation.gov.lk" },
+  { key: "redcross", label: "Sri Lanka Red Cross", url: "https://www.redcross.lk" },
+  { key: "cbsl", label: "Central Bank of Sri Lanka", url: "https://www.cbsl.gov.lk" },
+  { key: "numbers", label: "Police, ambulance and fire numbers: Telephone numbers in Sri Lanka", url: "https://en.wikipedia.org/wiki/Telephone_numbers_in_Sri_Lanka" },
 ];

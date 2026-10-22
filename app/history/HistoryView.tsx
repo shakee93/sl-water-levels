@@ -3,60 +3,93 @@ import type { HistoryData } from "@/lib/history";
 import { historyPath } from "@/lib/history";
 import {
   type Scope,
-  fmtRange,
-  MONTHS_LONG,
   peakGauges,
   peakGaugesPhrase,
   peakPhrase,
   scopeIndices,
   summarize,
-  fmtShort,
 } from "@/lib/historyStats";
+import { dayRange, monthsLong, monthsShort, riverName, shortDay, shortStamp } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
+import { getI18n } from "@/lib/i18n/server";
 import { basinPath } from "@/lib/slug";
 import { FloodCalendar } from "./FloodCalendar";
+import { YearSummary, type YearSummaryLabels } from "./YearSummary";
+import type { TFn } from "@/lib/i18n/translate";
 
 const SITE = "https://sl-water-levels.vercel.app";
 
-export function scopeName(data: HistoryData, scope: Scope): string {
+function yearLabels(t: TFn): Partial<YearSummaryLabels> {
+  return {
+    heading: t("yr.heading"),
+    headlineRecorded: t("yr.headlineRecorded"),
+    headlineAverage: t("yr.headlineAverage"),
+    headlineWorst: t("yr.headlineWorst"),
+    headlineWorstSoFar: t("yr.headlineWorstSoFar"),
+    noWarnings: t("yr.noWarnings"),
+    estimateSentence: t("yr.estimateSentence"),
+    year: t("yr.year"),
+    affectedDays: t("yr.affected"),
+    worstDay: t("yr.worstDay"),
+    soFar: t("yr.soFar"),
+    recorded: t("yr.recorded"),
+    estimated: t("yr.estimated"),
+    recordedFrom: t("yr.recordedFrom"),
+    level: { alert: t("mark.alert"), minor: t("mark.minor"), major: t("mark.major") },
+    levelInline: { alert: t("mark.alert").toLowerCase(), minor: t("mark.minor").toLowerCase(), major: t("mark.major").toLowerCase() },
+    worstDaySingle: t("yr.worstDaySingle"),
+    worstDayMany: t("yr.worstDayMany"),
+    worstDayOne: t("yr.worstDayOne"),
+    estimatedSuffix: t("yr.estSuffix"),
+    noWorstDay: t("yr.noWorst"),
+    breakdown: t("yr.breakdown"),
+    footnote: t("yr.footnote"),
+    myLevelColumn: t("yr.myColumn"),
+    myLevelHeadline: t("yr.myHeadline"),
+    myLevelNoRecords: t("yr.myNoRecords"),
+    myLevelNoRecordsNote: t("yr.myNoRecordsNote"),
+    myLevelPartial: t("yr.myPartial"),
+  };
+}
+
+export function scopeName(data: HistoryData, scope: Scope, lang: Locale = "en"): string {
   if (scope.kind === "all") return "Sri Lanka";
-  if (scope.kind === "basin") return scope.basin;
+  if (scope.kind === "basin") return riverName(scope.basin, lang);
   return data.stations.find((s) => s.station === scope.station)?.name ?? scope.station;
 }
 
 /** Shared body for /history, /history/<river> and /history/<river>/<gauge>. */
-export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }) {
+export function HistoryView({ lang, data, scope }: { lang: Locale; data: HistoryData; scope: Scope }) {
+  const { t, p } = getI18n(lang);
   const idx = scopeIndices(data, scope);
-  const sum = summarize(data, idx);
-  const name = scopeName(data, scope);
+  const sum = summarize(data, idx, t);
+  const name = scopeName(data, scope, lang);
   const station = scope.kind === "station" ? data.stations.find((s) => s.station === scope.station) : undefined;
   const basin = scope.kind === "basin" ? scope.basin : station?.basin;
-  const where = scope.kind === "all" ? "Sri Lanka's rivers" : scope.kind === "basin" ? `the ${name}` : name;
-  const path = historyPath(basin, station?.station);
+  const where = scope.kind === "all" ? t("hist.whereAll") : scope.kind === "basin" ? t("hist.whereBasin", { name }) : name;
+  const path = p(historyPath(basin, station?.station));
 
-  const updated = new Date(data.generatedAt).toLocaleString("en-GB", {
-    timeZone: "Asia/Colombo",
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const updated = shortStamp(new Date(data.generatedAt).getTime(), t);
+  const months = monthsLong(t);
+  const since = `${shortDay(sum.gaugeSince, t)} ${sum.gaugeSince.slice(0, 4)}`;
 
   // Schema.org Dataset + breadcrumbs: makes the archive eligible for Google
   // Dataset Search and gives the page a proper breadcrumb trail in results.
   const crumbs = [
-    { name: "Flood history", url: `${SITE}/history` },
-    ...(basin ? [{ name: basin, url: `${SITE}${historyPath(basin)}` }] : []),
+    { name: t("hist.nav"), url: `${SITE}${p("/history")}` },
+    ...(basin ? [{ name: riverName(basin, lang), url: `${SITE}${p(historyPath(basin))}` }] : []),
     ...(station ? [{ name: station.name, url: `${SITE}${path}` }] : []),
   ];
   const jsonLd = [
     {
       "@context": "https://schema.org",
       "@type": "Dataset",
-      name: `${name} river flood history`,
-      description: `Daily river flood warnings (alert, minor flood, major flood) for ${where}: measured at Department of Irrigation gauges since ${fmtShort(data.gauge.start)} ${data.gauge.start.slice(0, 4)}, and estimated from GloFAS modelled river flow since ${data.model.start.slice(0, 4)}.`,
+      name: t("hist.ldName", { name }),
+      inLanguage: lang,
+      description: t("hist.ldDesc", { where, since: `${shortDay(data.gauge.start, t)} ${data.gauge.start.slice(0, 4)}`, year: data.model.start.slice(0, 4) }),
       url: `${SITE}${path}`,
       temporalCoverage: `${data.model.start}/..`,
-      spatialCoverage: { "@type": "Place", name: scope.kind === "all" ? "Sri Lanka" : `${name}, Sri Lanka` },
+      spatialCoverage: { "@type": "Place", name: scope.kind === "all" ? t("hist.ldPlaceAll") : `${name}, ${t("hist.ldPlaceAll")}` },
       isAccessibleForFree: true,
       license: "https://creativecommons.org/licenses/by/4.0/",
       creator: { "@type": "Organization", name: "Sri Lanka Water Levels", url: SITE },
@@ -80,26 +113,26 @@ export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3 flex flex-wrap gap-1">
-          <Link href="/" className="hover:underline">
-            Home
+          <Link href={p("/")} className="hover:underline">
+            {t("crumb.home")}
           </Link>
           <span aria-hidden>›</span>
           {scope.kind === "all" ? (
-            <span className="text-slate-700 dark:text-slate-300">Flood history</span>
+            <span className="text-slate-700 dark:text-slate-300">{t("hist.nav")}</span>
           ) : (
-            <Link href="/history" className="hover:underline">
-              Flood history
+            <Link href={p("/history")} className="hover:underline">
+              {t("hist.nav")}
             </Link>
           )}
           {basin && (
             <>
               <span aria-hidden>›</span>
               {station ? (
-                <Link href={historyPath(basin)} className="hover:underline">
-                  {basin}
+                <Link href={p(historyPath(basin))} className="hover:underline">
+                  {riverName(basin, lang)}
                 </Link>
               ) : (
-                <span className="text-slate-700 dark:text-slate-300">{basin}</span>
+                <span className="text-slate-700 dark:text-slate-300">{riverName(basin, lang)}</span>
               )}
             </>
           )}
@@ -114,59 +147,61 @@ export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }
         <header className="mb-8">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
             <span className="size-1.5 rounded-full bg-sky-500" />
-            Flood history
+            {t("hist.eyebrow")}
           </div>
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-            {scope.kind === "all" ? "When do our rivers flood?" : `When does ${where} flood?`}
+            {scope.kind === "all" ? t("hist.h1All") : t("hist.h1Where", { where })}
           </h1>
 
           {/* Server-rendered answer: what searchers want, in the first lines of the page. */}
           <div className="text-slate-700 dark:text-slate-300 mt-3 max-w-prose space-y-2">
             {sum.season && (
               <p>
-                Flood warnings {scope.kind === "all" ? "on Sri Lanka's rivers" : scope.kind === "basin" ? `on the ${name}` : `at ${name}`} come{" "}
-                <strong>{sum.season}</strong>.{" "}
+                {t("hist.warningsCome", {
+                  on: scope.kind === "all" ? t("hist.onAll") : scope.kind === "basin" ? t("hist.onBasin", { name }) : t("hist.atStation", { name }),
+                  season: sum.season,
+                })}{" "}
                 {sum.now.phase === "main"
-                  ? `It's ${MONTHS_LONG[sum.now.month]} now, the main flood season.`
+                  ? t("hist.nowMain", { month: months[sum.now.month] })
                   : sum.now.phase === "second"
-                    ? `It's ${MONTHS_LONG[sum.now.month]} now, the smaller flood season.`
+                    ? t("hist.nowSecond", { month: months[sum.now.month] })
                     : ""}
               </p>
             )}
             <p>
-              Since {fmtShort(sum.gaugeSince)} {sum.gaugeSince.slice(0, 4)},{" "}
-              {sum.scopeSize === 1 ? "this gauge has" : `its ${sum.scopeSize} gauges have`} recorded flooding on{" "}
-              <strong>{sum.gaugeFloodDays} days</strong> and alert levels on {sum.gaugeAlertDays} days.
-              {sum.latest && (
-                <>
-                  {" "}
-                  The most recent flood was <strong>{fmtRange(sum.latest.from, sum.latest.to)}</strong>
-                  {sum.scopeSize === 1 ? " (" : ", at "}
-                  {sum.scopeSize === 1
-                    ? peakPhrase(sum.latest.peakAgg, 1)
-                    : peakGaugesPhrase(peakGauges(data, idx, sum.latest), 3)}
-                  {sum.latest.source === "model" ? ", estimated" : ""}
-                  {sum.scopeSize === 1 ? ")." : "."}
-                </>
-              )}
+              {t(sum.scopeSize === 1 ? "hist.sinceThis" : "hist.sinceMany", {
+                date: since,
+                n: sum.scopeSize,
+                floodDays: t("hist.daysN", { n: sum.gaugeFloodDays }),
+                alertDays: sum.gaugeAlertDays,
+              })}
+              {sum.latest &&
+                " " +
+                  t("hist.mostRecent", {
+                    range: dayRange(sum.latest.from, sum.latest.to, t),
+                    at:
+                      sum.scopeSize === 1
+                        ? t("hist.mostRecentSingle", { peak: peakPhrase(sum.latest.peakAgg, 1, t) })
+                        : t("hist.mostRecentMany", { peak: peakGaugesPhrase(peakGauges(data, idx, sum.latest), t, 3) }),
+                    est: sum.latest.source === "model" ? t("hist.estimatedSuffix") : "",
+                  })}
             </p>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-            Below each line is what the river gauges recorded; above it, our estimate of how high the rivers ran,
-            going back to {data.model.start.slice(0, 4)}. Updated {updated} (Sri Lanka time).
+            {t("hist.belowEach", { year: data.model.start.slice(0, 4), updated })}
             {station && (
               <>
                 {" "}
-                <Link href={station.href} className="text-sky-700 dark:text-sky-400 hover:underline">
-                  Live {station.name} water level →
+                <Link href={p(station.href)} className="text-sky-700 dark:text-sky-400 hover:underline">
+                  {t("hist.liveStation", { name: station.name })}
                 </Link>
               </>
             )}
             {scope.kind === "basin" && (
               <>
                 {" "}
-                <Link href={basinPath(name)} className="text-sky-700 dark:text-sky-400 hover:underline">
-                  Live {name} levels →
+                <Link href={p(basinPath(scope.basin))} className="text-sky-700 dark:text-sky-400 hover:underline">
+                  {t("hist.liveBasin", { name })}
                 </Link>
               </>
             )}
@@ -175,21 +210,36 @@ export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }
 
         <FloodCalendar data={data} scope={scope} />
 
+        <div className="mt-8">
+          <YearSummary
+            data={data}
+            scope={scope}
+            labels={yearLabels(t)}
+            locale={lang === "si" ? "si-LK" : lang === "ta" ? "ta-LK" : "en-GB"}
+            dateFormat={{ months: monthsShort(t), pattern: t("date.short") }}
+            name={
+              scope.kind === "station" && station
+                ? t("yr.stationName", { river: riverName(station.basin, lang), gauge: station.name })
+                : name
+            }
+          />
+        </div>
+
         {/* Crawlable links to every river and gauge history (the picker is a <select>). */}
         {scope.kind !== "station" && (
           <section className="mt-12">
             <h2 className="text-base font-semibold mb-2">
-              {scope.kind === "all" ? "Flood history by river" : `Flood history by gauge on the ${name}`}
+              {scope.kind === "all" ? t("hist.byRiver") : t("hist.byGauge", { name })}
             </h2>
             <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
               {(scope.kind === "all"
-                ? [...new Set(data.stations.map((s) => s.basin))].sort().map((b) => ({ key: b, href: historyPath(b), label: b }))
+                ? [...new Set(data.stations.map((s) => s.basin))].sort().map((b) => ({ key: b, href: historyPath(b), label: riverName(b, lang) }))
                 : data.stations
                     .filter((s) => s.basin === scope.basin)
                     .map((s) => ({ key: s.station, href: historyPath(s.basin, s.station), label: s.name }))
               ).map((l) => (
                 <li key={l.key}>
-                  <Link href={l.href} className="text-sky-700 dark:text-sky-400 hover:underline">
+                  <Link href={p(l.href)} className="text-sky-700 dark:text-sky-400 hover:underline">
                     {l.label}
                   </Link>
                 </li>
@@ -199,28 +249,25 @@ export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }
         )}
 
         <section className="mt-12 text-sm text-slate-600 dark:text-slate-400 space-y-2 max-w-prose">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">About this data</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("hist.aboutData")}</h2>
           <p>
-            <strong>Measured:</strong>{" "}the highest level each gauge reached that day, compared with the Department of
-            Irrigation&apos;s alert, minor-flood and major-flood levels.
+            <strong>{t("hist.measuredLabel")}</strong> {t("hist.measuredText")}
           </p>
           <p>
-            <strong>Estimated:</strong>{" "}for years before the gauge records here begin, we estimate how high each river
-            ran from a global river-flow model. These are not official warnings. They show the flood seasons and the
-            big floods well, but can miss the exact day or gauge, especially on small rivers.
+            <strong>{t("hist.estimatedLabel")}</strong> {t("hist.estimatedText")}
           </p>
           <p className="text-xs">
-            Sources: Department of Irrigation river gauges; earlier gauge readings saved by{" "}
+            {t("hist.sourcesPre")}
             <a href="https://github.com/nuuuwan/lk_irrigation" className="underline">
               lk_irrigation
             </a>
-            ; river-flow estimates by{" "}
+            {t("hist.sourcesMid")}
             <a href="https://open-meteo.com/" className="underline">
               Open-Meteo
             </a>
-            .{" "}
+            {t("hist.sourcesPost")}
             <a href="https://github.com/shakee93/sl-water-levels/tree/data" className="underline">
-              Download the daily records
+              {t("hist.download")}
             </a>
             .
           </p>
@@ -230,11 +277,12 @@ export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }
   );
 }
 
-export function HistoryUnavailable() {
+export function HistoryUnavailable({ lang }: { lang: Locale }) {
+  const { t } = getI18n(lang);
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
       <p className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-sm">
-        Flood history couldn&apos;t be loaded right now. Please try again in a few minutes.
+        {t("hist.unavailable")}
       </p>
     </main>
   );

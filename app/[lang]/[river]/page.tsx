@@ -8,11 +8,15 @@ import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { stationDisplayName } from "@/lib/displayName";
 import { orderStations } from "@/lib/basinOrder";
 import { basinSlug, resolveBasin, stationPath } from "@/lib/slug";
-import { RiverGauges } from "../RiverGauges";
-import { TimeAgo } from "../TimeAgo";
-import { colomboTime } from "../tierUi";
-import { BasinDams } from "../BasinDams";
-import { FloodHistoryCard } from "../history/FloodHistoryCard";
+import { RiverGauges } from "@/app/RiverGauges";
+import { TimeAgo } from "@/app/TimeAgo";
+import { colomboTime } from "@/app/tierUi";
+import { BasinDams } from "@/app/BasinDams";
+import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
+import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
+import { getI18n } from "@/lib/i18n/server";
+import { riverName } from "@/lib/i18n/format";
+import type { TFn } from "@/lib/i18n/translate";
 
 export const revalidate = 60;
 
@@ -23,32 +27,23 @@ const SITE = "https://sl-water-levels.vercel.app";
 const TIER_RANK: Record<Tier, number> = {
   major: 6, minor: 5, alert: 4, watch: 3, normal: 2, none: 1, stale: 0,
 };
-const TIER_PHRASE: Record<Tier, string> = {
-  major: "major flood level",
-  minor: "minor flood level",
-  alert: "alert level",
-  watch: "approaching alert level",
-  normal: "normal",
-  none: "no flood levels published",
-  stale: "no recent readings",
-};
 
 /** Worst current tier across a basin's gauges, as a short phrase; null if unknown. */
-async function worstStatus(basin: string): Promise<string | null> {
+async function worstStatus(basin: string, t: TFn): Promise<string | null> {
   try {
     const snap = await fetchBasinSnapshot(basin);
     if (!snap.length) return null;
     const worst = snap.reduce((a, b) => (TIER_RANK[b.tier] > TIER_RANK[a.tier] ? b : a));
-    return TIER_PHRASE[worst.tier];
+    return t(`phrase.${worst.tier}` as "phrase.alert");
   } catch {
     return null;
   }
 }
 
-function joinNames(names: string[]): string {
+function joinNames(names: string[], and: string): string {
   if (names.length <= 1) return names.join("");
-  if (names.length === 2) return `${names[0]} and ${names[1]}`;
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  if (names.length === 2) return `${names[0]} ${and} ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
 }
 
 export async function generateStaticParams() {
@@ -69,9 +64,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ river: string }>;
+  params: Promise<{ lang: string; river: string }>;
 }): Promise<Metadata> {
-  const { river } = await params;
+  const { lang, river } = await params;
+  if (!isLocale(lang)) return {};
+  const { t } = getI18n(lang);
 
   let stations: Station[] = [];
   try {
@@ -87,21 +84,25 @@ export async function generateMetadata({
     stations.filter((s) => s.basin === basin),
   );
   const names = onBasin.map((s) => stationDisplayName(s.station));
-  const worst = await worstStatus(basin);
-  const title = `${basin} Water Level Today – Live Gauges & Flood Alerts`;
-  const description = `${basin} water level today: ${joinNames(names)} gauges, upstream to downstream.${
-    worst ? ` Now: ${worst}.` : ""
-  } Flood thresholds and forecast, updated hourly.`;
+  const worst = await worstStatus(basin, t);
+  const rn = riverName(basin, lang);
+  const title = t("river.metaTitle", { river: rn });
+  const description = t("river.metaDesc", {
+    river: rn,
+    names: joinNames(names, t("list.and")),
+    now: worst ? t("river.metaNow", { phrase: worst }) : "",
+  });
+  const alternates = pageAlternates(lang, `/${river}`);
 
   return {
     // absolute: the layout template would push this past ~60 characters.
     title: { absolute: title },
     description,
-    alternates: { canonical: `/${river}` },
+    alternates,
     openGraph: {
       title,
       description,
-      url: `${SITE}/${river}`,
+      url: `${SITE}${alternates.canonical}`,
       type: "website",
     },
     twitter: {
@@ -115,9 +116,12 @@ export async function generateMetadata({
 export default async function BasinPage({
   params,
 }: {
-  params: Promise<{ river: string }>;
+  params: Promise<{ lang: string; river: string }>;
 }) {
-  const { river } = await params;
+  const { lang: rawLang, river } = await params;
+  if (!isLocale(rawLang)) notFound();
+  const lang: Locale = rawLang;
+  const { t, p } = getI18n(lang);
 
   let stations: Station[] = [];
   let outage = false;
@@ -133,8 +137,8 @@ export default async function BasinPage({
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
           <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            <Link href="/" className="hover:underline">
-              All basins
+            <Link href={p("/")} className="hover:underline">
+              {t("crumb.allBasins")}
             </Link>
           </nav>
           <div
@@ -143,8 +147,7 @@ export default async function BasinPage({
           >
             <AlertTriangle className="size-4 mt-0.5 shrink-0" />
             <p>
-              The Department of Irrigation gauge feed is not responding right now, so live
-              readings for this river cannot be shown. Please try again in a few minutes.
+              {t("river.outage")}
             </p>
           </div>
         </div>
@@ -162,7 +165,7 @@ export default async function BasinPage({
   const names = onBasin.map((s) => stationDisplayName(s.station));
 
   // A river with one gauge has nothing to list: the station page is the answer.
-  if (onBasin.length === 1) permanentRedirect(stationPath(onBasin[0].basin, onBasin[0].station));
+  if (onBasin.length === 1) permanentRedirect(p(stationPath(onBasin[0].basin, onBasin[0].station)));
 
   let snap: Awaited<ReturnType<typeof fetchBasinSnapshot>> = [];
   try {
@@ -177,22 +180,22 @@ export default async function BasinPage({
 
   let status: React.ReactNode;
   if (snap.length === 0 || newest == null) {
-    status = "No readings available right now";
+    status = t("river.noReadings");
   } else if (reporting.length === 0) {
     status = (
       <>
-        Data delayed — last reading <TimeAgo ts={newest} serverNow={serverNow} />
+        {t("river.delayed")}<TimeAgo ts={newest} serverNow={serverNow} />
       </>
     );
   } else {
     const lead =
       flagged.length > 0
-        ? `${flagged.length} of ${reporting.length} gauges at or near alert`
-        : `All ${reporting.length} gauges normal`;
+        ? t("river.flagged", { n: flagged.length, m: reporting.length })
+        : t("river.allNormal", { n: reporting.length });
     status = (
       <>
         {lead}
-        {snap.length > reporting.length ? ` · ${snap.length - reporting.length} not reporting` : ""} · updated {colomboTime(newest)}, <TimeAgo ts={newest} serverNow={serverNow} />
+        {snap.length > reporting.length ? ` · ${t("river.notReporting", { n: snap.length - reporting.length })}` : ""} · {t("river.updated", { time: colomboTime(newest, t) })}<TimeAgo ts={newest} serverNow={serverNow} />
       </>
     );
   }
@@ -208,45 +211,45 @@ export default async function BasinPage({
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          <Link href="/" className="hover:underline">
-            All basins
+          <Link href={p("/")} className="hover:underline">
+            {t("crumb.allBasins")}
           </Link>{" "}
-          <span aria-hidden>›</span> <span className="text-slate-700 dark:text-slate-300">{basin}</span>
+          <span aria-hidden>›</span> <span className="text-slate-700 dark:text-slate-300">{riverName(basin, lang)}</span>
         </nav>
 
         <header className="mb-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{basin}</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{riverName(basin, lang)}</h1>
           <p className={`mt-1.5 text-sm tabular-nums ${statusTone}`}>{status}</p>
           <p className="sr-only">
-            {onBasin.length} river gauges, upstream to downstream: {joinNames(names)}.
+            {t("river.srGauges", { n: onBasin.length, names: joinNames(names, t("list.and")) })}
           </p>
         </header>
 
         <Suspense key={`warn-${basin}`} fallback={null}>
-          <OfficialWarningLine basin={basin} />
+          <OfficialWarningLine basin={basin} lang={lang} />
         </Suspense>
 
         {snap.length > 0 ? (
-          <RiverGauges stations={snap} serverNow={serverNow} />
+          <RiverGauges lang={lang} stations={snap} serverNow={serverNow} />
         ) : (
           <p className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <Clock className="size-4" aria-hidden /> Gauge readings are unavailable right now.
+            <Clock className="size-4" aria-hidden /> {t("river.unavailable")}
           </p>
         )}
 
         <Suspense key={`history-${basin}`} fallback={null}>
-          <FloodHistoryCard basin={basin} />
+          <FloodHistoryCard basin={basin} lang={lang} />
         </Suspense>
 
         <Suspense key={`dams-${basin}`} fallback={null}>
-          <BasinDams basin={basin} />
+          <BasinDams basin={basin} lang={lang} />
         </Suspense>
 
         <Link
-          href="/help"
+          href={p("/help")}
           className="mt-8 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
         >
-          Flood help &amp; emergency numbers
+          {t("common.floodHelpLink")}
           <ChevronRight className="size-3.5" aria-hidden />
         </Link>
       </div>
@@ -255,14 +258,15 @@ export default async function BasinPage({
 }
 
 /** One compact amber line when a current official bulletin names this basin. Fails soft. */
-async function OfficialWarningLine({ basin }: { basin: string }) {
+async function OfficialWarningLine({ basin, lang }: { basin: string; lang: Locale }) {
+  const { t } = getI18n(lang);
   const w = warningsForBasin(await getOfficialWarnings(), basin)[0];
   if (!w) return null;
   return (
     <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">
       <TriangleAlert className="size-4 mt-0.5 shrink-0" aria-hidden />
       <p className="min-w-0">
-        {w.summary}{" "}
+        {w.summary}{lang !== "en" && <span className="text-amber-800/80 dark:text-amber-300/80"> {t("common.englishNote")}</span>}{" "}
         <a
           href={w.url}
           target="_blank"

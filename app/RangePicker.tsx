@@ -3,6 +3,7 @@
 import { useRef, useSyncExternalStore } from "react";
 import { DAYS_OPTIONS, DEFAULT_DAYS, parseDays } from "@/lib/range";
 import { trackEvent } from "@/lib/umami";
+import { useI18n } from "./LocaleProvider";
 
 // The range lives in the URL (?days=) but is read on the client only, so the
 // station page itself stays statically cacheable (ISR) and never touches
@@ -38,6 +39,7 @@ const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 
 export function RangePicker() {
+  const { t } = useI18n();
   const current = useDays();
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
@@ -63,7 +65,7 @@ export function RangePicker() {
   return (
     <div
       role="radiogroup"
-      aria-label="History range"
+      aria-label={t("range.aria")}
       className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 p-0.5"
     >
       {DAYS_OPTIONS.map((opt, i) => {
@@ -77,7 +79,7 @@ export function RangePicker() {
             type="button"
             role="radio"
             aria-checked={active}
-            aria-label={`${opt.value} ${opt.value === 1 ? "day" : "days"}`}
+            aria-label={t(opt.value === 1 ? "range.day" : "range.days", { n: opt.value })}
             tabIndex={active ? 0 : -1}
             onClick={() => select(opt.value)}
             onKeyDown={(e) => onKeyDown(e, i)}
@@ -87,7 +89,7 @@ export function RangePicker() {
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
             }`}
           >
-            {opt.value}d
+            {t("range.d", { n: opt.value })}
           </button>
         );
       })}

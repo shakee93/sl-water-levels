@@ -13,6 +13,8 @@ import { trackEvent } from "@/lib/umami";
 import { distanceKm, formatKm, matchLocation } from "@/lib/nearby";
 import { ForgetLink } from "./NearYou";
 import { markDenied, storeLocation, useLocation } from "./useLocation";
+import { useI18n } from "./LocaleProvider";
+import { riverName } from "@/lib/i18n/format";
 import type { SearchStation } from "./PlaceSearchData";
 
 type Props = { variant: "hero" | "header"; stations: SearchStation[] };
@@ -53,6 +55,7 @@ function writeRecent(r: { label: string; sub: string; href: string }) {
 /** Shared state + behaviour for both variants. */
 function useSearch(stations: SearchStation[], onDone?: () => void) {
   const router = useRouter();
+  const { lang, t, p } = useI18n();
   const index = useMemo(
     () => buildIndex(stations.map(({ station, basin, latitude, longitude }) => ({ station, basin, latitude, longitude })), PLACES, RIVERS),
     [stations],
@@ -107,8 +110,8 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
               key: `near|${g.station}`,
               type: "result",
               label: i === 0 && near.placeName ? near.placeName : g.station,
-              sub: `${formatKm(g.km)} away`,
-              href: g.href,
+              sub: t("near.away", { km: formatKm(g.km, t) }),
+              href: p(g.href),
               river: false,
               gauge,
               near: true,
@@ -125,21 +128,21 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
       const g = h.gauges[0];
       const gauge = g ? byName.get(g.station) : undefined;
       if (h.kind === "river") {
-        return { key: `r|${h.label}`, type: "result", label: h.label, sub: h.sub, href: basinPath(h.label), river: true, away: awayKm(h) };
+        return { key: `r|${h.label}`, type: "result", label: riverName(h.label, lang), sub: t("search.gauges", { n: h.gauges.length }), href: p(basinPath(h.label)), river: true, away: awayKm(h) };
       }
       return {
         key: `${h.kind}|${h.label}`,
         type: "result",
         label: h.label,
         sub: h.kind === "place" ? h.sub : h.sub,
-        href: gauge?.href ?? "/",
+        href: p(gauge?.href ?? "/"),
         river: false,
         gauge,
         km: h.kind === "place" ? (g as { km: number }).km : undefined,
         away: awayKm(h),
       };
     });
-  }, [hits, byName, recents, trimmed, near, loc, awayKm]);
+  }, [hits, byName, recents, trimmed, near, loc, awayKm, t, p, lang]);
 
   // Track no-match once per settled query, not per keystroke.
   useEffect(() => {
@@ -151,7 +154,7 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
   const locate = useCallback(() => {
     trackEvent("find_nearest_clicked");
     if (!navigator.geolocation) {
-      setLocError("Location isn't available in this browser.");
+      setLocError(t("search.errNoGeo"));
       return;
     }
     setLocError(null);
@@ -168,17 +171,17 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
         if (!near) return;
         trackEvent("find_nearest_success", { nearest: near.s.station, nearest_km: Number(near.km.toFixed(1)) });
         onDone?.();
-        router.push(near.s.href);
+        router.push(p(near.s.href));
       },
       (err) => {
         setLocating(false);
         trackEvent("find_nearest_error", { code: err.code });
         if (err.code === err.PERMISSION_DENIED) markDenied();
-        setLocError(err.code === err.PERMISSION_DENIED ? "Location permission was denied." : "Couldn't get your location.");
+        setLocError(err.code === err.PERMISSION_DENIED ? t("search.errDenied") : t("search.errFail"));
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60_000 },
     );
-  }, [stations, router, onDone]);
+  }, [stations, router, onDone, t, p]);
 
   const reset = useCallback(() => {
     setQuery("");
@@ -218,19 +221,19 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
     }
   };
 
-  return { query, setQuery, active, setActive, items, noMatch, locating, locError, choose, onKeyDown, refreshRecents, reset, done: onDone, hasLoc: !!loc, forget };
+  return { t, p, lang, query, setQuery, active, setActive, items, noMatch, locating, locError, choose, onKeyDown, refreshRecents, reset, done: onDone, hasLoc: !!loc, forget };
 }
 
 function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }) {
   const empty = s.query.trim().length < 2;
   return (
     <>
-      <ul id={listId} role="listbox" aria-label="Search results">
+      <ul id={listId} role="listbox" aria-label={s.t("search.results")}>
         {s.items.map((it, i) => {
           const on = i === s.active;
-          const group = !empty ? null : it.type === "recent" ? "Recent" : it.type === "result" && it.near ? "Near you" : null;
+          const group = !empty ? null : it.type === "recent" ? s.t("search.recent") : it.type === "result" && it.near ? s.t("search.nearYou") : null;
           const prev = s.items[i - 1];
-          const prevGroup = !prev ? null : prev.type === "recent" ? "Recent" : prev.type === "result" && prev.near ? "Near you" : null;
+          const prevGroup = !prev ? null : prev.type === "recent" ? s.t("search.recent") : prev.type === "result" && prev.near ? s.t("search.nearYou") : null;
           return (
             <Fragment key={it.key}>
               {group && group !== prevGroup && (
@@ -252,7 +255,7 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
               {it.type === "locate" ? (
                 <span className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                   {s.locating ? <Loader2 className="size-3.5 animate-spin text-slate-400" /> : <MapPin className="size-3.5 text-slate-400" />}
-                  {s.locating ? "Locating…" : "Use my location"}
+                  {s.locating ? s.t("search.locating") : s.t("search.locate")}
                   {s.locError && <span className="text-xs text-amber-700 dark:text-amber-300">{s.locError}</span>}
                 </span>
               ) : it.type === "recent" ? (
@@ -272,7 +275,7 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
                       <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                         <span className={`size-1.5 rounded-full shrink-0 ${dot[it.gauge.tier] ?? dot.none}`} />
                         <span className="truncate">
-                          {it.gauge.station !== it.label && `→ ${it.gauge.station} · `}{it.gauge.basin}
+                          {it.gauge.station !== it.label && `→ ${it.gauge.station} · `}{riverName(it.gauge.basin, s.lang)}
                         </span>
                         {it.gauge.level != null && (
                           <span className="tabular-nums text-slate-700 dark:text-slate-300 shrink-0">
@@ -284,7 +287,7 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
                   </span>
                   <span className="flex items-center gap-2 shrink-0">
                     {it.away != null && !it.near && (
-                      <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">{formatKm(it.away)}</span>
+                      <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">{formatKm(it.away, s.t)}</span>
                     )}
                     {it.river ? (
                       <Waves className="size-3.5 text-slate-400" />
@@ -306,9 +309,9 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
       )}
       {s.noMatch && (
         <div className="px-3.5 py-4 text-sm text-slate-500 dark:text-slate-400">
-          No match for “{s.query.trim()}”.{" "}
-          <Link href="/" onClick={s.done} className="text-sky-700 dark:text-sky-300 underline underline-offset-2">
-            Browse all rivers
+          {s.t("search.noMatch", { q: s.query.trim() })}{" "}
+          <Link href={s.p("/")} onClick={s.done} className="text-sky-700 dark:text-sky-300 underline underline-offset-2">
+            {s.t("search.browse")}
           </Link>
         </div>
       )}
@@ -316,13 +319,12 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
   );
 }
 
-const PLACEHOLDER = "Search your town or river — Kaduwela, Ratnapura, කැලණි";
-
 export function PlaceSearch({ variant, stations }: Props) {
   return variant === "hero" ? <Hero stations={stations} /> : <HeaderSearch stations={stations} />;
 }
 
 function Hero({ stations }: { stations: SearchStation[] }) {
+  const { t } = useI18n();
   const id = useId();
   const listId = `${id}-list`;
   const wrap = useRef<HTMLDivElement>(null);
@@ -352,13 +354,13 @@ function Hero({ stations }: { stations: SearchStation[] }) {
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList ? `${listId}-${s.active}` : undefined}
-          aria-label="Search your town or river"
+          aria-label={t("search.aria")}
           inputMode="search"
           enterKeyHint="go"
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
-          placeholder={PLACEHOLDER}
+          placeholder={t("search.placeholder")}
           value={s.query}
           onChange={(e) => {
             s.setQuery(e.target.value);
@@ -379,7 +381,7 @@ function Hero({ stations }: { stations: SearchStation[] }) {
           className="flex-1 min-w-0 bg-transparent py-3 text-base sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none"
         />
         {s.query && (
-          <button type="button" aria-label="Clear" onClick={() => s.reset()} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button type="button" aria-label={t("search.clear")} onClick={() => s.reset()} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
             <X className="size-4" />
           </button>
         )}
@@ -394,6 +396,7 @@ function Hero({ stations }: { stations: SearchStation[] }) {
 }
 
 function HeaderSearch({ stations }: { stations: SearchStation[] }) {
+  const { t } = useI18n();
   const id = useId();
   const listId = `${id}-list`;
   const [open, setOpen] = useState(false);
@@ -462,9 +465,9 @@ function HeaderSearch({ stations }: { stations: SearchStation[] }) {
         ref={trigger}
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Search towns and rivers"
+        aria-label={t("search.openAria")}
         aria-haspopup="dialog"
-        title="Search ( / )"
+        title={t("search.hint")}
         className="inline-flex items-center justify-center size-9 rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
       >
         <Search className="size-4" />
@@ -478,7 +481,7 @@ function HeaderSearch({ stations }: { stations: SearchStation[] }) {
             ref={panel}
             role="dialog"
             aria-modal="true"
-            aria-label="Search towns and rivers"
+            aria-label={t("search.openAria")}
             onKeyDown={onPanelKey}
             className="h-full sm:h-auto w-full sm:max-w-lg flex flex-col bg-white dark:bg-slate-900 sm:rounded-xl sm:border border-slate-200 dark:border-slate-800 sm:shadow-xl overflow-hidden text-slate-900 dark:text-slate-100"
           >
@@ -492,13 +495,13 @@ function HeaderSearch({ stations }: { stations: SearchStation[] }) {
                 aria-controls={listId}
                 aria-autocomplete="list"
                 aria-activedescendant={showList ? `${listId}-${s.active}` : undefined}
-                aria-label="Search your town or river"
+                aria-label={t("search.aria")}
                 inputMode="search"
                 enterKeyHint="go"
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder={PLACEHOLDER}
+                placeholder={t("search.placeholder")}
                 value={s.query}
                 onChange={(e) => {
                   s.setQuery(e.target.value);
@@ -507,7 +510,7 @@ function HeaderSearch({ stations }: { stations: SearchStation[] }) {
                 onKeyDown={s.onKeyDown}
                 className="flex-1 min-w-0 bg-transparent py-3.5 text-base sm:text-sm placeholder:text-slate-400 outline-none"
               />
-              <button type="button" onClick={close} aria-label="Close search" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+              <button type="button" onClick={close} aria-label={t("search.close")} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
                 <X className="size-4" />
               </button>
             </div>

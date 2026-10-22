@@ -8,11 +8,13 @@ import { stationDisplayName } from "@/lib/displayName";
 import {
   STEADY_M_PER_H,
   TIER_DOT,
-  TIER_TEXT,
+  tierLabel,
   TIER_TEXT_CLASS,
   type HomeStation,
 } from "./tierUi";
 import { TimeAgo } from "./TimeAgo";
+import { useI18n } from "./LocaleProvider";
+import type { TFn } from "@/lib/i18n/translate";
 
 const KEY = "sl_favourites";
 
@@ -48,15 +50,15 @@ function parse(raw: string | null): string[] {
   }
 }
 
-function Trend({ rateM }: { rateM: number | null }) {
+function Trend({ t, rateM }: { t: TFn; rateM: number | null }) {
   if (rateM == null) return null;
   if (Math.abs(rateM) < STEADY_M_PER_H) {
-    return <Minus className="size-3.5 text-slate-400" aria-label="Steady" />;
+    return <Minus className="size-3.5 text-slate-400" aria-label={t("trend.steady")} />;
   }
   return rateM > 0 ? (
-    <ArrowUp className="size-3.5 text-orange-600 dark:text-orange-400" aria-label="Rising" />
+    <ArrowUp className="size-3.5 text-orange-600 dark:text-orange-400" aria-label={t("trend.rising")} />
   ) : (
-    <ArrowDown className="size-3.5 text-emerald-600 dark:text-emerald-400" aria-label="Falling" />
+    <ArrowDown className="size-3.5 text-emerald-600 dark:text-emerald-400" aria-label={t("trend.falling")} />
   );
 }
 
@@ -67,6 +69,7 @@ export function Favourites({
   stations: HomeStation[];
   serverNow: number;
 }) {
+  const { t, p } = useI18n();
   const raw = useSyncExternalStore(subscribe, readRaw, () => null);
   const rows = useMemo(() => {
     const byHref = new Map(stations.map((s) => [s.href, s] as const));
@@ -84,13 +87,13 @@ export function Favourites({
         className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200"
       >
         <Star className="size-3.5 fill-amber-400 text-amber-500" aria-hidden />
-        My places
+        {t("fav.heading")}
       </h2>
       <ul className="divide-y divide-slate-200 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         {rows.map((s) => (
           <li key={s.href}>
             <Link
-              href={s.href}
+              href={p(s.href)}
               className="group flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition first:rounded-t-xl last:rounded-b-xl"
             >
               <span
@@ -102,7 +105,7 @@ export function Favourites({
                   {stationDisplayName(s.station)}
                 </span>
                 <span className={`block truncate text-[11px] ${TIER_TEXT_CLASS[s.tier]}`}>
-                  {TIER_TEXT[s.tier]}
+                  {tierLabel(t, s.tier)}
                   {s.tier === "stale" && s.ts != null && (
                     <>
                       {" · "}
@@ -114,7 +117,7 @@ export function Favourites({
               </span>
               <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
                 {formatLevel(s.level, s.unit)}
-                {s.tier !== "stale" && <Trend rateM={s.rate3hM} />}
+                {s.tier !== "stale" && <Trend t={t} rateM={s.rate3hM} />}
               </span>
               <ChevronRight className="size-4 shrink-0 text-slate-400 group-hover:text-sky-500 transition" />
             </Link>

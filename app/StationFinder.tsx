@@ -6,6 +6,8 @@ import { MapPin, Loader2, AlertCircle, X } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
 import { trackEvent } from "@/lib/umami";
+import { useI18n } from "./LocaleProvider";
+import { riverName } from "@/lib/i18n/format";
 
 type StationWithCoords = Station & { latitude: number; longitude: number };
 
@@ -34,11 +36,12 @@ function distanceKm(
 
 export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
   const [state, setState] = useState<State>({ kind: "idle" });
+  const { lang, t, p } = useI18n();
 
   function locate() {
     trackEvent("find_nearest_clicked");
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setState({ kind: "error", message: "Geolocation isn't available in this browser." });
+      setState({ kind: "error", message: t("finder.errNoGeo") });
       return;
     }
     setState({ kind: "locating" });
@@ -62,10 +65,10 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
       (err) => {
         const reason =
           err.code === err.PERMISSION_DENIED
-            ? "Location permission was denied."
+            ? t("finder.errDenied")
             : err.code === err.POSITION_UNAVAILABLE
-              ? "Couldn't determine your location."
-              : "Location request timed out.";
+              ? t("finder.errUnavailable")
+              : t("finder.errTimeout");
         trackEvent("find_nearest_error", { code: err.code });
         setState({ kind: "error", message: reason });
       },
@@ -85,14 +88,14 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
           className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 shadow-sm transition"
         >
           <MapPin className="size-3.5" />
-          Find my nearest station
+          {t("finder.button")}
         </button>
       )}
 
       {state.kind === "locating" && (
         <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 px-2.5 py-1.5">
           <Loader2 className="size-3.5 animate-spin" />
-          Locating…
+          {t("finder.locating")}
         </span>
       )}
 
@@ -101,7 +104,7 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
           <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
           <span>{state.message}</span>
           <button onClick={reset} className="ml-2 underline">
-            close
+            {t("common.closeLower")}
           </button>
         </div>
       )}
@@ -110,11 +113,11 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
         <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden max-w-xs">
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800">
             <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-              Nearest to you
+              {t("finder.nearest")}
             </span>
             <button
               onClick={reset}
-              aria-label="Close"
+              aria-label={t("common.close")}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <X className="size-3.5" />
@@ -124,7 +127,7 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
             {state.nearest.map(({ station, km }, i) => (
               <li key={`${station.basin}|${station.station}`}>
                 <Link
-                  href={stationPath(station.basin, station.station)}
+                  href={p(stationPath(station.basin, station.station))}
                   onClick={() =>
                     trackEvent("nearest_station_clicked", {
                       basin: station.basin?.trim() || "(unknown)",
@@ -140,18 +143,18 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
                       {station.station}
                     </div>
                     <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                      {station.basin || "—"}
+                      {station.basin ? riverName(station.basin, lang) : "—"}
                     </div>
                   </div>
                   <div className="tabular-nums text-xs text-slate-600 dark:text-slate-400 shrink-0">
-                    {km.toFixed(1)} km
+                    {km.toFixed(1)} {t("unit.km")}
                   </div>
                 </Link>
               </li>
             ))}
           </ul>
           <div className="px-3 py-1.5 text-[10px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
-            Straight-line distance — your local river gauge may be further by road or downstream.
+            {t("finder.straight")}
           </div>
         </div>
       )}

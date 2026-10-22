@@ -8,7 +8,8 @@ import { formatKm, matchLocation } from "@/lib/nearby";
 import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { LocationPrompt } from "./LocationPrompt";
-import { TONE, useLang } from "./ShareButton";
+import { TONE } from "./ShareButton";
+import { useI18n } from "./LocaleProvider";
 import { useLocation } from "./useLocation";
 import { CALL, NEXT_HOUR, VERDICT, directionFor } from "./verdict";
 import { TIER_DOT, TIER_TEXT_CLASS, type HomeStation } from "./tierUi";
@@ -20,7 +21,7 @@ const callBtn = `inline-flex items-center justify-center gap-2 h-11 w-full round
 /** Home page, top: the visitor's nearest river gauge, or the polite location prompt. */
 export function NearYou({ stations }: { stations: HomeStation[] }) {
   const { loc, forget } = useLocation();
-  const [lang] = useLang();
+  const { lang, t, p } = useI18n();
   const byStation = useMemo(() => new Map(stations.map((s) => [s.station, s])), [stations]);
   const near = useMemo(() => (loc ? matchLocation(loc, stations) : null), [loc, stations]);
 
@@ -42,12 +43,12 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
         className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200"
       >
         <MapPin className="size-3.5 text-sky-600 dark:text-sky-400" aria-hidden />
-        {near.placeName ? `Near ${near.placeName}` : "Near you"}
+        {near.placeName ? t("near.near", { place: near.placeName }) : t("near.nearYou")}
       </h2>
 
       <div data-tier={tone} className={`rounded-xl border border-l-4 ${bar} border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm`}>
         <Link
-          href={me.href}
+          href={p(me.href)}
           className={`group flex items-center gap-3 p-4 rounded-t-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}
         >
           <span className="min-w-0 flex-1" lang={lang}>
@@ -62,14 +63,14 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
               </span>
             )}
             <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400" lang="en">
-              {stationDisplayName(me.station)} · {formatKm(near.primary.km)} away
+              {stationDisplayName(me.station)} · {t("near.away", { km: formatKm(near.primary.km, t) })}
               {me.level != null && <> · <span className="tabular-nums">{formatLevel(me.level, me.unit)}</span></>}
             </span>
           </span>
           <ChevronRight className="size-4 shrink-0 text-slate-400 group-hover:text-sky-500 transition" aria-hidden />
         </Link>
 
-        {lang !== "en" && <p className="px-4 pb-2 text-xs text-slate-500 dark:text-slate-400">machine-translated</p>}
+        {lang !== "en" && <p className="px-4 pb-2 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
 
         {elevated && (
           <div className="px-4 pb-4 grid gap-2 sm:grid-cols-2">
@@ -84,7 +85,7 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
                 href={dc.tel}
                 className={`${callBtn} border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800`}
               >
-                <Phone className="size-4" aria-hidden /> {dc.district} DMC office
+                <Phone className="size-4" aria-hidden /> {t("common.callDmcOffice", { district: dc.district })}
               </a>
             )}
           </div>
@@ -97,11 +98,11 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
               if (!s) return null;
               return (
                 <li key={s.href}>
-                  <Link href={s.href} className={`group flex items-center gap-2.5 px-4 min-h-11 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}>
+                  <Link href={p(s.href)} className={`group flex items-center gap-2.5 px-4 min-h-11 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}>
                     <span className={`size-2 shrink-0 rounded-full ${TIER_DOT[s.tier]}`} aria-hidden />
                     <span className="min-w-0 flex-1 truncate text-sm text-slate-900 dark:text-slate-100">
                       {stationDisplayName(s.station)}
-                      <span className="text-xs text-slate-500 dark:text-slate-400"> · {formatKm(o.km)}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400"> · {formatKm(o.km, t)}</span>
                     </span>
                     <span className={`text-xs shrink-0 tabular-nums ${TIER_TEXT_CLASS[s.tier]}`}>{formatLevel(s.level, s.unit)}</span>
                   </Link>
@@ -120,13 +121,14 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
 }
 
 export function ForgetLink({ onClick, className = "" }: { onClick: () => void; className?: string }) {
+  const { t } = useI18n();
   return (
     <button
       type="button"
       onClick={onClick}
       className={`inline-flex items-center min-h-6 text-xs text-slate-500 dark:text-slate-400 underline underline-offset-2 decoration-slate-300 dark:decoration-slate-600 hover:text-slate-800 dark:hover:text-slate-200 rounded ${ring} ${className}`}
     >
-      Forget my location
+      {t("near.forget")}
     </button>
   );
 }

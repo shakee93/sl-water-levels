@@ -1,3 +1,7 @@
+"use client";
+
+import { useI18n } from "./LocaleProvider";
+
 // Horizontal river gauge for the verdict card: how far the water is from each
 // flood mark, at a glance. Fill = current level, faint extension = the 24 h
 // estimate, ticks = alert / minor / major.
@@ -15,9 +19,9 @@ const FILL: Record<Tone, string> = {
 };
 
 const MARKS = [
-  { key: "alert", label: "Alert", tick: "bg-amber-500" },
-  { key: "minor", label: "Minor flood", tick: "bg-orange-600" },
-  { key: "major", label: "Major flood", tick: "bg-red-600" },
+  { key: "alert", label: "mark.alert", tick: "bg-amber-500" },
+  { key: "minor", label: "mark.minor", tick: "bg-orange-600" },
+  { key: "major", label: "mark.major", tick: "bg-red-600" },
 ] as const;
 
 const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(v < 10 ? 2 : 1).replace(/0$/, ""));
@@ -35,6 +39,7 @@ export function LevelGauge({
   unit: string | null;
   thresholds: { alert: number | null; minor: number | null; major: number | null };
 }) {
+  const { t } = useI18n();
   const marks = MARKS.filter((m) => thresholds[m.key] != null && thresholds[m.key]! > 0);
   if (marks.length === 0) return null;
   // Scale from 0 (or a negative reading) to a little past the highest mark or reading.
@@ -44,7 +49,7 @@ export function LevelGauge({
   const now = pct(level);
   const ahead = next24 != null ? pct(next24) : now;
   const u = unit ? ` ${unit}` : "";
-  const label = `Level ${fmt(level)}${u}; ${marks.map((m) => `${m.label.toLowerCase()} ${fmt(thresholds[m.key]!)}${u}`).join(", ")}`;
+  const label = t("gauge.aria", { level: `${fmt(level)}${u}`, marks: marks.map((m) => `${t(m.label).toLowerCase()} ${fmt(thresholds[m.key]!)}${u}`).join(", ") });
 
   return (
     <div className="mt-4" role="img" aria-label={label}>
@@ -69,7 +74,7 @@ export function LevelGauge({
         {marks.map((m) => (
           <span key={m.key} className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span className={`inline-block w-0.5 h-3 rounded-full ${m.tick}`} />
-            {m.label} {fmt(thresholds[m.key]!)}
+            {t(m.label)} {fmt(thresholds[m.key]!)}
             {u}
           </span>
         ))}

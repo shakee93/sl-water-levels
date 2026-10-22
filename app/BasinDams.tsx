@@ -1,31 +1,35 @@
 import { Droplet, Zap, ArrowRightLeft, Sprout } from "lucide-react";
 import { DAMS_BY_BASIN, type Dam } from "@/lib/dams";
 import { fetchHydroGeneration, currentByPlant, peakInLast } from "@/lib/ceb";
+import { getI18n } from "@/lib/i18n/server";
+import { riverName } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
 
-const typeStyle: Record<Dam["type"], { label: string; cls: string; Icon: typeof Droplet }> = {
+const typeStyle: Record<Dam["type"], { label: "dams.hydroReservoir" | "dams.hydroStation" | "dams.diversion" | "dams.irrigation"; cls: string; Icon: typeof Droplet }> = {
   "hydropower-reservoir": {
-    label: "Hydropower reservoir",
+    label: "dams.hydroReservoir",
     cls: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-900",
     Icon: Droplet,
   },
   "hydropower-station": {
-    label: "Hydropower station",
+    label: "dams.hydroStation",
     cls: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900",
     Icon: Zap,
   },
   diversion: {
-    label: "Diversion",
+    label: "dams.diversion",
     cls: "bg-violet-50 text-violet-700 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-900",
     Icon: ArrowRightLeft,
   },
   irrigation: {
-    label: "Irrigation reservoir",
+    label: "dams.irrigation",
     cls: "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900",
     Icon: Sprout,
   },
 };
 
-export async function BasinDams({ basin }: { basin: string }) {
+export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }) {
+  const { t } = getI18n(lang);
   const dams = DAMS_BY_BASIN[basin];
   if (!dams || dams.length === 0) return null;
 
@@ -39,10 +43,10 @@ export async function BasinDams({ basin }: { basin: string }) {
     <section className="mt-8">
       <div className="flex items-baseline justify-between mb-3">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-          {basin} — connected dams &amp; power stations
+          {t("dams.heading", { basin: riverName(basin, lang) })}
         </h3>
         <span className="text-[11px] text-slate-500 dark:text-slate-400">
-          {dams.length} known
+          {t("dams.known", { n: dams.length })}
         </span>
       </div>
 
@@ -66,7 +70,7 @@ export async function BasinDams({ basin }: { basin: string }) {
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <span className="text-sm font-medium truncate">{d.name}</span>
                     <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      {style.label}
+                      {t(style.label)}
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-600 dark:text-slate-400">
@@ -79,14 +83,14 @@ export async function BasinDams({ basin }: { basin: string }) {
                       <span>
                         {liveRec && liveRec.powerMW > 0 ? (
                           <span className="text-amber-700 dark:text-amber-300 tabular-nums">
-                            ⚡ {liveRec.powerMW} MW now
+                            {t("dams.mwNow", { mw: liveRec.powerMW })}
                           </span>
                         ) : (
-                          <span className="text-slate-400">live MW: n/a</span>
+                          <span className="text-slate-400">{t("dams.mwNa")}</span>
                         )}
                         {peak6h > 0 && (
                           <span className="text-slate-500 ml-2 tabular-nums">
-                            (peak 6h: {peak6h} MW)
+                            {t("dams.peak", { mw: peak6h })}
                           </span>
                         )}
                       </span>
