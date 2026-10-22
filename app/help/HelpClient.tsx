@@ -1,11 +1,14 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MapPin, Phone } from "lucide-react";
 import { DISTRICT_BY_STATION } from "@/lib/districts";
 import { DISTRICT_CONTACTS, contactsForDistrict } from "@/lib/help";
+import { districtNear } from "@/lib/nearby";
+import { ForgetLink } from "../NearYou";
+import { useLocation } from "../useLocation";
 
 const districts = Object.keys(DISTRICT_CONTACTS).sort();
 
@@ -18,8 +21,14 @@ function initialDistrict(station: string | null, district: string | null): strin
 function Inner() {
   const params = useSearchParams();
   const fromUrl = initialDistrict(params.get("station"), params.get("district"));
+  const { loc, forget } = useLocation();
+  // Only when the link names no district: the visitor's own, worked out on this device.
+  const fromLoc = useMemo(() => {
+    const d = !fromUrl && loc ? districtNear(loc) : null;
+    return d ? (contactsForDistrict(d)?.district ?? "") : "";
+  }, [fromUrl, loc]);
   const [picked, setPicked] = useState<string | null>(null);
-  const district = picked ?? fromUrl;
+  const district = picked ?? (fromUrl || fromLoc);
   const c = contactsForDistrict(district);
   const stations = Object.entries(DISTRICT_BY_STATION)
     .filter(([, d]) => d === district)
@@ -44,6 +53,13 @@ function Inner() {
           <option key={d} value={d}>{d}</option>
         ))}
       </select>
+
+      {fromLoc && picked == null && (
+        <p className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <span>From your location</span>
+          <ForgetLink onClick={forget} />
+        </p>
+      )}
 
       {c && (
         <div className="mt-3 space-y-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Check, ChevronDown, CircleCheck, Clock, Copy, Eye, Info, MessageCircle, Phone, Share2, Siren, Star, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Eye, Info, Minus, MessageCircle, Phone, Share2, Siren, Star, TriangleAlert } from "lucide-react";
 
 const KEY = "sl_favourites";
 const EVT = "sl:favourites";
@@ -161,7 +161,7 @@ function langSnap(): string {
   }
 }
 
-function useLang(avail: Lang[] = ["en", "si", "ta"]): [Lang, (l: Lang) => void] {
+export function useLang(avail: Lang[] = ["en", "si", "ta"]): [Lang, (l: Lang) => void] {
   const stored = useSyncExternalStore(langSub, langSnap, () => "en");
   const lang = (avail as string[]).includes(stored) ? (stored as Lang) : "en";
   const pick = (l: Lang) => {
@@ -255,7 +255,7 @@ export function AdvisoryText({
 export type T3 = { en: string; si: string; ta: string };
 export type VerdictTone = "normal" | "watch" | "alert" | "minor" | "major" | "none" | "stale";
 
-const TONE: Record<VerdictTone, { icon: typeof Clock; text: string; bar: string }> = {
+export const TONE: Record<VerdictTone, { icon: typeof Clock; text: string; bar: string }> = {
   normal: { icon: CircleCheck, text: "text-emerald-700 dark:text-emerald-400", bar: "border-l-emerald-500" },
   watch: { icon: Eye, text: "text-slate-900 dark:text-slate-100", bar: "border-l-slate-300 dark:border-l-slate-600" },
   alert: { icon: TriangleAlert, text: "text-amber-700 dark:text-amber-400", bar: "border-l-amber-500" },
@@ -265,6 +265,13 @@ const TONE: Record<VerdictTone, { icon: typeof Clock; text: string; bar: string 
   stale: { icon: Clock, text: "text-slate-600 dark:text-slate-400", bar: "border-l-slate-300 dark:border-l-slate-600" },
 };
 
+const TREND = {
+  up: { icon: ArrowUp, tone: "text-amber-600 dark:text-amber-400" },
+  down: { icon: ArrowDown, tone: "text-emerald-600 dark:text-emerald-400" },
+  steady: { icon: Minus, tone: "text-slate-500 dark:text-slate-400" },
+  unknown: { icon: CircleHelp, tone: "text-slate-400 dark:text-slate-500" },
+} as const;
+
 export function VerdictCard({
   tone,
   verdict,
@@ -272,6 +279,7 @@ export function VerdictCard({
   fact,
   labels,
   action,
+  outlook,
   call,
   office,
   footer,
@@ -285,6 +293,8 @@ export function VerdictCard({
   /** Optional muted labels shown before direction and fact ("Next hour:", "Next 24 hours:"). */
   labels?: { direction: T3 | null; fact: T3 | null };
   action: T3 | null;
+  /** The AI sentence with a round trend badge, shown by default under the forecast lines. */
+  outlook?: { trend: "up" | "down" | "steady" | "unknown"; text: React.ReactNode } | null;
   /** Label for the 117 button; null hides the call buttons. */
   call: T3 | null;
   office: { label: string; tel: string } | null;
@@ -329,6 +339,20 @@ export function VerdictCard({
           {action && <p className="font-medium text-slate-900 dark:text-slate-100">{action[lang]}</p>}
         </div>
         {lang !== "en" && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">machine-translated</p>}
+        {outlook && (
+          <div className="mt-3 flex items-start gap-3">
+            <span
+              className={`shrink-0 size-10 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center ${TREND[outlook.trend].tone}`}
+              aria-hidden
+            >
+              {(() => {
+                const T = TREND[outlook.trend].icon;
+                return <T className="size-5" />;
+              })()}
+            </span>
+            <div className="flex-1 min-w-0 pt-1">{outlook.text}</div>
+          </div>
+        )}
         {call && (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <a

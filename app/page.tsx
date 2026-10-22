@@ -10,6 +10,7 @@ import { getSearchStations } from "./PlaceSearchData";
 import { SriLankaMap } from "./SriLankaMap";
 import { NeedsAttention } from "./NeedsAttention";
 import { Favourites } from "./Favourites";
+import { NearYou } from "./NearYou";
 import { LegacyRedirect } from "./LegacyRedirect";
 import { TimeAgo } from "./TimeAgo";
 import {
@@ -130,6 +131,8 @@ export default async function Home() {
                 <ArrowRight className="size-3" aria-hidden />
               </Link>
             </div>
+
+            <NearYou stations={home} />
 
             <Favourites stations={home} serverNow={serverNow} />
 

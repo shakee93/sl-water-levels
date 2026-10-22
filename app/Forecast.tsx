@@ -10,6 +10,7 @@ import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { stationPath } from "@/lib/slug";
 import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareButton";
+import { CALL, STEADY_M_PER_H, VERDICT, directionFor } from "./verdict";
 
 const TZ = "Asia/Colombo";
 const HOUR = 3_600_000;
@@ -19,32 +20,12 @@ const clock = (ts: number) => timeFmt.format(ts).replace(/\s?(AM|PM)/, (_, m: st
 const fmtTime = clock;
 const fmtRain = (v: number | null) => (v == null ? "n/a" : `${v.toFixed(1)} mm`);
 
-// Fixed phrases. Sinhala and Tamil are machine translations (the card says so when they are shown).
-const VERDICT: Record<VerdictTone, T3> = {
-  normal: { en: "Normal", si: "සාමාන්‍යයි", ta: "இயல்பு" },
-  watch: { en: "Keep an eye on it", si: "සැලකිලිමත් වන්න", ta: "கவனமாக இருங்கள்" },
-  alert: { en: "Get ready", si: "සූදානම් වන්න", ta: "தயாராகுங்கள்" },
-  minor: { en: "Flooding now", si: "දැන් ගංවතුර තත්ත්වයක්", ta: "இப்போது வெள்ளம்" },
-  major: { en: "Move to safety", si: "ආරක්ෂිත ස්ථානයකට යන්න", ta: "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள்" },
-  none: { en: "No flood levels published", si: "ගංවතුර මට්ටම් පළ කර නැත", ta: "வெள்ள மட்டங்கள் வெளியிடப்படவில்லை" },
-  stale: { en: "Data delayed", si: "දත්ත ප්‍රමාදයි", ta: "தரவு தாமதம்" },
-};
 const ACTION: Partial<Record<VerdictTone, T3>> = {
   alert: { en: "Move valuables up, charge your phone", si: "ඔබේ භාණ්ඩ ඉහළට ගෙන යන්න, දුරකථනය චාජ් කරන්න", ta: "உடைமைகளை உயரத்தில் வையுங்கள், தொலைபேசியை சார்ஜ் செய்யுங்கள்" },
   minor: { en: "Be ready to leave low areas", si: "පහත් ප්‍රදේශවලින් ඉවත් වීමට සූදානම් වන්න", ta: "தாழ்வான பகுதிகளிலிருந்து வெளியேறத் தயாராக இருங்கள்" },
   major: { en: "Follow official instructions", si: "නිල උපදෙස් අනුගමනය කරන්න", ta: "அதிகாரப்பூர்வ அறிவுறுத்தல்களைப் பின்பற்றுங்கள்" },
 };
-const CALL: T3 = { en: "Call 117", si: "117 අමතන්න", ta: "117 ஐ அழைக்கவும்" };
-const DIR: Record<string, T3> = {
-  rising: { en: "Rising", si: "ඉහළ යයි", ta: "உயர்கிறது" },
-  slow: { en: "Rising slowly", si: "සෙමින් ඉහළ යයි", ta: "மெதுவாக உயர்கிறது" },
-  falling: { en: "Falling", si: "පහළ යයි", ta: "குறைகிறது" },
-  steady: { en: "Steady", si: "ස්ථාවරයි", ta: "மாற்றமில்லை" },
-};
-
 const ORDER = ["normal", "watch", "alert", "minor", "major"] as const;
-const STEADY_M_PER_H = 0.006;
-const SLOW_M_PER_H = 0.05;
 
 function hoursPhrase(n: number): T3 {
   return n <= 1
@@ -146,13 +127,7 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
       : { en: "No recent reading", si: "මෑත කියවීමක් නැත", ta: "சமீபத்திய அளவீடு இல்லை" }
     : r == null
       ? null
-      : Math.abs(r) < STEADY_M_PER_H
-        ? DIR.steady
-        : r < 0
-          ? DIR.falling
-          : r < SLOW_M_PER_H
-            ? DIR.slow
-            : DIR.rising;
+      : directionFor(r);
 
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const dc = elevated ? contactsForDistrict(district) : null;
@@ -204,18 +179,27 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
               }
         }
         action={stale ? null : (ACTION[tone] ?? null)}
+        outlook={
+          stale
+            ? null
+            : {
+                trend: r == null ? "unknown" : Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "down" : "up",
+                text: (
+                  <AdvisoryText
+                    en={advisory.en}
+                    si={advisory.si}
+                    ta={advisory.ta}
+                    experimental={f.experimental && f.method === "model"}
+                    source={advisory.source}
+                  />
+                ),
+              }
+        }
         call={elevated ? CALL : null}
         office={dc ? { label: `${dc.district} DMC office`, tel: dc.tel } : null}
         footer={footer}
         share={{ href: stationPath(basin, selectedStation), name: `${name} (${basin.trim()})`, text: shareText }}
       >
-        <AdvisoryText
-          en={advisory.en}
-          si={advisory.si}
-          ta={advisory.ta}
-          experimental={f.experimental && f.method === "model"}
-          source={advisory.source}
-        />
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
           <p className="font-medium">{f.headline}</p>
           {f.outlook === "elevated" && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,12 +10,15 @@ import { PLACES, RIVERS } from "@/lib/places";
 import { basinPath } from "@/lib/slug";
 import { formatLevel } from "@/lib/units";
 import { trackEvent } from "@/lib/umami";
+import { distanceKm, formatKm, matchLocation } from "@/lib/nearby";
+import { ForgetLink } from "./NearYou";
+import { markDenied, storeLocation, useLocation } from "./useLocation";
 import type { SearchStation } from "./PlaceSearchData";
 
 type Props = { variant: "hero" | "header"; stations: SearchStation[] };
 
 type Item =
-  | { key: string; type: "result"; label: string; sub: string; href: string; river: boolean; gauge?: SearchStation; km?: number }
+  | { key: string; type: "result"; label: string; sub: string; href: string; river: boolean; gauge?: SearchStation; km?: number; away?: number; near?: boolean }
   | { key: string; type: "recent"; label: string; sub: string; href: string }
   | { key: string; type: "locate" };
 
@@ -47,12 +50,6 @@ function writeRecent(r: { label: string; sub: string; href: string }) {
   }
 }
 
-function distanceKm(aLat: number, aLon: number, bLat: number, bLon: number) {
-  const r = (d: number) => (d * Math.PI) / 180;
-  const h = Math.sin(r(bLat - aLat) / 2) ** 2 + Math.cos(r(aLat)) * Math.cos(r(bLat)) * Math.sin(r(bLon - aLon) / 2) ** 2;
-  return 12742 * Math.asin(Math.sqrt(h));
-}
-
 /** Shared state + behaviour for both variants. */
 function useSearch(stations: SearchStation[], onDone?: () => void) {
   const router = useRouter();
@@ -66,25 +63,69 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
   const [recents, setRecents] = useState<{ label: string; sub: string; href: string }[]>([]);
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
+  const { loc, forget } = useLocation();
+  const placeByName = useMemo(() => new Map(PLACES.map((p) => [p.name, p])), []);
 
   const refreshRecents = useCallback(() => setRecents(readRecents()), []);
 
-  const hits: Hit[] = useMemo(() => search(query, index, 6), [query, index]);
+  // Distance from the visitor to whatever a hit points at (town, gauge, or the nearest gauge of a river).
+  const awayKm = useCallback(
+    (h: Hit): number | undefined => {
+      if (!loc) return undefined;
+      let pt: { latitude: number; longitude: number } | undefined;
+      if (h.kind === "place") {
+        const p = placeByName.get(h.label);
+        pt = p ? { latitude: p.lat, longitude: p.lon } : undefined;
+      } else if (h.kind === "station") {
+        pt = byName.get(h.label);
+      } else {
+        const ds = stations.filter((s) => s.basin === h.label).map((s) => distanceKm(loc, { lat: s.latitude, lon: s.longitude }));
+        return ds.length ? Math.min(...ds) : undefined;
+      }
+      return pt ? distanceKm(loc, { lat: pt.latitude, lon: pt.longitude }) : undefined;
+    },
+    [loc, placeByName, byName, stations],
+  );
+
+  const hits: Hit[] = useMemo(() => {
+    const found = search(query, index, 6);
+    if (!loc) return found;
+    // Near-equal matches: the one closer to the visitor first.
+    const bucket = (h: Hit) => Math.round(h.score * 20);
+    return [...found].sort((a, b) => bucket(b) - bucket(a) || (awayKm(a) ?? Infinity) - (awayKm(b) ?? Infinity));
+  }, [query, index, loc, awayKm]);
+  const near = useMemo(() => (loc ? matchLocation(loc, stations) : null), [loc, stations]);
   const trimmed = query.trim();
   const noMatch = trimmed.length >= 2 && hits.length === 0;
 
   const items: Item[] = useMemo(() => {
     if (trimmed.length < 2) {
+      const nearItems: Item[] = near
+        ? [near.primary, ...near.others].map((g, i): Item => {
+            const gauge = byName.get(g.station);
+            return {
+              key: `near|${g.station}`,
+              type: "result",
+              label: i === 0 && near.placeName ? near.placeName : g.station,
+              sub: `${formatKm(g.km)} away`,
+              href: g.href,
+              river: false,
+              gauge,
+              near: true,
+            };
+          })
+        : [];
       return [
+        ...nearItems,
         ...recents.map((r): Item => ({ key: `r|${r.href}`, type: "recent", ...r })),
-        { key: "locate", type: "locate" },
+        ...(loc ? [] : [{ key: "locate", type: "locate" } as Item]),
       ];
     }
     return hits.map((h): Item => {
       const g = h.gauges[0];
       const gauge = g ? byName.get(g.station) : undefined;
       if (h.kind === "river") {
-        return { key: `r|${h.label}`, type: "result", label: h.label, sub: h.sub, href: basinPath(h.label), river: true };
+        return { key: `r|${h.label}`, type: "result", label: h.label, sub: h.sub, href: basinPath(h.label), river: true, away: awayKm(h) };
       }
       return {
         key: `${h.kind}|${h.label}`,
@@ -95,9 +136,10 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
         river: false,
         gauge,
         km: h.kind === "place" ? (g as { km: number }).km : undefined,
+        away: awayKm(h),
       };
     });
-  }, [hits, byName, recents, trimmed]);
+  }, [hits, byName, recents, trimmed, near, loc, awayKm]);
 
   // Track no-match once per settled query, not per keystroke.
   useEffect(() => {
@@ -117,9 +159,10 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: la, longitude: lo } = pos.coords;
+        storeLocation(la, lo);
         const near = stations
           .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
-          .map((s) => ({ s, km: distanceKm(la, lo, s.latitude, s.longitude) }))
+          .map((s) => ({ s, km: distanceKm({ lat: la, lon: lo }, { lat: s.latitude, lon: s.longitude }) }))
           .sort((a, b) => a.km - b.km)[0];
         setLocating(false);
         if (!near) return;
@@ -130,6 +173,7 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
       (err) => {
         setLocating(false);
         trackEvent("find_nearest_error", { code: err.code });
+        if (err.code === err.PERMISSION_DENIED) markDenied();
         setLocError(err.code === err.PERMISSION_DENIED ? "Location permission was denied." : "Couldn't get your location.");
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60_000 },
@@ -174,24 +218,27 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
     }
   };
 
-  return { query, setQuery, active, setActive, items, noMatch, locating, locError, choose, onKeyDown, refreshRecents, reset, done: onDone };
+  return { query, setQuery, active, setActive, items, noMatch, locating, locError, choose, onKeyDown, refreshRecents, reset, done: onDone, hasLoc: !!loc, forget };
 }
 
 function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }) {
   const empty = s.query.trim().length < 2;
   return (
     <>
-      {empty && s.items.some((i) => i.type === "recent") && (
-        <div className="px-3.5 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-          Recent
-        </div>
-      )}
       <ul id={listId} role="listbox" aria-label="Search results">
         {s.items.map((it, i) => {
           const on = i === s.active;
+          const group = !empty ? null : it.type === "recent" ? "Recent" : it.type === "result" && it.near ? "Near you" : null;
+          const prev = s.items[i - 1];
+          const prevGroup = !prev ? null : prev.type === "recent" ? "Recent" : prev.type === "result" && prev.near ? "Near you" : null;
           return (
+            <Fragment key={it.key}>
+              {group && group !== prevGroup && (
+                <li role="presentation" className="px-3.5 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+                  {group}
+                </li>
+              )}
             <li
-              key={it.key}
               id={`${listId}-${i}`}
               role="option"
               aria-selected={on}
@@ -225,7 +272,7 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
                       <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                         <span className={`size-1.5 rounded-full shrink-0 ${dot[it.gauge.tier] ?? dot.none}`} />
                         <span className="truncate">
-                          → {it.gauge.station} · {it.gauge.basin}
+                          {it.gauge.station !== it.label && `→ ${it.gauge.station} · `}{it.gauge.basin}
                         </span>
                         {it.gauge.level != null && (
                           <span className="tabular-nums text-slate-700 dark:text-slate-300 shrink-0">
@@ -235,17 +282,28 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
                       </span>
                     )}
                   </span>
-                  {it.river ? (
-                    <Waves className="size-3.5 text-slate-400 shrink-0" />
-                  ) : (
-                    <ArrowRight className={`size-3.5 shrink-0 transition ${on ? "text-sky-500" : "text-slate-400"}`} />
-                  )}
+                  <span className="flex items-center gap-2 shrink-0">
+                    {it.away != null && !it.near && (
+                      <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">{formatKm(it.away)}</span>
+                    )}
+                    {it.river ? (
+                      <Waves className="size-3.5 text-slate-400" />
+                    ) : (
+                      <ArrowRight className={`size-3.5 transition ${on ? "text-sky-500" : "text-slate-400"}`} />
+                    )}
+                  </span>
                 </>
               )}
             </li>
+            </Fragment>
           );
         })}
       </ul>
+      {s.hasLoc && (
+        <div className="px-3.5 py-2 border-t border-slate-100 dark:border-slate-800 text-right">
+          <ForgetLink onClick={s.forget} />
+        </div>
+      )}
       {s.noMatch && (
         <div className="px-3.5 py-4 text-sm text-slate-500 dark:text-slate-400">
           No match for “{s.query.trim()}”.{" "}

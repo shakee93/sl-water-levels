@@ -8,13 +8,16 @@ import {
   Popup,
   ZoomControl,
   Polyline,
+  useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
+import { matchLocation } from "@/lib/nearby";
 import { TIER_HEX, TIER_TEXT, type HomeStation } from "./tierUi";
+import { useLocation } from "./useLocation";
 
 type Props = {
   stations: HomeStation[];
@@ -71,6 +74,21 @@ function useColorScheme(): "light" | "dark" {
   return scheme;
 }
 
+const inSriLanka = (lat: number, lon: number) =>
+  lat >= SL_BOUNDS[0][0] && lat <= SL_BOUNDS[1][0] && lon >= SL_BOUNDS[0][1] && lon <= SL_BOUNDS[1][1];
+
+/** Once per page load: frame the visitor and their nearest gauges. No continuous tracking. */
+function FitToUser({ points }: { points: Array<[number, number]> | null }) {
+  const map = useMap();
+  const done = useRef(false);
+  useEffect(() => {
+    if (!points || done.current) return;
+    done.current = true;
+    map.fitBounds(points, { padding: [48, 48], maxZoom: 11, animate: false });
+  }, [map, points]);
+  return null;
+}
+
 export function MapLeaflet({ stations, basinChains }: Props) {
   const scheme = useColorScheme();
   // On phones the whole island only fits one zoom level further out.
@@ -78,6 +96,15 @@ export function MapLeaflet({ stations, basinChains }: Props) {
     typeof window !== "undefined" && window.innerWidth < 640 ? SL_ZOOM - 1 : SL_ZOOM,
   );
   const tile = scheme === "dark" ? DARK_TILE : LIGHT_TILE;
+  const { loc } = useLocation();
+  const user = loc && inSriLanka(loc.lat, loc.lon) ? loc : null;
+  const fit = useMemo(() => {
+    if (!user) return null;
+    const near = matchLocation(user, stations);
+    const pts: Array<[number, number]> = [[user.lat, user.lon]];
+    if (near) for (const g of [near.primary, ...near.others]) pts.push([g.latitude, g.longitude]);
+    return pts;
+  }, [user, stations]);
 
   return (
     <MapContainer
@@ -93,6 +120,7 @@ export function MapLeaflet({ stations, basinChains }: Props) {
       style={{ height: "100%", width: "100%", background: "transparent" }}
     >
       <ZoomControl position="bottomright" />
+      <FitToUser points={fit} />
       <TileLayer
         key={scheme}
         attribution={tile.attribution}
@@ -158,6 +186,26 @@ export function MapLeaflet({ stations, basinChains }: Props) {
           </CircleMarker>
         );
       })}
+      {user && (
+        <>
+          <CircleMarker
+            center={[user.lat, user.lon]}
+            radius={14}
+            pathOptions={{ stroke: false, fillColor: "#3b82f6", fillOpacity: 0.18 }}
+            interactive={false}
+          />
+          <CircleMarker
+            center={[user.lat, user.lon]}
+            radius={6}
+            pathOptions={{ fillColor: "#2563eb", fillOpacity: 1, color: scheme === "dark" ? "#0f172a" : "#ffffff", weight: 2.5, opacity: 1 }}
+          >
+            <Tooltip direction="top" offset={[0, -6]} opacity={1}>
+              <span className="font-medium">You are here</span>
+              <span className="text-slate-500"> · about 1 km</span>
+            </Tooltip>
+          </CircleMarker>
+        </>
+      )}
     </MapContainer>
   );
 }

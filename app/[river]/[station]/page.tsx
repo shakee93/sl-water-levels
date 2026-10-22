@@ -9,7 +9,7 @@ import {
   statusFor,
   type Station,
 } from "@/lib/arcgis";
-import { basinPath, basinSlug, resolveStation, stationSlug } from "@/lib/slug";
+import { basinPath, basinSlug, resolveStation, stationPath, stationSlug } from "@/lib/slug";
 import { StationPicker } from "../../StationPicker";
 import { StationFinder } from "../../StationFinder";
 import { StationCard } from "../../StationCard";
@@ -19,6 +19,7 @@ import { BasinFlow } from "../../BasinFlow";
 import { BasinDams } from "../../BasinDams";
 import { Forecast } from "../../Forecast";
 import { Anomaly } from "../../Anomaly";
+import { StationNearby } from "../../StationNearby";
 
 export const revalidate = 60;
 
@@ -195,6 +196,17 @@ export default async function StationPage({
             <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
               <Forecast basin={basin} selectedStation={station} />
             </Suspense>
+
+            <StationNearby
+              current={station}
+              gauges={stations.map((s) => ({
+                station: s.station,
+                basin: s.basin.trim(),
+                latitude: s.latitude,
+                longitude: s.longitude,
+                href: stationPath(s.basin, s.station),
+              }))}
+            />
 
             <Suspense key={`anomaly-${station}`} fallback={null}>
               <Anomaly basin={basin} selectedStation={station} />
