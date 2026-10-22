@@ -89,7 +89,6 @@ export default function RootLayout({
     >
       <body
         className="min-h-full flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
-        style={{ fontFamily: "Arial, Helvetica, var(--font-sinhala), var(--font-tamil), sans-serif" }}
       >
         <Suspense fallback={<HeaderFallback />}>
           <Header />
