@@ -30,6 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE, ...stamp(newest) },
     { url: `${SITE}/help` },
     { url: `${SITE}/about` },
+    { url: `${SITE}/history` },
     // One-gauge rivers 308 to their station page, so only list multi-gauge rivers.
     ...[...basinLatest.values()].filter((b) => b.count > 1).map((b) => ({ url: `${SITE}${b.href}`, ...stamp(b.ts) })),
     ...stations.map((s) => ({ url: `${SITE}${s.href}`, ...stamp(s.latest?.ts) })),

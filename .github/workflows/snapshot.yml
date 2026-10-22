@@ -4,6 +4,7 @@
 # the history is lost. scripts/snapshot.mjs merges by objectid, so runs are
 # idempotent and a skipped run is filled in by the next one (within 7 days).
 # Twice a day because GitHub's scheduler sometimes delays or drops cron runs.
+# It then rebuilds history.json for the /history page.
 # Writing to a separate branch keeps these commits from triggering Vercel
 # deploys of main.
 
@@ -44,6 +45,12 @@ jobs:
 
       - name: Fetch readings
         run: node scripts/snapshot.mjs archive
+
+      # Feeds the /history page. Non-fatal: a failed model fetch shouldn't
+      # lose the day's readings, which are the irreplaceable part.
+      - name: Rebuild history.json
+        continue-on-error: true
+        run: node scripts/build-history.mjs archive
 
       - name: Commit and push
         working-directory: archive

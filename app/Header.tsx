@@ -66,6 +66,14 @@ export async function Header() {
           )}
 
           <Link
+            href="/history"
+            data-umami-event="history_nav_click"
+            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            History
+          </Link>
+
+          <Link
             href="/about"
             data-umami-event="about_nav_click"
             className="rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
