@@ -1,6 +1,9 @@
 import { ArrowDown, ArrowUp, Minus, HelpCircle, CloudRain } from "lucide-react";
 import { fetchBasinSnapshot } from "@/lib/arcgis";
 import { loadForecast } from "@/lib/forecast";
+import { getAdvisory } from "@/lib/advisory";
+import { DISTRICT_BY_STATION } from "@/lib/districts";
+import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 
 const directionConfig = {
   rising: {
@@ -50,9 +53,15 @@ export async function Forecast({
   selectedStation: string;
 }) {
   if (!basin) return null;
+  const warningsP = getOfficialWarnings(); // fails soft, never throws
   const snapshot = await fetchBasinSnapshot(basin);
   if (snapshot.length === 0) return null;
   const f = await loadForecast(basin, snapshot, selectedStation);
+  const me = snapshot.find((s) => s.station === selectedStation);
+  const [advisory, warnings] = await Promise.all([
+    getAdvisory({ station: selectedStation, river: basin.trim(), district: DISTRICT_BY_STATION[selectedStation] ?? null, tier: me?.tier ?? "stale", forecast: f }),
+    warningsP.then((w) => warningsForBasin(w, basin)),
+  ]);
 
   const cfg = directionConfig[f.direction];
   const Icon = cfg.Icon;
@@ -87,6 +96,24 @@ export async function Forecast({
               </span>
             )}
           </div>
+          <div className="mt-1 text-sm text-slate-700 dark:text-slate-200" data-advisory data-advisory-source={advisory.source}>
+            <p>{advisory.en}</p>
+            {(advisory.si || advisory.ta) && (
+              <details className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                <summary className="cursor-pointer">සිංහල / தமிழ் (machine-translated)</summary>
+                {advisory.si && <p lang="si" className="mt-1">{advisory.si}</p>}
+                {advisory.ta && <p lang="ta" className="mt-1">{advisory.ta}</p>}
+              </details>
+            )}
+          </div>
+          {warnings.map((w) => (
+            <p key={w.url} data-official-warning className="mt-1 text-xs text-slate-700 dark:text-slate-200">
+              <span className="font-semibold">Official warning ({w.severity}):</span> {w.summary}{" "}
+              <a href={w.url} target="_blank" rel="noopener noreferrer" className="underline">
+                {w.source}
+              </a>
+            </p>
+          ))}
           <div className={`mt-1 text-lg sm:text-xl font-semibold ${caution ? "" : cfg.tone}`} data-forecast-headline>
             {f.headline}
           </div>

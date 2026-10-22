@@ -8,6 +8,7 @@ import {
 } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 import { ageMinutes } from "@/lib/readings";
+import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 
 const handler = createMcpHandler(
   (server) => {
@@ -124,6 +125,23 @@ const handler = createMcpHandler(
                 2,
               ),
             },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      "get_official_warnings",
+      "Get the latest official flood and weather warnings (issued in the last 24 hours) from the Disaster Management Centre, Irrigation Department and Met Department that name our river basins or carry a warning level. Each has source, bulletin URL, issue time, basins named, severity (none/advisory/alert/minor flood/major flood/evacuation), a one-sentence summary and a confidence. Read by an AI model from the published bulletin PDFs, so check the linked bulletin. Returns an empty list with a reason when nothing is current or the feed is unavailable.",
+      {
+        basin: z.string().optional().describe("Optional basin filter, e.g. 'Kala Oya'"),
+      },
+      async ({ basin }) => {
+        const result = await getOfficialWarnings();
+        const warnings = basin ? warningsForBasin(result, basin) : result.warnings;
+        return {
+          content: [
+            { type: "text", text: JSON.stringify({ warnings, count: warnings.length, reason: result.reason ?? null }, null, 2) },
           ],
         };
       },

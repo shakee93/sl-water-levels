@@ -306,3 +306,18 @@ npm run dev
 
 No env vars. No database. Append `?station=Hanwella` to the URL to
 deep-link a specific station.
+
+## Official warnings and plain-language advisory (OpenAI)
+
+Both need `OPENAI_API_KEY` (server env only, never `NEXT_PUBLIC_`); without it the page renders a deterministic
+English advisory and no official warnings.
+
+- `lib/warnings.ts`: scrapes the DMC report listings (River Water Level and Flood Warning, Weather Reports). Each row has a
+  title, date and 24h Colombo time, so `issuedAt` and "current (<24h)" are parsed, not guessed. Routine "Water level & Rainfall"
+  tables, sea/lightning notices and translations are skipped. PDF text is extracted with `unpdf`, hashed, and analysed once per
+  bulletin (Decisions API, `gpt-6-luna`: a predicate per basin plus a severity choice; Responses API for one summary sentence,
+  rejected if it contains a number not in the bulletin). Results are cached by content, listings for 30 min.
+- `lib/advisory.ts`: the model only rewords a fact sheet built from the computed forecast, in English, Sinhala and Tamil
+  (the latter two machine-translated). Output is rejected if it contains a number not in the fact sheet, lacks "117" at tier
+  alert or above, or is not in the right script; the deterministic template is the fallback. Cached per station, forecast hour, tier.
+- `lib/openai.ts`: plain-fetch client and the cost guard (`AI_MAX_CALLS_PER_HOUR`, default 60 per server instance; counts, never content, are logged).
