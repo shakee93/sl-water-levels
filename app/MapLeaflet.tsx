@@ -12,12 +12,12 @@ import {
 import "leaflet/dist/leaflet.css";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import type { Station } from "@/lib/arcgis";
-import { stationPath } from "@/lib/slug";
+import { formatLevel } from "@/lib/units";
+import { stationDisplayName } from "@/lib/displayName";
+import { TIER_HEX, TIER_TEXT, type HomeStation } from "./tierUi";
 
 type Props = {
-  stations: Station[];
-  colorForBasin: Record<string, string>;
+  stations: HomeStation[];
   basinChains: Record<string, Array<[number, number]>>;
 };
 
@@ -50,6 +50,9 @@ const DARK_TILE = {
   attribution: ESRI_ATTRIBUTION,
 };
 
+const isHot = (s: HomeStation) =>
+  s.tier === "watch" || s.tier === "alert" || s.tier === "minor" || s.tier === "major";
+
 function useColorScheme(): "light" | "dark" {
   // Lazy initializer reads matchMedia synchronously on first render. MapLeaflet
   // only renders in the browser (dynamic-imported with ssr:false), so this is
@@ -68,17 +71,21 @@ function useColorScheme(): "light" | "dark" {
   return scheme;
 }
 
-export function MapLeaflet({ stations, colorForBasin, basinChains }: Props) {
+export function MapLeaflet({ stations, basinChains }: Props) {
   const scheme = useColorScheme();
+  // On phones the whole island only fits one zoom level further out.
+  const [zoom] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 640 ? SL_ZOOM - 1 : SL_ZOOM,
+  );
   const tile = scheme === "dark" ? DARK_TILE : LIGHT_TILE;
 
   return (
     <MapContainer
       center={SL_CENTER}
-      zoom={SL_ZOOM}
+      zoom={zoom}
       maxBounds={SL_BOUNDS}
       maxBoundsViscosity={1.0}
-      minZoom={SL_ZOOM}
+      minZoom={zoom}
       maxZoom={12}
       scrollWheelZoom={false}
       zoomControl={false}
@@ -94,15 +101,14 @@ export function MapLeaflet({ stations, colorForBasin, basinChains }: Props) {
       />
       <TileLayer key={`${scheme}-labels`} url={tile.labels} maxZoom={16} />
       {Object.entries(basinChains).map(([basin, chain]) => {
-        const color = colorForBasin[basin] || "#64748b";
         return (
           <Polyline
             key={`chain-${basin}`}
             positions={chain}
             pathOptions={{
-              color,
-              weight: 3,
-              opacity: 0.65,
+              color: scheme === "dark" ? "#94a3b8" : "#64748b",
+              weight: 1.5,
+              opacity: 0.35,
               lineCap: "round",
               lineJoin: "round",
             }}
@@ -110,14 +116,17 @@ export function MapLeaflet({ stations, colorForBasin, basinChains }: Props) {
           />
         );
       })}
-      {stations.map((s) => {
-        const color = colorForBasin[s.basin] || "#64748b";
+      {[...stations]
+        // Draw the stations that matter last so they sit on top of grey dots.
+        .sort((a, b) => Number(isHot(a)) - Number(isHot(b)))
+        .map((s) => {
+        const color = TIER_HEX[s.tier];
         const stroke = scheme === "dark" ? "#0f172a" : "#ffffff";
         return (
           <CircleMarker
             key={`${s.basin}|${s.station}`}
             center={[s.latitude, s.longitude]}
-            radius={6.5}
+            radius={isHot(s) ? 8 : 6}
             pathOptions={{
               fillColor: color,
               fillOpacity: 0.95,
@@ -127,22 +136,21 @@ export function MapLeaflet({ stations, colorForBasin, basinChains }: Props) {
             }}
           >
             <Tooltip direction="top" offset={[0, -6]} opacity={1}>
-              <span className="font-medium">{s.station}</span>
-              <span className="text-slate-500"> — {s.basin}</span>
+              <span className="font-medium">{stationDisplayName(s.station)}</span>
+              <span className="text-slate-500">
+                {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {TIER_TEXT[s.tier]}
+              </span>
             </Tooltip>
             <Popup>
               <div className="space-y-0.5">
-                <Link
-                  href={stationPath(s.basin, s.station)}
-                  className="font-semibold text-sky-700 hover:underline block"
-                >
-                  {s.station}
+                <Link href={s.href} className="font-semibold text-sky-700 hover:underline block">
+                  {stationDisplayName(s.station)}
                 </Link>
-                <div className="text-xs text-slate-500">{s.basin}</div>
-                <Link
-                  href={stationPath(s.basin, s.station)}
-                  className="text-xs text-sky-600 hover:underline inline-block mt-1"
-                >
+                <div className="text-xs text-slate-500">
+                  {s.basin}
+                  {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {TIER_TEXT[s.tier]}
+                </div>
+                <Link href={s.href} className="text-xs text-sky-600 hover:underline inline-block mt-1">
                   Open station →
                 </Link>
               </div>

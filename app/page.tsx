@@ -1,80 +1,96 @@
-import { Suspense } from "react";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRight, MapPin } from "lucide-react";
-import { fetchStations, type Station } from "@/lib/arcgis";
-import { basinPath, stationPath } from "@/lib/slug";
-import { orderStations } from "@/lib/basinOrder";
-import { StationFinder } from "./StationFinder";
+import { ArrowRight, Clock, LifeBuoy } from "lucide-react";
+import { getNational, fetchStations, type NationalStation } from "@/lib/arcgis";
+import { basinPath } from "@/lib/slug";
+import { stationDisplayName } from "@/lib/displayName";
+import { formatLevel } from "@/lib/units";
 import { PlaceSearch } from "./PlaceSearch";
 import { getSearchStations } from "./PlaceSearchData";
 import { SriLankaMap } from "./SriLankaMap";
-import { NeedsAttention, NeedsAttentionSkeleton } from "./NeedsAttention";
+import { NeedsAttention } from "./NeedsAttention";
+import { Favourites } from "./Favourites";
+import { LegacyRedirect } from "./LegacyRedirect";
+import { TimeAgo } from "./TimeAgo";
+import {
+  TIER_DOT,
+  TIER_TEXT,
+  colomboTime,
+  tierRank,
+  type HomeStation,
+} from "./tierUi";
 
-export const revalidate = 300;
+// No cookies()/searchParams on the server, so the page is ISR-cached.
+export const revalidate = 60;
 
-const STATION_COOKIE = "sl_station";
 const SITE = "https://sl-water-levels.vercel.app";
+const nowMs = () => Date.now();
+const STALE_MS = 3 * 3_600_000;
 
 export const metadata: Metadata = {
-  title: "Sri Lanka Water Levels — Every River Gauge, Live",
+  title: { absolute: "Sri Lanka Water Levels Today – Live River Gauges & Flood Levels" },
   description:
-    "Live water-level readings for every river gauge in Sri Lanka, grouped by basin. Tap a station for thresholds, next-hour forecast, upstream stations, and connected dams.",
+    "Latest water-level readings for every river gauge in Sri Lanka, grouped by basin. Tap a station for flood thresholds, next-hour forecast, upstream stations, and connected dams.",
   alternates: { canonical: "/" },
 };
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ station?: string; days?: string }>;
-}) {
-  const { station: legacyStation, days: legacyDays } = await searchParams;
+function compact(s: NationalStation): HomeStation {
+  return {
+    station: s.station,
+    basin: s.basin.trim(),
+    latitude: s.latitude,
+    longitude: s.longitude,
+    href: s.href,
+    tier: s.tier,
+    level: s.latest?.water_level ?? null,
+    unit: s.unit,
+    ts: s.latest?.ts ?? null,
+    rate3hM: s.rate3hM,
+  };
+}
 
-  let stations: Station[] = [];
+export default async function Home() {
+  const serverNow = nowMs();
+  let national: NationalStation[] | null = null;
   let stationsError: string | null = null;
   try {
-    stations = await fetchStations();
+    national = await getNational();
   } catch (err) {
-    stationsError = err instanceof Error ? err.message : "Could not load stations";
-  }
-
-  // Backwards compat: redirect /?station=X[&days=Y] to /:river/:station[?days=Y].
-  if (legacyStation && !stationsError) {
-    const hit = stations.find((s) => s.station === legacyStation);
-    if (hit) {
-      const qs = legacyDays ? `?days=${encodeURIComponent(legacyDays)}` : "";
-      redirect(`${stationPath(hit.basin, hit.station)}${qs}`);
+    // Fall back to the plain station list so the page still works without levels.
+    try {
+      await fetchStations();
+    } catch {
+      stationsError = err instanceof Error ? err.message : "Could not load stations";
     }
   }
 
-  const cookieStore = await cookies();
-  const lastStationName = cookieStore.get(STATION_COOKIE)?.value;
-  const resume = lastStationName
-    ? stations.find((s) => s.station === lastStationName) ?? null
-    : null;
+  const home = national ? national.map(compact) : [];
 
   const grouped = (() => {
-    const m = new Map<string, Station[]>();
-    for (const s of stations) {
+    const m = new Map<string, HomeStation[]>();
+    for (const s of home) {
       const b = s.basin || "(no basin)";
       if (!m.has(b)) m.set(b, []);
       m.get(b)!.push(s);
     }
     return [...m.entries()]
-      .map(([basin, list]) => [basin, orderStations(basin, list)] as const)
+      .map(([basin, list]) => {
+        // Worst first, so the gauge that matters leads each river.
+        const sorted = [...list].sort(
+          (a, b) => tierRank(a.tier) - tierRank(b.tier) || a.station.localeCompare(b.station),
+        );
+        return [basin, sorted] as const;
+      })
       .sort(([a], [b]) => a.localeCompare(b));
   })();
 
-  const basinCount = grouped.length;
+  const hrefByStation = Object.fromEntries(home.map((s) => [s.station, s.href]));
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <script
           type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
@@ -82,22 +98,18 @@ export default async function Home({
               name: "Sri Lanka Water Levels",
               url: SITE,
               description:
-                "Live Sri Lanka river-gauge readings + next-hour flood forecast.",
+                "Latest Sri Lanka river-gauge readings + next-hour flood forecast.",
             }),
           }}
         />
+        <LegacyRedirect hrefByStation={hrefByStation} />
 
-        <header className="mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
-            <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
-            Realtime
-          </div>
+        <header className="mb-5 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
             Sri Lanka Water Levels
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-prose">
-            Live river-gauge readings from the Department of Irrigation, updated every minute.
-            Pick a station to see thresholds, next-hour forecast, upstream basin view and connected dams.
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
+            River gauges from the Department of Irrigation.
           </p>
         </header>
 
@@ -107,75 +119,70 @@ export default async function Home({
           <>
             <PlaceSearch variant="hero" stations={await getSearchStations()} />
 
-            {/* Lede: what needs attention right now, before the map. Streamed so
-                a slow ArcGIS response never delays the map or the basin list. */}
-            <Suspense fallback={<NeedsAttentionSkeleton />}>
-              <NeedsAttention stations={stations} />
-            </Suspense>
+            <div className="mb-5 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+              <NationalLine snapshot={national} serverNow={serverNow} />
+              <Link
+                href="/help"
+                className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+              >
+                <LifeBuoy className="size-3.5" aria-hidden />
+                Flood help &amp; emergency numbers
+                <ArrowRight className="size-3" aria-hidden />
+              </Link>
+            </div>
 
-            {resume && (
-              <section className="mb-5">
-                <Link
-                  href={stationPath(resume.basin, resume.station)}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 px-4 py-3 hover:border-sky-400 dark:hover:border-sky-700 transition"
-                >
-                  <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-wider text-sky-700 dark:text-sky-400 font-medium">
-                      Resume
-                    </div>
-                    <div className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                      {resume.station}
-                    </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {resume.basin}
-                    </div>
-                  </div>
-                  <ArrowRight className="size-4 text-sky-500 shrink-0" />
-                </Link>
-              </section>
-            )}
+            <Favourites stations={home} serverNow={serverNow} />
 
-            <section className="mb-5 flex flex-wrap items-center gap-3 text-xs">
-              <StationFinder stations={stations} />
-            </section>
+            <NeedsAttention snapshot={national} serverNow={serverNow} />
 
-            <SriLankaMap stations={stations} />
+            <SriLankaMap stations={home} />
 
-            <section>
-              <h2 className="sr-only">River basins</h2>
+            <section id="rivers" className="scroll-mt-4">
+              <h2 className="sr-only">All rivers</h2>
               <ul className="space-y-6">
                 {grouped.map(([basin, list]) => (
                   <li key={basin}>
                     <div className="flex items-baseline justify-between gap-3 mb-2">
                       <Link
-                        href={basinPath(basin)}
+                        href={list.length === 1 ? list[0].href : basinPath(basin)}
                         className="group inline-flex items-baseline gap-1.5"
                       >
                         <h3 className="text-base sm:text-lg font-semibold tracking-tight group-hover:text-sky-700 dark:group-hover:text-sky-300 transition">
                           {basin}
                         </h3>
-                        <span className="text-[10px] uppercase tracking-wider text-slate-400 group-hover:text-sky-500 transition">
-                          overview →
-                        </span>
+                        <ArrowRight className="size-3.5 self-center text-slate-400 group-hover:text-sky-500 transition" aria-hidden />
                       </Link>
-                      <span className="text-[11px] text-slate-400 tabular-nums">
-                        {list.length} station{list.length === 1 ? "" : "s"}
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                        {list.length}
                       </span>
                     </div>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {list.map((s) => (
-                        <li key={`${s.basin}|${s.station}`}>
+                        <li key={s.href}>
                           <Link
-                            href={stationPath(s.basin, s.station)}
+                            href={s.href}
                             className="group flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 hover:border-sky-400 dark:hover:border-sky-700 transition"
                           >
-                            <span className="flex items-center gap-2 min-w-0">
-                              <MapPin className="size-3.5 text-slate-400 group-hover:text-sky-500 transition shrink-0" />
+                            <span className="flex items-center gap-2.5 min-w-0">
+                              <span
+                                className={`size-2.5 shrink-0 rounded-full ${TIER_DOT[s.tier]}`}
+                                title={TIER_TEXT[s.tier]}
+                                aria-hidden
+                              />
                               <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                                {s.station}
+                                {stationDisplayName(s.station)}
                               </span>
+                              <span className="sr-only">{TIER_TEXT[s.tier]}</span>
                             </span>
-                            <ArrowRight className="size-3.5 text-slate-400 group-hover:text-sky-500 transition shrink-0" />
+                            <span
+                              className={`text-sm tabular-nums shrink-0 ${
+                                s.tier === "stale"
+                                  ? "text-slate-400 dark:text-slate-500"
+                                  : "font-medium text-slate-700 dark:text-slate-200"
+                              }`}
+                            >
+                              {formatLevel(s.level, s.unit)}
+                            </span>
                           </Link>
                         </li>
                       ))}
@@ -188,6 +195,59 @@ export default async function Home({
         )}
       </div>
     </main>
+  );
+}
+
+
+function NationalLine({
+  snapshot,
+  serverNow,
+}: {
+  snapshot: NationalStation[] | null;
+  serverNow: number;
+}) {
+  let newest: number | null = null;
+  if (snapshot) {
+    for (const s of snapshot) {
+      const ts = s.latest?.ts;
+      if (ts != null && (newest == null || ts > newest)) newest = ts;
+    }
+  }
+  if (!snapshot || newest == null || serverNow - newest > STALE_MS) {
+    return (
+      <p className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <Clock className="size-3.5" aria-hidden />
+        {newest == null ? (
+          "Data delayed — no recent readings"
+        ) : (
+          <>
+            Data delayed — last reading{" "}
+            <TimeAgo ts={newest} serverNow={serverNow} />
+          </>
+        )}
+      </p>
+    );
+  }
+
+  let above = 0;
+  let near = 0;
+  for (const s of snapshot) {
+    if (s.tier === "alert" || s.tier === "minor" || s.tier === "major") above++;
+    else if (s.tier === "watch") near++;
+  }
+
+  const bits: string[] = [];
+  if (above) bits.push(`${above} gauge${above === 1 ? "" : "s"} above alert`);
+  if (near) bits.push(`${near} near alert`);
+  const lead = bits.length ? bits.join(" · ") : "All gauges below alert";
+
+  return (
+    <p className="text-xs text-slate-600 dark:text-slate-300">
+      <span className="font-medium">{lead}</span>
+      <span className="text-slate-500 dark:text-slate-400">
+        {" "}· updated {colomboTime(newest)} (<TimeAgo ts={newest} serverNow={serverNow} />)
+      </span>
+    </p>
   );
 }
 

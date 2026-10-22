@@ -1,8 +1,18 @@
 import Link from "next/link";
-import { ArrowDown, ArrowRight, ArrowUp, Minus, ShieldCheck, TriangleAlert } from "lucide-react";
-import { getNational, type Station } from "@/lib/arcgis";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  Clock,
+  Minus,
+  ShieldCheck,
+  TriangleAlert,
+  WifiOff,
+} from "lucide-react";
+import type { NationalStation } from "@/lib/arcgis";
 import {
   buildAttention,
+  RISING_M_PER_H,
   TIER_LABEL,
   type AttentionTier,
   type BasinAttention,
@@ -10,6 +20,8 @@ import {
 } from "@/lib/attention";
 import { basinPath } from "@/lib/slug";
 import { detectUnit, formatLevel, type Unit } from "@/lib/units";
+import { stationDisplayName } from "@/lib/displayName";
+import { TimeAgo } from "./TimeAgo";
 
 type TierStyle = {
   card: string;
@@ -21,65 +33,61 @@ type TierStyle = {
 
 // One row per tier so the colour story is consistent with the status dots used
 // in BasinFlow and StationCard: red = major, orange = minor, amber = alert.
-// `watch` deliberately reads as informational (sky), not alarming — it is
-// a watch state, and colouring it like a flood would cry wolf.
+// `watch` is yellow: visible, but clearly milder than a crossed threshold.
+// Pills use dark text on the light fills (amber/yellow) for AA contrast.
 const TIER_STYLE: Record<AttentionTier, TierStyle> = {
   major: {
     card: "border-red-300 dark:border-red-900 bg-red-50/70 dark:bg-red-950/30 hover:border-red-500 dark:hover:border-red-700",
-    pill: "bg-red-600 text-white",
+    pill: "bg-red-700 text-white",
     bar: "bg-red-500",
     gap: "text-red-700 dark:text-red-300",
     dot: "bg-red-500",
   },
   minor: {
     card: "border-orange-300 dark:border-orange-900 bg-orange-50/70 dark:bg-orange-950/30 hover:border-orange-500 dark:hover:border-orange-700",
-    pill: "bg-orange-500 text-white",
+    pill: "bg-orange-700 text-white",
     bar: "bg-orange-500",
     gap: "text-orange-700 dark:text-orange-300",
     dot: "bg-orange-500",
   },
   alert: {
     card: "border-amber-300 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/30 hover:border-amber-500 dark:hover:border-amber-700",
-    pill: "bg-amber-500 text-white",
+    pill: "bg-amber-400 text-amber-950",
     bar: "bg-amber-500",
     gap: "text-amber-700 dark:text-amber-300",
     dot: "bg-amber-500",
   },
   watch: {
-    card: "border-sky-200 dark:border-sky-900 bg-sky-50/60 dark:bg-sky-950/20 hover:border-sky-400 dark:hover:border-sky-700",
-    pill: "bg-sky-500 text-white",
-    bar: "bg-sky-500",
-    gap: "text-sky-700 dark:text-sky-300",
-    dot: "bg-sky-500",
+    card: "border-yellow-300 dark:border-yellow-900 bg-yellow-50/60 dark:bg-yellow-950/20 hover:border-yellow-500 dark:hover:border-yellow-700",
+    pill: "bg-yellow-300 text-yellow-950",
+    bar: "bg-yellow-400",
+    gap: "text-yellow-700 dark:text-yellow-300",
+    dot: "bg-yellow-400",
   },
 };
 
-function Trend({ rate }: { rate: number | null }) {
-  if (rate == null) {
-    return <span className="text-[11px] text-slate-400">no trend</span>;
-  }
-  const abs = Math.abs(rate);
-  const text = `${rate >= 0 ? "+" : ""}${rate.toFixed(2)}/h`;
-  if (abs < 0.02) {
+// Direction comes from the metre-normalised 3h rate so feet and metre gauges
+// share one "steady" cut-off; the printed number stays in the gauge's own unit.
+function Trend({ rateM, rate }: { rateM: number | null; rate: number | null }) {
+  if (rateM == null || rate == null) return null;
+  if (Math.abs(rateM) < RISING_M_PER_H) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
         <Minus className="size-3" aria-hidden />
-        steady
+        Steady
       </span>
     );
   }
-  if (rate > 0) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-orange-600 dark:text-orange-400 tabular-nums">
-        <ArrowUp className="size-3" aria-hidden />
-        rising {text}
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">
+  const text = `${rate >= 0 ? "+" : ""}${rate.toFixed(2)}/h`;
+  return rateM > 0 ? (
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-orange-700 dark:text-orange-400 tabular-nums">
+      <ArrowUp className="size-3" aria-hidden />
+      Rising {text}
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 tabular-nums">
       <ArrowDown className="size-3" aria-hidden />
-      falling {text}
+      Falling {text}
     </span>
   );
 }
@@ -129,26 +137,37 @@ function ThresholdBar({ s, style }: { s: StationAttention; style: TierStyle }) {
   );
 }
 
-function BasinCard({ b }: { b: BasinAttention }) {
+function BasinCard({
+  b,
+  rateM,
+  serverNow,
+}: {
+  b: BasinAttention;
+  rateM: number | null;
+  serverNow: number;
+}) {
   const style = TIER_STYLE[b.tier];
   const unit: Unit = detectUnit(b.lead.thresholds);
   const others = b.stations.slice(1);
+  // One flagged gauge: skip the basin page and go straight to that station.
+  const single = b.stations.length === 1;
 
   return (
     <li>
       <Link
-        href={basinPath(b.basin)}
+        href={single ? b.lead.href : basinPath(b.basin)}
         className={`group flex h-full flex-col rounded-xl border px-4 py-3.5 transition ${style.card}`}
       >
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.pill}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${style.pill}`}
           >
             {b.tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
             {TIER_LABEL[b.tier]}
           </span>
-          <span className="text-[10px] text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-            {b.stations.length} of {b.gaugeCount} gauge{b.gaugeCount === 1 ? "" : "s"}
+          <span className="inline-flex items-center gap-1 text-[11px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
+            {b.lead.stale && <Clock className="size-3" aria-hidden />}
+            <TimeAgo ts={b.lead.ts} serverNow={serverNow} short={b.lead.stale} />
           </span>
         </div>
 
@@ -158,7 +177,7 @@ function BasinCard({ b }: { b: BasinAttention }) {
 
         <div className="mt-1.5 flex items-baseline justify-between gap-2">
           <span className="text-[13px] text-slate-600 dark:text-slate-300 truncate">
-            {b.lead.station}
+            {stationDisplayName(b.lead.station)}
           </span>
           <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100 shrink-0">
             {formatLevel(b.lead.level, unit)}
@@ -176,7 +195,11 @@ function BasinCard({ b }: { b: BasinAttention }) {
         <ThresholdBar s={b.lead} style={style} />
 
         <div className="mt-2">
-          <Trend rate={b.lead.ratePerHour} />
+          {b.lead.stale ? (
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">Last known reading</span>
+          ) : (
+            <Trend rateM={rateM} rate={b.lead.ratePerHour} />
+          )}
         </div>
 
         {others.length > 0 && (
@@ -190,14 +213,14 @@ function BasinCard({ b }: { b: BasinAttention }) {
                   className={`size-1.5 rounded-full shrink-0 ${TIER_STYLE[o.tier].dot}`}
                   title={TIER_LABEL[o.tier]}
                 />
-                <span className="truncate">{o.station}</span>
+                <span className="truncate">{stationDisplayName(o.station)}</span>
               </li>
             ))}
           </ul>
         )}
 
         <div className="mt-auto pt-3 inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition">
-          View basin
+          {single ? `View ${stationDisplayName(b.lead.station)}` : "View basin"}
           <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
         </div>
       </Link>
@@ -205,44 +228,49 @@ function BasinCard({ b }: { b: BasinAttention }) {
   );
 }
 
-export async function NeedsAttention(props: { stations?: Station[] }) {
-  void props; // basin names now come from getNational()
-  let snapshot;
-  try {
-    snapshot = await getNational();
-  } catch {
-    // The map and basin list below still work without this section, so a
-    // rate-limited ArcGIS response should degrade to silence, not an error page.
-    return null;
-  }
-
-  const { basins, flagged, reporting, highest } = buildAttention(snapshot);
-
-  if (basins.length === 0) {
+export function NeedsAttention({
+  snapshot,
+  serverNow,
+}: {
+  snapshot: NationalStation[] | null;
+  serverNow: number;
+}) {
+  if (!snapshot) {
     return (
       <section className="mb-6">
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/25 px-4 py-3">
-          <ShieldCheck className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-          <div className="min-w-0 text-sm">
-            <span className="font-medium text-emerald-800 dark:text-emerald-200">
-              All clear
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3">
+          <WifiOff className="size-5 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
+          <div className="text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">
+              Latest data unavailable
             </span>
-            <span className="text-emerald-700/80 dark:text-emerald-300/80">
-              {" "}— all {reporting} reporting gauges are well below their alert levels.
+            <span className="text-slate-500 dark:text-slate-400">
+              {" "}— can&rsquo;t tell if any river is at risk. Try again shortly.
             </span>
-            {highest && (
-              <div className="text-[11px] text-emerald-700/70 dark:text-emerald-300/60 mt-0.5 truncate">
-                Highest right now: {highest.station} ({highest.basin}) at{" "}
-                <span className="tabular-nums">{Math.round(highest.ratio * 100)}%</span> of alert.
-              </div>
-            )}
           </div>
         </div>
       </section>
     );
   }
 
-  const acting = flagged.filter((f) => f.tier !== "watch").length;
+  const { basins, flagged, reporting } = buildAttention(snapshot);
+  const rateByHref = new Map(snapshot.map((s) => [s.href, s.rate3hM] as const));
+
+  if (basins.length === 0) {
+    return (
+      <section className="mb-6">
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/25 px-4 py-3">
+          <ShieldCheck className="size-5 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
+          <div className="text-sm text-emerald-900 dark:text-emerald-200">
+            <span className="font-medium">All clear</span>
+            <span className="text-emerald-800/80 dark:text-emerald-300/80">
+              {" "}— {reporting} gauges reporting, all below alert.
+            </span>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mb-6" aria-labelledby="needs-attention-heading">
@@ -254,36 +282,17 @@ export async function NeedsAttention(props: { stations?: Station[] }) {
           Needs attention
         </h2>
         <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-          {basins.length} basin{basins.length === 1 ? "" : "s"} · {flagged.length} of {reporting} gauges
+          {flagged.length} of {reporting} gauges
         </span>
       </div>
 
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {basins.map((b) => (
-          <BasinCard key={b.basin} b={b} />
-        ))}
-      </ul>
-
-      <p className="mt-2.5 text-[11px] text-slate-500 dark:text-slate-400">
-        {acting > 0
-          ? `${acting} gauge${acting === 1 ? " is" : "s are"} at or above an official threshold. `
-          : "No gauge has crossed an official threshold yet. "}
-        Thresholds are the Department of Irrigation&rsquo;s own alert, minor-flood and
-        major-flood marks. Gauges within 15% of alert are shown as a watch.
-      </p>
-    </section>
-  );
-}
-
-export function NeedsAttentionSkeleton() {
-  return (
-    <section className="mb-6" aria-hidden>
-      <div className="h-4 w-32 rounded bg-slate-200 dark:bg-slate-800 animate-pulse mb-2.5" />
-      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {[0, 1, 2].map((i) => (
-          <li
-            key={i}
-            className="h-[168px] rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900 animate-pulse"
+          <BasinCard
+            key={b.basin}
+            b={b}
+            rateM={rateByHref.get(b.lead.href) ?? null}
+            serverNow={serverNow}
           />
         ))}
       </ul>

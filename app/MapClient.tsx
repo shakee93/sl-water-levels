@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { MapPin } from "lucide-react";
-import type { Station } from "@/lib/arcgis";
+import type { HomeStation } from "./tierUi";
 
 // Leaflet touches `window` on import, so the map module must not SSR.
 // next/dynamic with ssr:false is only allowed inside a Client Component —
@@ -17,20 +17,14 @@ const MapLeaflet = dynamic(
 
 export function MapClient({
   stations,
-  colorForBasin,
   basinChains,
 }: {
-  stations: Station[];
-  colorForBasin: Record<string, string>;
+  stations: HomeStation[];
   basinChains: Record<string, Array<[number, number]>>;
 }) {
   return (
-    <div className="relative w-full h-full min-h-[420px]">
-      <MapLeaflet
-        stations={stations}
-        colorForBasin={colorForBasin}
-        basinChains={basinChains}
-      />
+    <div className="relative w-full h-full min-h-[360px]">
+      <MapLeaflet stations={stations} basinChains={basinChains} />
     </div>
   );
 }

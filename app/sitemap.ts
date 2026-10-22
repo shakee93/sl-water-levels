@@ -1,48 +1,33 @@
 import type { MetadataRoute } from "next";
-import { fetchStations, type Station } from "@/lib/arcgis";
-import { basinPath, stationPath } from "@/lib/slug";
+import { getNational } from "@/lib/arcgis";
 
 const SITE = "https://sl-water-levels.vercel.app";
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  let stations: Station[] = [];
-  try {
-    stations = await fetchStations();
-  } catch {
-    /* fall through to empty list */
+  // No try/catch on purpose: if the feed is down this throws, so an empty
+  // sitemap is never cached for an hour. The last good one keeps being served.
+  const stations = await getNational();
+
+  const stamp = (ts: number | null | undefined) =>
+    ts != null ? { lastModified: new Date(ts) } : {};
+
+  const basinLatest = new Map<string, { href: string; ts: number | null }>();
+  let newest: number | null = null;
+  for (const s of stations) {
+    const ts = s.latest?.ts ?? null;
+    if (ts != null && (newest == null || ts > newest)) newest = ts;
+    const cur = basinLatest.get(s.basin);
+    if (!cur) basinLatest.set(s.basin, { href: s.basinHref, ts });
+    else if (ts != null && (cur.ts == null || ts > cur.ts)) cur.ts = ts;
   }
 
-  const now = new Date();
-
-  const basinSet = new Set<string>();
-  for (const s of stations) if (s.basin) basinSet.add(s.basin);
-
-  const basinEntries: MetadataRoute.Sitemap = [...basinSet].map((b) => ({
-    url: `${SITE}${basinPath(b)}`,
-    lastModified: now,
-    changeFrequency: "hourly",
-    priority: 0.7,
-  }));
-
-  const stationEntries: MetadataRoute.Sitemap = stations.map((s) => ({
-    url: `${SITE}${stationPath(s.basin, s.station)}`,
-    lastModified: now,
-    changeFrequency: "hourly",
-    priority: 0.8,
-  }));
-
   return [
-    {
-      url: SITE,
-      lastModified: now,
-      changeFrequency: "hourly",
-      priority: 1.0,
-    },
-    { url: `${SITE}/help`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${SITE}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
-    ...basinEntries,
-    ...stationEntries,
+    { url: SITE, ...stamp(newest) },
+    { url: `${SITE}/help` },
+    { url: `${SITE}/about` },
+    ...[...basinLatest.values()].map((b) => ({ url: `${SITE}${b.href}`, ...stamp(b.ts) })),
+    ...stations.map((s) => ({ url: `${SITE}${s.href}`, ...stamp(s.latest?.ts) })),
   ];
 }
