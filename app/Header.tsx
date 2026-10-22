@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { Waves, ChevronDown } from "lucide-react";
-import { fetchStations, type Station } from "@/lib/arcgis";
 import { basinPath } from "@/lib/slug";
+import { PlaceSearch } from "./PlaceSearch";
+import { getSearchStations, type SearchStation } from "./PlaceSearchData";
 
 export async function Header() {
-  let stations: Station[] = [];
-  try {
-    stations = await fetchStations();
-  } catch {
-    /* degrade gracefully — brand still shows */
-  }
+  // Never throws: an empty list just means no basin menu / empty search.
+  const stations: SearchStation[] = await getSearchStations();
 
   const basins = (() => {
     const set = new Set<string>();
@@ -39,6 +36,8 @@ export async function Header() {
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2 text-sm">
+          <PlaceSearch variant="header" stations={stations} />
+
           {basins.length > 0 && (
             <details className="relative group">
               <summary
@@ -72,6 +71,14 @@ export async function Header() {
             className="rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             About
+          </Link>
+
+          <Link
+            href="/help"
+            data-umami-event="help_nav_click"
+            className="rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            Help
           </Link>
 
           <a

@@ -8,6 +8,8 @@ import { fetchStations, type Station } from "@/lib/arcgis";
 import { basinPath, stationPath } from "@/lib/slug";
 import { orderStations } from "@/lib/basinOrder";
 import { StationFinder } from "./StationFinder";
+import { PlaceSearch } from "./PlaceSearch";
+import { getSearchStations } from "./PlaceSearchData";
 import { SriLankaMap } from "./SriLankaMap";
 import { NeedsAttention, NeedsAttentionSkeleton } from "./NeedsAttention";
 
@@ -103,6 +105,8 @@ export default async function Home({
           <ErrorBanner title="Could not load stations" detail={stationsError} />
         ) : (
           <>
+            <PlaceSearch variant="hero" stations={await getSearchStations()} />
+
             {/* Lede: what needs attention right now, before the map. Streamed so
                 a slow ArcGIS response never delays the map or the basin list. */}
             <Suspense fallback={<NeedsAttentionSkeleton />}>
