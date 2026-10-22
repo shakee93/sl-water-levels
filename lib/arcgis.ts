@@ -247,7 +247,7 @@ function buildNational(station: Station, rows: RawGauge[]): NationalStation {
   const anchor = latest?.ts ?? null;
   const trend24h = anchor != null ? series.filter((r) => r.ts >= anchor - 24 * HOUR_MS && r.ts <= anchor) : [];
 
-  const unit = detectUnit(thresholds);
+  const unit = detectUnit(thresholds, station.station);
   const mpu = metresPerUnit(unit, thresholds);
   // Cadence is ~hourly with some jitter, so the "1h"/"3h" windows get +15min
   // so the reading one cadence back is reliably inside the window.
