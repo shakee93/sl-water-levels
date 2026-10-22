@@ -32,18 +32,22 @@ const SL_BOUNDS: [[number, number], [number, number]] = [
   [10.1, 82.0],
 ];
 
-// CartoDB Voyager (warm/light) for light mode; CartoDB Dark Matter for dark.
-// Both are free with attribution and far easier on the eye than OSM Standard,
-// which is too saturated against our slate UI.
+// Esri Light/Dark Gray Canvas. Free with attribution and no API key.
+// (CARTO's basemaps.cartocdn.com started returning "API KEY REQUIRED"
+// watermark tiles for keyless requests in Oct 2026, so we moved off it.)
+// The muted grays sit well under our slate UI; the *_Reference overlay adds
+// city/place labels on top of the base so stations have geographic context.
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas";
+const ESRI_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors";
 const LIGHT_TILE = {
-  url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  url: `${ESRI}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+  labels: `${ESRI}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
+  attribution: ESRI_ATTRIBUTION,
 };
 const DARK_TILE = {
-  url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  url: `${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+  labels: `${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
+  attribution: ESRI_ATTRIBUTION,
 };
 
 function useColorScheme(): "light" | "dark" {
@@ -86,8 +90,9 @@ export function MapLeaflet({ stations, colorForBasin, basinChains }: Props) {
         key={scheme}
         attribution={tile.attribution}
         url={tile.url}
-        maxZoom={18}
+        maxZoom={16}
       />
+      <TileLayer key={`${scheme}-labels`} url={tile.labels} maxZoom={16} />
       {Object.entries(basinChains).map(([basin, chain]) => {
         const color = colorForBasin[basin] || "#64748b";
         return (
