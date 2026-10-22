@@ -1,0 +1,49 @@
+name: Monthly prediction export
+
+# On the 1st, export last month's prediction log (Cloudflare D1) to the data
+# branch as predictions/YYYY-MM/{verification,crossings,runs}.json, so the
+# monthly review routine can read it without database credentials.
+
+on:
+  schedule:
+    - cron: "0 1 1 * *" # 06:30 Asia/Colombo on the 1st
+  workflow_dispatch:
+    inputs:
+      month:
+        description: "Month to export (YYYY-MM); default = last month"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check out data branch
+        run: |
+          git fetch --depth=1 origin data
+          git worktree add archive FETCH_HEAD
+          git -C archive checkout -B data
+      - name: Export
+        run: |
+          month="${{ github.event.inputs.month }}"
+          if [ -z "$month" ]; then month=$(TZ=Asia/Colombo date -d "$(TZ=Asia/Colombo date +%Y-%m-01) -1 day" +%Y-%m); fi
+          echo "MONTH=$month" >> "$GITHUB_ENV"
+          scripts/export-predictions.sh "$month" "archive/predictions/$month"
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "Prediction log export $MONTH"
+          git push origin data
