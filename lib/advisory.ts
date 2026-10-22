@@ -160,7 +160,7 @@ const generateCached = unstable_cache(
     return v;
   },
   ["advisory-v1"],
-  { revalidate: 3600 },
+  { revalidate: 1800 }, // 30 min
 );
 
 const failedUntil = new Map<string, number>();
