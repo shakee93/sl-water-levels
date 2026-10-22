@@ -121,11 +121,22 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
 
   const stale = realTier === "stale";
   const now = f.asOfTs ?? latest?.ts ?? 0;
-  const { fact, target } = stale ? { fact: null, target: -1 } : forecastFact(f, realTier, now);
+  const { fact: rawFact, target } = stale ? { fact: null, target: -1 } : forecastFact(f, realTier, now);
+  // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
+  const fact: T3 | null = stale
+    ? null
+    : (rawFact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
   const tone = stale ? "stale" : upgrade(realTier, target);
 
-  // Direction in words, from the 3 h rate (metres per hour, unit-aware).
-  const r = stale ? null : (me?.rate3hM ?? null);
+  // "Next hour": the forecast's 1 h change when there is one (metres, unit-aware),
+  // otherwise the recent 3 h rate as a persistence guess.
+  const h1 = f.horizons.find((h) => h.h === 1);
+  const mpu = me?.metresPerUnit ?? 1;
+  const r = stale
+    ? null
+    : h1 && f.currentLevel != null
+      ? (h1.level - f.currentLevel) * mpu
+      : (me?.rate3hM ?? null);
   const direction: T3 | null = stale
     ? latest && me?.ageMin != null
       ? (() => {
@@ -184,6 +195,14 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
         verdict={VERDICT[tone]}
         direction={direction}
         fact={fact}
+        labels={
+          stale
+            ? undefined
+            : {
+                direction: { en: "Next hour:", si: "ඊළඟ පැය:", ta: "அடுத்த மணி நேரம்:" },
+                fact: { en: "Next 24 hours:", si: "ඉදිරි පැය 24:", ta: "அடுத்த 24 மணி நேரம்:" },
+              }
+        }
         action={stale ? null : (ACTION[tone] ?? null)}
         call={elevated ? CALL : null}
         office={dc ? { label: `${dc.district} DMC office`, tel: dc.tel } : null}

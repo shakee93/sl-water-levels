@@ -270,6 +270,7 @@ export function VerdictCard({
   verdict,
   direction,
   fact,
+  labels,
   action,
   call,
   office,
@@ -281,6 +282,8 @@ export function VerdictCard({
   verdict: T3;
   direction: T3 | null;
   fact: T3 | null;
+  /** Optional muted labels shown before direction and fact ("Next hour:", "Next 24 hours:"). */
+  labels?: { direction: T3 | null; fact: T3 | null };
   action: T3 | null;
   /** Label for the 117 button; null hides the call buttons. */
   call: T3 | null;
@@ -311,8 +314,18 @@ export function VerdictCard({
           {verdict[lang]}
         </h2>
         <div className="mt-2 space-y-1 text-base text-slate-700 dark:text-slate-300" lang={lang}>
-          {direction && <p data-direction>{direction[lang]}</p>}
-          {fact && <p data-fact>{fact[lang]}</p>}
+          {direction && (
+            <p data-direction>
+              {labels?.direction && <span className="text-slate-500 dark:text-slate-400">{labels.direction[lang]} </span>}
+              {direction[lang]}
+            </p>
+          )}
+          {fact && (
+            <p data-fact>
+              {labels?.fact && <span className="text-slate-500 dark:text-slate-400">{labels.fact[lang]} </span>}
+              {fact[lang]}
+            </p>
+          )}
           {action && <p className="font-medium text-slate-900 dark:text-slate-100">{action[lang]}</p>}
         </div>
         {lang !== "en" && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">machine-translated</p>}
