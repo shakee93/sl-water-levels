@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getNational } from "@/lib/arcgis";
+import { getHistory, historyPath } from "@/lib/history";
 
 const SITE = "https://sl-water-levels.vercel.app";
 
@@ -9,6 +10,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // No try/catch on purpose: if the feed is down this throws, so an empty
   // sitemap is never cached for an hour. The last good one keeps being served.
   const stations = await getNational();
+  // Fails soft: the history archive is a separate source and optional here.
+  const history = await getHistory();
 
   const stamp = (ts: number | null | undefined) =>
     ts != null ? { lastModified: new Date(ts) } : {};
@@ -31,6 +34,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/help` },
     { url: `${SITE}/about` },
     { url: `${SITE}/history` },
+    ...[...new Set(history?.stations.map((s) => s.basin) ?? [])].map((b) => ({ url: `${SITE}${historyPath(b)}` })),
+    ...(history?.stations ?? []).map((s) => ({ url: `${SITE}${historyPath(s.basin, s.station)}` })),
     // One-gauge rivers 308 to their station page, so only list multi-gauge rivers.
     ...[...basinLatest.values()].filter((b) => b.count > 1).map((b) => ({ url: `${SITE}${b.href}`, ...stamp(b.ts) })),
     ...stations.map((s) => ({ url: `${SITE}${s.href}`, ...stamp(s.latest?.ts) })),

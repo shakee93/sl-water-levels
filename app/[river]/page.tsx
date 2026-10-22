@@ -12,6 +12,7 @@ import { RiverGauges } from "../RiverGauges";
 import { TimeAgo } from "../TimeAgo";
 import { colomboTime } from "../tierUi";
 import { BasinDams } from "../BasinDams";
+import { FloodHistoryCard } from "../history/FloodHistoryCard";
 
 export const revalidate = 60;
 
@@ -232,6 +233,10 @@ export default async function BasinPage({
             <Clock className="size-4" aria-hidden /> Gauge readings are unavailable right now.
           </p>
         )}
+
+        <Suspense key={`history-${basin}`} fallback={null}>
+          <FloodHistoryCard basin={basin} />
+        </Suspense>
 
         <Suspense key={`dams-${basin}`} fallback={null}>
           <BasinDams basin={basin} />

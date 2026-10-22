@@ -18,6 +18,7 @@ import { StationHelpCard } from "../../StationHelpCard";
 import { BasinFlow } from "../../BasinFlow";
 import { BasinDams } from "../../BasinDams";
 import { Forecast } from "../../Forecast";
+import { FloodHistoryCard } from "../../history/FloodHistoryCard";
 import { Anomaly } from "../../Anomaly";
 import { StationNearby } from "../../StationNearby";
 
@@ -214,6 +215,10 @@ export default async function StationPage({
 
             <Suspense key={`chart-${station}`} fallback={<StationCardSkeleton />}>
               <StationCard stationName={station} />
+            </Suspense>
+
+            <Suspense key={`history-${station}`} fallback={null}>
+              <FloodHistoryCard basin={basin} station={station} />
             </Suspense>
 
             <section className="mt-6">

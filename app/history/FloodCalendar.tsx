@@ -2,17 +2,26 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { HistoryData } from "@/lib/history";
+import { historyPath, type HistoryData } from "@/lib/history";
+import {
+  type Agg,
+  type Scope,
+  addDays,
+  biggestEvents,
+  diffDays,
+  findEvents,
+  fmtShort,
+  MONTHS,
+  scopeIndices,
+  scopeStats,
+  seasonality,
+  toMs,
+  warned,
+} from "@/lib/historyStats";
 import { TIER_HEX } from "../tierUi";
 
-// ---- dates (all UTC calendar days; the data is already in Colombo days) ----
-
-const DAY_MS = 86_400_000;
-const toMs = (iso: string) => Date.parse(iso + "T00:00:00Z");
-const toIso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
-const addDays = (iso: string, n: number) => toIso(toMs(iso) + n * DAY_MS);
-const diffDays = (a: string, b: string) => Math.round((toMs(a) - toMs(b)) / DAY_MS);
 const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
 const daysInYear = (y: number) => (isLeap(y) ? 366 : 365);
 const fmtDay = (iso: string) =>
@@ -23,10 +32,7 @@ const fmtDay = (iso: string) =>
     year: "numeric",
     timeZone: "UTC",
   });
-const fmtShort = (iso: string) =>
-  new Date(toMs(iso)).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_START_DOY = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]; // non-leap
 
 // Sri Lanka's four rainfall seasons, as the Dept of Meteorology defines them.
@@ -38,71 +44,23 @@ const SEASONS = [
   { label: "NE", from: 334, to: 365, tint: "bg-sky-500/10" },
 ];
 
-// ---- aggregation ----
-
-type Agg = { alert: number; minor: number; major: number; reporting: number };
 type Tier3 = "alert" | "minor" | "major";
 const TIER_BY_CODE: Record<string, Tier3 | undefined> = { "1": "alert", "2": "minor", "3": "major" };
 const TIER_LABEL: Record<Tier3, string> = { alert: "Alert", minor: "Minor flood", major: "Major flood" };
 
-function aggregate(codes: string[], idx: number[]): Agg[] {
-  const len = codes[0]?.length ?? 0;
-  const out: Agg[] = Array.from({ length: len }, () => ({ alert: 0, minor: 0, major: 0, reporting: 0 }));
-  for (const i of idx) {
-    const c = codes[i];
-    for (let d = 0; d < len; d++) {
-      const ch = c[d];
-      if (ch === "." || ch === undefined) continue;
-      const a = out[d];
-      a.reporting++;
-      if (ch === "1") a.alert++;
-      else if (ch === "2") a.minor++;
-      else if (ch === "3") a.major++;
-    }
-  }
-  return out;
-}
-
-const warned = (a: Agg | undefined) => !!a && a.alert + a.minor + a.major > 0;
-const score = (a: Agg | undefined) => (a ? a.alert + 2 * a.minor + 3 * a.major : 0);
-
-type Scope = { kind: "all" } | { kind: "basin"; basin: string } | { kind: "station"; i: number };
-const scopeKey = (s: Scope) => (s.kind === "all" ? "all" : s.kind === "basin" ? `b:${s.basin}` : `s:${s.i}`);
-
 // ---- component ----
 
-export function FloodCalendar({ data, initialScope }: { data: HistoryData; initialScope?: string }) {
+export function FloodCalendar({ data, scope }: { data: HistoryData; scope: Scope }) {
+  const router = useRouter();
   const { stations, gauge, model } = data;
   const basins = useMemo(() => [...new Set(stations.map((s) => s.basin))].sort(), [stations]);
-
-  // Shareable scope via ?scope=, parsed on the server so there's no flash.
-  const [scope, setScope] = useState<Scope>(() => {
-    if (initialScope?.startsWith("b:") && basins.includes(initialScope.slice(2)))
-      return { kind: "basin", basin: initialScope.slice(2) };
-    const si = stations.findIndex((s) => `s:${s.station}` === initialScope);
-    return si >= 0 ? { kind: "station", i: si } : { kind: "all" };
-  });
   const [selected, setSelected] = useState<string | null>(null);
 
-  const changeScope = (s: Scope) => {
-    setScope(s);
-    const url = new URL(window.location.href);
-    if (s.kind === "all") url.searchParams.delete("scope");
-    else url.searchParams.set("scope", s.kind === "basin" ? `b:${s.basin}` : `s:${stations[s.i].station}`);
-    window.history.replaceState(null, "", url);
-  };
-
-  const idx = useMemo(() => {
-    if (scope.kind === "all") return stations.map((_, i) => i);
-    if (scope.kind === "basin") return stations.flatMap((s, i) => (s.basin === scope.basin ? [i] : []));
-    return [scope.i];
-  }, [scope, stations]);
-
-  const modelAgg = useMemo(() => aggregate(model.codes, idx), [model.codes, idx]);
-  const gaugeAgg = useMemo(() => aggregate(gauge.codes, idx), [gauge.codes, idx]);
+  const idx = useMemo(() => scopeIndices(data, scope), [data, scope]);
+  const st = useMemo(() => scopeStats(data, idx), [data, idx]);
+  const { modelAgg, gaugeAgg, lastDay } = st;
   const scopeSize = idx.length;
 
-  const lastDay = addDays(model.start, (model.codes[0]?.length ?? 1) - 1);
   const firstYear = Number(model.start.slice(0, 4));
   const lastYear = Number(lastDay.slice(0, 4));
   const years = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => lastYear - i);
@@ -113,65 +71,14 @@ export function FloodCalendar({ data, initialScope }: { data: HistoryData; initi
     return d >= 0 ? gaugeAgg[d] : undefined;
   };
 
-  // Best available per day: real gauges where we have them, else the model.
-  const events = useMemo(() => {
-    type Ev = { from: string; to: string; peak: string; peakScore: number; total: number; source: "gauge" | "model" };
-    const out: Ev[] = [];
-    let cur: Ev | null = null;
-    let gap = 0;
-    const minFlooded = Math.max(1, Math.ceil(idx.length * 0.1));
-    for (let d = 0; d < modelAgg.length; d++) {
-      const iso = addDays(model.start, d);
-      const g = diffDays(iso, gauge.start);
-      const a = g >= 0 ? gaugeAgg[g] : modelAgg[d];
-      const source = g >= 0 ? "gauge" : "model";
-      // An "event" day needs flooding at >=10% of the gauges in scope, not
-      // just an alert, so routine alerts don't chain a monsoon into one blob.
-      const s = a && a.minor + a.major >= minFlooded ? score(a) : 0;
-      if (s > 0) {
-        if (!cur) cur = { from: iso, to: iso, peak: iso, peakScore: s, total: 0, source };
-        cur.to = iso;
-        cur.total += s;
-        if (s > cur.peakScore) {
-          cur.peak = iso;
-          cur.peakScore = s;
-        }
-        if (source === "gauge") cur.source = "gauge";
-        gap = 0;
-      } else if (cur && ++gap > 1) {
-        out.push(cur);
-        cur = null;
-      }
-    }
-    if (cur) out.push(cur);
-    return out.sort((a, b) => b.total - a.total).slice(0, 6);
-  }, [modelAgg, gaugeAgg, model.start, gauge.start, idx.length]);
+  const events = useMemo(() => biggestEvents(findEvents(data, st), 6), [data, st]);
+  const months = useMemo(() => seasonality(data, st), [data, st]);
 
-  // Share of days per month with any alert-or-worse in scope.
-  const seasonality = useMemo(() => {
-    const m = Array.from({ length: 12 }, () => ({ modelDays: 0, modelWarn: 0, gaugeDays: 0, gaugeWarn: 0 }));
-    modelAgg.forEach((a, d) => {
-      const iso = addDays(model.start, d);
-      if (!a.reporting) return;
-      const mo = Number(iso.slice(5, 7)) - 1;
-      m[mo].modelDays++;
-      if (warned(a)) m[mo].modelWarn++;
-    });
-    gaugeAgg.forEach((a, d) => {
-      if (!a.reporting) return;
-      const mo = Number(addDays(gauge.start, d).slice(5, 7)) - 1;
-      m[mo].gaugeDays++;
-      if (warned(a)) m[mo].gaugeWarn++;
-    });
-    return m;
-  }, [modelAgg, gaugeAgg, model.start, gauge.start]);
-
+  const station = scope.kind === "station" ? stations.find((s) => s.station === scope.station) : undefined;
   const scopeLabel =
-    scope.kind === "all"
-      ? "anywhere in Sri Lanka"
-      : scope.kind === "basin"
-        ? `on the ${scope.basin}`
-        : `at ${stations[scope.i].name}`;
+    scope.kind === "all" ? "anywhere in Sri Lanka" : scope.kind === "basin" ? `on the ${scope.basin}` : `at ${station?.name}`;
+  const scopeValue =
+    scope.kind === "all" ? "all" : scope.kind === "basin" ? `b:${scope.basin}` : `s:${scope.station}`;
 
   return (
     <div className="space-y-8">
@@ -182,12 +89,14 @@ export function FloodCalendar({ data, initialScope }: { data: HistoryData; initi
         </label>
         <select
           id="scope"
-          value={scopeKey(scope)}
+          value={scopeValue}
           onChange={(e) => {
             const v = e.target.value;
-            if (v === "all") changeScope({ kind: "all" });
-            else if (v.startsWith("b:")) changeScope({ kind: "basin", basin: v.slice(2) });
-            else changeScope({ kind: "station", i: Number(v.slice(2)) });
+            const s = v.startsWith("s:") ? stations.find((x) => x.station === v.slice(2)) : undefined;
+            router.push(
+              v === "all" ? historyPath() : v.startsWith("b:") ? historyPath(v.slice(2)) : historyPath(s?.basin, s?.station),
+              { scroll: false },
+            );
           }}
           data-umami-event="history_scope_change"
           className="min-w-0 max-w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 shadow-sm"
@@ -202,14 +111,14 @@ export function FloodCalendar({ data, initialScope }: { data: HistoryData; initi
           </optgroup>
           {basins.map((b) => (
             <optgroup key={b} label={`${b} gauges`}>
-              {stations.flatMap((s, i) =>
-                s.basin === b ? [<option key={s.station} value={`s:${i}`}>{s.name}</option>] : [],
+              {stations.flatMap((s) =>
+                s.basin === b ? [<option key={s.station} value={`s:${s.station}`}>{s.name}</option>] : [],
               )}
             </optgroup>
           ))}
         </select>
-        {scope.kind === "station" && (
-          <Link href={stations[scope.i].href} className="text-sm text-sky-700 dark:text-sky-400 hover:underline">
+        {station && (
+          <Link href={station.href} className="text-sm text-sky-700 dark:text-sky-400 hover:underline">
             Live readings →
           </Link>
         )}
@@ -271,7 +180,7 @@ export function FloodCalendar({ data, initialScope }: { data: HistoryData; initi
             Share of days in each month with at least one gauge at alert or worse {scopeLabel}.
           </p>
         </div>
-        <Seasonality months={seasonality} />
+        <Seasonality months={months} />
       </section>
 
       {/* events */}
@@ -281,7 +190,7 @@ export function FloodCalendar({ data, initialScope }: { data: HistoryData; initi
             Biggest flood events {scope.kind === "all" ? "since 2022" : scopeLabel}
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Runs of days with minor or major flooding, ranked by how many gauges flooded and for how long.
+            Runs of days with minor or major flooding, ranked by the worst day.
           </p>
         </div>
         {events.length === 0 ? (

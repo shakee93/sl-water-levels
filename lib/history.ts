@@ -10,7 +10,7 @@
 import { levelTier } from "./status";
 import type { Thresholds } from "./readings";
 import { detectUnit, type Unit } from "./units";
-import { stationPath } from "./slug";
+import { basinSlug, stationPath } from "./slug";
 import { stationDisplayName } from "./displayName";
 
 const HISTORY_URL = "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/history.json";
@@ -116,4 +116,11 @@ export async function getHistory(): Promise<HistoryData | null> {
       }),
     },
   };
+}
+
+/** Canonical /history URL for a scope: /history, /history/<river>, /history/<river>/<gauge>. */
+export function historyPath(basin?: string | null, station?: string | null): string {
+  if (basin && station) return `/history${stationPath(basin, station)}`;
+  if (basin) return `/history/${basinSlug(basin)}`;
+  return "/history";
 }
