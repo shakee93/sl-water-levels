@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Minus, TrendingUp } from "lucide-react";
 import { fetchBasinSnapshot, statusFor, type BasinStation } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 import { stationPath } from "@/lib/slug";
+import { formatLevel, type Unit } from "@/lib/units";
 
 const dotForTone: Record<string, string> = {
   green: "bg-emerald-500",
@@ -18,13 +19,11 @@ function pct(level: number | null, threshold: number | null) {
   return Math.max(0, Math.min(150, (level / threshold) * 100));
 }
 
-function trendDelta(s: BasinStation) {
-  if (!s.latest || !s.prior) return null;
-  if (s.latest.water_level == null || s.prior.water_level == null) return null;
-  const dt = (s.latest.ts - s.prior.ts) / 3_600_000;
-  if (dt <= 0) return null;
-  const delta = s.latest.water_level - s.prior.water_level;
-  return { delta, ratePerHour: delta / dt };
+const STEADY_M_PER_H = 0.006;
+
+function fmtRate(rateM: number) {
+  const cm = Math.abs(rateM) * 100;
+  return `${rateM > 0 ? "+" : "-"}${cm >= 100 ? `${(cm / 100).toFixed(1)} m` : `${Math.max(1, Math.round(cm))} cm`}/h`;
 }
 
 function Sparkline({ readings }: { readings: BasinStation["trend24h"] }) {
@@ -59,37 +58,28 @@ function Sparkline({ readings }: { readings: BasinStation["trend24h"] }) {
 }
 
 function Arrow({ rate }: { rate: number }) {
-  const abs = Math.abs(rate);
-  if (abs < 0.02) {
-    return <Minus className="size-3.5 text-slate-400" aria-label="steady" />;
+  if (Math.abs(rate) < STEADY_M_PER_H) {
+    return <Minus className="size-4 text-slate-500" aria-label="steady" />;
   }
   if (rate > 0) {
-    return <ArrowUp className="size-3.5 text-orange-500" aria-label="rising" />;
+    return <ArrowUp className="size-4 text-orange-600 dark:text-orange-400" aria-label="rising" />;
   }
-  return <ArrowDown className="size-3.5 text-emerald-500" aria-label="falling" />;
+  return <ArrowDown className="size-4 text-emerald-600 dark:text-emerald-400" aria-label="falling" />;
 }
 
 function buildWaveInsight(stations: BasinStation[], selectedStation: string) {
   const selectedIdx = stations.findIndex((s) => s.station === selectedStation);
   if (selectedIdx <= 0) return null;
-  const upstream = stations.slice(0, selectedIdx);
   const selected = stations[selectedIdx];
-  if (!selected) return null;
-
-  const upRising = upstream
-    .map((s) => ({ station: s.station, trend: trendDelta(s) }))
-    .filter((x): x is { station: string; trend: { delta: number; ratePerHour: number } } => x.trend != null && x.trend.ratePerHour > 0.05);
-
+  if (selected.tier === "stale") return null;
+  const upRising = stations
+    .slice(0, selectedIdx)
+    .filter((s) => s.tier !== "stale" && s.rate3hM != null && s.rate3hM > 0.05);
   if (upRising.length === 0) return null;
-  const selTrend = trendDelta(selected);
-  const fastestUp = upRising.reduce((a, b) => (a.trend.ratePerHour > b.trend.ratePerHour ? a : b));
-  const isCalmHere = !selTrend || selTrend.ratePerHour < fastestUp.trend.ratePerHour * 0.6;
-  if (!isCalmHere) return null;
-
-  return {
-    upstreamStation: fastestUp.station,
-    rate: fastestUp.trend.ratePerHour,
-  };
+  const fastest = upRising.reduce((a, b) => ((a.rate3hM ?? 0) > (b.rate3hM ?? 0) ? a : b));
+  const selRate = selected.rate3hM;
+  if (selRate != null && selRate >= (fastest.rate3hM ?? 0) * 0.6) return null;
+  return { upstreamStation: fastest.station, rateM: fastest.rate3hM ?? 0 };
 }
 
 type RelToneClass = {
@@ -102,26 +92,27 @@ const relToneText: RelToneClass = {
   red: "text-red-600 dark:text-red-400",
   orange: "text-orange-600 dark:text-orange-400",
   yellow: "text-yellow-600 dark:text-yellow-400",
-  neutral: "text-slate-500 dark:text-slate-500",
+  neutral: "text-slate-600 dark:text-slate-400",
 };
 
 function relativeToThreshold(
   level: number | null | undefined,
+  unit: Unit,
   t: { alert: number | null; minor: number | null; major: number | null },
 ): { label: string; tone: keyof RelToneClass } | null {
   if (level == null) return null;
   if (t.major != null && level >= t.major) {
-    return { label: `+${(level - t.major).toFixed(2)} above major`, tone: "red" };
+    return { label: `+${(level - t.major).toFixed(2)}${unit ? ` ${unit}` : ""} above major`, tone: "red" };
   }
   if (t.minor != null && level >= t.minor) {
-    return { label: `+${(level - t.minor).toFixed(2)} above minor`, tone: "orange" };
+    return { label: `+${(level - t.minor).toFixed(2)}${unit ? ` ${unit}` : ""} above minor`, tone: "orange" };
   }
   if (t.alert != null && level >= t.alert) {
-    return { label: `+${(level - t.alert).toFixed(2)} above alert`, tone: "yellow" };
+    return { label: `+${(level - t.alert).toFixed(2)}${unit ? ` ${unit}` : ""} above alert`, tone: "yellow" };
   }
   if (t.alert != null) {
     return {
-      label: `${(t.alert - level).toFixed(2)} below alert`,
+      label: `${(t.alert - level).toFixed(2)}${unit ? ` ${unit}` : ""} below alert`,
       tone: "neutral",
     };
   }
@@ -144,21 +135,17 @@ export async function BasinFlow({
   return (
     <section className="mt-6">
       <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-          {basin} — upstream to downstream
+        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-200">
+          Along the {basin.trim()}
         </h3>
-        <span className="text-[11px] text-slate-500 dark:text-slate-400">
-          24h trend
-        </span>
       </div>
 
       {insight && (
-        <div className="mb-3 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-xs sm:text-sm flex items-start gap-2">
-          <TrendingUp className="size-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-          <div className="text-amber-800 dark:text-amber-200">
-            <strong>{insight.upstreamStation}</strong> upstream is rising at{" "}
-            <span className="tabular-nums">{insight.rate.toFixed(2)}/h</span> — a pulse may reach{" "}
-            <strong>{selectedStation}</strong> in the coming hours.
+        <div className="mb-3 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-sm flex items-start gap-2">
+          <TrendingUp className="size-4 shrink-0 mt-0.5 text-amber-700 dark:text-amber-400" aria-hidden />
+          <div className="text-amber-950 dark:text-amber-100">
+            <strong>{insight.upstreamStation}</strong> is rising {fmtRate(insight.rateM).replace("+", "")}. The rise may
+            reach {selectedStation} in the coming hours.
           </div>
         </div>
       )}
@@ -167,17 +154,20 @@ export async function BasinFlow({
         {stations.map((s, i) => {
           const status = statusFor(s.latest?.water_level ?? null, s.thresholds, s.latest?.ts);
           const isSelected = s.station === selectedStation;
-          const trend = trendDelta(s);
-          const alertPct = pct(s.latest?.water_level ?? null, s.thresholds.alert);
+          const stale = status.tier === "stale";
+          const rate = !stale ? s.rate3hM : null;
+          const alertPct = stale ? null : pct(s.latest?.water_level ?? null, s.thresholds.alert);
           const majorPct = pct(s.thresholds.minor, s.thresholds.alert);
+          const rel = stale ? null : relativeToThreshold(s.latest?.water_level, s.unit, s.thresholds);
 
           return (
             <li key={s.station}>
               <Link
                 href={stationPath(s.basin, s.station)}
-                className={`flex items-center gap-3 px-3 sm:px-4 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
-                  isSelected ? "bg-sky-50 dark:bg-sky-950/30" : ""
-                }`}
+                aria-current={isSelected ? "page" : undefined}
+                className={`flex items-center gap-3 px-3 sm:px-4 py-3 min-h-14 border-l-4 transition hover:bg-slate-50 dark:hover:bg-slate-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 ${
+                  isSelected ? "bg-sky-50 dark:bg-sky-950/30 border-sky-500" : "border-transparent"
+                } ${stale ? "opacity-60" : ""}`}
               >
                 <div className="flex flex-col items-center w-4 shrink-0">
                   <span className={`size-2 rounded-full ${dotForTone[status.tone]}`} />
@@ -187,23 +177,19 @@ export async function BasinFlow({
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <div className={`text-sm font-medium truncate ${isSelected ? "text-sky-700 dark:text-sky-300" : ""}`}>
-                      {s.station}
-                    </div>
-                    <div className="text-[10px] uppercase tracking-wider text-slate-400 hidden sm:block">
-                      {i === 0 ? "upstream" : i === stations.length - 1 ? "downstream" : ""}
-                    </div>
+                  <div className={`text-sm font-medium truncate ${isSelected ? "text-sky-800 dark:text-sky-300 font-semibold" : ""}`}>
+                    {s.station}
+                    {isSelected && <span className="ml-2 text-xs font-normal">(this station)</span>}
                   </div>
-                  {(() => {
-                    const rel = relativeToThreshold(s.latest?.water_level, s.thresholds);
-                    return rel ? (
-                      <div className={`text-[11px] mt-0.5 tabular-nums ${relToneText[rel.tone]}`}>
-                        {rel.label}
-                      </div>
-                    ) : null;
-                  })()}
-                  {/* threshold bar */}
+                  {stale ? (
+                    <div className="text-xs mt-0.5 text-slate-600 dark:text-slate-400">
+                      {s.ageMin != null ? `Last reading ${Math.round(s.ageMin / 60)} h ago` : "Not reporting"}
+                    </div>
+                  ) : (
+                    rel && (
+                      <div className={`text-xs mt-0.5 tabular-nums ${relToneText[rel.tone]}`}>{rel.label}</div>
+                    )
+                  )}
                   {alertPct != null && (
                     <div className="relative mt-1.5 h-1 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <div
@@ -222,40 +208,33 @@ export async function BasinFlow({
                         <div
                           className="absolute inset-y-0 w-px bg-slate-400 dark:bg-slate-500"
                           style={{ left: `${majorPct}%` }}
-                          title="minor flood threshold"
                         />
                       )}
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col items-end shrink-0 min-w-[3.5rem]">
-                  <div className="text-sm font-semibold tabular-nums flex items-center gap-1">
-                    {s.latest?.water_level != null ? s.latest.water_level.toFixed(2) : "—"}
-                    {trend && <Arrow rate={trend.ratePerHour} />}
+                <div className="flex flex-col items-end shrink-0 min-w-[4.5rem]">
+                  <div className={`text-sm font-semibold tabular-nums flex items-center gap-1 ${stale ? "text-slate-500 dark:text-slate-400" : ""}`}>
+                    {formatLevel(s.latest?.water_level, s.unit)}
+                    {rate != null && <Arrow rate={rate} />}
                   </div>
-                  {trend && (
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 tabular-nums">
-                      {trend.delta >= 0 ? "+" : ""}
-                      {trend.delta.toFixed(2)}/3h
-                    </div>
+                  {rate != null && Math.abs(rate) >= STEADY_M_PER_H && (
+                    <div className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">{fmtRate(rate)}</div>
                   )}
                 </div>
 
-                <div className="hidden sm:block shrink-0">
-                  <Sparkline readings={s.trend24h} />
-                </div>
+                {!stale && (
+                  <div className="hidden sm:block shrink-0">
+                    <Sparkline readings={s.trend24h} />
+                  </div>
+                )}
               </Link>
             </li>
           );
         })}
       </ol>
-      <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">
-        Stations ordered by river flow. Trend = change over last ~3 hours; arrow direction reflects rate.
-        {Object.keys({ "Kelani Ganga": true }).includes(basin.trim())
-          ? ""
-          : " Ordering for this basin is by longitude — may not perfectly match river hydrology."}
-      </p>
+      <p className="mt-3 text-xs text-slate-600 dark:text-slate-400">Arrows show the change over the last 3 hours.</p>
     </section>
   );
 }

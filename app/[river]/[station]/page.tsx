@@ -10,12 +10,11 @@ import {
   type Station,
 } from "@/lib/arcgis";
 import { basinPath, basinSlug, resolveStation, stationSlug } from "@/lib/slug";
-import { DEFAULT_DAYS, parseDays } from "@/lib/range";
 import { StationPicker } from "../../StationPicker";
-import { RangePicker } from "../../RangePicker";
 import { StationFinder } from "../../StationFinder";
 import { StationCard } from "../../StationCard";
-import { StationCardSkeleton } from "../../StationCardSkeleton";
+import { StationCardSkeleton, VerdictSkeleton } from "../../StationCardSkeleton";
+import { StationHelpCard } from "../../StationHelpCard";
 import { BasinFlow } from "../../BasinFlow";
 import { BasinDams } from "../../BasinDams";
 import { Forecast } from "../../Forecast";
@@ -83,7 +82,7 @@ export async function generateMetadata({
         type: "website",
       },
       twitter: {
-        card: "summary",
+        card: "summary_large_image",
         title: `${heading} — Sri Lanka Water Levels`,
         description: descBits,
       },
@@ -96,15 +95,14 @@ export async function generateMetadata({
   }
 }
 
+// No searchParams / cookies here: that would make the page dynamic (no-store). The chart range
+// (?days) is read on the client, so this route stays ISR-cached (revalidate = 60).
 export default async function StationPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ river: string; station: string }>;
-  searchParams: Promise<{ days?: string }>;
 }) {
   const { river, station: stationParam } = await params;
-  const { days: daysParam } = await searchParams;
 
   let stations: Station[] = [];
   let stationsError: string | null = null;
@@ -122,9 +120,6 @@ export default async function StationPage({
   const station = resolved?.station ?? "";
   const basin = resolved?.basin ?? "";
 
-  const days = parseDays(daysParam) ?? DEFAULT_DAYS;
-
-  const basinCount = new Set(stations.map((s) => s.basin)).size;
   const canonical = `/${river}/${stationParam}`;
 
   return (
@@ -134,7 +129,6 @@ export default async function StationPage({
           <>
             <script
               type="application/ld+json"
-              // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{
                 __html: JSON.stringify({
                   "@context": "https://schema.org",
@@ -149,7 +143,6 @@ export default async function StationPage({
             />
             <script
               type="application/ld+json"
-              // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{
                 __html: JSON.stringify({
                   "@context": "https://schema.org",
@@ -167,6 +160,15 @@ export default async function StationPage({
         )}
 
         {resolved && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(datasetLd(resolved.station, basin, stations, canonical)),
+            }}
+          />
+        )}
+
+        {resolved && (
           <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             <Link href="/" className="hover:underline">
               All basins
@@ -180,54 +182,37 @@ export default async function StationPage({
           </nav>
         )}
 
-        <header className="mb-5 sm:mb-7">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
-            <span className="size-1.5 rounded-full bg-sky-500 animate-pulse" />
-            Realtime · {basin || "Sri Lanka"}
-          </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
+        <header className="mb-4 sm:mb-5">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
             {station ? stationHeading(station, basin) : "Station water level"}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-prose">
-            Live reading from the Department of Irrigation, refreshed every minute.
-            Below: alert / minor-flood / major-flood thresholds, recent history,
-            next-hour forecast and the upstream → downstream basin view.
-          </p>
         </header>
 
         {stationsError ? (
           <ErrorBanner title="Could not load stations" detail={stationsError} />
         ) : (
           <>
-            <section className="mb-4 sm:mb-6">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1.5 font-medium">
-                    Station
-                  </label>
-                  <StationPicker stations={stations} current={station} />
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 sm:pb-2.5 tabular-nums">
-                  {stations.length} stations · {basinCount} basins
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <StationFinder stations={stations} />
-                <RangePicker current={days} />
-              </div>
-            </section>
+            <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
+              <Forecast basin={basin} selectedStation={station} />
+            </Suspense>
 
             <Suspense key={`anomaly-${station}`} fallback={null}>
               <Anomaly basin={basin} selectedStation={station} />
             </Suspense>
 
-            <Suspense key={`${station}-${days}`} fallback={<StationCardSkeleton />}>
-              <StationCard stationName={station} days={days} />
+            <Suspense key={`chart-${station}`} fallback={<StationCardSkeleton />}>
+              <StationCard stationName={station} />
             </Suspense>
 
-            <Suspense key={`forecast-${station}`} fallback={null}>
-              <Forecast basin={basin} selectedStation={station} />
-            </Suspense>
+            <section className="mt-6">
+              <label htmlFor="station-picker" className="block text-sm text-slate-600 dark:text-slate-400 mb-1.5 font-medium">
+                Other stations
+              </label>
+              <StationPicker stations={stations} current={station} id="station-picker" />
+              <div className="mt-3">
+                <StationFinder stations={stations} />
+              </div>
+            </section>
 
             <Suspense key={`flow-${station}`} fallback={null}>
               <BasinFlow basin={basin} selectedStation={station} />
@@ -236,11 +221,54 @@ export default async function StationPage({
             <Suspense key={`dams-${station}`} fallback={null}>
               <BasinDams basin={basin} />
             </Suspense>
+
+            <Suspense key={`helplink-${station}`} fallback={null}>
+              <StationHelpCard basin={basin} station={station} variant="link" />
+            </Suspense>
           </>
         )}
       </div>
     </main>
   );
+}
+
+const ARCGIS_GAUGES =
+  "https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0/query";
+
+function datasetLd(station: string, basin: string, stations: Station[], canonical: string) {
+  const s = stations.find((x) => x.station === station);
+  const end = new Date();
+  const start = new Date(end.getTime() - 7 * 86_400_000);
+  const day = (d: Date) => d.toISOString().slice(0, 10);
+  const name = stationDisplayName(station);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name: `${name} river gauge water level (${basin.trim()})`,
+    description: `Hourly water-level readings at the ${name} gauge on the ${basin.trim()}, Sri Lanka, with alert, minor flood and major flood levels. Last 7 days.`,
+    url: `${SITE}${canonical}`,
+    isAccessibleForFree: true,
+    creator: {
+      "@type": "GovernmentOrganization",
+      name: "Department of Irrigation, Sri Lanka",
+      url: "https://www.irrigation.gov.lk",
+    },
+    temporalCoverage: `${day(start)}/${day(end)}`,
+    ...(s && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
+      ? {
+          spatialCoverage: {
+            "@type": "Place",
+            name: `${name}, ${basin.trim()}`,
+            geo: { "@type": "GeoCoordinates", latitude: s.latitude, longitude: s.longitude },
+          },
+        }
+      : {}),
+    distribution: {
+      "@type": "DataDownload",
+      encodingFormat: "application/json",
+      contentUrl: `${ARCGIS_GAUGES}?where=${encodeURIComponent(`gauge='${station}'`)}&outFields=*&orderByFields=CreationDate+DESC&f=json`,
+    },
+  };
 }
 
 function ErrorBanner({ title, detail }: { title: string; detail: string }) {

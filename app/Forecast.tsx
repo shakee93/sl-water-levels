@@ -1,210 +1,269 @@
-import { ArrowDown, ArrowUp, Minus, HelpCircle, CloudRain } from "lucide-react";
+import { CloudRain, TriangleAlert } from "lucide-react";
 import { fetchBasinSnapshot } from "@/lib/arcgis";
-import { loadForecast } from "@/lib/forecast";
+import { loadForecast, type Forecast as ForecastT } from "@/lib/forecast";
 import { getAdvisory } from "@/lib/advisory";
 import { DISTRICT_BY_STATION } from "@/lib/districts";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
+import { contactsForDistrict } from "@/lib/help";
+import { statusFor } from "@/lib/status";
+import { formatLevel } from "@/lib/units";
+import { stationDisplayName } from "@/lib/displayName";
+import { stationPath } from "@/lib/slug";
+import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareButton";
 
-const directionConfig = {
-  rising: {
-    label: "Rising",
-    Icon: ArrowUp,
-    tone: "text-orange-600 dark:text-orange-400",
-    bg: "bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-900",
-  },
-  falling: {
-    label: "Falling",
-    Icon: ArrowDown,
-    tone: "text-emerald-600 dark:text-emerald-400",
-    bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900",
-  },
-  steady: {
-    label: "Steady",
-    Icon: Minus,
-    tone: "text-slate-600 dark:text-slate-300",
-    bg: "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800",
-  },
-  unknown: {
-    label: "Unknown",
-    Icon: HelpCircle,
-    tone: "text-slate-400 dark:text-slate-500",
-    bg: "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800",
-  },
-} as const;
+const TZ = "Asia/Colombo";
+const HOUR = 3_600_000;
+const timeFmt = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit", hour12: true });
+const lc = (m: string) => ` ${m.toLowerCase()}`;
+const clock = (ts: number) => timeFmt.format(ts).replace(/\s?(AM|PM)/, (_, m: string) => lc(m));
+const fmtTime = clock;
+const fmtRain = (v: number | null) => (v == null ? "n/a" : `${v.toFixed(1)} mm`);
 
-function fmtRain(v: number | null) {
-  return v == null ? "n/a" : `${v.toFixed(1)}mm`;
+// Fixed phrases. Sinhala and Tamil are machine translations (the card says so when they are shown).
+const VERDICT: Record<VerdictTone, T3> = {
+  normal: { en: "Normal", si: "සාමාන්‍යයි", ta: "இயல்பு" },
+  watch: { en: "Keep an eye on it", si: "සැලකිලිමත් වන්න", ta: "கவனமாக இருங்கள்" },
+  alert: { en: "Get ready", si: "සූදානම් වන්න", ta: "தயாராகுங்கள்" },
+  minor: { en: "Flooding now", si: "දැන් ගංවතුර තත්ත්වයක්", ta: "இப்போது வெள்ளம்" },
+  major: { en: "Move to safety", si: "ආරක්ෂිත ස්ථානයකට යන්න", ta: "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள்" },
+  none: { en: "No flood levels published", si: "ගංවතුර මට්ටම් පළ කර නැත", ta: "வெள்ள மட்டங்கள் வெளியிடப்படவில்லை" },
+  stale: { en: "Data delayed", si: "දත්ත ප්‍රමාදයි", ta: "தரவு தாமதம்" },
+};
+const ACTION: Partial<Record<VerdictTone, T3>> = {
+  alert: { en: "Move valuables up, charge your phone", si: "ඔබේ භාණ්ඩ ඉහළට ගෙන යන්න, දුරකථනය චාජ් කරන්න", ta: "உடைமைகளை உயரத்தில் வையுங்கள், தொலைபேசியை சார்ஜ் செய்யுங்கள்" },
+  minor: { en: "Be ready to leave low areas", si: "පහත් ප්‍රදේශවලින් ඉවත් වීමට සූදානම් වන්න", ta: "தாழ்வான பகுதிகளிலிருந்து வெளியேறத் தயாராக இருங்கள்" },
+  major: { en: "Follow official instructions", si: "නිල උපදෙස් අනුගමනය කරන්න", ta: "அதிகாரப்பூர்வ அறிவுறுத்தல்களைப் பின்பற்றுங்கள்" },
+};
+const CALL: T3 = { en: "Call 117", si: "117 අමතන්න", ta: "117 ஐ அழைக்கவும்" };
+const DIR: Record<string, T3> = {
+  rising: { en: "Rising", si: "ඉහළ යයි", ta: "உயர்கிறது" },
+  slow: { en: "Rising slowly", si: "සෙමින් ඉහළ යයි", ta: "மெதுவாக உயர்கிறது" },
+  falling: { en: "Falling", si: "පහළ යයි", ta: "குறைகிறது" },
+  steady: { en: "Steady", si: "ස්ථාවරයි", ta: "மாற்றமில்லை" },
+};
+
+const ORDER = ["normal", "watch", "alert", "minor", "major"] as const;
+const STEADY_M_PER_H = 0.006;
+const SLOW_M_PER_H = 0.05;
+
+function hoursPhrase(n: number): T3 {
+  return n <= 1
+    ? { en: "~1 hour", si: "පැයක් පමණ", ta: "சுமார் 1 மணி நேரம்" }
+    : { en: `~${n} hours`, si: `පැය ${n}ක් පමණ`, ta: `சுமார் ${n} மணி நேரம்` };
 }
 
-function fmtTime(ts: number) {
-  return new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Colombo",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(ts);
+/** One forecast fact, or null. Never numbers beyond the ETA, never probabilities. */
+function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | null; target: number } {
+  const c = f.crossings
+    .filter((x) => x.wording === "likely" || x.wording === "possible")
+    .sort((a, b) => (a.etaTs ?? Infinity) - (b.etaTs ?? Infinity))[0];
+  if (c) {
+    const flood = c.threshold !== "alert";
+    const lvl = flood
+      ? { en: "flood level", si: "ගංවතුර මට්ටම", ta: "வெள்ள மட்டத்தை" }
+      : { en: "alert level", si: "අනතුරු ඇඟවීමේ මට්ටම", ta: "எச்சரிக்கை மட்டத்தை" };
+    const target = ORDER.indexOf(c.threshold);
+    if (c.etaTs != null) {
+      const n = Math.max(1, Math.round((c.etaTs - now) / HOUR));
+      const h = hoursPhrase(n);
+      return {
+        target,
+        fact: {
+          en: `Could reach ${lvl.en} in ${h.en}`,
+          si: `${h.si} ඇතුළත ${lvl.si}ට ළඟා විය හැක`,
+          ta: `${h.ta}ில் ${lvl.ta} எட்டலாம்`,
+        },
+      };
+    }
+    return {
+      target,
+      fact: {
+        en: `Could reach ${lvl.en} within 24 hours`,
+        si: `පැය 24ක් ඇතුළත ${lvl.si}ට ළඟා විය හැක`,
+        ta: `24 மணி நேரத்தில் ${lvl.ta} எட்டலாம்`,
+      },
+    };
+  }
+  if (f.method === "model" && f.status === "ok" && (tier === "normal" || tier === "watch")) {
+    return {
+      target: -1,
+      fact: { en: "No flooding expected today", si: "අද ගංවතුර අපේක්ෂා නොකෙරේ", ta: "இன்று வெள்ளம் எதிர்பார்க்கப்படவில்லை" },
+    };
+  }
+  if (f.method === "trend" && tier === "watch") {
+    return { target: -1, fact: { en: "Close to alert level", si: "අනතුරු ඇඟවීමේ මට්ටමට ආසන්නයි", ta: "எச்சரிக்கை மட்டத்திற்கு அருகில்" } };
+  }
+  return { fact: null, target: -1 };
 }
 
-export async function Forecast({
-  basin,
-  selectedStation,
-}: {
-  basin: string;
-  selectedStation: string;
-}) {
+/** Verdict tier: the real tier, upgraded one step when a higher tier is likely/possible within 24h. */
+function upgrade(tier: VerdictTone, target: number): VerdictTone {
+  const i = Math.max(0, ORDER.indexOf(tier as (typeof ORDER)[number]));
+  if (tier === "none" || tier === "stale" || target <= i) return tier;
+  return ORDER[i <= 1 ? 2 : Math.min(i + 1, 4)];
+}
+
+export async function Forecast({ basin, selectedStation }: { basin: string; selectedStation: string }) {
   if (!basin) return null;
   const warningsP = getOfficialWarnings(); // fails soft, never throws
   const snapshot = await fetchBasinSnapshot(basin);
   if (snapshot.length === 0) return null;
   const f = await loadForecast(basin, snapshot, selectedStation);
   const me = snapshot.find((s) => s.station === selectedStation);
+  const district = DISTRICT_BY_STATION[selectedStation] ?? null;
+  const latest = me?.latest ?? null;
+  const status = statusFor(latest?.water_level ?? null, me?.thresholds ?? { alert: null, minor: null, major: null }, latest?.ts);
+  const realTier = status.tier;
   const [advisory, warnings] = await Promise.all([
-    getAdvisory({ station: selectedStation, river: basin.trim(), district: DISTRICT_BY_STATION[selectedStation] ?? null, tier: me?.tier ?? "stale", forecast: f }),
+    getAdvisory({ station: selectedStation, river: basin.trim(), district, tier: realTier, forecast: f }),
     warningsP.then((w) => warningsForBasin(w, basin)),
   ]);
 
-  const cfg = directionConfig[f.direction];
-  const Icon = cfg.Icon;
-  const unit = f.unit ? ` ${f.unit}` : "";
+  const stale = realTier === "stale";
+  const now = f.asOfTs ?? latest?.ts ?? 0;
+  const { fact, target } = stale ? { fact: null, target: -1 } : forecastFact(f, realTier, now);
+  const tone = stale ? "stale" : upgrade(realTier, target);
+
+  // Direction in words, from the 3 h rate (metres per hour, unit-aware).
+  const r = stale ? null : (me?.rate3hM ?? null);
+  const direction: T3 | null = stale
+    ? latest && me?.ageMin != null
+      ? (() => {
+          const h = Math.max(1, Math.round(me.ageMin / 60));
+          return { en: `Last reading ${h} h ago`, si: `අවසන් කියවීම පැය ${h}කට පෙර`, ta: `கடைசி அளவீடு ${h} மணி நேரத்திற்கு முன்` };
+        })()
+      : { en: "No recent reading", si: "මෑත කියවීමක් නැත", ta: "சமீபத்திய அளவீடு இல்லை" }
+    : r == null
+      ? null
+      : Math.abs(r) < STEADY_M_PER_H
+        ? DIR.steady
+        : r < 0
+          ? DIR.falling
+          : r < SLOW_M_PER_H
+            ? DIR.slow
+            : DIR.rising;
+
+  const elevated = tone === "alert" || tone === "minor" || tone === "major";
+  const dc = elevated ? contactsForDistrict(district) : null;
+  const name = stationDisplayName(selectedStation);
+  const unit = me?.unit ?? null;
+  const level = latest?.water_level ?? null;
+  const footer = latest && level != null ? `${formatLevel(level, unit)} · ${clock(latest.ts)}` : "No reading";
+  const shareText = stale
+    ? `${name} (${basin.trim()}): data delayed${level != null ? `, last reading ${formatLevel(level, unit)}` : ""}.`
+    : `${name} (${basin.trim()}): ${formatLevel(level, unit)}, ${VERDICT[tone].en}${direction ? `, ${direction.en.toLowerCase()}` : ""}. ${latest ? clock(latest.ts) : ""}.`;
+
+  const w = warnings[0];
+  const fu = f.unit ? ` ${f.unit}` : "";
   const hasRain = (f.signals.rainAtStation6h ?? 0) + (f.signals.rainUpstream6h ?? 0) > 1;
-  const caution = f.status === "degraded" || f.outlook === "elevated";
 
   return (
-    <section
-      data-forecast-method={f.method}
-      className={`mt-6 rounded-xl border ${cfg.bg} p-4 sm:p-5`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={`shrink-0 size-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center ${cfg.tone}`}
+    <section data-forecast-method={f.method}>
+      {w && (
+        <p
+          data-official-warning
+          className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100"
         >
-          <Icon className="size-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              Forecast
-            </h3>
-            {f.experimental && f.method === "model" && (
-              <span className="text-[11px] rounded border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 px-1.5">
-                Experimental
-              </span>
-            )}
-            {f.outlook === "elevated" && (
-              <span className="text-[11px] rounded border border-orange-300 dark:border-orange-800 text-orange-700 dark:text-orange-400 px-1.5">
-                Elevated river-flow outlook this week
-              </span>
-            )}
-          </div>
-          <div className="mt-1 text-sm text-slate-700 dark:text-slate-200" data-advisory data-advisory-source={advisory.source}>
-            <p>{advisory.en}</p>
-            {(advisory.si || advisory.ta) && (
-              <details className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                <summary className="cursor-pointer">සිංහල / தமிழ் (machine-translated)</summary>
-                {advisory.si && <p lang="si" className="mt-1">{advisory.si}</p>}
-                {advisory.ta && <p lang="ta" className="mt-1">{advisory.ta}</p>}
-              </details>
-            )}
-          </div>
-          {warnings.map((w) => (
-            <p key={w.url} data-official-warning className="mt-1 text-xs text-slate-700 dark:text-slate-200">
-              <span className="font-semibold">Official warning ({w.severity}):</span> {w.summary}{" "}
-              <a href={w.url} target="_blank" rel="noopener noreferrer" className="underline">
-                {w.source}
-              </a>
-            </p>
-          ))}
-          <div className={`mt-1 text-lg sm:text-xl font-semibold ${caution ? "" : cfg.tone}`} data-forecast-headline>
-            {f.headline}
-          </div>
+          <TriangleAlert className="size-4 shrink-0 mt-0.5" aria-hidden />
+          <span>
+            <span className="font-semibold">Official warning:</span> {w.summary}{" "}
+            <a
+              href={w.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline inline-flex items-center min-h-6 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            >
+              {w.source}
+            </a>
+          </span>
+        </p>
+      )}
 
-          {f.horizons.length > 0 && (
-            <table className="mt-3 text-xs tabular-nums w-full max-w-md">
-              <thead>
-                <tr className="text-left text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <th className="font-normal pb-1">In</th>
-                  <th className="font-normal pb-1">Level</th>
-                  <th className="font-normal pb-1">80% range</th>
-                  <th className="font-normal pb-1">At</th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-800 dark:text-slate-200">
-                {f.horizons.map((h) => (
-                  <tr key={h.h}>
-                    <td className="py-0.5">{h.h}h</td>
-                    <td className="py-0.5 font-medium">
-                      {h.level.toFixed(2)}
-                      {unit}
-                    </td>
-                    <td className="py-0.5">
-                      {h.low != null && h.high != null ? `${h.low.toFixed(2)} to ${h.high.toFixed(2)}` : "n/a"}
-                    </td>
-                    <td className="py-0.5">{fmtTime(h.ts)}</td>
+      <VerdictCard
+        tone={tone}
+        verdict={VERDICT[tone]}
+        direction={direction}
+        fact={fact}
+        action={stale ? null : (ACTION[tone] ?? null)}
+        call={elevated ? CALL : null}
+        office={dc ? { label: `${dc.district} DMC office`, tel: dc.tel } : null}
+        footer={footer}
+        share={{ href: stationPath(basin, selectedStation), name: `${name} (${basin.trim()})`, text: shareText }}
+      >
+        <AdvisoryText
+          en={advisory.en}
+          si={advisory.si}
+          ta={advisory.ta}
+          experimental={f.experimental && f.method === "model"}
+          source={advisory.source}
+        />
+        <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
+          <p className="font-medium">{f.headline}</p>
+          {f.outlook === "elevated" && (
+              <p className="mb-2 text-orange-700 dark:text-orange-400">Elevated river-flow outlook this week.</p>
+            )}
+            {f.horizons.length > 0 && (
+              <table className="text-xs tabular-nums w-full max-w-md">
+                <thead>
+                  <tr className="text-left text-slate-500 dark:text-slate-400">
+                    <th className="font-normal pb-1">In</th>
+                    <th className="font-normal pb-1">Level</th>
+                    <th className="font-normal pb-1">80% range</th>
+                    <th className="font-normal pb-1">At</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {f.crossings.some((c) => c.wording !== "already") && (
-            <ul className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 space-y-0.5">
-              {f.crossings
-                .filter((c) => c.wording !== "already")
-                .map((c) => (
+                </thead>
+                <tbody>
+                  {f.horizons.map((h) => (
+                    <tr key={h.h}>
+                      <td className="py-0.5">{h.h}h</td>
+                      <td className="py-0.5 font-medium">{h.level.toFixed(2)}{fu}</td>
+                      <td className="py-0.5">{h.low != null && h.high != null ? `${h.low.toFixed(2)} to ${h.high.toFixed(2)}` : "n/a"}</td>
+                      <td className="py-0.5">{fmtTime(h.ts)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {f.crossings.some((c) => c.wording !== "already") && (
+              <ul className="mt-3 text-xs space-y-0.5">
+                {f.crossings.filter((c) => c.wording !== "already").map((c) => (
                   <li key={c.threshold}>
-                    {c.threshold} ({c.level}
-                    {unit}): {c.wording}, {Math.round(c.probability * 100)}% peak chance
+                    {c.threshold} ({c.level}{fu}): {c.wording}, {Math.round(c.probability * 100)}% peak chance
                     {c.etaTs ? `, from about ${fmtTime(c.etaTs)}` : ""}
                   </li>
                 ))}
-            </ul>
-          )}
-
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs">
-            <Cell label="Local trend">
-              {f.signals.localRatePerH != null
-                ? `${f.signals.localRatePerH >= 0 ? "+" : ""}${f.signals.localRatePerH.toFixed(2)}/h`
-                : "—"}
-            </Cell>
-            <Cell label="Upstream avg">
-              {f.signals.upstreamRatePerH != null
-                ? `${f.signals.upstreamRatePerH >= 0 ? "+" : ""}${f.signals.upstreamRatePerH.toFixed(2)}/h`
-                : f.signals.upstreamCount === 0
-                  ? "n/a (top)"
-                  : "—"}
-            </Cell>
-            <Cell label="Rain here (6h)">{fmtRain(f.signals.rainAtStation6h)}</Cell>
-            <Cell label="Rain upstream (6h)">{fmtRain(f.signals.rainUpstream6h)}</Cell>
-          </div>
-
-          {hasRain && f.signals.rainContributors.length > 0 && (
-            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
-              <CloudRain className="size-3.5 shrink-0 text-sky-500" />
-              <span className="truncate">
-                {f.signals.rainContributors.slice(0, 4).join(" · ")}
-              </span>
-            </div>
-          )}
-
-          {f.notes.length > 0 && (
-            <ul className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 space-y-0.5">
-              {f.notes.map((n, i) => (
-                <li key={i}>· {n}</li>
-              ))}
-            </ul>
-          )}
-          {f.basis.length > 0 && (
-            <details className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-              <summary className="cursor-pointer">How this is worked out</summary>
-              <ul className="mt-1 space-y-0.5">
-                {f.basis.map((n, i) => (
-                  <li key={i}>· {n}</li>
-                ))}
               </ul>
-            </details>
-          )}
+            )}
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs">
+              <Cell label="Local trend">{f.signals.localRatePerH != null ? `${f.signals.localRatePerH >= 0 ? "+" : ""}${f.signals.localRatePerH.toFixed(2)}/h` : "—"}</Cell>
+              <Cell label="Upstream avg">
+                {f.signals.upstreamRatePerH != null
+                  ? `${f.signals.upstreamRatePerH >= 0 ? "+" : ""}${f.signals.upstreamRatePerH.toFixed(2)}/h`
+                  : f.signals.upstreamCount === 0 ? "n/a (top)" : "—"}
+              </Cell>
+              <Cell label="Rain here (6h)">{fmtRain(f.signals.rainAtStation6h)}</Cell>
+              <Cell label="Rain upstream (6h)">{fmtRain(f.signals.rainUpstream6h)}</Cell>
+            </div>
+            {hasRain && f.signals.rainContributors.length > 0 && (
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                <CloudRain className="size-3.5 shrink-0 text-sky-500" aria-hidden />
+                <span>{f.signals.rainContributors.slice(0, 4).join(" · ")}</span>
+              </div>
+            )}
+            {f.notes.length > 0 && (
+              <ul className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                {f.notes.map((n, i) => <li key={i}>· {n}</li>)}
+              </ul>
+            )}
+            {f.basis.length > 0 && (
+              <ul className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
+                <li className="font-medium">How this is worked out</li>
+                {f.basis.map((n, i) => <li key={i}>· {n}</li>)}
+              </ul>
+            )}
+
         </div>
-      </div>
+      </VerdictCard>
     </section>
   );
 }
@@ -212,12 +271,8 @@ export async function Forecast({
 function Cell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        {label}
-      </div>
-      <div className="tabular-nums font-medium text-slate-800 dark:text-slate-200">
-        {children}
-      </div>
+      <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
+      <div className="tabular-nums font-medium text-slate-800 dark:text-slate-200">{children}</div>
     </div>
   );
 }

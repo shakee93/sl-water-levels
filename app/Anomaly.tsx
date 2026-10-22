@@ -32,35 +32,26 @@ export async function Anomaly({
     : "text-amber-800 dark:text-amber-300";
 
   return (
-    <section className={`mb-6 rounded-xl border ${bg} p-4 sm:p-5`}>
+    <section className={`mt-6 rounded-xl border ${bg} p-4`}>
       <div className="flex items-start gap-3">
-        <div
-          className={`shrink-0 size-10 rounded-full bg-white dark:bg-slate-900 border border-current/20 flex items-center justify-center ${iconColor}`}
-        >
-          <Icon className="size-5" />
-        </div>
+        <Icon className={`size-5 shrink-0 mt-0.5 ${iconColor}`} aria-hidden />
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-baseline gap-x-3">
-            <h3 className={`text-base font-semibold ${titleColor}`}>
-              {isLikely ? "Likely upstream release" : "Unusual rise"}
-            </h3>
-            <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Detected by anomaly
-            </span>
-          </div>
-          <p className={`mt-1.5 text-sm ${bodyColor}`}>{a.message}</p>
+          <h3 className={`text-base font-semibold ${titleColor}`}>
+            {isLikely ? "Likely upstream release" : "Unusual rise"}
+          </h3>
+          <p className={`mt-1 text-sm ${bodyColor}`}>{a.message}</p>
           {a.reasons.length > 0 && (
-            <ul className={`mt-2 text-xs space-y-1 ${bodyColor}`}>
-              {a.reasons.map((r, i) => (
-                <li key={i}>· {r}</li>
-              ))}
-            </ul>
+            <details className={`text-sm ${bodyColor}`}>
+              <summary className="cursor-pointer min-h-11 inline-flex items-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+                Why?
+              </summary>
+              <ul className="space-y-1">
+                {a.reasons.map((r, i) => (
+                  <li key={i}>· {r}</li>
+                ))}
+              </ul>
+            </details>
           )}
-          <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-            Inferred from gauge data alone — no direct release feed used.
-            Rising water with no rainfall and no matching upstream rise is the
-            signature of a dam opening upstream.
-          </p>
         </div>
       </div>
     </section>

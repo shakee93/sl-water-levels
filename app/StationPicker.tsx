@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useMemo, useTransition } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
@@ -16,12 +16,13 @@ function setCookie(name: string, value: string) {
 export function StationPicker({
   stations,
   current,
+  id,
 }: {
   stations: Station[];
   current: string;
+  id?: string;
 }) {
   const router = useRouter();
-  const params = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
   const grouped = useMemo(() => {
@@ -48,7 +49,7 @@ export function StationPicker({
     if (!hit) return;
     trackEvent("station_change", { basin: hit.basin?.trim() || "(unknown)", station: hit.station });
     // Preserve days= but drop legacy station= if present.
-    const next = new URLSearchParams(params.toString());
+    const next = new URLSearchParams(window.location.search);
     next.delete("station");
     const qs = next.toString();
     const url = `${stationPath(hit.basin, hit.station)}${qs ? `?${qs}` : ""}`;
@@ -60,11 +61,12 @@ export function StationPicker({
   return (
     <div className="relative">
       <select
+        id={id}
         value={current}
         onChange={onChange}
         disabled={isPending}
         aria-busy={isPending}
-        className="w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2.5 pr-10 text-sm font-medium text-slate-900 dark:text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 min-h-11 px-3.5 py-2.5 pr-10 text-base sm:text-sm font-medium text-slate-900 dark:text-slate-100 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {grouped.map(([basin, list]) => (
           <optgroup key={basin} label={basin}>
