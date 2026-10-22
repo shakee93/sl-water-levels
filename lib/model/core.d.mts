@@ -39,6 +39,8 @@ export type StationCoef = {
   levelMin: number;
   levelMax: number;
   horizons: Record<string, HorizonCoef>;
+  /** Horizons (h) where the out-of-sample error beat "level stays put"; the rest ship as persistence. */
+  skilledHorizons?: number[];
 };
 
 export function interp(a: SeriesPoint[], t: number): number | null;

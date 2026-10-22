@@ -10,9 +10,11 @@
 //   ensemble-api.open-meteo.com   ECMWF IFS 51-member ensemble, for spread
 //   flood-api.open-meteo.com      GloFAS river discharge (daily, ensemble)
 //
-// Rain is the plain mean over the basin's sample points in lib/model/catchments.json,
-// keyed by the END of each hour in epoch ms (Open-Meteo reports the sum over the
-// preceding hour), the same convention the fitting script uses.
+// Rain is the plain mean over the grid cells of a gauge's upstream sub-catchment (area average;
+// lib/model/catchments.json, built by scripts/build-catchments.mjs), keyed by the END of each
+// hour in epoch ms (Open-Meteo reports the sum over the preceding hour), the same convention
+// the fitting script uses. One deterministic request (<= ~30 locations) plus one ensemble request
+// per gauge, each cached 30 minutes by Next's fetch cache.
 
 import catchments from "./model/catchments.json";
 import { normaliseBasin } from "./basinOrder";
@@ -29,7 +31,10 @@ export type RainSeries = Record<number, number>;
 
 export type BasinWeather = {
   basin: string;
-  points: string[];
+  /** Gauge whose upstream sub-catchment the rain is averaged over. */
+  station: string;
+  /** Number of grid cells averaged (deterministic / ensemble). */
+  cells: { det: number; ens: number };
   /** Hour boundary treated as "now": earlier bins are past rain, later ones forecast. */
   nowHour: number;
   /** Deterministic past + forecast. */
@@ -37,6 +42,7 @@ export type BasinWeather = {
   /** Past from `rain`; the future from the ensemble members ranked by next-24h total. null = ensemble unavailable. */
   scenarios: { p10: RainSeries; p50: RainSeries; p90: RainSeries } | null;
   ensembleReason: string | null;
+  past6hMm: number | null;
   past24hMm: number | null;
   /** Catchment-mean rain over the next 24h (mm): deterministic and ensemble percentiles. */
   next24hMm: { det: number | null; p10: number | null; p50: number | null; p90: number | null };
@@ -55,13 +61,15 @@ export type Glofas = {
 };
 
 type BasinCfg = {
-  points: { name: string; lat: number; lon: number }[];
+  grid: [number, number][];
+  ens: [number, number][];
+  stations: Record<string, { cells: number[]; ensCells: number[] }>;
   glofas?: { lat: number; lon: number; p95: number; p99: number };
 };
-const BASINS = (catchments as { basins: Record<string, BasinCfg> }).basins;
+const BASINS = (catchments as unknown as { basins: Record<string, BasinCfg> }).basins;
 
-export function hasCatchment(basin: string): boolean {
-  return normaliseBasin(basin) in BASINS;
+export function hasCatchment(basin: string, station: string): boolean {
+  return !!BASINS[normaliseBasin(basin)]?.stations[station];
 }
 
 async function getJson(url: string, revalidate: number): Promise<Fetched<unknown>> {
@@ -116,31 +124,38 @@ const sumWindow = (r: RainSeries, fromExcl: number, toIncl: number): number | nu
   return s;
 };
 
-export async function getBasinWeather(basin: string, now = Date.now()): Promise<Fetched<BasinWeather>> {
+/** Catchment-mean rain (area average over the gauge's upstream sub-catchment) with forecast and ensemble scenarios. */
+export async function getBasinWeather(basin: string, station: string, now = Date.now()): Promise<Fetched<BasinWeather>> {
   const key = normaliseBasin(basin);
   const cfg = BASINS[key];
-  if (!cfg) return { ok: false, reason: `no rain sample points defined for ${key || "this basin"}` };
-  const lat = cfg.points.map((p) => p.lat).join(",");
-  const lon = cfg.points.map((p) => p.lon).join(",");
+  const sc = cfg?.stations[station];
+  if (!cfg || !sc) return { ok: false, reason: `no rain grid defined for ${station} (${key || "unknown basin"})` };
+  const det = sc.cells.map((i) => cfg.grid[i]);
+  const ensPts = sc.ensCells.map((i) => cfg.ens[i]);
+  const lat = det.map((p) => p[0]).join(",");
+  const lon = det.map((p) => p[1]).join(",");
+  const eLat = ensPts.map((p) => p[0]).join(",");
+  const eLon = ensPts.map((p) => p[1]).join(",");
   const nowHour = Math.floor(now / HOUR_MS) * HOUR_MS;
 
-  const [det, ens] = await Promise.all([
+  const [detR, ens] = await Promise.all([
     getJson(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation&past_days=2&forecast_days=3&timezone=UTC`,
       RAIN_REVALIDATE_S,
     ),
     getJson(
-      `https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${lat}&longitude=${lon}&hourly=precipitation&models=ecmwf_ifs025&past_days=0&forecast_days=3&timezone=UTC`,
+      `https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${eLat}&longitude=${eLon}&hourly=precipitation&models=ecmwf_ifs025&past_days=0&forecast_days=3&timezone=UTC`,
       RAIN_REVALIDATE_S,
     ),
   ]);
-  if (!det.ok) return { ok: false, reason: `rain forecast unavailable (${det.reason})` };
-  const rain = catchmentSeries(asList(det.data), "precipitation");
+  if (!detR.ok) return { ok: false, reason: `rain forecast unavailable (${detR.reason})` };
+  const rain = catchmentSeries(asList(detR.data), "precipitation");
   if (!rain) return { ok: false, reason: "rain forecast response was empty" };
 
   const horizonEnd = nowHour + 24 * HOUR_MS;
   const detNext = sumWindow(rain, nowHour, horizonEnd);
   const past24 = sumWindow(rain, nowHour - 24 * HOUR_MS, nowHour);
+  const past6 = sumWindow(rain, nowHour - 6 * HOUR_MS, nowHour);
 
   let scenarios: BasinWeather["scenarios"] = null;
   let ensembleReason: string | null = null;
@@ -183,11 +198,13 @@ export async function getBasinWeather(basin: string, now = Date.now()): Promise<
     ok: true,
     data: {
       basin: key,
-      points: cfg.points.map((p) => p.name),
+      station,
+      cells: { det: det.length, ens: ensPts.length },
       nowHour,
       rain,
       scenarios,
       ensembleReason,
+      past6hMm: past6,
       past24hMm: past24,
       next24hMm: { det: detNext, p10, p50, p90 },
     },

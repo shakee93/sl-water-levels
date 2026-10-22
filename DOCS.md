@@ -252,8 +252,15 @@ pill on `StationCard`.
 
 ### The forecast (`lib/forecast.ts`, `lib/weather.ts`, `lib/model/`)
 
-Stations with a fitted model (Kelani: Hanwella, Glencourse, Nagalagam Street) get a 1/3/6/12/24 h
-forecast; every other gauge keeps the old one-hour trend extrapolation, labelled "trend only". For each
+Every gauge with a rain grid (18 basins) and a fitted model that beat
+"level stays put" in leave-one-day-out testing gets a 1/3/6/12/24 h forecast (30 gauges as of 2026-10-22; the rest are
+labelled "trend only" and the note names the measured reason, e.g. "no more accurate than 'level stays put' at any
+horizon", or "too few readings"). Horizons without skill ship as persistence with the observed change distribution as the
+band, so every fitted gauge has a 24 h range. Catchment rain is the area average over the grid cells of the sub-catchment
+upstream of the gauge (`lib/model/catchments.json`, built by `scripts/build-catchments.mjs` from the Irrigation Department
+`river_basins` polygons: a 0.075-0.15 deg lattice, "upstream" = not nearer the river mouth than the gauge; approximate).
+For topmost gauges it is the only upstream signal. Leaders and lags per gauge come from
+`scripts/derive-configs.mjs` (lagged cross-correlation) into `scripts/station-configs.json`. For each
 station and horizon a ridge regression predicts the change in level from the gauge's own 3 h change,
 lagged changes at upstream "leader" gauges (Glencourse leads Hanwella by ~3 h, Deraniyagala/Kithulgala by
 8-9 h) and catchment rain in a window that mostly lies in the future (so it is fed Open-Meteo forecast

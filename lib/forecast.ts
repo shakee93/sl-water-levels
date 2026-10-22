@@ -28,7 +28,7 @@ import type { BasinStation } from "./arcgis";
 import { normaliseBasin, orderStations } from "./basinOrder";
 import { ageMinutes, HOUR_MS, isStale, rainTotal, rate, STALE_MINUTES } from "./readings";
 import type { Unit } from "./units";
-import { getBasinWeather, getGlofas, type BasinWeather, type Fetched, type Glofas, type RainSeries } from "./weather";
+import { getBasinWeather, getGlofas, hasCatchment, type BasinWeather, type Fetched, type Glofas, type RainSeries } from "./weather";
 import coefficientsJson from "./model/coefficients.json";
 import {
   evalStation,
@@ -40,7 +40,13 @@ import {
   type StationCoef,
 } from "./model/core.mjs";
 
-const COEFFS = (coefficientsJson as unknown as { stations: Record<string, StationCoef> }).stations;
+const COEF_FILE = coefficientsJson as unknown as {
+  stations: Record<string, StationCoef>;
+  /** Gauges tried by scripts/fit-forecast.mjs that did not ship a model, with the measured reason. */
+  unfitted?: Record<string, string>;
+};
+const COEFFS = COEF_FILE.stations;
+const UNFITTED = COEF_FILE.unfitted ?? {};
 
 /** One monsoon season of archive before we drop the "experimental" label. */
 export const MIN_TRAIN_DAYS = 150;
@@ -100,8 +106,16 @@ export type Forecast = {
     rainContributors: string[];
     trendConfidence: "high" | "medium" | "low" | "none";
   };
-  /** Catchment rain context (mm), null when the weather fetch failed. */
-  rain: { past24hMm: number | null; next24hMm: { det: number | null; p10: number | null; p50: number | null; p90: number | null } } | null;
+  /**
+   * Area-average rain over the sub-catchment upstream of this gauge (mm), null when the weather fetch failed.
+   * `cells` = number of 0.075-0.15 degree grid cells averaged (lib/model/catchments.json).
+   */
+  rain: {
+    cells: number;
+    past6hMm: number | null;
+    past24hMm: number | null;
+    next24hMm: { det: number | null; p10: number | null; p50: number | null; p90: number | null };
+  } | null;
 };
 
 export type ForecastInput = {
@@ -109,7 +123,7 @@ export type ForecastInput = {
   /** Snapshot of the whole basin (leaders are looked up here). */
   snapshot: BasinStation[];
   station: string;
-  /** Result of getBasinWeather; null/undefined is treated as "not fetched" = failed. */
+  /** Result of getBasinWeather(basin, station); null/undefined = not fetched (no rain grid for this gauge) or failed. */
   weather: Fetched<BasinWeather> | null | undefined;
   /** Result of getGlofas; null = basin has no cell. */
   glofas?: Fetched<Glofas> | null;
@@ -120,7 +134,10 @@ export type ForecastInput = {
 export async function loadForecast(basin: string, snapshot: BasinStation[], station: string): Promise<Forecast> {
   const key = normaliseBasin(basin);
   const covered = COEFFS[station] && normaliseBasin(COEFFS[station].basin) === key;
-  const [weather, glofas] = covered ? await Promise.all([getBasinWeather(key), getGlofas(key)]) : [null, null];
+  // Rain is fetched for every gauge that has a grid (trend-only gauges show it too); GloFAS only matters to fitted models.
+  const [weather, glofas] = hasCatchment(key, station)
+    ? await Promise.all([getBasinWeather(key, station), covered ? getGlofas(key) : null])
+    : [null, null];
   return makeForecast({ basin, snapshot, station, weather, glofas });
 }
 
@@ -147,14 +164,15 @@ function emptyResult(station: string, unit: Unit, headline: string, notes: strin
   };
 }
 
-function signalsOf(t: TrendResult | null): Forecast["signals"] {
+function signalsOf(t: TrendResult | null, catchment6h: number | null = null): Forecast["signals"] {
   return {
     localRatePerH: t?.localRatePerH ?? null,
     upstreamRatePerH: t?.upstreamRatePerH ?? null,
     upstreamLeader: t?.upstreamLeader ?? null,
     upstreamCount: t?.upstreamCount ?? 0,
     rainAtStation6h: t?.rainAtStation6h ?? null,
-    rainUpstream6h: t?.rainUpstream6h ?? null,
+    // area average over the sub-catchment above this gauge when the weather fetch worked, else the upstream gauges' own rain
+    rainUpstream6h: catchment6h ?? t?.rainUpstream6h ?? null,
     rainContributors: t?.rainContributors ?? [],
     trendConfidence: t?.confidence ?? "none",
   };
@@ -164,7 +182,8 @@ export function makeForecast(input: ForecastInput): Forecast {
   const { basin, snapshot, station } = input;
   const now = input.now ?? Date.now();
   const me = snapshot.find((s) => s.station === station);
-  const trend = trendForecast(basin, snapshot, station);
+  const w0 = input.weather && input.weather.ok ? input.weather.data : null;
+  const trend = trendForecast(basin, snapshot, station, w0?.past6hMm ?? null);
   if (!me) return emptyResult(station, null, "No forecast: this station is not in the basin snapshot.", [], trend, null, null);
   const unit = me.unit;
   if (!me.latest || me.latest.water_level == null) {
@@ -178,27 +197,52 @@ export function makeForecast(input: ForecastInput): Forecast {
   }
 
   const coef = COEFFS[station];
-  if (!coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)) return fromTrend(station, me, trend, L0, anchor);
+  if (!coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)) return fromTrend(station, me, trend, L0, anchor, input.weather);
   return fromModel(input, me, coef, trend, L0, anchor, now);
 }
 
+/** Why this gauge has no fitted model, in words that name what is missing (never a vague "inputs missing"). */
+function noModelReason(station: string, hasGrid: boolean): string {
+  const measured = UNFITTED[station];
+  if (measured) return measured;
+  if (!hasGrid) return "this gauge has no published flood levels or catchment rain grid, so no model was fitted";
+  return "no model has been fitted for this gauge yet";
+}
+
+const rainBits = (r: NonNullable<Forecast["rain"]>) =>
+  `${r.past6hMm != null ? `${r.past6hMm.toFixed(1)} mm in the last 6 hours, ` : ""}${r.past24hMm != null ? `${r.past24hMm.toFixed(0)} mm in the last 24 hours` : ""}${r.next24hMm.det != null ? `, ${r.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}`.replace(/^, /, "");
+
 /** Trend-only forecast for stations without a fitted model. */
-function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number, anchor: number): Forecast {
+function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number, anchor: number, weather: ForecastInput["weather"]): Forecast {
   const pred = t.predictedLevel;
   const dir = t.direction;
   const word = dir === "rising" ? "Rising" : dir === "falling" ? "Falling" : dir === "steady" ? "Steady" : "Unclear";
+  const w = weather && weather.ok ? weather.data : null;
+  const rain: Forecast["rain"] = w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null;
+  const grid = weather !== undefined && weather !== null;
+  const reason = noModelReason(station, grid);
   const headline =
     pred == null
       ? "No forecast: not enough recent readings to see a trend."
-      : `${word}: about ${pred.toFixed(2)}${me.unit ? ` ${me.unit}` : ""} in an hour (trend only, no rain model for this river yet).`;
+      : `${word}: about ${pred.toFixed(2)}${me.unit ? ` ${me.unit}` : ""} in an hour (trend only; ${reason}).`;
+  const notes = t.notes.filter((n) => !(w && n.startsWith("No rain data reported nearby")));
+  if (w && rain) {
+    notes.unshift(`Catchment rain (area average over ${rain.cells} grid cells above this gauge, Open-Meteo): ${rainBits(rain)}. It is shown for context; this gauge's forecast does not use it.`);
+  } else if (weather && !weather.ok) {
+    notes.unshift(`Catchment rain unavailable right now (${weather.reason}).`);
+  }
+  notes.unshift(`Trend only: ${reason}.`);
   return {
     station, unit: me.unit, currentLevel: L0, asOfTs: anchor,
     method: "trend", status: pred == null ? "unavailable" : "degraded", direction: dir, experimental: true,
-    basis: ["Recent trend at this gauge and the gauges upstream of it (one hour ahead only)."],
+    basis: [
+      "Recent trend at this gauge and the gauges upstream of it (one hour ahead only)." +
+        (t.upstreamCount === 0 ? " This is the topmost gauge on its river, so there is no upstream gauge; the catchment rain above is the only upstream signal." : ""),
+    ],
     horizons: pred == null ? [] : [{ h: 1, ts: anchor + HOUR_MS, level: pred, low: null, high: null }],
     crossings: [], outlook: null, headline,
-    notes: ["Rain-based multi-hour forecasts are not available for this gauge yet.", ...t.notes],
-    signals: signalsOf(t), rain: null,
+    notes,
+    signals: signalsOf(t, w?.past6hMm ?? null), rain,
   };
 }
 
@@ -365,7 +409,8 @@ function fromModel(
   if (Math.max(...hs.map((x) => x.high)) > coef.levelMax) {
     notes.push(`Part of the range is above the highest level this model has seen (${coef.levelMax.toFixed(2)}${unit ? ` ${unit}` : ""}); treat it as a rough guide.`);
   }
-  if (hs.some((x) => x.persistence)) notes.push("Beyond about 12 hours the model has no skill over 'level stays the same', so the later hours blend that with the earlier outlook and carry a wide range.");
+  const noSkill = hs.filter((x) => x.persistence).map((x) => `${x.h} h`);
+  if (noSkill.length) notes.push(`In testing the model was no better than 'level stays the same' at ${noSkill.join(", ")}, so those hours blend that with the earlier outlook and carry a wide range.`);
   if (w) {
     const n = w.next24hMm;
     const fmt = (v: number | null) => (v == null ? "n/a" : v.toFixed(0));
@@ -401,13 +446,15 @@ function fromModel(
   // ---- basis
   const basis: string[] = [];
   const leaders = [...new Set(coef.terms.flatMap((t) => (t.k === "delta" ? t.g : [])))].filter((g) => g !== station);
-  basis.push(`Latest level at ${station} and recent change, plus upstream gauges: ${leaders.join(", ")}.`);
+  basis.push(leaders.length ? `Latest level at ${station} and recent change, plus upstream gauges: ${leaders.join(", ")}.` : `Latest level at ${station} and recent change. No gauge sits upstream of it (or none reports in step with it), so the catchment rain is its upstream signal.`);
   if (w) {
     const past = w.past24hMm;
-    basis.push(`Catchment rain from Open-Meteo (${w.points.length} points)${past != null ? `: ${past.toFixed(0)} mm in the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
+    basis.push(`Catchment rain from Open-Meteo (area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm in the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
   }
+  const skilled = hs.filter((x) => !x.persistence).map((x) => `${x.h} h`);
   const m6 = coef.horizons["6"];
-  if (m6?.mae != null) basis.push(`Fitted to ${coef.trainDays} days of readings; out-of-sample 6-hour error about ${(m6.mae).toFixed(2)}${unit ? ` ${unit}` : ""} (a 'no change' guess: ${m6.maePersistence.toFixed(2)}).`);
+  if (m6?.mae != null && !m6.persistence) basis.push(`Fitted to ${coef.trainDays} days of readings; out-of-sample 6-hour error about ${(m6.mae).toFixed(2)}${unit ? ` ${unit}` : ""} (a 'no change' guess: ${m6.maePersistence.toFixed(2)}).`);
+  else basis.push(`Fitted to ${coef.trainDays} days of readings; it beat a 'no change' guess out-of-sample only at ${skilled.join(", ") || "no horizon"}.`);
 
   return {
     station, unit, currentLevel: L0, asOfTs: anchor,
@@ -415,8 +462,8 @@ function fromModel(
     basis,
     horizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })),
     crossings, outlook, headline, notes,
-    signals: signalsOf(trend),
-    rain: w ? { past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null,
+    signals: signalsOf(trend, w?.past6hMm ?? null),
+    rain: w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null,
   };
 }
 
@@ -527,6 +574,8 @@ function trendForecast(
   basin: string,
   snapshot: BasinStation[],
   selectedStation: string,
+  /** Area-average catchment rain over the last 6 h (mm), used when no upstream gauge reports rain. */
+  catchRain6h: number | null = null,
 ): TrendResult {
   const ordered = orderStations(basin, snapshot);
   const myIdx = ordered.findIndex((s) => s.station === selectedStation);
@@ -594,7 +643,7 @@ function trendForecast(
   const rainUpstream6h =
     upRainWeightSum > 0
       ? upRainSignals.reduce((a, b) => a + b.rain * b.weight, 0) / upRainWeightSum
-      : null;
+      : catchRain6h;
   const rainContributors = upRainSignals
     .filter((s) => s.rain > 1)
     .map((s) => `${s.station} ${s.rain.toFixed(1)}mm`);
@@ -658,7 +707,7 @@ function trendForecast(
   } else if (upstreamRateM == null) {
     confidence = upstream.length === 0 ? "medium" : "low";
     if (upstream.length === 0)
-      notes.push("Topmost station in basin; no upstream signal available.");
+      notes.push("Topmost gauge on its river: no gauge upstream, so only its own trend (plus catchment rain) is available.");
     else notes.push("Upstream readings missing; using local trend only.");
   } else {
     const sameDir = Math.sign(localRateM) === Math.sign(upstreamRateM);

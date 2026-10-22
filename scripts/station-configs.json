@@ -1,0 +1,1287 @@
+{
+ "Kithulgala": {
+  "basin": "Kelani Ganga",
+  "mainLeader": "Norwood",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Kithulgala"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Norwood"
+    ],
+    "hrs": 3,
+    "label": "Norwood 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 7,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Norwood",
+     "lag": 0,
+     "r": 0.35
+    }
+   ],
+   "rainLag": 3,
+   "rainR": 0.2
+  }
+ },
+ "Holombuwa": {
+  "basin": "Kelani Ganga",
+  "mainLeader": "Kithulgala",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Holombuwa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Kithulgala"
+    ],
+    "hrs": 3,
+    "label": "Kithulgala 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 7,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Kithulgala",
+     "lag": 2,
+     "r": 0.53
+    }
+   ],
+   "rainLag": 3,
+   "rainR": 0.2
+  }
+ },
+ "Deraniyagala": {
+  "basin": "Kelani Ganga",
+  "mainLeader": "Kithulgala",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Deraniyagala"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Kithulgala"
+    ],
+    "hrs": 3,
+    "label": "Kithulgala 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 7,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Norwood",
+     "lag": 1,
+     "r": 0.35
+    },
+    {
+     "g": "Kithulgala",
+     "lag": 0,
+     "r": 0.69
+    }
+   ],
+   "rainLag": 3,
+   "rainR": 0.21
+  }
+ },
+ "Norwood": {
+  "basin": "Kelani Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Norwood"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 7,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 3,
+   "rainR": 0.45
+  }
+ },
+ "Putupaula": {
+  "basin": "Kalu Ganga",
+  "mainLeader": "Magura",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Putupaula"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Magura"
+    ],
+    "hrs": 6,
+    "label": "Magura 6h change"
+   },
+   {
+    "k": "rain",
+    "from": 22,
+    "to": 14,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Magura",
+     "lag": 10,
+     "r": 0.36
+    }
+   ],
+   "rainLag": 18,
+   "rainR": 0.22
+  }
+ },
+ "Ellagawa": {
+  "basin": "Kalu Ganga",
+  "mainLeader": "Rathnapura",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Ellagawa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Rathnapura"
+    ],
+    "hrs": 6,
+    "label": "Rathnapura 6h change"
+   },
+   {
+    "k": "rain",
+    "from": 16,
+    "to": 8,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Rathnapura",
+     "lag": 5,
+     "r": 0.63
+    }
+   ],
+   "rainLag": 12,
+   "rainR": 0.47
+  }
+ },
+ "Rathnapura": {
+  "basin": "Kalu Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Rathnapura"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 8,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 4,
+   "rainR": 0.34
+  }
+ },
+ "Kalawellawa (Millakanda)": {
+  "basin": "Kalu Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Kalawellawa (Millakanda)"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 16,
+    "to": 8,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 12,
+   "rainR": 0.11
+  }
+ },
+ "Magura": {
+  "basin": "Kalu Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Magura"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 8,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 4,
+   "rainR": 0.26
+  }
+ },
+ "Baddegama": {
+  "basin": "Gin Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Baddegama"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 18,
+    "to": 10,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 14,
+   "rainR": 0.48
+  }
+ },
+ "Thawalama": {
+  "basin": "Gin Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Thawalama"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 8,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 4,
+   "rainR": 0.4
+  }
+ },
+ "Panadugama": {
+  "basin": "Nilwala Ganga",
+  "mainLeader": "Pitabeddara",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Panadugama"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Pitabeddara"
+    ],
+    "hrs": 3,
+    "label": "Pitabeddara 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 12,
+    "to": 4,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Pitabeddara",
+     "lag": 4,
+     "r": 0.48
+    },
+    {
+     "g": "Urawa",
+     "lag": 3,
+     "r": 0.33
+    }
+   ],
+   "rainLag": 8,
+   "rainR": 0.53
+  }
+ },
+ "Pitabeddara": {
+  "basin": "Nilwala Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Pitabeddara"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 8,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 4,
+   "rainR": 0.43
+  }
+ },
+ "Urawa": {
+  "basin": "Nilwala Ganga",
+  "mainLeader": "Pitabeddara",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Urawa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Pitabeddara"
+    ],
+    "hrs": 3,
+    "label": "Pitabeddara 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 5,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Pitabeddara",
+     "lag": 0,
+     "r": 0.43
+    }
+   ],
+   "rainLag": 1,
+   "rainR": 0.45
+  }
+ },
+ "Thalgahagoda": {
+  "basin": "Nilwala Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Thalgahagoda"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 12,
+    "to": 4,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 8,
+   "rainR": 0.27
+  }
+ },
+ "Dunamale": {
+  "basin": "Aththanagalu Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Dunamale"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 10,
+    "to": 2,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 6,
+   "rainR": 0.56
+  }
+ },
+ "Moragaswewa": {
+  "basin": "Deduru Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Moragaswewa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 16,
+    "to": 8,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 12,
+   "rainR": 0.22
+  }
+ },
+ "Siyambalanduwa": {
+  "basin": "Heda Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Siyambalanduwa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 9,
+    "to": 1,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 5,
+   "rainR": 0.28
+  }
+ },
+ "Thanamalwila": {
+  "basin": "Kirindi Oya",
+  "mainLeader": "Wellawaya",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Thanamalwila"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Wellawaya"
+    ],
+    "hrs": 3,
+    "label": "Wellawaya 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 11,
+    "to": 3,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Wellawaya",
+     "lag": 4,
+     "r": 0.74
+    },
+    {
+     "g": "Kuda Oya",
+     "lag": 0,
+     "r": 0.45
+    }
+   ],
+   "rainLag": 7,
+   "rainR": 0.47
+  }
+ },
+ "Wellawaya": {
+  "basin": "Kirindi Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Wellawaya"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 6,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 2,
+   "rainR": 0.26
+  }
+ },
+ "Kuda Oya": {
+  "basin": "Kirindi Oya",
+  "mainLeader": "Wellawaya",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Kuda Oya"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Wellawaya"
+    ],
+    "hrs": 6,
+    "label": "Wellawaya 6h change"
+   },
+   {
+    "k": "rain",
+    "from": 11,
+    "to": 3,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Wellawaya",
+     "lag": 5,
+     "r": 0.67
+    }
+   ],
+   "rainLag": 7,
+   "rainR": 0.54
+  }
+ },
+ "Nakkala": {
+  "basin": "Kumbukkan Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Nakkala"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 5,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 1,
+   "rainR": 0.3
+  }
+ },
+ "Yaka Wewa": {
+  "basin": "Ma Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Yaka Wewa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 5,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 1,
+   "rainR": 0.3
+  }
+ },
+ "Padiyathalawa": {
+  "basin": "Maduru Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Padiyathalawa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 6,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 2,
+   "rainR": 0.36
+  }
+ },
+ "Badalgama": {
+  "basin": "Maha Oya",
+  "mainLeader": "Giriulla",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Badalgama"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Giriulla"
+    ],
+    "hrs": 3,
+    "label": "Giriulla 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 18,
+    "to": 10,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Giriulla",
+     "lag": 3,
+     "r": 0.95
+    }
+   ],
+   "rainLag": 14,
+   "rainR": 0.31
+  }
+ },
+ "Giriulla": {
+  "basin": "Maha Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Giriulla"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 14,
+    "to": 6,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 10,
+   "rainR": 0.28
+  }
+ },
+ "Manampitiya": {
+  "basin": "Mahaweli Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Manampitiya"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 5,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 1,
+   "rainR": 0.23
+  }
+ },
+ "Weraganthota": {
+  "basin": "Mahaweli Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Weraganthota"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 12,
+    "to": 4,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 18,
+   "rainR": 0.07
+  }
+ },
+ "Peradeniya": {
+  "basin": "Mahaweli Ganga",
+  "mainLeader": "Nawalapitiya",
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Peradeniya"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "delta",
+    "g": [
+     "Nawalapitiya"
+    ],
+    "hrs": 3,
+    "label": "Nawalapitiya 3h change"
+   },
+   {
+    "k": "rain",
+    "from": 7,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [
+    {
+     "g": "Nawalapitiya",
+     "lag": 0,
+     "r": 0.55
+    }
+   ],
+   "rainLag": 3,
+   "rainR": 0.46
+  }
+ },
+ "Nawalapitiya": {
+  "basin": "Mahaweli Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Nawalapitiya"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 7,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 3,
+   "rainR": 0.33
+  }
+ },
+ "Thaldena": {
+  "basin": "Mahaweli Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Thaldena"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 6,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 2,
+   "rainR": 0.17
+  }
+ },
+ "Thanthirimale": {
+  "basin": "Malwathu Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Thanthirimale"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 18,
+    "to": 10,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 14,
+   "rainR": 0.59
+  }
+ },
+ "Galgamuwa": {
+  "basin": "Mee Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Galgamuwa"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 6,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 2,
+   "rainR": 0.27
+  }
+ },
+ "Katharagama": {
+  "basin": "Menik Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Katharagama"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 16,
+    "to": 8,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 12,
+   "rainR": 0.1
+  }
+ },
+ "Moraketiya": {
+  "basin": "Walawe Ganga",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Moraketiya"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 8,
+    "to": 0,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 4,
+   "rainR": 0.17
+  }
+ },
+ "Horowpothana": {
+  "basin": "Yan Oya",
+  "mainLeader": null,
+  "terms": [
+   {
+    "k": "delta",
+    "g": [
+     "Horowpothana"
+    ],
+    "hrs": 3,
+    "label": "own 3h change",
+    "local": true
+   },
+   {
+    "k": "rain",
+    "from": 11,
+    "to": 3,
+    "label": "catchment rain"
+   },
+   {
+    "k": "level",
+    "label": "level",
+    "local": true
+   }
+  ],
+  "evidence": {
+   "leaders": [],
+   "rainLag": 7,
+   "rainR": 0.3
+  }
+ }
+}

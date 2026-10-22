@@ -58,6 +58,14 @@ export const STATIONS = {
   },
 };
 
+// Auto-derived configs for every other gauge with a rain grid (scripts/derive-configs.mjs).
+const derivedFile = path.join(here, "station-configs.json");
+if (existsSync(derivedFile)) {
+  for (const [name, def] of Object.entries(JSON.parse(readFileSync(derivedFile, "utf8")))) {
+    if (!STATIONS[name]) STATIONS[name] = { basin: def.basin, mainLeader: def.mainLeader, terms: def.terms };
+  }
+}
+
 export function gaugesOf(cfg) {
   return [...new Set([cfg.target ?? "", ...cfg.terms.flatMap((t) => (t.k === "delta" ? t.g : []))])].filter(Boolean);
 }
@@ -97,14 +105,16 @@ export function loadArchive(dir) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Hourly catchment-mean rain for a basin, { T(ms, bin end): mm }. Prefers archived
- * rain/ files from the data branch (written by snapshot.mjs); anything still missing
- * is filled from the Open-Meteo FORECAST api with past_days (<= 92), which is
- * gap-free up to "now" (the archive api lags several days) and is the same product
- * the app reads at serving time.
+ * Hourly catchment-mean rain for one gauge, { T(ms, bin end): mm }: the plain mean over the grid
+ * cells of the gauge's upstream sub-catchment (lib/model/catchments.json). Prefers archived rain/ files
+ * from the data branch (written by snapshot.mjs, point = "lat,lon"); anything still missing is filled
+ * from the Open-Meteo FORECAST api with past_days (<= 92), which is gap-free up to "now" (the archive
+ * api lags several days) and is the same product the app reads at serving time.
  */
-export async function loadRain(dir, basin, fromTs, toTs) {
-  const pts = CATCHMENTS[basin].points;
+export async function loadRain(dir, basin, station, fromTs, toTs) {
+  const cfg = CATCHMENTS[basin];
+  const cells = cfg.stations[station].cells.map((i) => cfg.grid[i]);
+  const pts = cells.map(([lat, lon]) => ({ name: `${lat},${lon}`, lat, lon }));
   const sums = new Map(), counts = new Map();
   const add = (T, v) => { sums.set(T, (sums.get(T) ?? 0) + v); counts.set(T, (counts.get(T) ?? 0) + 1); };
   const rdir = path.join(dir, "rain");
@@ -131,6 +141,7 @@ export async function loadRain(dir, basin, fromTs, toTs) {
     const list = Array.isArray(j) ? j : [j];
     sums.clear(); counts.clear(); // API is complete; don't double count partial archive files
     for (const p of list) p.hourly.time.forEach((t, i) => { const v = p.hourly.precipitation[i]; if (v != null) add(Date.parse(t + "Z"), v); });
+    await sleep(1200); // be polite to the free API
   }
   const R = {};
   for (const [T, n] of counts) if (n >= pts.length) R[T] = sums.get(T) / n;

@@ -15,7 +15,7 @@
 // Also archives the weather the forecast model is fitted on (best effort: a weather
 // outage must never block the gauge archive, so failures only log a warning):
 //   <outDir>/rain/YYYY/YYYY-MM-DD.csv     hourly Open-Meteo precipitation (mm, hour ENDING at
-//                                         time_utc) at each catchment point in lib/model/catchments.json
+//                                         time_utc) at each basin grid cell (point = "lat,lon") in lib/model/catchments.json
 //   <outDir>/glofas/YYYY/YYYY-MM-DD.csv   daily GloFAS river discharge (m3/s) at each basin's main-stem cell
 // Rain is taken from the forecast api with past_days (analysis, no multi-day lag like the
 // archive api) and only for hours already elapsed, so rewrites are stable.
@@ -229,7 +229,7 @@ async function archiveWeather() {
   const glofasByDay = new Map();
   for (const [basin, cfg] of Object.entries(catchments)) {
     try {
-      const pts = cfg.points;
+      const pts = cfg.grid.map(([lat, lon]) => ({ name: `${lat},${lon}`, lat, lon })); // 0.15/0.075 deg lattice inside the basin; point = "lat,lon"
       const j = await getJson(
         `https://api.open-meteo.com/v1/forecast?latitude=${pts.map((p) => p.lat)}&longitude=${pts.map((p) => p.lon)}&hourly=precipitation&past_days=3&forecast_days=1&timezone=UTC`,
       );

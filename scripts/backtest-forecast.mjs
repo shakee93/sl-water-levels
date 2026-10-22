@@ -26,8 +26,8 @@ for (const [name, def] of Object.entries(STATIONS)) {
   const names = gaugesOf(cfg);
   if (names.some((g) => !series[g])) { console.log(`${name}: skipped (missing archive data)`); continue; }
   const times = hourlyGrid(series, names);
-  rainCache[def.basin] ??= await loadRain(dir, def.basin, times[0] - 24 * H, times.at(-1));
-  const R = rainCache[def.basin];
+  rainCache[name] ??= await loadRain(dir, def.basin, name, times[0] - 24 * H, times.at(-1));
+  const R = rainCache[name];
   const meanRain = mean(Object.values(R));
   const base = makeCtx(series, R);
   const blind = { ...base, rainFor: (t) => (T) => (T <= t ? R[T] : meanRain) };

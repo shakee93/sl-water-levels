@@ -22,6 +22,8 @@ const dir = args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--out") 
 
 const series = loadArchive(dir);
 const stations = {};
+const unfitted = {}; // gauge -> measured reason it ships no model (shown in the UI notes)
+const fmtN = (v) => (v < 0.1 ? v.toFixed(3) : v.toFixed(2));
 const rainCache = {};
 for (const [name, def] of Object.entries(STATIONS)) {
   const cfg = { target: name, terms: def.terms };
@@ -29,10 +31,24 @@ for (const [name, def] of Object.entries(STATIONS)) {
   const absent = names.filter((g) => !series[g]);
   if (absent.length) { console.error(`${name}: skipped, no archive data for ${absent.join(", ")}`); continue; }
   const times = hourlyGrid(series, names);
-  if (!rainCache[def.basin]) rainCache[def.basin] = await loadRain(dir, def.basin, times[0] - 24 * 3600e3, times.at(-1));
-  const ctx = makeCtx(series, rainCache[def.basin]);
+  if (!rainCache[name]) rainCache[name] = await loadRain(dir, def.basin, name, times[0] - 24 * 3600e3, times.at(-1));
+  const ctx = makeCtx(series, rainCache[name]);
   const fit = fitStation(cfg, ctx, times);
+  const hs = Object.entries(fit.horizons);
+  const skilled = hs.filter(([, m]) => !m.persistence).map(([h]) => +h);
+  if (!hs.length) {
+    unfitted[name] = `only ${fit.trainDays} days of hourly readings so far (this gauge reports intermittently), too few to fit`;
+    console.log(`${name}: NOT SHIPPED, too few samples`);
+    continue;
+  }
+  if (!skilled.length) {
+    const [bh, bm] = hs.map(([h, m]) => [h, m]).sort((a, b) => a[1].mae / a[1].maePersistence - b[1].mae / b[1].maePersistence)[0];
+    unfitted[name] = `a rain model was fitted and tested on ${fit.trainDays} days but was no more accurate than "level stays put" at any horizon (best: ${bh} h, ${fmtN(bm.mae)} vs ${fmtN(bm.maePersistence)} error)`;
+    console.log(`${name}: NOT SHIPPED, no horizon beats persistence (best ${bh}h ${bm.mae.toFixed(3)} vs ${bm.maePersistence.toFixed(3)})`);
+    continue;
+  }
   stations[name] = {
+    skilledHorizons: skilled,
     basin: def.basin,
     mainLeader: def.mainLeader,
     terms: def.terms,
@@ -47,6 +63,6 @@ for (const [name, def] of Object.entries(STATIONS)) {
     console.log(`  ${String(h).padStart(2)}h n=${m.n} OOS MAE ${m.mae?.toFixed(3)} vs persistence ${m.maePersistence.toFixed(3)}  q10/q90 ${m.q10.toFixed(2)}/${m.q90.toFixed(2)}  w=[${m.w.map((v) => v.toFixed(3)).join(", ")}]`);
 }
 const round = (k, v) => (typeof v === "number" ? +v.toPrecision(6) : v);
-const json = { version: 1, fittedAt: new Date().toISOString(), lambda: 0.15, stations };
+const json = { version: 1, fittedAt: new Date().toISOString(), lambda: 0.15, stations, unfitted };
 writeFileSync(outFile, JSON.stringify(json, round, 1) + "\n");
 console.log(`wrote ${outFile}`);
