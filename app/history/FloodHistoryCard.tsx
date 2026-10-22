@@ -120,7 +120,7 @@ export async function FloodHistoryCard({ basin, station }: { basin: string; stat
                     }`}
                   >
                     {st ? (g[0]?.tier === "major" ? "Major flood" : "Minor flood") : peakGaugesPhrase(g)}
-                    {e.source === "model" && <span className="text-slate-400 dark:text-slate-500"> · modelled</span>}
+                    {e.source === "model" && <span className="text-slate-400 dark:text-slate-500"> · estimated</span>}
                   </span>
                 </li>
               );

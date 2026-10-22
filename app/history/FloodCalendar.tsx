@@ -149,9 +149,8 @@ export function FloodCalendar({ data, scope }: { data: HistoryData; scope: Scope
             ))}
           </div>
           <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-            Bar height grows with the share of the {scopeSize === 1 ? "gauge" : `${scopeSize} gauges`} in warning that day. Tap
-            or hover a day for details. Gauge archive starts 23 Nov 2025; earlier
-            years show the modelled estimate only.
+            {scopeSize > 1 ? "Taller bars mean more gauges were in warning that day. " : ""}Tap or hover a day for
+            details. Gauge records here start on 23 Nov 2025; earlier years are estimates.
           </p>
         </div>
       </section>
@@ -248,10 +247,10 @@ function Legend() {
         </span>
       ))}
       <span className="inline-flex items-center gap-1.5">
-        <span className="text-slate-400">▼</span> below the line: measured at the gauge
+        <span className="text-slate-400">▼</span> below the line: measured at the gauges
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="text-slate-400">▲</span> above: estimated from modelled river flow
+        <span className="text-slate-400">▲</span> above: estimated
       </span>
     </div>
   );
@@ -413,7 +412,7 @@ function SourceTag({ source }: { source: "gauge" | "model" }) {
     </span>
   ) : (
     <span className="shrink-0 text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-      Modelled
+      Estimated
     </span>
   );
 }
@@ -508,7 +507,7 @@ function DayDetail({
           <div className="flex items-center gap-2 mb-1">
             <SourceTag source="gauge" />
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              {gaugeRows ? `${gaugeReporting} of ${idx.length} gauges reported` : "no gauge archive for this date"}
+              {gaugeRows ? `${gaugeReporting} of ${idx.length} gauges reported` : "no gauge records for this date"}
             </span>
           </div>
           {gaugeRows &&
@@ -525,7 +524,7 @@ function DayDetail({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <SourceTag source="model" />
-            <span className="text-xs text-slate-500 dark:text-slate-400">river-flow estimate</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">how high the rivers likely ran</span>
           </div>
           {modelRows.length ? (
             <ul className="divide-y divide-slate-200/70 dark:divide-slate-800">
@@ -534,7 +533,7 @@ function DayDetail({
               ))}
             </ul>
           ) : (
-            <p className="text-slate-600 dark:text-slate-400">No unusually high flow estimated.</p>
+            <p className="text-slate-600 dark:text-slate-400">No flooding estimated.</p>
           )}
         </div>
       </div>
@@ -555,7 +554,7 @@ function Seasonality({
           const mp = pct(m.modelWarn, m.modelDays);
           const gp = pct(m.gaugeWarn, m.gaugeDays);
           return (
-            <div key={i} className="h-full flex items-end justify-center gap-0.5" title={`${MONTHS[i]}: ${mp ?? "–"}% modelled, ${gp ?? "–"}% measured`}>
+            <div key={i} className="h-full flex items-end justify-center gap-0.5" title={`${MONTHS[i]}: ${mp ?? "–"}% estimated, ${gp ?? "–"}% measured`}>
               <div className="w-1/2 max-w-3 rounded-t bg-slate-300 dark:bg-slate-600" style={{ height: `${mp ?? 0}%` }} />
               <div className="w-1/2 max-w-3 rounded-t bg-amber-500" style={{ height: `${gp ?? 0}%` }} />
             </div>
@@ -569,7 +568,7 @@ function Seasonality({
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-slate-300 dark:bg-slate-600" /> Modelled, 2022 to now
+          <span className="size-2.5 rounded-sm bg-slate-300 dark:bg-slate-600" /> Estimated, 2022 to now
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2.5 rounded-sm bg-amber-500" /> Measured at gauges, Nov 2025 to now

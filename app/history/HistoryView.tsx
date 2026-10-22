@@ -145,15 +145,15 @@ export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }
                   {sum.scopeSize === 1
                     ? peakPhrase(sum.latest.peakAgg, 1)
                     : peakGaugesPhrase(peakGauges(data, idx, sum.latest), 3)}
-                  {sum.latest.source === "model" ? ", modelled" : ""}
+                  {sum.latest.source === "model" ? ", estimated" : ""}
                   {sum.scopeSize === 1 ? ")." : "."}
                 </>
               )}
             </p>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-            Below each line is what the gauges measured; above it, an estimate from modelled river flow back to{" "}
-            {data.model.start.slice(0, 4)}. Updated {updated} (Sri Lanka time).
+            Below each line is what the river gauges recorded; above it, our estimate of how high the rivers ran,
+            going back to {data.model.start.slice(0, 4)}. Updated {updated} (Sri Lanka time).
             {station && (
               <>
                 {" "}
@@ -201,27 +201,26 @@ export function HistoryView({ data, scope }: { data: HistoryData; scope: Scope }
         <section className="mt-12 text-sm text-slate-600 dark:text-slate-400 space-y-2 max-w-prose">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">About this data</h2>
           <p>
-            <strong>Measured:</strong>{" "}each gauge&apos;s highest reading that day (Sri Lanka time) against its
-            current official alert, minor-flood and major-flood levels. Readings before our own archive began come
-            from{" "}
-            <a href="https://github.com/nuuuwan/lk_irrigation" className="underline">
-              nuuuwan/lk_irrigation
-            </a>
-            , which has recorded the same Department of Irrigation feed hourly since 23 Nov 2025.
+            <strong>Measured:</strong>{" "}the highest level each gauge reached that day, compared with the Department of
+            Irrigation&apos;s alert, minor-flood and major-flood levels.
           </p>
           <p>
-            <strong>Modelled:</strong>{" "}not official warnings. GloFAS river-discharge estimates (via{" "}
-            <a href="https://open-meteo.com/en/docs/flood-api" className="underline">
+            <strong>Estimated:</strong>{" "}for years before the gauge records here begin, we estimate how high each river
+            ran from a global river-flow model. These are not official warnings. They show the flood seasons and the
+            big floods well, but can miss the exact day or gauge, especially on small rivers.
+          </p>
+          <p className="text-xs">
+            Sources: Department of Irrigation river gauges; earlier gauge readings saved by{" "}
+            <a href="https://github.com/nuuuwan/lk_irrigation" className="underline">
+              lk_irrigation
+            </a>
+            ; river-flow estimates by{" "}
+            <a href="https://open-meteo.com/" className="underline">
               Open-Meteo
             </a>
-            ) at each gauge&apos;s location. A day counts as alert, minor or major when flow is in the top 3.9%,
-            1.6% or 0.55% of 1995–2021 days, which matches how often real gauges hit those levels. They get the
-            season and the big events right, but not always the exact day or gauge, especially on small rivers.
-          </p>
-          <p>
-            Raw daily files are public on the{" "}
+            .{" "}
             <a href="https://github.com/shakee93/sl-water-levels/tree/data" className="underline">
-              data branch
+              Download the daily records
             </a>
             .
           </p>
@@ -235,7 +234,7 @@ export function HistoryUnavailable() {
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
       <p className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-sm">
-        The flood history archive couldn&apos;t be loaded right now. Please try again in a few minutes.
+        Flood history couldn&apos;t be loaded right now. Please try again in a few minutes.
       </p>
     </main>
   );
