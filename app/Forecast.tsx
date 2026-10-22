@@ -134,7 +134,8 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
   const name = stationDisplayName(selectedStation);
   const unit = me?.unit ?? null;
   const level = latest?.water_level ?? null;
-  const footer = latest && level != null ? `${formatLevel(level, unit)} · ${clock(latest.ts)}` : "No reading";
+  const footer = latest ? `Updated ${clock(latest.ts)}` : "No reading";
+  const levelText = level != null ? formatLevel(level, unit) : null;
   const shareText = stale
     ? `${name} (${basin.trim()}): data delayed${level != null ? `, last reading ${formatLevel(level, unit)}` : ""}.`
     : `${name} (${basin.trim()}): ${formatLevel(level, unit)}, ${VERDICT[tone].en}${direction ? `, ${direction.en.toLowerCase()}` : ""}. ${latest ? clock(latest.ts) : ""}.`;
@@ -198,6 +199,7 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
         call={elevated ? CALL : null}
         office={dc ? { label: `${dc.district} DMC office`, tel: dc.tel } : null}
         footer={footer}
+        level={levelText}
         share={{ href: stationPath(basin, selectedStation), name: `${name} (${basin.trim()})`, text: shareText }}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>

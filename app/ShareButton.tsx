@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Eye, Info, Minus, MessageCircle, Phone, Share2, Siren, Star, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Eye, Info, Minus, MessageCircle, Phone, Share2, Siren, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
 
 const KEY = "sl_favourites";
 const EVT = "sl:favourites";
@@ -265,6 +265,18 @@ export const TONE: Record<VerdictTone, { icon: typeof Clock; text: string; bar: 
   stale: { icon: Clock, text: "text-slate-600 dark:text-slate-400", bar: "border-l-slate-300 dark:border-l-slate-600" },
 };
 
+// Card surfaces per tone: calm states stay neutral; alert and above tint the
+// whole card so the danger reads before any word does.
+const SURFACE: Record<VerdictTone, { card: string; tile: string; action: string; call: string; divider: string }> = {
+  normal: { card: "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900", tile: "bg-slate-50 dark:bg-slate-800/60", action: "bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100", call: "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900", divider: "border-slate-100 dark:border-slate-800" },
+  watch: { card: "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900", tile: "bg-slate-50 dark:bg-slate-800/60", action: "bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100", call: "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900", divider: "border-slate-100 dark:border-slate-800" },
+  alert: { card: "border-amber-300 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/25", tile: "bg-white/80 dark:bg-slate-900/60", action: "bg-amber-100 dark:bg-amber-900/40 text-amber-950 dark:text-amber-100", call: "bg-amber-500 text-amber-950 hover:bg-amber-400", divider: "border-amber-200 dark:border-amber-800/50" },
+  minor: { card: "border-orange-300 dark:border-orange-700/60 bg-orange-50/60 dark:bg-orange-950/25", tile: "bg-white/80 dark:bg-slate-900/60", action: "bg-orange-100 dark:bg-orange-900/40 text-orange-950 dark:text-orange-100", call: "bg-orange-600 text-white hover:bg-orange-500", divider: "border-orange-200 dark:border-orange-800/50" },
+  major: { card: "border-red-300 dark:border-red-700/60 bg-red-50/60 dark:bg-red-950/30", tile: "bg-white/80 dark:bg-slate-900/60", action: "bg-red-100 dark:bg-red-900/40 text-red-950 dark:text-red-100", call: "bg-red-600 text-white hover:bg-red-500", divider: "border-red-200 dark:border-red-800/50" },
+  none: { card: "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900", tile: "bg-slate-50 dark:bg-slate-800/60", action: "bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100", call: "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900", divider: "border-slate-100 dark:border-slate-800" },
+  stale: { card: "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900", tile: "bg-white dark:bg-slate-800/60", action: "bg-white dark:bg-slate-800/60 text-slate-900 dark:text-slate-100", call: "bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900", divider: "border-slate-200 dark:border-slate-800" },
+};
+
 const TREND = {
   up: { icon: ArrowUp, tone: "text-amber-600 dark:text-amber-400" },
   down: { icon: ArrowDown, tone: "text-emerald-600 dark:text-emerald-400" },
@@ -283,6 +295,7 @@ export function VerdictCard({
   call,
   office,
   footer,
+  level,
   share,
   children,
 }: {
@@ -299,82 +312,100 @@ export function VerdictCard({
   call: T3 | null;
   office: { label: string; tel: string } | null;
   footer: string;
+  /** Current level with unit, shown large beside the verdict. */
+  level?: string | null;
   share: { href: string; name: string; text: string };
   children: React.ReactNode;
 }) {
   const [lang, pick] = useLang();
-  const { icon: Icon, text, bar } = TONE[tone];
+  const { icon: Icon, text } = TONE[tone];
+  const look = SURFACE[tone];
   const btn =
-    "inline-flex items-center justify-center gap-2 h-11 w-full rounded-md px-4 text-sm font-semibold transition-colors";
+    "inline-flex items-center justify-center gap-2 h-12 w-full rounded-lg px-4 text-base font-semibold transition-colors";
+  const trend = outlook ? TREND[outlook.trend] : null;
+  const TrendIcon = trend?.icon ?? null;
   return (
-    <section
-      aria-label="Current status"
-      data-tier={tone}
-      className={`rounded-xl border border-l-4 ${bar} border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm`}
-    >
-      <div className="p-4 sm:p-5">
-        {/* Controls sit above the verdict so the verdict, direction and forecast
-            read as one block. */}
+    <section aria-label="Current status" data-tier={tone} className={`rounded-2xl border ${look.card} shadow-sm`}>
+      <div className="p-4 sm:p-6">
         <div className="flex items-center justify-between gap-2">
           <LangToggle lang={lang} pick={pick} />
           <StationActions {...share} />
         </div>
-        <h2 className={`mt-3 flex items-center gap-2 text-xl font-semibold ${text}`} lang={lang}>
-          <Icon className="size-6 shrink-0" aria-hidden />
-          {verdict[lang]}
-        </h2>
-        <div className="mt-2 space-y-1 text-base text-slate-700 dark:text-slate-300" lang={lang}>
-          {direction && (
-            <p data-direction>
-              {labels?.direction && <span className="text-slate-500 dark:text-slate-400">{labels.direction[lang]} </span>}
-              {direction[lang]}
+
+        {/* The answer: verdict on the left, the number on the right. */}
+        <div className="mt-4 flex items-end justify-between gap-4" lang={lang}>
+          <h2 className={`flex items-center gap-2 text-2xl sm:text-3xl font-semibold tracking-tight ${text}`}>
+            <Icon className="size-7 shrink-0" aria-hidden />
+            {verdict[lang]}
+          </h2>
+          {level && (
+            <p className="text-right leading-tight">
+              <span className="block text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900 dark:text-slate-50">{level}</span>
             </p>
           )}
-          {fact && (
-            <p data-fact>
-              {labels?.fact && <span className="text-slate-500 dark:text-slate-400">{labels.fact[lang]} </span>}
-              {fact[lang]}
-            </p>
-          )}
-          {action && <p className="font-medium text-slate-900 dark:text-slate-100">{action[lang]}</p>}
         </div>
-        {lang !== "en" && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">machine-translated</p>}
-        {outlook && (
-          <div className="mt-3 flex items-start gap-3">
-            <span
-              className={`shrink-0 size-10 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center ${TREND[outlook.trend].tone}`}
-              aria-hidden
-            >
-              {(() => {
-                const T = TREND[outlook.trend].icon;
-                return <T className="size-5" />;
-              })()}
-            </span>
-            <div className="flex-1 min-w-0 pt-1">{outlook.text}</div>
+
+        {(direction || fact) && (
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3" lang={lang}>
+            {direction && (
+              <div data-direction className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${look.tile}`}>
+                {labels?.direction && (
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{labels.direction[lang].replace(/:$/, "")}</p>
+                )}
+                <p className="mt-0.5 flex items-center gap-1.5 text-base sm:text-lg font-medium text-slate-900 dark:text-slate-50">
+                  {TrendIcon && <TrendIcon className={`size-5 shrink-0 ${trend!.tone}`} aria-hidden />}
+                  {direction[lang]}
+                </p>
+              </div>
+            )}
+            {fact && (
+              <div data-fact className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${look.tile}`}>
+                {labels?.fact && (
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{labels.fact[lang].replace(/:$/, "")}</p>
+                )}
+                <p className="mt-0.5 text-base sm:text-lg font-medium text-slate-900 dark:text-slate-50">{fact[lang]}</p>
+              </div>
+            )}
           </div>
         )}
+
+        {action && (
+          <p
+            className={`mt-3 flex items-center gap-2 rounded-xl px-3 py-2.5 sm:px-4 text-base font-medium ${look.action}`}
+            lang={lang}
+          >
+            <ListChecks className="size-5 shrink-0" aria-hidden />
+            {action[lang]}
+          </p>
+        )}
+
+        {outlook && (
+          <div className="mt-4 flex items-start gap-3 text-slate-600 dark:text-slate-400">
+            <Sparkles className="size-4 shrink-0 mt-1 text-slate-400 dark:text-slate-500" aria-hidden />
+            <div className="flex-1 min-w-0">{outlook.text}</div>
+          </div>
+        )}
+        {lang !== "en" && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">machine-translated</p>}
+
         {call && (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <a
-              href="tel:117"
-              className={`${btn} bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200 ${ring}`}
-            >
-              <Phone className="size-4" aria-hidden /> {call[lang]}
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <a href="tel:117" className={`${btn} ${look.call} ${ring}`}>
+              <Phone className="size-5" aria-hidden /> {call[lang]}
             </a>
             {office && (
               <a
                 href={office.tel}
-                className={`${btn} border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}
+                className={`${btn} border border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-900 dark:text-slate-100 hover:bg-white dark:hover:bg-slate-800 ${ring}`}
               >
-                <Phone className="size-4" aria-hidden /> {office.label}
+                <Phone className="size-5" aria-hidden /> {office.label}
               </a>
             )}
           </div>
         )}
       </div>
-      <details className="group border-t border-slate-100 dark:border-slate-800">
+      <details className={`group border-t ${look.divider}`}>
         <summary
-          className={`flex items-center justify-between gap-3 min-h-11 px-4 sm:px-5 cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-b-xl ${ring}`}
+          className={`flex items-center justify-between gap-3 min-h-11 px-4 sm:px-6 cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-b-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500`}
         >
           <span className="tabular-nums">{footer}</span>
           <span className="inline-flex items-center gap-1 font-medium">
@@ -382,7 +413,7 @@ export function VerdictCard({
             <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
           </span>
         </summary>
-        <div className="px-4 sm:px-5 pb-4 pt-2 space-y-3">{children}</div>
+        <div className="px-4 sm:px-6 pb-4 pt-2 space-y-3">{children}</div>
       </details>
     </section>
   );

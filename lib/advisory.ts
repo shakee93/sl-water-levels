@@ -45,7 +45,6 @@ const TIER_PHRASE: Record<Tier, string> = {
   stale: "not reporting recent readings",
 };
 
-const CALL_117 = "If you feel you are in danger, call 117 (Disaster Management Centre hotline).";
 
 function levelText(f: Forecast): string | null {
   return f.currentLevel == null ? null : `${f.currentLevel.toFixed(2)}${f.unit ? ` ${f.unit}` : ""}`;
@@ -68,17 +67,11 @@ export function factSheet(i: AdvisoryInput): string {
 
 /** Deterministic English advisory. Also the safe fallback. */
 export function templateAdvisory(i: AdvisoryInput): string {
+  // One short line: the card around it already shows station, level, verdict and call buttons.
   const f = i.forecast;
-  const where = `${i.station} on the ${i.river}`;
-  const parts: string[] = [];
-  if (i.tier === "stale") parts.push(`${where} is not reporting recent readings, so its level is unknown right now.`);
-  else {
-    parts.push(`${where} is ${TIER_PHRASE[i.tier]}.`);
-    if (f.status !== "unavailable") parts.push(f.headline.endsWith(".") ? f.headline : `${f.headline}.`);
-  }
-  if (atLeastAlert(i.tier)) parts.push(CALL_117);
-  else parts.push("Follow official warnings from the Disaster Management Centre.");
-  return parts.join(" ");
+  if (i.tier === "stale") return "No recent readings, so the current level is unknown.";
+  if (f.status !== "unavailable" && f.headline) return f.headline.endsWith(".") ? f.headline : `${f.headline}.`;
+  return `The river is ${TIER_PHRASE[i.tier]}.`;
 }
 
 /** True when the model adds nothing over the template (no usable forecast, or only a weak trend). */
@@ -108,9 +101,8 @@ export function validate(out: ModelOut, facts: string, tier: Tier): { en: string
   allowed.add("0");
   if (atLeastAlert(tier)) allowed.add("117");
   const ok = (text: string | undefined, lang: "en" | "si" | "ta") => {
-    if (!text || text.length < 10 || text.length > 700) return false;
+    if (!text || text.length < 10 || text.length > 320) return false;
     for (const n of numbersIn(text)) if (!allowed.has(n)) return false;
-    if (atLeastAlert(tier) && !numbersIn(text).has("117")) return false;
     if (!atLeastAlert(tier) && numbersIn(text).has("117")) return false;
     if (lang !== "en" && scriptShare(text, SCRIPT[lang]) < 0.5) return false;
     if (/https?:\/\/|<[a-z]/i.test(text)) return false;
@@ -122,10 +114,11 @@ export function validate(out: ModelOut, facts: string, tier: Tier): { en: string
 // ---- model call (cached) ----------------------------------------------------
 
 const INSTRUCTIONS = `You turn a flood-forecast fact sheet for a Sri Lankan river gauge into a short public advisory.
-Write 1 or 2 short sentences, in three versions: English (en), Sinhala (si) and Tamil (ta). Plain words, calm and factual, no alarm, no exclamation marks.
+Write ONE short sentence (at most 25 words), in three versions: English (en), Sinhala (si) and Tamil (ta), saying what to expect over the coming hours. Plain words, calm and factual, no alarm, no exclamation marks.
+The page already shows the station, river, district, current level, verdict, an "Experimental" tag and call buttons, so do NOT repeat any of those, and do NOT mention forecast methods, models, missing inputs, data quality or accuracy.
 STRICT RULES:
 - Use ONLY the facts in the fact sheet. Do not add, change, round or invent any number, probability, time, level, place or tier. Copy numbers exactly as written (digits, not words). Do not write any other number.
-- Keep the same level of certainty: "could" stays "could", "likely" stays "likely". Mention that the forecast is experimental if the sheet says so.
+- Keep the same level of certainty: "could" stays "could", "likely" stays "likely".
 - No medical or legal advice, no instructions beyond the sheet.
 - ${"{CALL}"}
 - In Sinhala and Tamil, translate ordinary words (hours, rising, level) into that language; keep station and river names and level units (ft, m) in English letters.`;
@@ -134,7 +127,7 @@ function instructionsFor(tier: Tier): string {
   return INSTRUCTIONS.replace(
     "{CALL}",
     atLeastAlert(tier)
-      ? "End every version with a short line telling people who feel in danger to call 117 (the Disaster Management Centre hotline). Include the digits 117 in each."
+      ? "Do not mention phone numbers: a Call 117 button is shown next to the sentence."
       : "Do not mention 117 or any phone number.",
   );
 }
@@ -159,7 +152,7 @@ const generateCached = unstable_cache(
     if (!v.en) throw new Error("model output failed validation");
     return v;
   },
-  ["advisory-v1"],
+  ["advisory-v2"],
   { revalidate: 1800 }, // 30 min
 );
 
