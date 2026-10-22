@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { MapPin } from "lucide-react";
 import type { HomeStation } from "./tierUi";
 import { useI18n } from "./LocaleProvider";
+import { useInView } from "./useInView";
 
 // Leaflet touches `window` on import, so the map module must not SSR.
 // next/dynamic with ssr:false is only allowed inside a Client Component —
@@ -23,9 +24,11 @@ export function MapClient({
   stations: HomeStation[];
   basinChains: Record<string, Array<[number, number]>>;
 }) {
+  // The map sits well below the verdict list: fetch Leaflet and the tiles only when it is near the screen.
+  const [ref, seen] = useInView<HTMLDivElement>("500px");
   return (
-    <div className="relative w-full h-full min-h-[360px]">
-      <MapLeaflet stations={stations} basinChains={basinChains} />
+    <div ref={ref} className="relative w-full h-full">
+      {seen ? <MapLeaflet stations={stations} basinChains={basinChains} /> : <MapSkeleton />}
     </div>
   );
 }
@@ -33,10 +36,10 @@ export function MapClient({
 function MapSkeleton() {
   const { t } = useI18n();
   return (
-    <div className="absolute inset-0 grid place-items-center bg-gradient-to-b from-sky-50/60 to-white dark:from-sky-950/30 dark:to-slate-900">
-      <div className="flex flex-col items-center gap-2 text-slate-400 dark:text-slate-500">
-        <MapPin className="size-5 animate-pulse" aria-hidden />
-        <span className="text-[11px] uppercase tracking-[0.18em]">{t("map.loading")}</span>
+    <div className="absolute inset-0 grid place-items-center bg-slate-50 dark:bg-slate-900">
+      <div className="flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400">
+        <MapPin className="size-5 animate-pulse motion-reduce:animate-none" aria-hidden />
+        <span className="text-xs">{t("map.loading")}</span>
       </div>
     </div>
   );

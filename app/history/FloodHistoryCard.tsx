@@ -78,7 +78,7 @@ export async function FloodHistoryCard({ lang, basin, station }: { lang: Locale;
               </div>
             ))}
           </div>
-          <div className="mt-1 grid grid-cols-12 gap-1 text-center text-[10px] text-slate-500 dark:text-slate-400" aria-hidden>
+          <div className="mt-1 grid grid-cols-12 gap-1 text-center text-[11px] text-slate-500 dark:text-slate-400" aria-hidden>
             {initials.map((m, i) => (
               <span key={i} className={i === sum.now.month ? "font-semibold text-sky-700 dark:text-sky-400" : ""}>
                 {m}
@@ -103,7 +103,7 @@ export async function FloodHistoryCard({ lang, basin, station }: { lang: Locale;
 
       {rows.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("hist.card.recent")}</h3>
+          <h3 className="text-xs text-slate-500 dark:text-slate-400">{t("hist.card.recent")}</h3>
           <ul className="mt-1 divide-y divide-slate-100 dark:divide-slate-800 text-sm">
             {rows.map(({ e, label }) => {
               const g = peakGauges(data, idx, e);
@@ -111,7 +111,7 @@ export async function FloodHistoryCard({ lang, basin, station }: { lang: Locale;
                 <li key={e.from} className="py-1.5 sm:flex sm:items-baseline sm:justify-between sm:gap-3">
                   <span className="tabular-nums">
                     {label && (
-                      <span className="mr-1.5 text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      <span className="mr-1.5 text-xs text-slate-500 dark:text-slate-400">
                         {label}:
                       </span>
                     )}
@@ -123,7 +123,7 @@ export async function FloodHistoryCard({ lang, basin, station }: { lang: Locale;
                     }`}
                   >
                     {st ? (g[0]?.tier === "major" ? t("tier.major") : t("tier.minor")) : peakGaugesPhrase(g, t)}
-                    {e.source === "model" && <span className="text-slate-400 dark:text-slate-500"> · {t("hist.card.estimated")}</span>}
+                    {e.source === "model" && <span className="text-slate-500 dark:text-slate-400"> · {t("hist.card.estimated")}</span>}
                   </span>
                 </li>
               );
@@ -135,7 +135,7 @@ export async function FloodHistoryCard({ lang, basin, station }: { lang: Locale;
       <Link
         href={p(historyPath(basin, st?.station))}
         data-umami-event="flood_history_card_click"
-        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sky-700 dark:text-sky-400 hover:underline"
+        className="mt-2 inline-flex items-center gap-1 min-h-11 text-sm font-medium text-sky-700 dark:text-sky-400 hover:underline"
       >
         {t("hist.card.link", { year: data.model.start.slice(0, 4) })}
         <ChevronRight className="size-4" aria-hidden />

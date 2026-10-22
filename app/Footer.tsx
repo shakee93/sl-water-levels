@@ -23,8 +23,8 @@ export async function Footer({ lang }: { lang: Locale }) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-12 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+    <footer className="mt-10 sm:mt-12 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-8 grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-4 text-sm">
         <div className="space-y-2">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100">
             {t("site.name")}
@@ -34,13 +34,13 @@ export async function Footer({ lang }: { lang: Locale }) {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <h4 className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+        <div className="space-y-2 order-last sm:order-none">
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             {t("footer.basins")}
           </h4>
-          <ul className="space-y-1 max-h-44 overflow-y-auto pr-2">
+          <ul className="grid grid-cols-2 gap-x-3 sm:block sm:space-y-1 sm:max-h-44 sm:overflow-y-auto sm:pr-2">
             {basins.length === 0 ? (
-              <li className="text-slate-400 dark:text-slate-500 text-xs">
+              <li className="text-slate-500 dark:text-slate-400 text-xs">
                 {t("footer.loading")}
               </li>
             ) : (
@@ -48,7 +48,7 @@ export async function Footer({ lang }: { lang: Locale }) {
                 <li key={b}>
                   <Link
                     href={p(basinPath(b))}
-                    className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+                    className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
                   >
                     {riverName(b, lang)}
                   </Link>
@@ -59,14 +59,14 @@ export async function Footer({ lang }: { lang: Locale }) {
         </div>
 
         <div className="space-y-2">
-          <h4 className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             {t("footer.site")}
           </h4>
-          <ul className="space-y-1">
+          <ul className="sm:space-y-1">
             <li>
               <Link
                 href={p("/")}
-                className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+                className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
                 {t("footer.allBasinsStations")}
               </Link>
@@ -74,7 +74,7 @@ export async function Footer({ lang }: { lang: Locale }) {
             <li>
               <Link
                 href={p("/about")}
-                className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+                className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
                 {t("footer.aboutMethod")}
               </Link>
@@ -82,7 +82,7 @@ export async function Footer({ lang }: { lang: Locale }) {
             <li>
               <Link
                 href={p("/help")}
-                className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+                className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
                 {t("footer.floodHelp")}
               </Link>
@@ -92,7 +92,7 @@ export async function Footer({ lang }: { lang: Locale }) {
                 href="https://github.com/shakee93/sl-water-levels"
                 target="_blank"
                 rel="noreferrer"
-                className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+                className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
                 {t("footer.source")}
               </a>
@@ -101,7 +101,7 @@ export async function Footer({ lang }: { lang: Locale }) {
         </div>
 
         <div className="space-y-2">
-          <h4 className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
             {t("footer.data")}
           </h4>
           <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-xs">
@@ -123,7 +123,7 @@ export async function Footer({ lang }: { lang: Locale }) {
       </div>
 
       <div className="border-t border-slate-200 dark:border-slate-800">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <p>{t("footer.copyright", { year })}</p>
         </div>
       </div>

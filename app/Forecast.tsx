@@ -1,3 +1,4 @@
+import { ClampedText } from "./ClampedText";
 import { CloudRain, TriangleAlert } from "lucide-react";
 import { fetchBasinSnapshot } from "@/lib/arcgis";
 import { loadForecast, type Forecast as ForecastT } from "@/lib/forecast";
@@ -159,23 +160,29 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   return (
     <section data-forecast-method={f.method}>
       {w && (
-        <p
+        <div
           data-official-warning
           className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100"
         >
           <TriangleAlert className="size-4 shrink-0 mt-0.5" aria-hidden />
-          <span>
-            <span className="font-semibold">{t("common.officialWarning")}</span> {w.summary}{lang !== "en" && <span className="opacity-80"> {t("common.englishNote")}</span>}{" "}
-            <a
-              href={w.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline inline-flex items-center min-h-6 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          <span className="min-w-0">
+            <span className="block font-semibold">{t("common.officialWarning")}</span>
+            <ClampedText
+              footer={
+                <a
+                  href={w.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline inline-flex items-center min-h-11 sm:min-h-6 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                >
+                  {w.source}
+                </a>
+              }
             >
-              {w.source}
-            </a>
+              {w.summary}{lang !== "en" && <span className="opacity-80"> {t("common.englishNote")}</span>}
+            </ClampedText>
           </span>
-        </p>
+        </div>
       )}
 
       <VerdictCard

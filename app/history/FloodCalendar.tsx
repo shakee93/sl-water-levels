@@ -99,7 +99,7 @@ export function FloodCalendar({ data, scope }: { data: HistoryData; scope: Scope
             );
           }}
           data-umami-event="history_scope_change"
-          className="min-w-0 max-w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 shadow-sm"
+          className="min-w-0 max-w-full min-h-11 sm:min-h-0 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-base sm:text-sm text-slate-900 dark:text-slate-100 shadow-sm"
         >
           <option value="all">{t("hist.cal.all", { n: stations.length })}</option>
           <optgroup label={t("hist.cal.basin")}>
@@ -118,7 +118,7 @@ export function FloodCalendar({ data, scope }: { data: HistoryData; scope: Scope
           ))}
         </select>
         {station && (
-          <Link href={p(station.href)} className="text-sm text-sky-700 dark:text-sky-400 hover:underline">
+          <Link href={p(station.href)} className="inline-flex items-center min-h-11 sm:min-h-0 text-sm text-sky-700 dark:text-sky-400 hover:underline">
             {t("hist.cal.live")}
           </Link>
         )}
@@ -379,7 +379,7 @@ function YearRow({
     <>
       <div className="flex flex-col justify-center text-right pr-1">
         <span className="text-sm font-semibold tabular-nums">{year}</span>
-        <span className="text-[10px] leading-tight text-slate-500 dark:text-slate-400 tabular-nums" title={t("hist.cal.daysFlood")}>
+        <span className="text-[11px] leading-tight text-slate-500 dark:text-slate-400 tabular-nums" title={t("hist.cal.daysFlood")}>
           {year > Number(gaugeStart.slice(0, 4))
             ? gaugeFloodDays > 0
               ? `${gaugeFloodDays}d`
@@ -433,11 +433,11 @@ function YearRow({
 
 function SourceTag({ t, source }: { t: TFn; source: "gauge" | "model" }) {
   return source === "gauge" ? (
-    <span className="shrink-0 text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
+    <span className="shrink-0 text-xs rounded px-1.5 py-0.5 bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300">
       {t("hist.cal.measured")}
     </span>
   ) : (
-    <span className="shrink-0 text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+    <span className="shrink-0 text-xs rounded px-1.5 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
       {t("hist.cal.estimatedTag")}
     </span>
   );

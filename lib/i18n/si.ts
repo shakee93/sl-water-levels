@@ -12,6 +12,8 @@ export const si: Dict = {
   "nav.about": "පිළිබඳව",
   "nav.help": "උදව්",
   "nav.github": "GitHub",
+  "nav.menu": "මෙනුව", // needs native review
+  "nav.menuClose": "මෙනුව වසන්න", // needs native review
   "lang.label": "භාෂාව",
   "lang.suggest.si": "සිංහලෙන් බලන්න",
   "lang.suggest.ta": "தமிழில் பார்க்க",
@@ -96,6 +98,8 @@ export const si: Dict = {
   "common.callDmcOffice": "{district} ආපදා කළමනාකරණ කාර්යාලය",
   "common.call117": "117 අමතන්න",
   "common.moreHelp": "තව උදව්",
+  "common.more": "තව", // needs native review
+  "common.less": "අඩුවෙන්", // needs native review
   "common.floodHelpLink": "ගංවතුර උදව් සහ හදිසි අංක",
   "common.machineTranslated": "යන්ත්‍ර පරිවර්තනයකි",
 
@@ -252,6 +256,7 @@ export const si: Dict = {
   "fc.crossingEta": ", {time} පමණ සිට",
   "fc.w.likely": "ඉඩ ඇත",
   "fc.w.possible": "විය හැක",
+  "fc.w.unlikely": "ඉඩ අඩුයි", // needs native review
   "fc.localTrend": "මෙහි ප්‍රවණතාව",
   "fc.upstreamAvg": "ඉහළ සාමාන්‍යය",
   "fc.upstreamTop": "නැත (ඉහළම ස්ථානය)",
@@ -542,7 +547,7 @@ export const si: Dict = {
   "error.retry": "නැවත උත්සාහ කරන්න",
   "nf.metaTitle": "පිටුව හමු නොවීය",
   "nf.title": "ඒ ගඟ අපේ සිතියමේ නැහැ.",
-  "nf.body": "ඔබ සොයන පිටුව නොමැත — දත්ත මූලාශ්‍රයේ ස්ථානයේ නම වෙනස් වී ඇති හෝ URL එක වැරදියට ටයිප් කර ඇති විය හැක. පහත ගංගා හෝ ජනප්‍රිය ස්ථාන වලින් එකක් උත්සාහ කරන්න.",
+  "nf.body": "ඒ පිටුව හමු නොවීය. ලිපිනය පරීක්ෂා කරන්න, නැතිනම් පහතින් ගඟක් හෝ ස්ථානයක් තෝරන්න.", // needs native review
   "nf.popular": "ජනප්‍රිය ස්ථාන",
   "nf.allBasins": "සියලු ගංගා",
   "nf.back": "← සියලු ස්ථාන වෙත ආපසු",

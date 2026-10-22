@@ -84,7 +84,7 @@ export function Favourites({
     <section className="mb-6" aria-labelledby="my-places-heading">
       <h2
         id="my-places-heading"
-        className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200"
+        className="mb-2 flex items-center gap-1.5 text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100"
       >
         <Star className="size-3.5 fill-amber-400 text-amber-500" aria-hidden />
         {t("fav.heading")}
@@ -104,7 +104,7 @@ export function Favourites({
                 <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">
                   {stationDisplayName(s.station)}
                 </span>
-                <span className={`block truncate text-[11px] ${TIER_TEXT_CLASS[s.tier]}`}>
+                <span className={`block truncate text-xs ${TIER_TEXT_CLASS[s.tier]}`}>
                   {tierLabel(t, s.tier)}
                   {s.tier === "stale" && s.ts != null && (
                     <>

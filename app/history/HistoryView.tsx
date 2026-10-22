@@ -111,16 +111,16 @@ export function HistoryView({ lang, data, scope }: { lang: Locale; data: History
   return (
     <main className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3 flex flex-wrap gap-1">
-          <Link href={p("/")} className="hover:underline">
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
             {t("crumb.home")}
           </Link>
           <span aria-hidden>›</span>
           {scope.kind === "all" ? (
             <span className="text-slate-700 dark:text-slate-300">{t("hist.nav")}</span>
           ) : (
-            <Link href={p("/history")} className="hover:underline">
+            <Link href={p("/history")} className="hover:underline inline-block py-3 -my-3">
               {t("hist.nav")}
             </Link>
           )}
@@ -128,7 +128,7 @@ export function HistoryView({ lang, data, scope }: { lang: Locale; data: History
             <>
               <span aria-hidden>›</span>
               {station ? (
-                <Link href={p(historyPath(basin))} className="hover:underline">
+                <Link href={p(historyPath(basin))} className="hover:underline inline-block py-3 -my-3">
                   {riverName(basin, lang)}
                 </Link>
               ) : (
@@ -144,12 +144,8 @@ export function HistoryView({ lang, data, scope }: { lang: Locale; data: History
           )}
         </nav>
 
-        <header className="mb-8">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
-            <span className="size-1.5 rounded-full bg-sky-500" />
-            {t("hist.eyebrow")}
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">
             {scope.kind === "all" ? t("hist.h1All") : t("hist.h1Where", { where })}
           </h1>
 
@@ -227,11 +223,11 @@ export function HistoryView({ lang, data, scope }: { lang: Locale; data: History
 
         {/* Crawlable links to every river and gauge history (the picker is a <select>). */}
         {scope.kind !== "station" && (
-          <section className="mt-12">
+          <section className="mt-10 sm:mt-12">
             <h2 className="text-base font-semibold mb-2">
               {scope.kind === "all" ? t("hist.byRiver") : t("hist.byGauge", { name })}
             </h2>
-            <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+            <ul className="flex flex-wrap gap-x-1 gap-y-0 text-sm">
               {(scope.kind === "all"
                 ? [...new Set(data.stations.map((s) => s.basin))].sort().map((b) => ({ key: b, href: historyPath(b), label: riverName(b, lang) }))
                 : data.stations
@@ -239,7 +235,7 @@ export function HistoryView({ lang, data, scope }: { lang: Locale; data: History
                     .map((s) => ({ key: s.station, href: historyPath(s.basin, s.station), label: s.name }))
               ).map((l) => (
                 <li key={l.key}>
-                  <Link href={p(l.href)} className="text-sky-700 dark:text-sky-400 hover:underline">
+                  <Link href={p(l.href)} className="inline-flex items-center min-h-11 px-2 text-sky-700 dark:text-sky-400 hover:underline">
                     {l.label}
                   </Link>
                 </li>
@@ -248,7 +244,7 @@ export function HistoryView({ lang, data, scope }: { lang: Locale; data: History
           </section>
         )}
 
-        <section className="mt-12 text-sm text-slate-600 dark:text-slate-400 space-y-2 max-w-prose">
+        <section className="mt-10 sm:mt-12 text-sm text-slate-600 dark:text-slate-400 space-y-2 max-w-prose">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("hist.aboutData")}</h2>
           <p>
             <strong>{t("hist.measuredLabel")}</strong> {t("hist.measuredText")}

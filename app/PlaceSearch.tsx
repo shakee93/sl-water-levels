@@ -237,7 +237,7 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
           return (
             <Fragment key={it.key}>
               {group && group !== prevGroup && (
-                <li role="presentation" className="px-3.5 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+                <li role="presentation" className="px-3.5 pt-3 pb-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
                   {group}
                 </li>
               )}
@@ -262,17 +262,17 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
                 <span className="flex items-center gap-2 min-w-0">
                   <Clock className="size-3.5 text-slate-400 shrink-0" />
                   <span className="text-sm text-slate-900 dark:text-slate-100 truncate">{it.label}</span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{it.sub}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{it.sub}</span>
                 </span>
               ) : (
                 <>
                   <span className="min-w-0">
                     <span className="flex items-baseline gap-2">
                       <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{it.label}</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{it.sub}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate">{it.sub}</span>
                     </span>
                     {it.gauge && (
-                      <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                         <span className={`size-1.5 rounded-full shrink-0 ${dot[it.gauge.tier] ?? dot.none}`} />
                         <span className="truncate">
                           {it.gauge.station !== it.label && `→ ${it.gauge.station} · `}{riverName(it.gauge.basin, s.lang)}
@@ -287,7 +287,7 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
                   </span>
                   <span className="flex items-center gap-2 shrink-0">
                     {it.away != null && !it.near && (
-                      <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">{formatKm(it.away, s.t)}</span>
+                      <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">{formatKm(it.away, s.t)}</span>
                     )}
                     {it.river ? (
                       <Waves className="size-3.5 text-slate-400" />
@@ -303,7 +303,7 @@ function Rows({ s, listId }: { s: ReturnType<typeof useSearch>; listId: string }
         })}
       </ul>
       {s.hasLoc && (
-        <div className="px-3.5 py-2 border-t border-slate-100 dark:border-slate-800 text-right">
+        <div className="px-2.5 py-0 sm:py-1 border-t border-slate-100 dark:border-slate-800 text-right">
           <ForgetLink onClick={s.forget} />
         </div>
       )}
@@ -345,7 +345,7 @@ function Hero({ stations }: { stations: SearchStation[] }) {
 
   return (
     <div ref={wrap} className="relative mb-5">
-      <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm px-3.5 focus-within:border-sky-400 dark:focus-within:border-sky-700 transition">
+      <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm px-3.5 focus-within:border-sky-500 dark:focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30 transition">
         <Search className="size-4 text-slate-400 shrink-0" aria-hidden />
         <input
           type="text"
@@ -381,8 +381,8 @@ function Hero({ stations }: { stations: SearchStation[] }) {
           className="flex-1 min-w-0 bg-transparent py-3 text-base sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none"
         />
         {s.query && (
-          <button type="button" aria-label={t("search.clear")} onClick={() => s.reset()} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-            <X className="size-4" />
+          <button type="button" aria-label={t("search.clear")} onClick={() => s.reset()} className="grid place-items-center size-11 -mr-3 shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <X className="size-4" aria-hidden />
           </button>
         )}
       </div>
@@ -468,7 +468,7 @@ function HeaderSearch({ stations }: { stations: SearchStation[] }) {
         aria-label={t("search.openAria")}
         aria-haspopup="dialog"
         title={t("search.hint")}
-        className="inline-flex items-center justify-center size-9 rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+        className="inline-flex items-center justify-center h-11 w-10 sm:size-9 rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
       >
         <Search className="size-4" />
       </button>
@@ -483,7 +483,7 @@ function HeaderSearch({ stations }: { stations: SearchStation[] }) {
             aria-modal="true"
             aria-label={t("search.openAria")}
             onKeyDown={onPanelKey}
-            className="h-full sm:h-auto w-full sm:max-w-lg flex flex-col bg-white dark:bg-slate-900 sm:rounded-xl sm:border border-slate-200 dark:border-slate-800 sm:shadow-xl overflow-hidden text-slate-900 dark:text-slate-100"
+            className="h-full sm:h-auto w-full sm:max-w-lg flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:pt-0 sm:pb-0 bg-white dark:bg-slate-900 sm:rounded-xl sm:border border-slate-200 dark:border-slate-800 sm:shadow-xl overflow-hidden text-slate-900 dark:text-slate-100"
           >
             <div className="flex items-center gap-2 px-3.5 border-b border-slate-100 dark:border-slate-800">
               <Search className="size-4 text-slate-400 shrink-0" aria-hidden />
@@ -510,8 +510,8 @@ function HeaderSearch({ stations }: { stations: SearchStation[] }) {
                 onKeyDown={s.onKeyDown}
                 className="flex-1 min-w-0 bg-transparent py-3.5 text-base sm:text-sm placeholder:text-slate-400 outline-none"
               />
-              <button type="button" onClick={close} aria-label={t("search.close")} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
-                <X className="size-4" />
+              <button type="button" onClick={close} aria-label={t("search.close")} className="grid place-items-center size-11 -mr-3 shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X className="size-4" aria-hidden />
               </button>
             </div>
             <div className="flex-1 sm:flex-none sm:max-h-[60vh] overflow-y-auto">

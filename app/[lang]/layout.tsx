@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
@@ -41,8 +41,20 @@ const notoTamil = Noto_Sans_Tamil({
 
 const SITE = "https://sl-water-levels.vercel.app";
 
-// Only /en, /si and /ta exist. (English is served unprefixed: proxy.ts rewrites / to /en.)
-export const dynamicParams = false;
+// viewport-fit=cover lets the pages use env(safe-area-inset-*) on notched phones.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#020617" },
+  ],
+};
+
+// Only /en, /si and /ta exist (anything else hits notFound() below). dynamicParams stays on so an
+// unknown river or gauge under a real locale reaches our own 404 page instead of the bare default.
+// (English is served unprefixed: proxy.ts rewrites / to /en.)
 
 export function generateStaticParams() {
   return LOCALES.map((lang) => ({ lang }));

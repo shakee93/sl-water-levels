@@ -38,21 +38,21 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
   const { t, p } = getI18n(lang);
   return (
     <main className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          <Link href={p("/")} className="hover:underline">
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
             {t("crumb.allBasins")}
           </Link>{" "}
           <span aria-hidden>›</span>{" "}
           <span className="text-slate-700 dark:text-slate-300">{t("nav.about")}</span>
         </nav>
 
-        <header className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{t("about.h1")}</h1>
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">{t("about.h1")}</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-prose">{t("about.intro")}</p>
         </header>
 
-        <section className="space-y-8">
+        <section className="space-y-5 sm:space-y-8">
           <Card icon={<Database className="size-5" />} title={t("about.src.h")}>
             <p>{t("about.src.p1")}</p>
             <p>{t("about.src.p2")}</p>
@@ -121,7 +121,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <article className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6">
+    <article className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-6">
       <header className="flex items-center gap-2.5 mb-3">
         <span className="grid place-items-center size-9 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300">
           {icon}

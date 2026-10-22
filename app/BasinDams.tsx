@@ -42,10 +42,10 @@ export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }
   return (
     <section className="mt-8">
       <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+        <h3 className="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100">
           {t("dams.heading", { basin: riverName(basin, lang) })}
         </h3>
-        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+        <span className="text-xs text-slate-500 dark:text-slate-400">
           {t("dams.known", { n: dams.length })}
         </span>
       </div>
@@ -69,11 +69,11 @@ export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <span className="text-sm font-medium truncate">{d.name}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {t(style.label)}
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-600 dark:text-slate-400">
                     {d.capacityMCM != null && (
                       <span className="tabular-nums">
                         {d.capacityMCM} MCM
@@ -97,7 +97,7 @@ export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }
                     )}
                   </div>
                   {d.note && (
-                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-500">
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       {d.note}
                     </p>
                   )}

@@ -12,6 +12,8 @@ export const ta: Dict = {
   "nav.about": "பற்றி",
   "nav.help": "உதவி",
   "nav.github": "GitHub",
+  "nav.menu": "பட்டி", // needs native review
+  "nav.menuClose": "பட்டியை மூடு", // needs native review
   "lang.label": "மொழி",
   "lang.suggest.si": "සිංහලෙන් බලන්න",
   "lang.suggest.ta": "தமிழில் பார்க்க",
@@ -96,6 +98,8 @@ export const ta: Dict = {
   "common.callDmcOffice": "{district} பேரிடர் மேலாண்மை அலுவலகம்",
   "common.call117": "117 ஐ அழைக்கவும்",
   "common.moreHelp": "மேலும் உதவி",
+  "common.more": "மேலும்", // needs native review
+  "common.less": "குறைவாக", // needs native review
   "common.floodHelpLink": "வெள்ள உதவியும் அவசர எண்களும்",
   "common.machineTranslated": "இயந்திர மொழிபெயர்ப்பு",
 
@@ -252,6 +256,7 @@ export const ta: Dict = {
   "fc.crossingEta": ", சுமார் {time} முதல்",
   "fc.w.likely": "வாய்ப்பு அதிகம்",
   "fc.w.possible": "நடக்கலாம்",
+  "fc.w.unlikely": "வாய்ப்பு குறைவு", // needs native review
   "fc.localTrend": "இங்கு போக்கு",
   "fc.upstreamAvg": "மேல்நிலை சராசரி",
   "fc.upstreamTop": "இல்லை (மேல்மட்டம்)",
@@ -542,7 +547,7 @@ export const ta: Dict = {
   "error.retry": "மீண்டும் முயல்",
   "nf.metaTitle": "பக்கம் கிடைக்கவில்லை",
   "nf.title": "அந்த ஆறு எங்கள் வரைபடத்தில் இல்லை.",
-  "nf.body": "நீங்கள் தேடிய பக்கம் இல்லை — மூலத் தரவில் நிலையத்தின் பெயர் மாறியிருக்கலாம், அல்லது URL தவறாக அடிக்கப்பட்டிருக்கலாம். கீழே உள்ள ஆறுகள் அல்லது பிரபல நிலையங்களில் ஒன்றை முயலுங்கள்.",
+  "nf.body": "அந்தப் பக்கம் கிடைக்கவில்லை. முகவரியைச் சரிபார்க்கவும், அல்லது கீழே ஒரு ஆறு அல்லது நிலையத்தைத் தேர்ந்தெடுக்கவும்.", // needs native review
   "nf.popular": "பிரபல நிலையங்கள்",
   "nf.allBasins": "எல்லா ஆறுகளும்",
   "nf.back": "← எல்லா நிலையங்களுக்கும் திரும்பு",

@@ -253,20 +253,22 @@ export function VerdictCard({
   const trend = outlook ? TREND[outlook.trend] : null;
   const TrendIcon = trend?.icon ?? null;
   return (
-    <section aria-label={t("verdict.aria")} data-tier={tone} className={`rounded-2xl border ${look.card} shadow-sm`}>
+    <section aria-label={t("verdict.aria")} data-tier={tone} className={`rounded-xl border ${look.card} shadow-sm`}>
       <div className="p-4 sm:p-6">
-        <div className="flex items-center justify-end gap-2">
+        {/* Freshness on the left, save / share on the right: one row, so the verdict starts high. */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 text-sm text-slate-500 dark:text-slate-400 tabular-nums">{footer}</p>
           <StationActions {...share} />
         </div>
 
         {/* The answer: verdict on the left, the number on the right. */}
-        <div className="mt-4 flex items-end justify-between gap-4" lang={lang}>
-          <h2 className={`flex items-center gap-2 text-2xl sm:text-3xl font-semibold tracking-tight ${text}`}>
+        <div className="mt-3 sm:mt-4 flex items-end justify-between gap-3 sm:gap-4" lang={lang}>
+          <h2 className={`flex min-w-0 items-center gap-2 text-2xl sm:text-3xl font-semibold tracking-tight ${text}`}>
             <Icon className="size-7 shrink-0" aria-hidden />
             {verdict[lang]}
           </h2>
           {level && (
-            <p className="text-right leading-tight">
+            <p className="shrink-0 text-right leading-tight">
               <span className="block text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900 dark:text-slate-50">{level}</span>
             </p>
           )}
@@ -275,7 +277,7 @@ export function VerdictCard({
         {gauge && <LevelGauge {...gauge} />}
 
         {(direction || fact) && (
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3" lang={lang}>
+          <div className={`mt-4 grid gap-2 sm:gap-3 ${lang === "en" ? "grid-cols-2" : "grid-cols-1 min-[430px]:grid-cols-2"}`} lang={lang}>
             {direction && (
               <div data-direction className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${look.tile}`}>
                 {labels?.direction && (
@@ -314,7 +316,8 @@ export function VerdictCard({
             <div className="flex-1 min-w-0">{outlook.text}</div>
           </div>
         )}
-        {lang !== "en" && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
+        {/* The advisory sentence carries its own "machine-translated" note. */}
+        {lang !== "en" && !outlook && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
 
         {call && (
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -334,13 +337,10 @@ export function VerdictCard({
       </div>
       <details className={`group border-t ${look.divider}`}>
         <summary
-          className={`flex items-center justify-between gap-3 min-h-11 px-4 sm:px-6 cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-b-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500`}
+          className={`flex items-center justify-between gap-3 min-h-11 px-4 sm:px-6 cursor-pointer list-none [&::-webkit-details-marker]:hidden text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 rounded-b-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500`}
         >
-          <span className="tabular-nums">{footer}</span>
-          <span className="inline-flex items-center gap-1 font-medium">
-            {t("verdict.details")}
-            <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
-          </span>
+          <span className="font-medium">{t("verdict.details")}</span>
+          <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
         </summary>
         <div className="px-4 sm:px-6 pb-4 pt-2 space-y-3">{children}</div>
       </details>

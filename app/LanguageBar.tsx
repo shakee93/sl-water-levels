@@ -96,7 +96,7 @@ export function LangSwitch() {
           onKeyDown={(e) => onKey(e, i)}
           data-umami-event="language_switch"
           data-umami-event-lang={o.id}
-          className={`inline-flex items-center justify-center h-8 min-w-8 sm:min-w-9 px-1.5 sm:px-2 rounded text-xs font-medium transition-colors ${ring} ${
+          className={`inline-flex items-center justify-center h-10 sm:h-8 min-w-8 sm:min-w-9 px-1 sm:px-2 rounded text-sm sm:text-xs font-medium transition-colors ${ring} ${
             lang === o.id
               ? "bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 shadow-sm"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"

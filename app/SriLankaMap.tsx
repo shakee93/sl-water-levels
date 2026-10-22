@@ -26,15 +26,15 @@ export function SriLankaMap({ lang, stations }: { lang: Locale; stations: HomeSt
 
   return (
     <section className="mb-8" aria-labelledby="map-heading">
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
         <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800">
           <h2
             id="map-heading"
-            className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100"
+            className="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100"
           >
             {t("map.heading")}
           </h2>
-          <ul className="mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-[11px] text-slate-600 dark:text-slate-300">
+          <ul className="mt-2 flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-slate-600 dark:text-slate-300">
             {LEGEND.map((k) => (
               <li key={k} className="inline-flex items-center gap-1.5">
                 <span className={`size-2.5 rounded-full ${TIER_DOT[k]}`} aria-hidden />

@@ -81,11 +81,11 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
   }
 
   return (
-    <div className="text-xs">
+    <div className="text-sm">
       {state.kind === "idle" && (
         <button
           onClick={locate}
-          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 px-2.5 py-1.5 font-medium text-slate-700 dark:text-slate-300 shadow-sm transition"
+          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 px-3 h-11 sm:h-9 text-sm font-medium text-slate-700 dark:text-slate-300 shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
         >
           <MapPin className="size-3.5" />
           {t("finder.button")}
@@ -103,7 +103,7 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
         <div className="inline-flex items-start gap-1.5 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1.5 text-amber-800 dark:text-amber-200">
           <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
           <span>{state.message}</span>
-          <button onClick={reset} className="ml-2 underline">
+          <button onClick={reset} className="ml-2 underline min-h-11 sm:min-h-0 px-1">
             {t("common.closeLower")}
           </button>
         </div>
@@ -112,13 +112,13 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
       {state.kind === "results" && (
         <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden max-w-xs">
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               {t("finder.nearest")}
             </span>
             <button
               onClick={reset}
               aria-label={t("common.close")}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="grid place-items-center size-11 -mr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <X className="size-3.5" />
             </button>
@@ -135,14 +135,14 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
                       rank: i + 1,
                     })
                   }
-                  className="flex items-baseline justify-between gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                  className="flex items-center justify-between gap-3 px-3 min-h-12 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
                       {i === 0 && "★ "}
                       {station.station}
                     </div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {station.basin ? riverName(station.basin, lang) : "—"}
                     </div>
                   </div>
@@ -153,7 +153,7 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
               </li>
             ))}
           </ul>
-          <div className="px-3 py-1.5 text-[10px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
+          <div className="px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
             {t("finder.straight")}
           </div>
         </div>

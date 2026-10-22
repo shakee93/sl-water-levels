@@ -66,7 +66,7 @@ export function LevelChart({
 
   if (data.length === 0) {
     return (
-      <div className="h-80 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-md">
+      <div className="h-72 sm:h-80 flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-md">
         {t("chart.none")}
       </div>
     );
@@ -85,7 +85,7 @@ export function LevelChart({
 
   return (
     <div
-      className="h-[22rem] sm:h-80 w-full"
+      className="h-72 sm:h-80 w-full"
       role="img"
       aria-label={t("chart.aria", { days: t(days === 1 ? "range.day" : "range.days", { n: days }), level: `${last?.level.toFixed(2)}${u}` })}
     >

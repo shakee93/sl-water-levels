@@ -71,18 +71,14 @@ export default async function HelpPage({ params }: { params: Promise<{ lang: str
   return (
     <main className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12 space-y-5 sm:space-y-6">
         <nav className="text-xs text-slate-500 dark:text-slate-400">
-          <Link href={p("/")} className="hover:underline">{t("crumb.allBasins")}</Link> <span aria-hidden>›</span>{" "}
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.allBasins")}</Link> <span aria-hidden>›</span>{" "}
           <span className="text-slate-700 dark:text-slate-300">{t("nav.help")}</span>
         </nav>
 
         <header>
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
-            <span className="size-1.5 rounded-full bg-sky-500" />
-            <span>{t("help.eyebrow")}</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{t("help.h1")}</h1>
+          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">{t("help.h1")}</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2">{t("help.danger")}</p>
         </header>
 
@@ -128,15 +124,15 @@ export default async function HelpPage({ params }: { params: Promise<{ lang: str
 
         <section aria-labelledby="warn-h" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5">
           <h2 id="warn-h" className="text-lg font-semibold tracking-tight mb-3">{t("help.warnings")}</h2>
-          <ul className="space-y-2 text-sm">
+          <ul className="text-sm">
             {WARNING_CHANNELS.map((w) => (
               <li key={w.id}>
                 {w.url ? (
-                  <a href={w.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sky-700 dark:text-sky-300 hover:underline">
+                  <a href={w.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 min-h-11 text-sky-700 dark:text-sky-300 hover:underline">
                     {t(`help.warn.${w.id}` as "help.warn.met")} <ExternalLink className="size-3.5" aria-hidden />
                   </a>
                 ) : (
-                  <Link href={p("/")} className="text-sky-700 dark:text-sky-300 hover:underline">{t(`help.warn.${w.id}` as "help.warn.met")}</Link>
+                  <Link href={p("/")} className="inline-flex items-center min-h-11 text-sky-700 dark:text-sky-300 hover:underline">{t(`help.warn.${w.id}` as "help.warn.met")}</Link>
                 )}
               </li>
             ))}
@@ -146,7 +142,7 @@ export default async function HelpPage({ params }: { params: Promise<{ lang: str
         <footer className="text-xs text-slate-500 dark:text-slate-400 space-y-2">
           <p>{t("help.footer", { date: checked })}</p>
           <details className="group">
-            <summary className="cursor-pointer inline-flex items-center gap-1 hover:text-slate-700 dark:hover:text-slate-200">
+            <summary className="cursor-pointer inline-flex items-center gap-1 min-h-11 hover:text-slate-700 dark:hover:text-slate-200">
               {t("help.sources")} <ChevronDown className="size-3.5 transition group-open:rotate-180" aria-hidden />
             </summary>
             <ul className="mt-2 space-y-1 list-disc pl-5">

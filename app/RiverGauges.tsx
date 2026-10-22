@@ -122,13 +122,13 @@ function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: N
         <span className="flex items-center gap-2 min-w-0">
           <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{name}</span>
           {flagged && !muted && (
-            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shrink-0 ${st.pill}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${st.pill}`}>
               {tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
               {tierLabel(t, tier)}
             </span>
           )}
         </span>
-        <span className="inline-flex items-center gap-1 text-[11px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
+        <span className="inline-flex items-center gap-1 text-xs tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
           {s.latest && (
             <>
               {stale && <Clock className="size-3" aria-hidden />}
@@ -161,7 +161,7 @@ function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: N
 /** Upstream → downstream list with a thin connector showing flow direction. */
 export function RiverGauges({ lang, stations, serverNow }: { lang: Locale; stations: NationalStation[]; serverNow: number }) {
   const { t, p } = getI18n(lang);
-  const label = "text-[10px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 font-medium";
+  const label = "text-xs text-slate-500 dark:text-slate-400 font-medium";
   const multi = stations.length > 1;
   return (
     <section aria-label={t("gauges.aria")}>

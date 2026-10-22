@@ -198,11 +198,11 @@ export default async function StationPage({
 
         {resolved && (
           <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            <Link href={p("/")} className="hover:underline">
+            <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
               {t("crumb.allBasins")}
             </Link>{" "}
             <span aria-hidden>›</span>{" "}
-            <Link href={p(basinPath(basin))} className="hover:underline">
+            <Link href={p(basinPath(basin))} className="hover:underline inline-block py-3 -my-3">
               {riverName(basin, lang)}
             </Link>{" "}
             <span aria-hidden>›</span>{" "}

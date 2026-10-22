@@ -1,3 +1,4 @@
+import { ClampedText } from "@/app/ClampedText";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -137,7 +138,7 @@ export default async function BasinPage({
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
           <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            <Link href={p("/")} className="hover:underline">
+            <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
               {t("crumb.allBasins")}
             </Link>
           </nav>
@@ -211,7 +212,7 @@ export default async function BasinPage({
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          <Link href={p("/")} className="hover:underline">
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
             {t("crumb.allBasins")}
           </Link>{" "}
           <span aria-hidden>›</span> <span className="text-slate-700 dark:text-slate-300">{riverName(basin, lang)}</span>
@@ -247,7 +248,7 @@ export default async function BasinPage({
 
         <Link
           href={p("/help")}
-          className="mt-8 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+          className="mt-8 inline-flex items-center gap-1 min-h-11 text-sm text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
         >
           {t("common.floodHelpLink")}
           <ChevronRight className="size-3.5" aria-hidden />
@@ -265,17 +266,22 @@ async function OfficialWarningLine({ basin, lang }: { basin: string; lang: Local
   return (
     <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">
       <TriangleAlert className="size-4 mt-0.5 shrink-0" aria-hidden />
-      <p className="min-w-0">
-        {w.summary}{lang !== "en" && <span className="text-amber-800/80 dark:text-amber-300/80"> {t("common.englishNote")}</span>}{" "}
-        <a
-          href={w.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline underline-offset-2 whitespace-nowrap"
+      <div className="min-w-0">
+        <ClampedText
+          footer={
+            <a
+              href={w.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 inline-flex items-center min-h-11 sm:min-h-6 whitespace-nowrap"
+            >
+              {w.source}
+            </a>
+          }
         >
-          {w.source}
-        </a>
-      </p>
+          {w.summary}{lang !== "en" && <span className="text-amber-800/80 dark:text-amber-300/80"> {t("common.englishNote")}</span>}
+        </ClampedText>
+      </div>
     </div>
   );
 }

@@ -20,11 +20,14 @@ const callBtn = `inline-flex items-center justify-center gap-2 h-11 w-full round
 
 /** Home page, top: the visitor's nearest river gauge, or the polite location prompt. */
 export function NearYou({ stations }: { stations: HomeStation[] }) {
-  const { loc, forget } = useLocation();
+  const { loc, forget, ready } = useLocation();
   const { lang, t, p } = useI18n();
   const byStation = useMemo(() => new Map(stations.map((s) => [s.station, s])), [stations]);
   const near = useMemo(() => (loc ? matchLocation(loc, stations) : null), [loc, stations]);
 
+  // Before the browser has told us anything, hold the prompt card's height so the page below it
+  // does not jump when the card (or the nearest-gauge block) appears after hydration.
+  if (!ready) return <div aria-hidden className="mb-5 h-[8.5rem] sm:h-[7.75rem] rounded-xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/40" />;
   if (!loc || !near) return <LocationPrompt variant="card" />;
 
   const me = byStation.get(near.primary.station);
@@ -40,7 +43,7 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
     <section className="mb-6" aria-labelledby="near-you-heading">
       <h2
         id="near-you-heading"
-        className="mb-2 flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200"
+        className="mb-2 flex items-center gap-1.5 text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100"
       >
         <MapPin className="size-3.5 text-sky-600 dark:text-sky-400" aria-hidden />
         {near.placeName ? t("near.near", { place: near.placeName }) : t("near.nearYou")}
@@ -112,7 +115,7 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
           </ul>
         )}
 
-        <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-2 text-right">
+        <div className="border-t border-slate-100 dark:border-slate-800 px-3 py-0 sm:py-1 text-right">
           <ForgetLink onClick={forget} />
         </div>
       </div>
@@ -126,7 +129,7 @@ export function ForgetLink({ onClick, className = "" }: { onClick: () => void; c
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center min-h-6 text-xs text-slate-500 dark:text-slate-400 underline underline-offset-2 decoration-slate-300 dark:decoration-slate-600 hover:text-slate-800 dark:hover:text-slate-200 rounded ${ring} ${className}`}
+      className={`inline-flex items-center min-h-11 sm:min-h-8 px-1 text-xs text-slate-500 dark:text-slate-400 underline underline-offset-2 decoration-slate-300 dark:decoration-slate-600 hover:text-slate-800 dark:hover:text-slate-200 rounded ${ring} ${className}`}
     >
       {t("near.forget")}
     </button>

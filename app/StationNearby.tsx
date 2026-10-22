@@ -35,7 +35,7 @@ export function StationNearby({ current, gauges }: { current: string; gauges: Ga
       {info.other && (
         <Link
           href={p(info.other.href)}
-          className="inline-flex items-center gap-1 min-h-6 text-sky-700 dark:text-sky-300 hover:underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="inline-flex items-center gap-1 min-h-11 sm:min-h-6 text-sky-700 dark:text-sky-300 hover:underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
         >
           {t("nearby.yourNearest", { name: stationDisplayName(info.other.station) })}
           <ArrowRight className="size-3.5" aria-hidden />

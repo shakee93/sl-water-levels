@@ -78,7 +78,7 @@ function Trend({ t, rateM, rate }: { t: TFn; rateM: number | null; rate: number 
   if (rateM == null || rate == null) return null;
   if (Math.abs(rateM) < RISING_M_PER_H) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+      <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
         <Minus className="size-3" aria-hidden />
         {t("trend.steady")}
       </span>
@@ -86,12 +86,12 @@ function Trend({ t, rateM, rate }: { t: TFn; rateM: number | null; rate: number 
   }
   const text = `${rate >= 0 ? "+" : ""}${rate.toFixed(2)}/h`;
   return rateM > 0 ? (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-orange-700 dark:text-orange-400 tabular-nums">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 tabular-nums">
       <ArrowUp className="size-3" aria-hidden />
       {t("trend.rising")} {text}
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 tabular-nums">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 tabular-nums">
       <ArrowDown className="size-3" aria-hidden />
       {t("trend.falling")} {text}
     </span>
@@ -172,12 +172,12 @@ function BasinCard({
       >
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${style.pill}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${style.pill}`}
           >
             {b.tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
             {tierText(t, b.tier)}
           </span>
-          <span className="inline-flex items-center gap-1 text-[11px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
+          <span className="inline-flex items-center gap-1 text-xs tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
             {b.lead.stale && <Clock className="size-3" aria-hidden />}
             <TimeAgo ts={b.lead.ts} serverNow={serverNow} short={b.lead.stale} />
           </span>
@@ -197,7 +197,7 @@ function BasinCard({
         </div>
 
         {b.lead.gap && (
-          <div className={`mt-0.5 text-[11px] tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
+          <div className={`mt-0.5 text-xs tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
             {b.lead.gap.crossed
               ? t("gap.above", { amount: b.lead.gap.amount.toFixed(2), mark: markText(t, b.lead.gap.label) })
               : t("gap.below", { amount: b.lead.gap.amount.toFixed(2), mark: markText(t, b.lead.gap.label) })}
@@ -208,14 +208,14 @@ function BasinCard({
 
         <div className="mt-2">
           {b.lead.stale ? (
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">{t("needs.lastKnown")}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{t("needs.lastKnown")}</span>
           ) : (
             <Trend t={t} rateM={rateM} rate={b.lead.ratePerHour} />
           )}
         </div>
 
         {others.length > 0 && (
-          <ul className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+          <ul className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
             {others.map((o) => (
               <li key={o.station} className="inline-flex items-center gap-1 min-w-0">
                 {/* Per-gauge dot: a basin can hold an at-alert gauge and a
@@ -231,7 +231,7 @@ function BasinCard({
           </ul>
         )}
 
-        <div className="mt-auto pt-3 inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition">
+        <div className="mt-auto pt-3 inline-flex items-center gap-1 text-xs font-medium text-slate-600 dark:text-slate-300 group-hover:text-sky-700 dark:group-hover:text-sky-300 transition">
           {single ? t("needs.viewStation", { name: stationDisplayName(b.lead.station) }) : t("needs.viewBasin")}
           <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" />
         </div>
@@ -292,11 +292,11 @@ export function NeedsAttention({
       <div className="flex items-baseline justify-between gap-3 mb-2.5">
         <h2
           id="needs-attention-heading"
-          className="text-sm font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-200"
+          className="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100"
         >
           {t("needs.heading")}
         </h2>
-        <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
+        <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
           {t("needs.count", { n: flagged.length, m: reporting })}
         </span>
       </div>

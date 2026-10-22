@@ -139,7 +139,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               <NationalLine t={t} snapshot={national} serverNow={serverNow} />
               <Link
                 href={p("/help")}
-                className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+                className="inline-flex items-center gap-1 text-sm py-2.5 -my-2.5 text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
                 <LifeBuoy className="size-3.5" aria-hidden />
                 {t("common.floodHelpLink")}
@@ -157,20 +157,20 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
             <section id="rivers" className="scroll-mt-4">
               <h2 className="sr-only">{t("home.allRivers")}</h2>
-              <ul className="space-y-6">
+              <ul className="space-y-5 sm:space-y-6">
                 {grouped.map(([basin, list]) => (
                   <li key={basin}>
                     <div className="flex items-baseline justify-between gap-3 mb-2">
                       <Link
                         href={p(list.length === 1 ? list[0].href : basinPath(basin))}
-                        className="group inline-flex items-baseline gap-1.5"
+                        className="group inline-flex items-baseline gap-1.5 py-2.5 -my-2.5"
                       >
                         <h3 className="text-base sm:text-lg font-semibold tracking-tight group-hover:text-sky-700 dark:group-hover:text-sky-300 transition">
                           {riverName(basin, lang)}
                         </h3>
                         <ArrowRight className="size-3.5 self-center text-slate-400 group-hover:text-sky-500 transition" aria-hidden />
                       </Link>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                         {list.length}
                       </span>
                     </div>
@@ -179,7 +179,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                         <li key={s.href}>
                           <Link
                             href={p(s.href)}
-                            className="group flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 hover:border-sky-400 dark:hover:border-sky-700 transition"
+                            className="group flex items-center justify-between gap-3 min-h-11 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2 hover:border-sky-400 dark:hover:border-sky-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                           >
                             <span className="flex items-center gap-2.5 min-w-0">
                               <span
@@ -195,7 +195,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                             <span
                               className={`text-sm tabular-nums shrink-0 ${
                                 s.tier === "stale"
-                                  ? "text-slate-400 dark:text-slate-500"
+                                  ? "text-slate-500 dark:text-slate-400"
                                   : "font-medium text-slate-700 dark:text-slate-200"
                               }`}
                             >

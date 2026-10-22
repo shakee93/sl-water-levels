@@ -22,20 +22,28 @@ export function LocationPrompt({ variant }: { variant: "card" | "banner" }) {
   if (!shouldAsk || (variant === "banner" && /^\/(?:(?:en|si|ta)\/?)?$/.test(pathname))) return null;
 
   if (variant === "banner") {
+    // Fixed to the bottom of the screen: it appears after the page has loaded, so it must not push
+    // the content down. The safe-area padding keeps it clear of the home indicator.
     return (
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-sky-50/70 dark:bg-sky-950/30">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 flex items-center gap-2 sm:gap-3 text-sm">
-          <MapPin className="size-4 shrink-0 text-sky-700 dark:text-sky-300" aria-hidden />
-          <span className="min-w-0 flex-1 truncate font-medium text-slate-800 dark:text-slate-200">
+      <div
+        role="region"
+        aria-label={t("loc.aria")}
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_-2px_8px_rgba(15,23,42,0.08)] pb-[env(safe-area-inset-bottom)]"
+      >
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-2.5 sm:py-2 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-sm">
+          <p className="flex min-w-0 flex-1 items-center gap-2 font-medium text-slate-800 dark:text-slate-200 leading-snug">
+            <MapPin className="size-4 shrink-0 text-sky-700 dark:text-sky-300" aria-hidden />
             {failed ? t("loc.failedBanner") : t("loc.seeRiver")}
-          </span>
-          <button type="button" onClick={request} disabled={requesting} className={`${primary} h-9 px-3 text-sm shrink-0`}>
-            {requesting && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
-            {t("loc.use")}
-          </button>
-          <button type="button" onClick={dismiss} className={`${ghost} h-9 px-2.5 text-sm shrink-0`}>
-            {t("loc.notNow")}
-          </button>
+          </p>
+          <div className="grid grid-cols-[1fr_1.8fr] gap-2 sm:flex sm:shrink-0">
+            <button type="button" onClick={dismiss} className={`${ghost} h-11 px-3 text-sm border border-slate-200 dark:border-slate-700 sm:border-0`}>
+              {t("loc.notNow")}
+            </button>
+            <button type="button" onClick={request} disabled={requesting} className={`${primary} h-11 px-4 text-sm leading-tight`}>
+              {requesting && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
+              {t("loc.use")}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -57,7 +65,7 @@ export function LocationPrompt({ variant }: { variant: "card" | "banner" }) {
           </p>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+      <div className="mt-3 grid grid-cols-[1fr_1.8fr] gap-2 sm:flex sm:justify-end">
         <button type="button" onClick={dismiss} className={`${ghost} h-11 sm:h-9 px-4 text-sm border border-slate-200 dark:border-slate-700`}>
           {t("loc.notNow")}
         </button>

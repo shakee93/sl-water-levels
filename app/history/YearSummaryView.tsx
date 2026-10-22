@@ -261,7 +261,7 @@ export function YearSummaryView(p: YearSummaryViewProps) {
                   )}
                 </span>
                 <span
-                  className={`mt-0.5 w-fit text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 ${
+                  className={`mt-0.5 w-fit text-xs rounded px-1.5 py-0.5 ${
                     src.recorded
                       ? "bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300"
                       : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"

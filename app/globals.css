@@ -77,3 +77,40 @@ body {
 .leaflet-container {
   z-index: 0;
 }
+
+/* Anchors (#rivers, #map...) land below the 56px sticky header. */
+html {
+  scroll-padding-top: 4.5rem;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Bigger map zoom buttons for fingers. */
+@media (pointer: coarse) {
+  .leaflet-bar a,
+  .leaflet-bar a:hover {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 20px;
+  }
+  .leaflet-touch .leaflet-bar a {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+  }
+}
+
+/* People who ask their phone for less motion get none: no pulsing skeletons or smooth scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -91,6 +91,25 @@ function FitToUser({ points }: { points: Array<[number, number]> | null }) {
   return null;
 }
 
+/**
+ * One-finger drags scroll the page while the whole island is in view (nothing to pan to);
+ * once the visitor zooms in, dragging pans the map. Stops the map trapping a phone's scroll.
+ */
+function TouchScrollGuard() {
+  const map = useMap();
+  useEffect(() => {
+    const coarse = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+    if (!coarse) return;
+    const sync = () => (map.getZoom() > map.getMinZoom() ? map.dragging.enable() : map.dragging.disable());
+    sync();
+    map.on("zoomend", sync);
+    return () => {
+      map.off("zoomend", sync);
+    };
+  }, [map]);
+  return null;
+}
+
 export function MapLeaflet({ stations, basinChains }: Props) {
   const scheme = useColorScheme();
   const { lang, t, p } = useI18n();
@@ -124,6 +143,7 @@ export function MapLeaflet({ stations, basinChains }: Props) {
     >
       <ZoomControl position="bottomright" />
       <FitToUser points={fit} />
+      <TouchScrollGuard />
       <TileLayer
         key={scheme}
         attribution={tile.attribution}
