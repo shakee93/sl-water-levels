@@ -1,3 +1,4 @@
+import { stationDisplayName, stationHeading } from "@/lib/displayName";
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -62,34 +63,34 @@ export async function generateMetadata({
     const status = statusFor(level ?? null, data.thresholds);
     const basin = data.basin || resolved.basin || "Sri Lanka";
 
-    const titleBits =
-      level != null
-        ? `${resolved.station} water level (${level.toFixed(2)})`
-        : `${resolved.station} water level`;
+    const name = stationDisplayName(resolved.station);
+    const heading = stationHeading(resolved.station, basin);
+    // No live number in the title: it goes stale in search snippets.
+    const titleBits = `${heading} today (live)`;
     const descBits =
       level != null
-        ? `Live reading at ${resolved.station} on ${basin}: ${level.toFixed(2)} — ${status.label}. Alert ${data.thresholds.alert ?? "—"}, minor flood ${data.thresholds.minor ?? "—"}, major flood ${data.thresholds.major ?? "—"}. Includes next-hour forecast and upstream basin view.`
-        : `${resolved.station} river gauge on ${basin}, Sri Lanka. Live water-level readings from the Department of Irrigation with alert / minor-flood / major-flood thresholds and next-hour forecast.`;
+        ? `Live reading at ${name} on ${basin}: ${level.toFixed(2)} — ${status.label}. Alert ${data.thresholds.alert ?? "—"}, minor flood ${data.thresholds.minor ?? "—"}, major flood ${data.thresholds.major ?? "—"}. Includes next-hour forecast and upstream basin view.`
+        : `${name} river gauge on ${basin}, Sri Lanka. Live water-level readings from the Department of Irrigation with alert / minor-flood / major-flood thresholds and next-hour forecast.`;
 
     return {
       title: titleBits,
       description: descBits,
       alternates: { canonical },
       openGraph: {
-        title: `${resolved.station} — Sri Lanka Water Levels`,
+        title: `${heading} — Sri Lanka Water Levels`,
         description: descBits,
         url: `${SITE}${canonical}`,
         type: "website",
       },
       twitter: {
         card: "summary",
-        title: `${resolved.station} — Sri Lanka Water Levels`,
+        title: `${heading} — Sri Lanka Water Levels`,
         description: descBits,
       },
     };
   } catch {
     return {
-      title: `${resolved.station} water level`,
+      title: `${stationHeading(resolved.station, resolved.basin)} today (live)`,
       alternates: { canonical },
     };
   }
@@ -175,7 +176,7 @@ export default async function StationPage({
               {basin}
             </Link>{" "}
             <span aria-hidden>›</span>{" "}
-            <span className="text-slate-700 dark:text-slate-300">{station}</span>
+            <span className="text-slate-700 dark:text-slate-300">{station ? stationDisplayName(station) : ""}</span>
           </nav>
         )}
 
@@ -185,7 +186,7 @@ export default async function StationPage({
             Realtime · {basin || "Sri Lanka"}
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
-            {station || "Station"} water level
+            {station ? stationHeading(station, basin) : "Station water level"}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-prose">
             Live reading from the Department of Irrigation, refreshed every minute.
