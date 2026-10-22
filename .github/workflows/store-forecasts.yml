@@ -1,0 +1,35 @@
+name: Store forecasts
+
+# Hourly: save every gauge's forecast and recent readings to the Cloudflare D1
+# prediction log (database "sl-water-levels"), so forecasts can be checked
+# against what the river actually did. Runs whether or not anyone visits.
+
+on:
+  schedule:
+    - cron: "25 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: store-forecasts
+  cancel-in-progress: false
+
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch forecasts from the live site
+        run: |
+          curl -fsS --retry 3 --retry-delay 20 --max-time 120 \
+            https://sl-water-levels.vercel.app/api/forecasts -o forecasts.json
+      - name: Build SQL
+        run: node scripts/store-forecasts.mjs forecasts.json forecasts.sql
+      - name: Write to D1
+        run: npx -y wrangler@4 d1 execute sl-water-levels --remote --yes --file=forecasts.sql
