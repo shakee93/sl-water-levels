@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Minus, HelpCircle, CloudRain } from "lucide-react";
 import { fetchBasinSnapshot } from "@/lib/arcgis";
-import { makeForecast } from "@/lib/forecast";
+import { loadForecast } from "@/lib/forecast";
 
 const directionConfig = {
   rising: {
@@ -29,15 +29,17 @@ const directionConfig = {
   },
 } as const;
 
-const confidenceLabel: Record<string, string> = {
-  high: "High confidence",
-  medium: "Medium confidence",
-  low: "Low confidence",
-  none: "No signal",
-};
-
 function fmtRain(v: number | null) {
   return v == null ? "n/a" : `${v.toFixed(1)}mm`;
+}
+
+function fmtTime(ts: number) {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Colombo",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(ts);
 }
 
 export async function Forecast({
@@ -50,23 +52,19 @@ export async function Forecast({
   if (!basin) return null;
   const snapshot = await fetchBasinSnapshot(basin);
   if (snapshot.length === 0) return null;
-  const f = makeForecast(basin, snapshot, selectedStation);
+  const f = await loadForecast(basin, snapshot, selectedStation);
 
   const cfg = directionConfig[f.direction];
   const Icon = cfg.Icon;
-  const deltaStr =
-    f.predictedDelta == null
-      ? "—"
-      : `${f.predictedDelta >= 0 ? "+" : ""}${f.predictedDelta.toFixed(2)}`;
-  const predictedStr =
-    f.predictedLevel != null ? f.predictedLevel.toFixed(2) : "—";
-
-  const totalRain =
-    (f.rainAtStation6h ?? 0) + (f.rainUpstream6h ?? 0);
-  const hasRain = totalRain > 1;
+  const unit = f.unit ? ` ${f.unit}` : "";
+  const hasRain = (f.signals.rainAtStation6h ?? 0) + (f.signals.rainUpstream6h ?? 0) > 1;
+  const caution = f.status === "degraded" || f.outlook === "elevated";
 
   return (
-    <section className={`mt-6 rounded-xl border ${cfg.bg} p-4 sm:p-5`}>
+    <section
+      data-forecast-method={f.method}
+      className={`mt-6 rounded-xl border ${cfg.bg} p-4 sm:p-5`}
+    >
       <div className="flex items-start gap-3">
         <div
           className={`shrink-0 size-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center ${cfg.tone}`}
@@ -76,41 +74,87 @@ export async function Forecast({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              Next hour
+              Forecast
             </h3>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
-              {confidenceLabel[f.confidence]}
-            </span>
+            {f.experimental && f.method === "model" && (
+              <span className="text-[11px] rounded border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-400 px-1.5">
+                Experimental
+              </span>
+            )}
+            {f.outlook === "elevated" && (
+              <span className="text-[11px] rounded border border-orange-300 dark:border-orange-800 text-orange-700 dark:text-orange-400 px-1.5">
+                Elevated river-flow outlook this week
+              </span>
+            )}
           </div>
-          <div className={`mt-1 text-2xl sm:text-3xl font-semibold tabular-nums ${cfg.tone}`}>
-            {cfg.label}
-            <span className="text-base text-slate-600 dark:text-slate-300 font-normal ml-2">
-              {deltaStr} → {predictedStr}
-            </span>
+          <div className={`mt-1 text-lg sm:text-xl font-semibold ${caution ? "" : cfg.tone}`} data-forecast-headline>
+            {f.headline}
           </div>
+
+          {f.horizons.length > 0 && (
+            <table className="mt-3 text-xs tabular-nums w-full max-w-md">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="font-normal pb-1">In</th>
+                  <th className="font-normal pb-1">Level</th>
+                  <th className="font-normal pb-1">80% range</th>
+                  <th className="font-normal pb-1">At</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-800 dark:text-slate-200">
+                {f.horizons.map((h) => (
+                  <tr key={h.h}>
+                    <td className="py-0.5">{h.h}h</td>
+                    <td className="py-0.5 font-medium">
+                      {h.level.toFixed(2)}
+                      {unit}
+                    </td>
+                    <td className="py-0.5">
+                      {h.low != null && h.high != null ? `${h.low.toFixed(2)} to ${h.high.toFixed(2)}` : "n/a"}
+                    </td>
+                    <td className="py-0.5">{fmtTime(h.ts)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {f.crossings.some((c) => c.wording !== "already") && (
+            <ul className="mt-2 text-[11px] text-slate-600 dark:text-slate-300 space-y-0.5">
+              {f.crossings
+                .filter((c) => c.wording !== "already")
+                .map((c) => (
+                  <li key={c.threshold}>
+                    {c.threshold} ({c.level}
+                    {unit}): {c.wording}, {Math.round(c.probability * 100)}% peak chance
+                    {c.etaTs ? `, from about ${fmtTime(c.etaTs)}` : ""}
+                  </li>
+                ))}
+            </ul>
+          )}
 
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-xs">
             <Cell label="Local trend">
-              {f.localRatePerH != null
-                ? `${f.localRatePerH >= 0 ? "+" : ""}${f.localRatePerH.toFixed(2)}/h`
+              {f.signals.localRatePerH != null
+                ? `${f.signals.localRatePerH >= 0 ? "+" : ""}${f.signals.localRatePerH.toFixed(2)}/h`
                 : "—"}
             </Cell>
             <Cell label="Upstream avg">
-              {f.upstreamRatePerH != null
-                ? `${f.upstreamRatePerH >= 0 ? "+" : ""}${f.upstreamRatePerH.toFixed(2)}/h`
-                : f.upstreamCount === 0
+              {f.signals.upstreamRatePerH != null
+                ? `${f.signals.upstreamRatePerH >= 0 ? "+" : ""}${f.signals.upstreamRatePerH.toFixed(2)}/h`
+                : f.signals.upstreamCount === 0
                   ? "n/a (top)"
                   : "—"}
             </Cell>
-            <Cell label="Rain here (6h)">{fmtRain(f.rainAtStation6h)}</Cell>
-            <Cell label="Rain upstream (6h)">{fmtRain(f.rainUpstream6h)}</Cell>
+            <Cell label="Rain here (6h)">{fmtRain(f.signals.rainAtStation6h)}</Cell>
+            <Cell label="Rain upstream (6h)">{fmtRain(f.signals.rainUpstream6h)}</Cell>
           </div>
 
-          {hasRain && f.rainContributors.length > 0 && (
+          {hasRain && f.signals.rainContributors.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
               <CloudRain className="size-3.5 shrink-0 text-sky-500" />
               <span className="truncate">
-                {f.rainContributors.slice(0, 4).join(" · ")}
+                {f.signals.rainContributors.slice(0, 4).join(" · ")}
               </span>
             </div>
           )}
@@ -121,6 +165,16 @@ export async function Forecast({
                 <li key={i}>· {n}</li>
               ))}
             </ul>
+          )}
+          {f.basis.length > 0 && (
+            <details className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+              <summary className="cursor-pointer">How this is worked out</summary>
+              <ul className="mt-1 space-y-0.5">
+                {f.basis.map((n, i) => (
+                  <li key={i}>· {n}</li>
+                ))}
+              </ul>
+            </details>
           )}
         </div>
       </div>

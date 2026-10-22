@@ -250,6 +250,31 @@ otherwise           → "Normal"        (green)
 The same logic powers the colour dots in `BasinFlow` and the status
 pill on `StationCard`.
 
+### The forecast (`lib/forecast.ts`, `lib/weather.ts`, `lib/model/`)
+
+Stations with a fitted model (Kelani: Hanwella, Glencourse, Nagalagam Street) get a 1/3/6/12/24 h
+forecast; every other gauge keeps the old one-hour trend extrapolation, labelled "trend only". For each
+station and horizon a ridge regression predicts the change in level from the gauge's own 3 h change,
+lagged changes at upstream "leader" gauges (Glencourse leads Hanwella by ~3 h, Deraniyagala/Kithulgala by
+8-9 h) and catchment rain in a window that mostly lies in the future (so it is fed Open-Meteo forecast
+rain, with ECMWF ensemble members at the 10th/50th/90th percentile of 24 h rain as scenarios). The
+band is a split-normal built from leave-one-day-out residual quantiles, inflated while the archive is
+short, widened for model disagreement and a floor that grows with horizon, mixed over the rain scenarios;
+threshold-crossing probabilities come from the same mixture. GloFAS (6 h cache) only ever raises an
+"elevated outlook" flag when its 7-day ensemble maximum passes the p95 for the main-stem cell. Coefficients
+live in `lib/model/coefficients.json`, produced by `node scripts/fit-forecast.mjs` from the `data` branch
+(refit weekly and commit); `node scripts/backtest-forecast.mjs` scores them against "level stays put".
+Rules enforced in code (see the header of `lib/forecast.ts`): forecasts are "experimental" with probabilities
+capped at 90% until the archive spans a monsoon season (150 days); "likely" needs >= 50%, "possible"
+20-50%; an arrival time needs two adjacent horizons to agree; a stale gauge gives no forecast, and a stale
+leader or failed rain fetch is named on the page, widens the band and drops the arrival time.
+**Limits:** the first fit used 8 days, one rain event and no flood, so it under-predicts sharp rises (the
+event start by ~1 m), has no skill beyond ~12 h (24 h ships as persistence blended with the 12 h outlook),
+and knows nothing about dam releases or tides (Nagalagam Street is tidal). Treat it as a heads-up, not a warning;
+official flood warnings come from the Department of Irrigation and the Disaster Management Centre.
+`snapshot.mjs` also archives hourly catchment rain and daily GloFAS discharge to `rain/` and `glofas/` on
+the `data` branch so later refits can use real history.
+
 ### MCP server at `/mcp`
 
 `app/mcp/route.ts` mounts an MCP Streamable-HTTP server using

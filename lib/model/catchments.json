@@ -1,0 +1,45 @@
+{
+  "_note": "Rain sample points per basin (hand-placed, rough). The catchment rain series is the plain mean over a basin's points. Changing a point changes the model's rain feature, so refit with scripts/fit-forecast.mjs afterwards. glofas is a main-stem river cell (NOT the nearest cell to a gauge: that can be a tributary); p95/p99 are the 2010-2024 GloFAS climatology at that cell in m3/s.",
+  "basins": {
+    "Kelani Ganga": {
+      "points": [
+        { "name": "Kitulgala", "lat": 6.99, "lon": 80.41 },
+        { "name": "Laxapana", "lat": 6.9, "lon": 80.5 },
+        { "name": "Norton Bridge", "lat": 6.84, "lon": 80.6 },
+        { "name": "Avissawella", "lat": 6.95, "lon": 80.21 },
+        { "name": "Hanwella", "lat": 6.9, "lon": 80.08 }
+      ],
+      "glofas": { "lat": 6.975, "lon": 80.125, "p95": 338, "p99": 483, "note": "Kelani main stem just upstream of Hanwella" }
+    },
+    "Kalu Ganga": {
+      "points": [
+        { "name": "Balangoda", "lat": 6.66, "lon": 80.7 },
+        { "name": "Pelmadulla", "lat": 6.62, "lon": 80.54 },
+        { "name": "Ratnapura", "lat": 6.68, "lon": 80.4 },
+        { "name": "Putupaula", "lat": 6.61, "lon": 80.06 }
+      ]
+    },
+    "Gin Ganga": {
+      "points": [
+        { "name": "Thawalama", "lat": 6.34, "lon": 80.33 },
+        { "name": "Neluwa", "lat": 6.31, "lon": 80.4 },
+        { "name": "Baddegama", "lat": 6.17, "lon": 80.18 }
+      ]
+    },
+    "Nilwala Ganga": {
+      "points": [
+        { "name": "Deniyaya", "lat": 6.34, "lon": 80.55 },
+        { "name": "Pitabeddara", "lat": 6.21, "lon": 80.48 },
+        { "name": "Urawa", "lat": 6.24, "lon": 80.57 },
+        { "name": "Matara", "lat": 5.95, "lon": 80.55 }
+      ]
+    },
+    "Aththanagalu Oya": {
+      "points": [
+        { "name": "Dunamale", "lat": 7.12, "lon": 80.08 },
+        { "name": "Veyangoda", "lat": 7.15, "lon": 80.1 },
+        { "name": "Mirigama", "lat": 7.24, "lon": 80.13 }
+      ]
+    }
+  }
+}

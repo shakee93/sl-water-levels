@@ -12,6 +12,14 @@
 // within the feed's ~7-day window. Today's (incomplete) day is written too
 // and gets completed by tomorrow's run. Also refreshes <outDir>/stations.json.
 //
+// Also archives the weather the forecast model is fitted on (best effort: a weather
+// outage must never block the gauge archive, so failures only log a warning):
+//   <outDir>/rain/YYYY/YYYY-MM-DD.csv     hourly Open-Meteo precipitation (mm, hour ENDING at
+//                                         time_utc) at each catchment point in lib/model/catchments.json
+//   <outDir>/glofas/YYYY/YYYY-MM-DD.csv   daily GloFAS river discharge (m3/s) at each basin's main-stem cell
+// Rain is taken from the forecast api with past_days (analysis, no multi-day lag like the
+// archive api) and only for hours already elapsed, so rewrites are stable.
+//
 // No dependencies: Node 22 fetch + fs only, so CI needs no npm install.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -189,3 +197,79 @@ for (const [day, recs] of [...byDay].sort()) {
 
 await writeFile(path.join(outDir, "stations.json"), JSON.stringify(stations, null, 2) + "\n");
 console.log(`fetched ${readings.length} readings across ${byDay.size} days, ${added} new; ${stations.length} stations`);
+
+// ---------------------------------------------------------------------------
+// Weather archive for the forecast model (best effort)
+// ---------------------------------------------------------------------------
+
+async function mergeKeyedCsv(file, columns, keyOf, newRows) {
+  await mkdir(path.dirname(file), { recursive: true });
+  const merged = new Map();
+  if (existsSync(file)) for (const r of parseCsv(await readFile(file, "utf8"))) merged.set(keyOf(r), r);
+  for (const r of newRows) merged.set(keyOf(r), r);
+  const rows = [...merged.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, r]) => r);
+  await writeFile(file, [columns.join(","), ...rows.map((r) => columns.map((c) => csvCell(r[c] ?? "")).join(","))].join("\n") + "\n");
+}
+
+async function getJson(url) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+      if (r.ok) return await r.json();
+    } catch {}
+    await sleep(1500 * attempt);
+  }
+  throw new Error(`request failed: ${url.slice(0, 80)}`);
+}
+
+async function archiveWeather() {
+  const catchments = JSON.parse(await readFile(new URL("../lib/model/catchments.json", import.meta.url), "utf8")).basins;
+  const hourNow = Math.floor(Date.now() / 3600e3) * 3600e3;
+  const rainByDay = new Map();
+  const glofasByDay = new Map();
+  for (const [basin, cfg] of Object.entries(catchments)) {
+    try {
+      const pts = cfg.points;
+      const j = await getJson(
+        `https://api.open-meteo.com/v1/forecast?latitude=${pts.map((p) => p.lat)}&longitude=${pts.map((p) => p.lon)}&hourly=precipitation&past_days=3&forecast_days=1&timezone=UTC`,
+      );
+      (Array.isArray(j) ? j : [j]).forEach((p, i) => {
+        p.hourly.time.forEach((t, k) => {
+          const ms = Date.parse(t + "Z"), v = p.hourly.precipitation[k];
+          if (v == null || ms > hourNow) return;
+          const day = colomboDay(ms);
+          if (!rainByDay.has(day)) rainByDay.set(day, []);
+          rainByDay.get(day).push({ time_utc: new Date(ms).toISOString(), point: pts[i].name, mm: v });
+        });
+      });
+    } catch (e) {
+      console.warn(`rain archive skipped for ${basin}: ${e.message}`);
+    }
+    if (cfg.glofas) {
+      try {
+        const j = await getJson(
+          `https://flood-api.open-meteo.com/v1/flood?latitude=${cfg.glofas.lat}&longitude=${cfg.glofas.lon}&daily=river_discharge&past_days=3&forecast_days=0`,
+        );
+        j.daily.time.forEach((d, k) => {
+          const v = j.daily.river_discharge[k];
+          if (v == null) return;
+          if (!glofasByDay.has(d)) glofasByDay.set(d, []);
+          glofasByDay.get(d).push({ date: d, basin, river_discharge_m3s: v });
+        });
+      } catch (e) {
+        console.warn(`glofas archive skipped for ${basin}: ${e.message}`);
+      }
+    }
+  }
+  for (const [day, rows] of rainByDay)
+    await mergeKeyedCsv(path.join(outDir, "rain", day.slice(0, 4), `${day}.csv`), ["time_utc", "point", "mm"], (r) => `${r.time_utc}|${r.point}`, rows);
+  for (const [day, rows] of glofasByDay)
+    await mergeKeyedCsv(path.join(outDir, "glofas", day.slice(0, 4), `${day}.csv`), ["date", "basin", "river_discharge_m3s"], (r) => `${r.date}|${r.basin}`, rows);
+  console.log(`weather archive: ${rainByDay.size} rain days, ${glofasByDay.size} glofas days`);
+}
+
+try {
+  await archiveWeather();
+} catch (e) {
+  console.warn(`weather archive failed (gauge archive is unaffected): ${e.message}`);
+}
