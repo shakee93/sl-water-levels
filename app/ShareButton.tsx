@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { LevelGauge } from "./LevelGauge";
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Eye, Info, Minus, MessageCircle, Phone, Share2, Siren, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
 
 const KEY = "sl_favourites";
@@ -296,6 +297,7 @@ export function VerdictCard({
   office,
   footer,
   level,
+  gauge,
   share,
   children,
 }: {
@@ -314,6 +316,8 @@ export function VerdictCard({
   footer: string;
   /** Current level with unit, shown large beside the verdict. */
   level?: string | null;
+  /** Horizontal gauge data; omitted when the gauge has no flood levels or no reading. */
+  gauge?: React.ComponentProps<typeof LevelGauge> | null;
   share: { href: string; name: string; text: string };
   children: React.ReactNode;
 }) {
@@ -344,6 +348,8 @@ export function VerdictCard({
             </p>
           )}
         </div>
+
+        {gauge && <LevelGauge {...gauge} />}
 
         {(direction || fact) && (
           <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3" lang={lang}>

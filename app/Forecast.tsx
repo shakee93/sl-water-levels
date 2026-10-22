@@ -77,11 +77,14 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
   return { fact: null, target: -1 };
 }
 
-/** Verdict tier: the real tier, upgraded one step when a higher tier is likely/possible within 24h. */
+/**
+ * Verdict tier: the real tier, upgraded to "alert" (Get ready) when a crossing is
+ * forecast within 24h. Never upgrades into "Flooding now" / "Move to safety": those
+ * describe what is happening, so they only come from the measured level.
+ */
 function upgrade(tier: VerdictTone, target: number): VerdictTone {
-  const i = Math.max(0, ORDER.indexOf(tier as (typeof ORDER)[number]));
-  if (tier === "none" || tier === "stale" || target <= i) return tier;
-  return ORDER[i <= 1 ? 2 : Math.min(i + 1, 4)];
+  if ((tier === "normal" || tier === "watch") && target >= ORDER.indexOf("alert")) return "alert";
+  return tier;
 }
 
 export async function Forecast({ basin, selectedStation }: { basin: string; selectedStation: string }) {
@@ -200,6 +203,11 @@ export async function Forecast({ basin, selectedStation }: { basin: string; sele
         office={dc ? { label: `${dc.district} DMC office`, tel: dc.tel } : null}
         footer={footer}
         level={levelText}
+        gauge={
+          !stale && level != null && me
+            ? { tone, level, next24: f.horizons.find((h) => h.h === 24)?.level ?? null, unit, thresholds: me.thresholds }
+            : null
+        }
         share={{ href: stationPath(basin, selectedStation), name: `${name} (${basin.trim()})`, text: shareText }}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
