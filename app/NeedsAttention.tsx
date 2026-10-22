@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowDown, ArrowRight, ArrowUp, Minus, ShieldCheck, TriangleAlert } from "lucide-react";
-import { fetchNationalSnapshot, type Station } from "@/lib/arcgis";
+import { getNational, type Station } from "@/lib/arcgis";
 import {
   buildAttention,
   TIER_LABEL,
@@ -21,7 +21,7 @@ type TierStyle = {
 
 // One row per tier so the colour story is consistent with the status dots used
 // in BasinFlow and StationCard: red = major, orange = minor, amber = alert.
-// `approaching` deliberately reads as informational (sky), not alarming — it is
+// `watch` deliberately reads as informational (sky), not alarming — it is
 // a watch state, and colouring it like a flood would cry wolf.
 const TIER_STYLE: Record<AttentionTier, TierStyle> = {
   major: {
@@ -45,7 +45,7 @@ const TIER_STYLE: Record<AttentionTier, TierStyle> = {
     gap: "text-amber-700 dark:text-amber-300",
     dot: "bg-amber-500",
   },
-  approaching: {
+  watch: {
     card: "border-sky-200 dark:border-sky-900 bg-sky-50/60 dark:bg-sky-950/20 hover:border-sky-400 dark:hover:border-sky-700",
     pill: "bg-sky-500 text-white",
     bar: "bg-sky-500",
@@ -144,7 +144,7 @@ function BasinCard({ b }: { b: BasinAttention }) {
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.pill}`}
           >
-            {b.tier !== "approaching" && <TriangleAlert className="size-3" aria-hidden />}
+            {b.tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
             {TIER_LABEL[b.tier]}
           </span>
           <span className="text-[10px] text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
@@ -205,20 +205,18 @@ function BasinCard({ b }: { b: BasinAttention }) {
   );
 }
 
-export async function NeedsAttention({ stations }: { stations: Station[] }) {
+export async function NeedsAttention(props: { stations?: Station[] }) {
+  void props; // basin names now come from getNational()
   let snapshot;
   try {
-    snapshot = await fetchNationalSnapshot();
+    snapshot = await getNational();
   } catch {
     // The map and basin list below still work without this section, so a
     // rate-limited ArcGIS response should degrade to silence, not an error page.
     return null;
   }
 
-  const basinByStation = new Map(stations.map((s) => [s.station, s.basin] as const));
-  const { basins, flagged, reporting, highest } = buildAttention(snapshot, (name) =>
-    basinByStation.get(name),
-  );
+  const { basins, flagged, reporting, highest } = buildAttention(snapshot);
 
   if (basins.length === 0) {
     return (
@@ -244,7 +242,7 @@ export async function NeedsAttention({ stations }: { stations: Station[] }) {
     );
   }
 
-  const acting = flagged.filter((f) => f.tier !== "approaching").length;
+  const acting = flagged.filter((f) => f.tier !== "watch").length;
 
   return (
     <section className="mb-6" aria-labelledby="needs-attention-heading">

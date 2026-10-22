@@ -10,6 +10,8 @@ const toneClass: Record<string, string> = {
   orange:
     "bg-orange-100 text-orange-800 ring-1 ring-orange-200 dark:bg-orange-950/60 dark:text-orange-300 dark:ring-orange-900",
   red: "bg-red-100 text-red-800 ring-1 ring-red-200 dark:bg-red-950/60 dark:text-red-300 dark:ring-red-900",
+  stale:
+    "bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700",
   neutral:
     "bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700",
 };
@@ -31,7 +33,7 @@ function fmt(v: number | null | undefined) {
 
 export async function StationCard({ stationName, days = 4 }: { stationName: string; days?: number }) {
   const data = await fetchStationData(stationName, days);
-  const status = statusFor(data.latest?.water_level ?? null, data.thresholds);
+  const status = statusFor(data.latest?.water_level ?? null, data.thresholds, data.latest?.ts);
   const unit = detectUnit(data.thresholds);
 
   return (

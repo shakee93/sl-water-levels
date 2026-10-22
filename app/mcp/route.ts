@@ -7,6 +7,7 @@ import {
   statusFor,
 } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
+import { ageMinutes } from "@/lib/readings";
 
 const handler = createMcpHandler(
   (server) => {
@@ -48,7 +49,7 @@ const handler = createMcpHandler(
 
     server.tool(
       "get_station_readings",
-      "Get water-level (and rainfall where reported) readings for a single station. Returns up to the last `days` of readings plus alert / minor-flood / major-flood thresholds. Units vary by station — Kelani Ganga gauges are in feet; other basins may differ.",
+      "Get water-level (and rainfall where reported) readings for a single station. Returns up to the last `days` of readings (the source only retains ~7 days) plus alert / minor-flood / major-flood thresholds. Units vary by station — Kelani Ganga gauges are in feet; other basins may differ.",
       {
         station: z.string().describe("Exact station name, e.g. 'Nagalagam Street' or 'Hanwella'"),
         days: z
@@ -61,7 +62,7 @@ const handler = createMcpHandler(
       },
       async ({ station, days }) => {
         const data = await fetchStationData(station, days ?? 4);
-        const status = statusFor(data.latest?.water_level ?? null, data.thresholds);
+        const status = statusFor(data.latest?.water_level ?? null, data.thresholds, data.latest?.ts);
         return {
           content: [
             {
@@ -71,6 +72,8 @@ const handler = createMcpHandler(
                   station: data.station,
                   basin: data.basin,
                   status: status.label,
+                  tier: status.tier,
+                  age_minutes: ageMinutes(data.latest),
                   thresholds: data.thresholds,
                   latest: data.latest,
                   reading_count: data.readings.length,
@@ -95,17 +98,7 @@ const handler = createMcpHandler(
         const raw = await fetchBasinSnapshot(basin);
         const ordered = orderStations(basin, raw);
         const summary = ordered.map((s, i) => {
-          const status = statusFor(s.latest?.water_level ?? null, s.thresholds);
-          let ratePerHour: number | null = null;
-          if (
-            s.latest &&
-            s.prior &&
-            s.latest.water_level != null &&
-            s.prior.water_level != null
-          ) {
-            const dt = (s.latest.ts - s.prior.ts) / 3_600_000;
-            if (dt > 0) ratePerHour = (s.latest.water_level - s.prior.water_level) / dt;
-          }
+          const status = statusFor(s.latest?.water_level ?? null, s.thresholds, s.latest?.ts);
           return {
             position:
               i === 0 ? "upstream" : i === ordered.length - 1 ? "downstream" : "midstream",
@@ -113,8 +106,12 @@ const handler = createMcpHandler(
             latest_level: s.latest?.water_level ?? null,
             latest_ts: s.latest?.ts ?? null,
             status: status.label,
+            tier: status.tier,
+            age_minutes: s.ageMin,
+            unit: s.unit,
             thresholds: s.thresholds,
-            rate_per_hour_3h: ratePerHour,
+            rate_per_hour_3h: s.rate3h,
+            rate_m_per_hour_3h: s.rate3hM,
           };
         });
         return {

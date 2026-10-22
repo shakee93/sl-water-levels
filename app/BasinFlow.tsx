@@ -10,6 +10,7 @@ const dotForTone: Record<string, string> = {
   orange: "bg-orange-500",
   red: "bg-red-500",
   neutral: "bg-slate-400",
+  stale: "bg-slate-300 dark:bg-slate-600",
 };
 
 function pct(level: number | null, threshold: number | null) {
@@ -164,7 +165,7 @@ export async function BasinFlow({
 
       <ol className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
         {stations.map((s, i) => {
-          const status = statusFor(s.latest?.water_level ?? null, s.thresholds);
+          const status = statusFor(s.latest?.water_level ?? null, s.thresholds, s.latest?.ts);
           const isSelected = s.station === selectedStation;
           const trend = trendDelta(s);
           const alertPct = pct(s.latest?.water_level ?? null, s.thresholds.alert);

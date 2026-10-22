@@ -6,7 +6,7 @@
 // worst gauge per basin.
 //
 // Tiers mirror the Dept of Irrigation's own published thresholds
-// (alertpull / minorpull / majorpull) with one addition: `approaching`.
+// (alertpull / minorpull / majorpull) with one addition: `watch`.
 // Two reasons for it:
 //   1. A gauge at 99% of alert and rising is more actionable than one sitting
 //      2% over alert and falling. Ranking purely on threshold crossings buries
@@ -15,18 +15,16 @@
 //      a watch tier this section would be empty most of the year and readers
 //      would stop looking at it — which is exactly when it needs to be trusted.
 
-import type { Reading, SnapshotStation } from "./arcgis";
+import type { NationalStation } from "./arcgis";
+import { isStale, thresholdGap, type ThresholdGap, type Thresholds } from "./readings";
+import { WATCH_RATIO } from "./status";
 
-export type Thresholds = {
-  alert: number | null;
-  minor: number | null;
-  major: number | null;
-};
+export type { Thresholds };
 
-export type AttentionTier = "major" | "minor" | "alert" | "approaching";
+export type AttentionTier = "major" | "minor" | "alert" | "watch";
 
 export const TIER_RANK: Record<AttentionTier, number> = {
-  approaching: 0,
+  watch: 0,
   alert: 1,
   minor: 2,
   major: 3,
@@ -36,16 +34,19 @@ export const TIER_LABEL: Record<AttentionTier, string> = {
   major: "Major flood",
   minor: "Minor flood",
   alert: "Alert",
-  approaching: "Approaching alert",
+  watch: "Approaching alert",
 };
 
-// A gauge enters the watch tier at 85% of its alert threshold. Empirically that
-// pulls in ~1-3 gauges on a quiet day (Kithulgala sits ~99% in normal weather)
-// without flooding the section with the whole dry-zone. Tune here, not inline.
-export const APPROACHING_RATIO = 0.85;
+// A gauge enters the watch tier at 85% of its alert threshold (shared with
+// status.ts so the badge and the homepage agree). Empirically that pulls in
+// ~1-3 gauges on a quiet day (Kithulgala sits ~99% in normal weather) without
+// flooding the section with the whole dry-zone. Tune it in status.ts.
+export const APPROACHING_RATIO = WATCH_RATIO;
 
-// Matches the rate at which BasinFlow's arrow stops calling a gauge "steady".
-const RISING_RATE = 0.02;
+// A gauge counts as "rising" above this 3h rate, in METRES per hour so feet and
+// metre gauges are treated alike. 0.006 m/h is the old 0.02 ft/h (the point at
+// which BasinFlow's arrow stops calling a gauge "steady").
+export const RISING_M_PER_H = 0.006;
 
 export type StationAttention = {
   station: string;
@@ -56,14 +57,20 @@ export type StationAttention = {
   /** level / alert. Used for ordering within a tier. */
   ratio: number;
   /** Signed distance to the nearest meaningful threshold, and which one. */
-  gap: { label: string; amount: number; crossed: boolean } | null;
+  gap: ThresholdGap | null;
+  /** 3h rate in the station's own units; see `rising` for the unit-aware verdict. */
   ratePerHour: number | null;
   rising: boolean;
   ts: number;
+  /** Latest reading is older than 3h: still shown (last known) but never "rising". */
+  stale: boolean;
+  ageMin: number | null;
+  href: string;
 };
 
 export type BasinAttention = {
   basin: string;
+  basinHref: string;
   tier: AttentionTier;
   lead: StationAttention;
   stations: StationAttention[];
@@ -72,88 +79,40 @@ export type BasinAttention = {
   gaugeCount: number;
 };
 
-// Change over the last ~3h, derived from the 12h trend series. We look for the
-// reading closest to 3h before the latest one, but only accept it if it falls in
-// a 1h-5h window — outside that the rate is too noisy or too stale to quote.
-function ratePerHour(latest: Reading, trend: Reading[]): number | null {
-  if (latest.water_level == null) return null;
-  const target = latest.ts - 3 * 60 * 60 * 1000;
-  const minTs = latest.ts - 5 * 60 * 60 * 1000;
-  const maxTs = latest.ts - 1 * 60 * 60 * 1000;
-
-  let best: Reading | null = null;
-  for (const r of trend) {
-    if (r.water_level == null) continue;
-    if (r.ts < minTs || r.ts > maxTs) continue;
-    if (!best || Math.abs(r.ts - target) < Math.abs(best.ts - target)) best = r;
-  }
-  if (!best || best.water_level == null) return null;
-
-  const hours = (latest.ts - best.ts) / 3_600_000;
-  if (hours <= 0) return null;
-  return (latest.water_level - best.water_level) / hours;
+function attentionTier(s: NationalStation): AttentionTier | null {
+  const t = s.levelTier;
+  return t === "major" || t === "minor" || t === "alert" || t === "watch" ? t : null;
 }
 
-function tierFor(level: number, t: Thresholds): AttentionTier | null {
-  if (t.major != null && level >= t.major) return "major";
-  if (t.minor != null && level >= t.minor) return "minor";
-  if (t.alert != null && level >= t.alert) return "alert";
-  if (t.alert != null && t.alert > 0 && level >= t.alert * APPROACHING_RATIO) {
-    return "approaching";
-  }
-  return null;
-}
-
-function gapFor(level: number, t: Thresholds): StationAttention["gap"] {
-  if (t.major != null && level >= t.major) {
-    return { label: "major flood", amount: level - t.major, crossed: true };
-  }
-  if (t.minor != null && level >= t.minor) {
-    return { label: "minor flood", amount: level - t.minor, crossed: true };
-  }
-  if (t.alert != null && level >= t.alert) {
-    return { label: "alert", amount: level - t.alert, crossed: true };
-  }
-  // Below alert: quote the distance still to go.
-  if (t.alert != null) {
-    return { label: "alert", amount: t.alert - level, crossed: false };
-  }
-  return null;
+function toAttention(s: NationalStation, tier: AttentionTier): StationAttention | null {
+  const level = s.latest?.water_level;
+  const alert = s.thresholds.alert;
+  if (!s.latest || level == null || alert == null) return null;
+  const stale = isStale(s.latest);
+  return {
+    station: s.station,
+    basin: s.basin,
+    tier,
+    level,
+    thresholds: s.thresholds,
+    ratio: level / alert,
+    gap: thresholdGap(level, s.thresholds),
+    ratePerHour: s.rate3h,
+    rising: !stale && s.rate3hM != null && s.rate3hM > RISING_M_PER_H,
+    ts: s.latest.ts,
+    stale,
+    ageMin: s.ageMin,
+    href: s.href,
+  };
 }
 
 /**
  * Classify one gauge. Returns null when the gauge is comfortably normal, has no
  * reading, or publishes no alert threshold to measure against.
- *
- * `basin` is passed in rather than read off the snapshot row because
- * `hydrostations` is the authoritative source for basin naming and routing —
- * see the trailing-whitespace gotcha in CLAUDE.md.
  */
-export function classifyStation(
-  s: SnapshotStation,
-  basin: string,
-): StationAttention | null {
-  const level = s.latest?.water_level ?? null;
-  if (s.latest == null || level == null) return null;
-  if (s.thresholds.alert == null || !(s.thresholds.alert > 0)) return null;
-
-  const tier = tierFor(level, s.thresholds);
-  if (!tier) return null;
-
-  const rate = ratePerHour(s.latest, s.trend);
-
-  return {
-    station: s.station,
-    basin,
-    tier,
-    level,
-    thresholds: s.thresholds,
-    ratio: level / s.thresholds.alert,
-    gap: gapFor(level, s.thresholds),
-    ratePerHour: rate,
-    rising: rate != null && rate > RISING_RATE,
-    ts: s.latest.ts,
-  };
+export function classifyStation(s: NationalStation): StationAttention | null {
+  const tier = attentionTier(s);
+  return tier ? toAttention(s, tier) : null;
 }
 
 // Worst first: tier, then how far past its alert threshold, then rising before
@@ -171,58 +130,46 @@ export type AttentionSummary = {
   basins: BasinAttention[];
   /** Every flagged gauge, worst first — drives the "N gauges" summary line. */
   flagged: StationAttention[];
-  /** Gauges that reported a usable reading, flagged or not. */
+  /** Gauges with a fresh (<=3h) usable reading, flagged or not. */
   reporting: number;
-  /** Highest-standing gauge overall, even when nothing is flagged. */
+  /** Gauges with no data or a stale reading. */
+  notReporting: number;
+  /** Closest-to-alert fresh gauge overall, even when nothing is flagged. */
   highest: StationAttention | null;
 };
 
 /**
- * Roll a national snapshot up into per-basin attention cards.
- *
- * `basinOf` resolves a station name to its canonical (hydrostations) basin.
- * Gauges that don't resolve fall back to the basin on the reading row; gauges
- * with neither are dropped rather than rendered under "(no basin)", since the
- * card's whole purpose is to be a working link to a basin page.
+ * Roll the national snapshot up into per-basin attention cards. Every
+ * NationalStation already has a canonical, trimmed hydrostations basin, and
+ * basin-less stations never reach here, so every card links to a real page.
  */
-export function buildAttention(
-  snapshot: SnapshotStation[],
-  basinOf: (station: string) => string | undefined,
-): AttentionSummary {
+export function buildAttention(snapshot: NationalStation[]): AttentionSummary {
   const flagged: StationAttention[] = [];
   const gaugesPerBasin = new Map<string, number>();
   let reporting = 0;
+  let notReporting = 0;
   let highest: StationAttention | null = null;
 
   for (const s of snapshot) {
-    const basin = (basinOf(s.station) ?? s.basin ?? "").trim();
-    if (!basin) continue;
-    if (s.latest?.water_level != null) {
+    if (!s.basin) continue;
+    const fresh = s.latest?.water_level != null && !isStale(s.latest);
+    if (fresh) {
       reporting += 1;
-      gaugesPerBasin.set(basin, (gaugesPerBasin.get(basin) ?? 0) + 1);
+      gaugesPerBasin.set(s.basin, (gaugesPerBasin.get(s.basin) ?? 0) + 1);
+    } else {
+      notReporting += 1;
     }
 
-    const hit = classifyStation(s, basin);
+    const hit = classifyStation(s);
     if (hit) flagged.push(hit);
 
-    // Track the closest-to-alert gauge nationally so the all-clear state can
-    // still point somewhere useful.
+    const alert = s.thresholds.alert;
     const level = s.latest?.water_level;
-    if (level != null && s.thresholds.alert != null && s.thresholds.alert > 0) {
-      const ratio = level / s.thresholds.alert;
+    if (fresh && level != null && alert != null) {
+      const ratio = level / alert;
       if (!highest || ratio > highest.ratio) {
-        highest = {
-          station: s.station,
-          basin,
-          tier: "approaching",
-          level,
-          thresholds: s.thresholds,
-          ratio,
-          gap: gapFor(level, s.thresholds),
-          ratePerHour: ratePerHour(s.latest!, s.trend),
-          rising: false,
-          ts: s.latest!.ts,
-        };
+        highest = toAttention(s, attentionTier(s) ?? "watch");
+        if (highest) highest = { ...highest, tier: "watch", rising: false };
       }
     }
   }
@@ -234,11 +181,13 @@ export function buildAttention(
     if (!byBasin.has(f.basin)) byBasin.set(f.basin, []);
     byBasin.get(f.basin)!.push(f);
   }
+  const hrefByBasin = new Map(snapshot.map((s) => [s.basin, s.basinHref] as const));
 
   const basins: BasinAttention[] = [...byBasin.entries()].map(([basin, list]) => {
     const sorted = [...list].sort(bySeverity);
     return {
       basin,
+      basinHref: hrefByBasin.get(basin) ?? "/",
       tier: sorted[0].tier,
       lead: sorted[0],
       stations: sorted,
@@ -257,5 +206,5 @@ export function buildAttention(
       a.basin.localeCompare(b.basin),
   );
 
-  return { basins, flagged, reporting, highest };
+  return { basins, flagged, reporting, notReporting, highest };
 }

@@ -66,8 +66,9 @@ lib/
 ## Data sources (and their current state)
 
 - **ArcGIS hydrostations + gauges_2_view** (services3.arcgis.com/J7ZFXmR8rSmQ3FGf):
-  station list and per-gauge readings. WORKING. Hourly cadence, 4+ months
-  of history. The source of truth for level data.
+  station list and per-gauge readings. WORKING. Hourly cadence, but
+  gauges_2_view retains only ~7 days (~6.5k rows). The source of truth for
+  level data; `lib/arcgis.ts` `getNational()` is the one consolidated fetch.
 
 - **ArcGIS Reservoir_Data_2024**: static infrastructure — irrigation tanks
   only, NO CEB hydropower. Useful for context only.
@@ -104,8 +105,9 @@ These cost real debugging time. Future-you should not relearn them.
   Always `LIKE 'X%'` or `.trim()` before comparing.
 - **`CreationDate` is epoch milliseconds**, not ISO or seconds.
 - **ArcGIS rate-limits aren't documented but exist.** Repeated queries
-  (>=1/s) return `Too many requests.` All `arcgis()` calls go through
-  `fetch(url, { next: { revalidate: 60 } })` for ISR.
+  (>=1/s) return HTTP 200 with an `{error:{...}}` body ("Too many requests.").
+  `arcgis()` validates inside `unstable_cache` (60s) so errors throw and are
+  never cached. maxRecordCount is 1000: it pages on `exceededTransferLimit`.
 - **PUCSL day-ahead-dispatch returns rows with `powerInMw: null` for
   every record.** Don't assume any integer values are real — confirm
   by curling first.

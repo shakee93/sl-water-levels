@@ -1,5 +1,6 @@
-import type { BasinStation, Reading } from "./arcgis";
+import type { BasinStation } from "./arcgis";
 import { orderStations } from "./basinOrder";
+import { ageMinutes, isStale, rainTotal, rate } from "./readings";
 
 export type Forecast = {
   currentLevel: number | null;
@@ -41,69 +42,29 @@ function proximityWeight(distKm: number): number {
   return 10 / (10 + Math.max(0, distKm));
 }
 
-// Linear regression slope (units / hour) on the last `hours` of readings.
-function ratePerHour(readings: Reading[], hours: number): number | null {
-  const cutoff = Date.now() - hours * 3_600_000;
-  const pts = readings.filter(
-    (r): r is { ts: number; water_level: number; rain_fall: number | null } =>
-      r.water_level != null &&
-      Number.isFinite(r.water_level) &&
-      // drop common sentinel values (-9999, 9999) that poison regression
-      r.water_level > -100 &&
-      r.water_level < 1000 &&
-      r.ts >= cutoff,
-  );
-  if (pts.length < 2) return null;
+// Rates here are blended and converted to METRES per hour so that upstream
+// gauges reporting in a different unit (Norwood is metres on a feet river) are
+// comparable, and so the heuristics below mean the same on every gauge.
+// Thresholds were calibrated by eye on feet gauges; the metre values keep that
+// intent (0.02 ft/h ~ 0.006 m/h, 0.05 ft/h ~ 0.015 m/h, 0.1 ft/h ~ 0.03 m/h,
+// 0.5 ft ~ 0.15 m).
+const STEADY_M_PER_H = 0.006;
+const CONFIDENT_M_PER_H = 0.015;
+const LEADER_NOTE_M_PER_H = 0.03;
+const MIN_CLAMP_M = 0.15;
 
-  const t0 = pts[0].ts;
-  const x = pts.map((p) => (p.ts - t0) / 3_600_000);
-  const y = pts.map((p) => p.water_level);
-  const n = pts.length;
-  const sx = x.reduce((a, b) => a + b, 0);
-  const sy = y.reduce((a, b) => a + b, 0);
-  const sxy = x.reduce((a, b, i) => a + b * y[i], 0);
-  const sxx = x.reduce((a, b) => a + b * b, 0);
-  const denom = n * sxx - sx * sx;
-  if (denom === 0) return null;
-  return (n * sxy - sx * sy) / denom;
-}
-// Most recent reading-to-reading rate (units / hour), looking back ~2h.
-// Use to catch post-peak descents or sudden rises that a smoothed
-// regression misses.
-function recentMomentum(readings: Reading[]): number | null {
-  const cutoff = Date.now() - 2.5 * 3_600_000;
-  const pts = readings
-    .filter(
-      (r): r is { ts: number; water_level: number; rain_fall: number | null } =>
-        r.water_level != null &&
-        Number.isFinite(r.water_level) &&
-        r.water_level > -100 &&
-        r.water_level < 1000 &&
-        r.ts >= cutoff,
-    )
-    .sort((a, b) => a.ts - b.ts);
-  if (pts.length < 2) return null;
-  const a = pts[0];
-  const b = pts[pts.length - 1];
-  const dt = (b.ts - a.ts) / 3_600_000;
-  if (dt <= 0) return null;
-  return (b.water_level - a.water_level) / dt;
-}
-
-// Total rainfall in the last `hours` hours. Returns null if no rain_fall
-// values were ever reported (gauge has no rain sensor); 0 if the gauge
-// reports but it didn't rain.
-function totalRain(readings: Reading[], hours: number): number | null {
-  const cutoff = Date.now() - hours * 3_600_000;
-  let sum = 0;
-  let saw = false;
-  for (const r of readings) {
-    if (r.ts < cutoff) continue;
-    if (r.rain_fall == null) continue;
-    sum += r.rain_fall;
-    saw = true;
-  }
-  return saw ? sum : null;
+// Blend of the 3h least-squares slope (smooth) and the ~2h reading-to-reading
+// momentum (catches post-peak descents and sudden rises a regression smooths
+// away). Both windows are anchored to the gauge's own latest reading, and a
+// gauge that hasn't reported for >3h yields null instead of a stale trend.
+function blendedRateM(s: BasinStation): number | null {
+  if (!s.latest || isStale(s.latest)) return null;
+  const anchor = s.latest.ts;
+  const slope = rate(s.trend24h, { hours: 3.25, anchor, method: "slope" });
+  const momentum = rate(s.trend24h, { hours: 2.5, anchor });
+  const blended =
+    slope != null && momentum != null ? momentum * 0.6 + slope * 0.4 : (momentum ?? slope);
+  return blended == null ? null : blended * s.metresPerUnit;
 }
 
 // 1-hour ahead prediction: local persistence + weighted upstream momentum,
@@ -136,58 +97,56 @@ export function makeForecast(
   }
   const me = ordered[myIdx];
   const upstream = ordered.slice(0, myIdx);
+  const mpu = me.metresPerUnit;
 
-  const localSlope = ratePerHour(me.trend24h, 3);
-  const localMomentum = recentMomentum(me.trend24h);
-  const localRate =
-    localSlope != null && localMomentum != null
-      ? localMomentum * 0.6 + localSlope * 0.4
-      : (localMomentum ?? localSlope);
-  const currentLevel = me.latest?.water_level ?? null;
+  if (!me.latest) return emptyForecast(["This gauge is not reporting."]);
+  if (isStale(me.latest)) {
+    const h = Math.round((ageMinutes(me.latest) ?? 0) / 60);
+    return emptyForecast([`Latest reading is ${h}h old, too stale to forecast.`]);
+  }
+  const anchor = me.latest.ts;
 
-  // rain at THIS station over the last 6h (often null at downstream/urban gauges)
-  const rainAtStation6h = totalRain(me.trend24h, 6);
+  // all rates below are metres/hour until the final conversion back to me's unit
+  const localRateM = blendedRateM(me);
+  const currentLevel = me.latest.water_level;
+
+  // rain at THIS station over the 6h to its latest reading (often null at downstream/urban gauges)
+  const rainAtStation6h = rainTotal(me.trend24h, 6, anchor);
 
   // upstream rate + upstream rain, weighted by straight-line distance to
   // the selected station (closer upstream gauges count for more).
   type UpSignal = {
     station: string;
-    rate: number | null;
+    rateM: number | null;
     rain: number | null;
     weight: number;
     distKm: number;
   };
   const upSignals: UpSignal[] = upstream.map((s) => {
     const distKm = haversineKm(me, s);
-    const slope = ratePerHour(s.trend24h, 3);
-    const momentum = recentMomentum(s.trend24h);
-    const blended =
-      slope != null && momentum != null
-        ? momentum * 0.6 + slope * 0.4
-        : (momentum ?? slope);
     return {
       station: s.station,
-      rate: blended,
-      rain: totalRain(s.trend24h, 6),
+      rateM: blendedRateM(s),
+      rain: s.latest && !isStale(s.latest) ? rainTotal(s.trend24h, 6, s.latest.ts) : null,
       weight: proximityWeight(distKm),
       distKm,
     };
   });
 
   const upRateSignals = upSignals.filter(
-    (s): s is UpSignal & { rate: number } => s.rate != null,
+    (s): s is UpSignal & { rateM: number } => s.rateM != null,
   );
   const upRateWeightSum = upRateSignals.reduce((a, b) => a + b.weight, 0);
-  const upstreamRate =
+  const upstreamRateM =
     upRateWeightSum > 0
-      ? upRateSignals.reduce((a, b) => a + b.rate * b.weight, 0) / upRateWeightSum
+      ? upRateSignals.reduce((a, b) => a + b.rateM * b.weight, 0) / upRateWeightSum
       : null;
   const leaderRaw =
     upRateSignals.length > 0
-      ? upRateSignals.reduce((a, b) => (Math.abs(a.rate) > Math.abs(b.rate) ? a : b))
+      ? upRateSignals.reduce((a, b) => (Math.abs(a.rateM) > Math.abs(b.rateM) ? a : b))
       : null;
   const upstreamLeader: { station: string; ratePerH: number } | null = leaderRaw
-    ? { station: leaderRaw.station, ratePerH: leaderRaw.rate }
+    ? { station: leaderRaw.station, ratePerH: leaderRaw.rateM / mpu }
     : null;
 
   const upRainSignals = upSignals.filter(
@@ -202,72 +161,71 @@ export function makeForecast(
     .filter((s) => s.rain > 1)
     .map((s) => `${s.station} ${s.rain.toFixed(1)}mm`);
 
-  if (localRate == null && upstreamRate == null) {
+  if (localRateM == null && upstreamRateM == null) {
     return emptyForecast(["Not enough recent readings to predict."]);
   }
 
-  const localWeight = upstreamRate != null ? 0.7 : 1;
-  const upWeight = upstreamRate != null ? 0.3 : 0;
-  const baseDelta =
-    (localRate ?? upstreamRate ?? 0) * localWeight +
-    (upstreamRate ?? 0) * upWeight;
+  const localWeight = upstreamRateM != null ? 0.7 : 1;
+  const upWeight = upstreamRateM != null ? 0.3 : 0;
+  const baseDeltaM =
+    (localRateM ?? upstreamRateM ?? 0) * localWeight +
+    (upstreamRateM ?? 0) * upWeight;
 
   const notes: string[] = [];
-  // rain modulation
-  // total "rain signal" for modulating magnitude
-  const rainTotal = (rainAtStation6h ?? 0) + (rainUpstream6h ?? 0);
+  // Rain modulation. Unknown rain (null everywhere) contributes nothing and is
+  // never treated as "dry": isDry needs at least one real zero-ish reading.
+  const rainTotalMm = (rainAtStation6h ?? 0) + (rainUpstream6h ?? 0);
   // 0 mm => 1.0, 30 mm => 1.15, 80 mm => 1.3 (cap)
-  const rainBoost = Math.min(0.3, rainTotal / 200);
+  const rainBoost = Math.min(0.3, rainTotalMm / 200);
+  const rainKnown = rainAtStation6h != null || rainUpstream6h != null;
   // dry-and-rising means the rise will plateau soon → dampen
-  const isRising = baseDelta > 0.02;
-  const isDry = rainAtStation6h != null && rainAtStation6h < 1 &&
-                (rainUpstream6h == null || rainUpstream6h < 1);
+  const isRising = baseDeltaM > STEADY_M_PER_H;
+  const isDry = rainKnown && (rainAtStation6h ?? 0) < 1 && (rainUpstream6h ?? 0) < 1;
 
   let magnitudeFactor = 1;
   if (isRising) {
-    if (rainTotal > 1) magnitudeFactor = 1 + rainBoost;
+    if (rainTotalMm > 1) magnitudeFactor = 1 + rainBoost;
     else if (isDry) magnitudeFactor = 0.8;
   }
   // Safety clamp: regression noise + tiny time windows can yield absurd
-  // rates. Cap |delta| to whichever is greater of an absolute floor of 0.5
-  // units or 30% of the current level (so dam levels in the 100s aren't
-  // forced into a tiny window, but a 0.05 reading can't be predicted to
-  // jump by 50).
-  const rawDelta = baseDelta * magnitudeFactor;
-  const cap = currentLevel != null
-    ? Math.max(0.5, Math.abs(currentLevel) * 0.3)
-    : 1;
-  const predictedDelta = Math.max(-cap, Math.min(cap, rawDelta));
-  if (predictedDelta !== rawDelta) {
+  // rates. Cap |delta| to the greater of 0.15 m or 30% of the current level
+  // (so dam levels in the 100s aren't forced into a tiny window, but a 0.05
+  // reading can't be predicted to jump by 50).
+  const rawDeltaM = baseDeltaM * magnitudeFactor;
+  const capM = currentLevel != null
+    ? Math.max(MIN_CLAMP_M, Math.abs(currentLevel * mpu) * 0.3)
+    : 0.3;
+  const clampedM = Math.max(-capM, Math.min(capM, rawDeltaM));
+  const predictedDelta = clampedM / mpu;
+  if (clampedM !== rawDeltaM) {
     notes.push(
-      `Trend slope (${rawDelta.toFixed(2)}/h) was clamped to ±${cap.toFixed(2)} as a sanity bound.`,
+      `Trend slope (${(rawDeltaM / mpu).toFixed(2)}/h) was clamped to ±${(capM / mpu).toFixed(2)} as a sanity bound.`,
     );
   }
   const predictedLevel =
     currentLevel != null ? currentLevel + predictedDelta : null;
 
   const direction: Forecast["direction"] =
-    predictedDelta > 0.02
+    clampedM > STEADY_M_PER_H
       ? "rising"
-      : predictedDelta < -0.02
+      : clampedM < -STEADY_M_PER_H
         ? "falling"
         : "steady";
 
   // confidence
-  // (notes declared above the clamp block to be in scope)
   let confidence: Forecast["confidence"];
-  if (localRate == null) {
+  if (localRateM == null) {
     confidence = "low";
     notes.push("No recent local readings — relying on upstream only.");
-  } else if (upstreamRate == null) {
+  } else if (upstreamRateM == null) {
     confidence = upstream.length === 0 ? "medium" : "low";
     if (upstream.length === 0)
       notes.push("Topmost station in basin; no upstream signal available.");
     else notes.push("Upstream readings missing; using local trend only.");
   } else {
-    const sameDir = Math.sign(localRate) === Math.sign(upstreamRate);
-    const magnitude = Math.max(Math.abs(localRate), Math.abs(upstreamRate));
-    if (sameDir && magnitude >= 0.05) confidence = "high";
+    const sameDir = Math.sign(localRateM) === Math.sign(upstreamRateM);
+    const magnitude = Math.max(Math.abs(localRateM), Math.abs(upstreamRateM));
+    if (sameDir && magnitude >= CONFIDENT_M_PER_H) confidence = "high";
     else if (sameDir) confidence = "medium";
     else {
       confidence = "low";
@@ -277,25 +235,27 @@ export function makeForecast(
 
   // rain-based confidence/note overlays
   if (direction === "rising") {
-    if (rainTotal > 30) {
+    if (rainTotalMm > 30) {
       if (confidence === "medium") confidence = "high";
       notes.push(
-        `Recent rain (${rainTotal.toFixed(0)}mm/6h) reinforces the rising trend.`,
+        `Recent rain (${rainTotalMm.toFixed(0)}mm/6h) reinforces the rising trend.`,
       );
     } else if (isDry) {
       if (confidence === "high") confidence = "medium";
       notes.push("No recent rain — rise is likely to plateau soon.");
     }
-  } else if (direction === "falling" && rainTotal > 30) {
+  } else if (direction === "falling" && rainTotalMm > 30) {
     if (confidence === "high") confidence = "medium";
     notes.push(
-      `Recent rain (${rainTotal.toFixed(0)}mm/6h) may slow the decline.`,
+      `Recent rain (${rainTotalMm.toFixed(0)}mm/6h) may slow the decline.`,
     );
   }
+  if (!rainKnown) notes.push("No rain data reported nearby; rain effects not factored in.");
 
-  if (upstreamLeader && Math.abs(upstreamLeader.ratePerH) >= 0.1) {
+  if (leaderRaw && Math.abs(leaderRaw.rateM) >= LEADER_NOTE_M_PER_H) {
+    const lr = leaderRaw.rateM / mpu;
     notes.push(
-      `${upstreamLeader.station} ${upstreamLeader.ratePerH > 0 ? "rising" : "falling"} at ${upstreamLeader.ratePerH.toFixed(2)}/h.`,
+      `${leaderRaw.station} ${lr > 0 ? "rising" : "falling"} at ${lr.toFixed(2)}/h.`,
     );
   }
 
@@ -305,8 +265,8 @@ export function makeForecast(
     predictedDelta,
     direction,
     confidence,
-    localRatePerH: localRate,
-    upstreamRatePerH: upstreamRate,
+    localRatePerH: localRateM == null ? null : localRateM / mpu,
+    upstreamRatePerH: upstreamRateM == null ? null : upstreamRateM / mpu,
     upstreamLeader,
     upstreamCount: upstream.length,
     rainAtStation6h,

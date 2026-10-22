@@ -1,63 +1,45 @@
-import type { BasinStation, Reading } from "./arcgis";
+import type { BasinStation } from "./arcgis";
 import { orderStations } from "./basinOrder";
+import { isStale, rainTotal, rate } from "./readings";
 
 export type AnomalyDetection = {
   status: "normal" | "possible_release" | "likely_release";
+  /** Rates are in the SELECTED station's units per hour (see `unit`). */
   observedRatePerH: number | null;
   upstreamMaxRatePerH: number | null;
   upstreamLeader: string | null;
+  /** Rain over 6h across the basin's reporting gauges; null when none report rain. */
   rain6hTotal: number | null;
+  /** false when no gauge in the basin has rain data: a release is never "likely" then. */
+  rainKnown: boolean;
   residualPerH: number | null;
+  unit: "ft" | "m" | null;
   reasons: string[];
   message: string | null;
 };
 
-// Reading-to-reading rate over the most recent `hours` window.
-// Same shape as forecast.ts recentMomentum, kept local so anomaly logic
-// stays self-contained.
-function recentRate(readings: Reading[], hours: number): number | null {
-  const cutoff = Date.now() - hours * 3_600_000;
-  const pts = readings
-    .filter(
-      (r): r is { ts: number; water_level: number; rain_fall: number | null } =>
-        r.water_level != null &&
-        Number.isFinite(r.water_level) &&
-        r.water_level > -100 &&
-        r.water_level < 1000 &&
-        r.ts >= cutoff,
-    )
-    .sort((a, b) => a.ts - b.ts);
-  if (pts.length < 2) return null;
-  const a = pts[0];
-  const b = pts[pts.length - 1];
-  const dt = (b.ts - a.ts) / 3_600_000;
-  if (dt <= 0) return null;
-  return (b.water_level - a.water_level) / dt;
-}
-
-function rain6h(readings: Reading[]): number | null {
-  const cutoff = Date.now() - 6 * 3_600_000;
-  let sum = 0;
-  let saw = false;
-  for (const r of readings) {
-    if (r.ts < cutoff) continue;
-    if (r.rain_fall == null) continue;
-    sum += r.rain_fall;
-    saw = true;
-  }
-  return saw ? sum : null;
-}
+// Rate thresholds are in METRES per hour so gauges reporting in feet and metres
+// are judged alike (each station's rate is converted with its own unit). The
+// values are the original by-eye calibration for feet gauges (Kelani) expressed
+// in metres: 0.30 ft/h, 0.20 ft/h, 0.10 ft/h.
+const LIKELY_RISE_M_PER_H = 0.09; // ~0.30 ft/h
+const POSSIBLE_RISE_M_PER_H = 0.06; // ~0.20 ft/h
+const UPSTREAM_FLAT_M_PER_H = 0.03; // ~0.10 ft/h
+const NO_RAIN_MM_6H = 5;
+const RATE_WINDOW_H = 2.25; // 2h + cadence jitter, anchored to each gauge's latest reading
 
 // Detect "unexplained rise" — a level climb at the selected station that
 // can't be accounted for by upstream level rises or recent basin rainfall.
 // The classic signature of a dam release upstream.
 //
-// Thresholds (calibrated by eye; tune against real events later):
-//   observed >= 0.30/h AND no rain (<5mm) AND no upstream rise (<0.10/h)
-//     → "likely_release"
-//   observed >= 0.20/h AND (no rain OR no upstream rise) (one missing)
-//     → "possible_release"
+//   observed >= 0.09 m/h AND no rain (<5mm) AND no upstream rise (<0.03 m/h)
+//     → "likely_release"   (requires rain data to exist somewhere in the basin)
+//   observed >= 0.06 m/h AND (no rain OR no upstream rise)
+//     → "possible_release" (unknown rain counts as "not no-rain")
 //   otherwise → "normal" (we render nothing)
+//
+// Windows are anchored to each gauge's latest reading, and stale gauges (>3h)
+// are ignored, so a lagging gauge neither hides nor fakes a signal.
 export function detectAnomaly(
   basin: string,
   snapshot: BasinStation[],
@@ -69,7 +51,9 @@ export function detectAnomaly(
     upstreamMaxRatePerH: null,
     upstreamLeader: null,
     rain6hTotal: null,
+    rainKnown: false,
     residualPerH: null,
+    unit: null,
     reasons: [],
     message: null,
   };
@@ -78,61 +62,70 @@ export function detectAnomaly(
   const myIdx = ordered.findIndex((s) => s.station === selectedStation);
   if (myIdx < 0) return empty;
   const me = ordered[myIdx];
+  const unit = me.unit;
+  const mpu = me.metresPerUnit;
+  const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}${unit ? ` ${unit}` : ""}/h`;
 
-  const observed = recentRate(me.trend24h, 2);
-  if (observed == null) return empty;
+  // Basin-wide 6h rain, only from gauges that actually report rain.
+  const rains = ordered
+    .filter((s) => !isStale(s.latest))
+    .map((s) => rainTotal(s.trend24h, 6, s.latest?.ts ?? null))
+    .filter((v): v is number => v != null);
+  const rainKnown = rains.length > 0;
+  const rainSum = rainKnown ? rains.reduce((a, b) => a + b, 0) : null;
+  const base = { ...empty, rainKnown, rain6hTotal: rainSum, unit };
 
-  const upstream = ordered.slice(0, myIdx);
-  type UpRate = { station: string; rate: number };
-  const upRates: UpRate[] = upstream
-    .map((s) => ({ station: s.station, rate: recentRate(s.trend24h, 2) }))
-    .filter((x): x is UpRate => x.rate != null);
-  const upstreamLeader = upRates.length
-    ? upRates.reduce((a, b) => (a.rate > b.rate ? a : b))
-    : null;
-  const upstreamMax = upstreamLeader?.rate ?? null;
+  if (!me.latest || isStale(me.latest)) return base;
+  const observedM = rate(me.trend24h, { hours: RATE_WINDOW_H, anchor: me.latest.ts });
+  if (observedM == null) return base;
+  const observedMetres = observedM * mpu;
+  const observed = observedM; // station units
 
-  const atStation = rain6h(me.trend24h);
-  const upRainSum = upstream.reduce((acc, s) => {
-    const r = rain6h(s.trend24h);
-    return acc + (r ?? 0);
-  }, 0);
-  const total = (atStation ?? 0) + upRainSum;
-
-  // Don't flag anything if local isn't rising meaningfully.
-  if (observed < 0.20) {
-    return {
-      ...empty,
-      observedRatePerH: observed,
-      upstreamMaxRatePerH: upstreamMax,
-      upstreamLeader: upstreamLeader?.station ?? null,
-      rain6hTotal: total,
-    };
+  const upstream = ordered.slice(0, myIdx).filter((s) => s.latest && !isStale(s.latest));
+  type UpRate = { station: string; metres: number };
+  const upRates: UpRate[] = [];
+  for (const s of upstream) {
+    const r = rate(s.trend24h, { hours: RATE_WINDOW_H, anchor: s.latest!.ts });
+    if (r != null) upRates.push({ station: s.station, metres: r * s.metresPerUnit });
   }
+  const leader = upRates.length ? upRates.reduce((a, b) => (a.metres > b.metres ? a : b)) : null;
+  const upstreamMaxM = leader?.metres ?? null;
+  const upstreamMax = upstreamMaxM == null ? null : upstreamMaxM / mpu;
 
-  const noRain = total < 5;
-  const upstreamFlat = upstreamMax == null || upstreamMax < 0.10;
+  const partial = {
+    ...base,
+    observedRatePerH: observed,
+    upstreamMaxRatePerH: upstreamMax,
+    upstreamLeader: leader?.station ?? null,
+  };
+
+  if (observedMetres < POSSIBLE_RISE_M_PER_H) return partial;
+
+  // With no rain data anywhere we can't say it didn't rain.
+  const noRain = rainKnown && (rainSum ?? 0) < NO_RAIN_MM_6H;
+  const upstreamFlat = upstreamMaxM == null || upstreamMaxM < UPSTREAM_FLAT_M_PER_H;
 
   let status: AnomalyDetection["status"] = "normal";
   const reasons: string[] = [];
 
-  if (observed >= 0.30 && noRain && upstreamFlat) {
+  if (observedMetres >= LIKELY_RISE_M_PER_H && noRain && upstreamFlat) {
     status = "likely_release";
     reasons.push(
-      `Rising at +${observed.toFixed(2)}/h with no rainfall (${total.toFixed(1)}mm/6h across basin) and no upstream rise.`,
+      `Rising at ${fmt(observed)} with no rainfall (${(rainSum ?? 0).toFixed(1)}mm/6h across the basin) and no upstream rise.`,
     );
-  } else if (observed >= 0.20 && (noRain || upstreamFlat)) {
+  } else if (noRain || upstreamFlat) {
     status = "possible_release";
     if (noRain) {
       reasons.push(
-        `Rising at +${observed.toFixed(2)}/h despite only ${total.toFixed(1)}mm/6h of rain across the basin.`,
+        `Rising at ${fmt(observed)} despite only ${(rainSum ?? 0).toFixed(1)}mm/6h of rain across the basin.`,
       );
     }
     if (upstreamFlat) {
-      const leaderInfo = upstreamLeader
-        ? `; closest upstream (${upstreamLeader.station}) only ${upstreamLeader.rate >= 0 ? "+" : ""}${upstreamLeader.rate.toFixed(2)}/h`
-        : "";
+      const leaderInfo = leader ? `; closest upstream (${leader.station}) only ${fmt(leader.metres / mpu)}` : "";
       reasons.push(`Upstream stations are not rising in step${leaderInfo}.`);
+    }
+    if (!rainKnown) {
+      reasons.push("No rain gauge in this basin is reporting, so rainfall can't be ruled out.");
     }
   }
 
@@ -140,16 +133,15 @@ export function detectAnomaly(
     status === "likely_release"
       ? "Probable upstream release: rise here isn't explained by rainfall or natural upstream propagation."
       : status === "possible_release"
-        ? "Unusual rise here — one or more natural drivers don't fit."
+        ? rainKnown
+          ? "Unusual rise here — one or more natural drivers don't fit."
+          : "Unusual rise here — upstream isn't rising in step, but no rain data is available to confirm a release."
         : null;
 
   return {
+    ...partial,
     status,
-    observedRatePerH: observed,
-    upstreamMaxRatePerH: upstreamMax,
-    upstreamLeader: upstreamLeader?.station ?? null,
-    rain6hTotal: total,
-    residualPerH: observed - (upstreamMax ?? 0),
+    residualPerH: observed - (upstream.length ? (upstreamMax ?? 0) : 0),
     reasons,
     message,
   };

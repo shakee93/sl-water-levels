@@ -60,7 +60,7 @@ export async function generateMetadata({
   try {
     const data = await fetchStationData(resolved.station, 1);
     const level = data.latest?.water_level;
-    const status = statusFor(level ?? null, data.thresholds);
+    const status = statusFor(level ?? null, data.thresholds, data.latest?.ts);
     const basin = data.basin || resolved.basin || "Sri Lanka";
 
     const name = stationDisplayName(resolved.station);
