@@ -1,20 +1,20 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Activity, AlertTriangle, Clock, Database, Radio, Ruler } from "lucide-react";
+import { Activity, AlertTriangle, Database } from "lucide-react";
 
 export const revalidate = 86400;
 
 const SITE = "https://sl-water-levels.vercel.app";
 
 export const metadata: Metadata = {
-  title: "About & methodology",
+  title: "About",
   description:
-    "How Sri Lanka Water Levels sources data, what alert / minor-flood / major-flood thresholds mean, how the next-hour forecast works, and how the site handles the unit and ordering quirks of the Department of Irrigation feed.",
+    "Where the river levels come from, what alert, minor flood and major flood mean, and how the next-hour and next-24-hour forecast works.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "About — Sri Lanka Water Levels",
     description:
-      "Methodology, data sources, thresholds, and forecast model behind the site.",
+      "Where the river levels come from, what the flood levels mean, and how the forecast works.",
     url: `${SITE}/about`,
     type: "website",
   },
@@ -39,136 +39,51 @@ export default function AboutPage() {
         </nav>
 
         <header className="mb-8">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-sky-700 dark:text-sky-400 font-medium mb-2">
-            <span className="size-1.5 rounded-full bg-sky-500" />
-            About
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-            About & methodology
-          </h1>
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">About</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-prose">
-            This site is a community-built window onto the Sri Lanka Department
-            of Irrigation&apos;s real-time river-gauge feed — re-plotted against
-            the same flood thresholds the Department uses, with a short next-hour
-            forecast layered on top.
+            A free, independent site that shows how high Sri Lanka&apos;s rivers are right now,
+            whether they&apos;re rising, and what to expect next, using the Department of
+            Irrigation&apos;s own river gauges.
           </p>
         </header>
 
         <section className="space-y-8">
-          <Card icon={<Database className="size-5" />} title="Where the data comes from">
+          <Card icon={<Database className="size-5" />} title="Where the readings come from">
             <p>
-              All readings are pulled from the Department of Irrigation&apos;s public{" "}
-              <a
-                className="underline decoration-slate-400/40 hover:text-sky-700 dark:hover:text-sky-300"
-                href="https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0"
-                target="_blank"
-                rel="noreferrer"
-              >
-                ArcGIS feature service
-              </a>
-              . That feed is the source of truth for water-level, rainfall, and
-              threshold data. Each station also has hydrostations metadata
-              (latitude, longitude, basin) which the site uses to group stations
-              by river and order them upstream → downstream.
+              Every level on this site comes from the Department of Irrigation&apos;s river
+              gauges. Gauges report about once an hour, and the site shows the newest reading
+              with the time it was taken.
             </p>
             <p>
-              No database is involved. The feed is fetched on demand and ISR-cached
-              for 60 seconds, so under typical traffic each station triggers at most
-              one upstream call per minute.
+              Official flood warnings are taken from the Disaster Management Centre and shown
+              on the river they mention, with a link to the original bulletin.
             </p>
           </Card>
 
-          <Card icon={<AlertTriangle className="size-5" />} title="What the thresholds mean">
-            <p>
-              Each station has three thresholds published by the Department,
-              shown on every chart as horizontal reference lines:
-            </p>
+          <Card icon={<AlertTriangle className="size-5" />} title="What the levels mean">
             <ul className="list-disc pl-5 space-y-1.5">
               <li>
-                <strong>Alert</strong> — water level the Department flags as
-                worth attention. People living near the gauge should keep an eye
-                on the river.
+                <strong>Alert</strong>: the river is high. Keep an eye on it and get ready.
               </li>
               <li>
-                <strong>Minor flood</strong> — low-lying areas near the river
-                may start to flood. Local action — moving valuables, checking
-                drains — is appropriate.
+                <strong>Minor flood</strong>: low-lying areas near the river may flood.
               </li>
               <li>
-                <strong>Major flood</strong> — significant flooding expected.
-                Follow Department and Disaster Management Centre instructions.
+                <strong>Major flood</strong>: serious flooding. Follow official instructions.
               </li>
             </ul>
-            <p>
-              These thresholds come directly from the feed. The site does not
-              substitute its own values or interpret them — it only re-presents
-              them next to the current reading.
-            </p>
+            <p>These levels are set by the Department of Irrigation for each gauge.</p>
           </Card>
 
-          <Card icon={<Ruler className="size-5" />} title="Units (meters vs feet)">
+          <Card icon={<Activity className="size-5" />} title="The forecast">
             <p>
-              The source feed does not include unit metadata. Most stations
-              report in <strong>feet</strong>, but some highland stations on the
-              Kelani basin (Norwood, for example) report in <strong>meters</strong>.
-              The site uses a heuristic based on threshold values to detect the
-              unit per station, and only displays a unit suffix when confidence
-              is high.
+              The &quot;next hour&quot; and &quot;next 24 hours&quot; estimates look at how the
+              river has been moving, what the gauges upstream are doing, and the rain falling
+              and forecast over the hills that drain into it.
             </p>
             <p>
-              If a station&apos;s unit looks wrong, the safest interpretation is
-              the published threshold values: alert / minor / major are in the
-              same unit as the current reading for that station.
-            </p>
-          </Card>
-
-          <Card icon={<Activity className="size-5" />} title="Next-hour forecast">
-            <p>
-              The forecast panel under each station combines three signals:
-            </p>
-            <ul className="list-disc pl-5 space-y-1.5">
-              <li>
-                <strong>Persistence</strong> — what the level has been doing in
-                the last few hours at this station.
-              </li>
-              <li>
-                <strong>Upstream momentum</strong> — whether stations upstream
-                on the same basin are rising or falling, with travel-time
-                weighting.
-              </li>
-              <li>
-                <strong>Rainfall</strong> — recent rainfall at the gauge (when
-                available; many downstream gauges don&apos;t report rain).
-              </li>
-            </ul>
-            <p>
-              The model is direction-correct in most cases; <em>magnitudes are
-              not calibrated against historical flood events</em>, so treat
-              numbers as indicative, not predictive. The anomaly banner above
-              the chart fires when the level jumps in a way that looks like an
-              inferred upstream release.
-            </p>
-          </Card>
-
-          <Card icon={<Clock className="size-5" />} title="How often it updates">
-            <p>
-              The Department&apos;s gauges publish at roughly hourly cadence;
-              the site re-fetches at most every 60 seconds (ISR). Each station
-              page is statically prerendered at build time and then revalidated
-              on traffic. Sitemap entries refresh hourly.
-            </p>
-          </Card>
-
-          <Card icon={<Radio className="size-5" />} title="MCP server">
-            <p>
-              The same dataset is exposed as an MCP (Model Context Protocol)
-              server at{" "}
-              <code className="font-mono text-xs px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
-                /mcp
-              </code>{" "}
-              — point a compatible LLM client at it to ask questions like
-              &quot;is Kelani rising right now?&quot; or &quot;list the top 3
-              stations closest to major flood&quot;.
+              It&apos;s new and still learning from this season&apos;s data, so it&apos;s marked
+              experimental. Always go by official warnings first.
             </p>
           </Card>
 
