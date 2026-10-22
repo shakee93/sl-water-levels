@@ -102,7 +102,7 @@ export async function Footer() {
             Data
           </h4>
           <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-xs">
-            Readings sourced from the{" "}
+            Readings from the{" "}
             <a
               className="underline decoration-slate-400/40 hover:text-slate-700 dark:hover:text-slate-200"
               href="https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0"
@@ -110,12 +110,11 @@ export async function Footer() {
               rel="noreferrer"
             >
               Sri Lanka Department of Irrigation
-            </a>{" "}
-            ArcGIS feature service.
+            </a>
+            .
           </p>
           <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-xs">
-            Not an official flood-warning service — use for situational
-            awareness only.
+            Not an official warning service. In an emergency, call 117.
           </p>
         </div>
       </div>
@@ -123,9 +122,6 @@ export async function Footer() {
       <div className="border-t border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <p>© {year} Sri Lanka Water Levels. Built in Sri Lanka.</p>
-          <p className="tabular-nums">
-            Auto-refreshes every 60s · cached server-side
-          </p>
         </div>
       </div>
     </footer>

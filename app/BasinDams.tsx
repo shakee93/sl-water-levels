@@ -103,13 +103,6 @@ export async function BasinDams({ basin }: { basin: string }) {
           );
         })}
       </ul>
-
-      <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-        Static catalogue hand-curated from Mahaweli Authority and CEB sources.
-        {anyLiveMW
-          ? " Live MW values come from the PUCSL GenData API (15-min cadence)."
-          : " Live MW values are sourced from the PUCSL GenData API but the endpoint currently returns empty values across all plants — the table is a published stub. Real release data should appear here automatically when CEB starts populating it."}
-      </p>
     </section>
   );
 }
