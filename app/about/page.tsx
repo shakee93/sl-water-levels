@@ -18,6 +18,12 @@ export const metadata: Metadata = {
     url: `${SITE}/about`,
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "About — Sri Lanka Water Levels",
+    description:
+      "Where the river-gauge data comes from, what the flood thresholds mean, and how the next-hour forecast works.",
+  },
 };
 
 export default function AboutPage() {

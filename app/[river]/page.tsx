@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowRight } from "lucide-react";
-import { fetchStations, type Station } from "@/lib/arcgis";
+import { AlertTriangle, ArrowRight } from "lucide-react";
+import { fetchBasinSnapshot, fetchStations, type Station, type Tier } from "@/lib/arcgis";
+import { stationDisplayName } from "@/lib/displayName";
 import { orderStations } from "@/lib/basinOrder";
 import { basinSlug, resolveBasin, stationPath } from "@/lib/slug";
 import { BasinFlow } from "../BasinFlow";
@@ -12,6 +13,37 @@ import { BasinDams } from "../BasinDams";
 export const revalidate = 300;
 
 const SITE = "https://sl-water-levels.vercel.app";
+
+const TIER_RANK: Record<Tier, number> = {
+  major: 6, minor: 5, alert: 4, watch: 3, normal: 2, none: 1, stale: 0,
+};
+const TIER_PHRASE: Record<Tier, string> = {
+  major: "major flood level",
+  minor: "minor flood level",
+  alert: "alert level",
+  watch: "approaching alert level",
+  normal: "normal",
+  none: "no flood levels published",
+  stale: "no recent readings",
+};
+
+/** Worst current tier across a basin's gauges, as a short phrase; null if unknown. */
+async function worstStatus(basin: string): Promise<string | null> {
+  try {
+    const snap = await fetchBasinSnapshot(basin);
+    if (!snap.length) return null;
+    const worst = snap.reduce((a, b) => (TIER_RANK[b.tier] > TIER_RANK[a.tier] ? b : a));
+    return TIER_PHRASE[worst.tier];
+  } catch {
+    return null;
+  }
+}
+
+function joinNames(names: string[]): string {
+  if (names.length <= 1) return names.join("");
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
 
 export async function generateStaticParams() {
   let stations: Station[] = [];
@@ -44,23 +76,31 @@ export async function generateMetadata({
   const basin = resolveBasin(stations, river);
   if (!basin) return {};
 
-  const onBasin = stations.filter((s) => s.basin === basin);
-  const title = `${basin} water levels`;
-  const description = `Live water-level readings for every river gauge on the ${basin} basin in Sri Lanka — ${onBasin.length} stations from upstream to downstream, with alert and flood thresholds, next-hour forecast, and connected dams.`;
+  const onBasin = orderStations(
+    basin,
+    stations.filter((s) => s.basin === basin),
+  );
+  const names = onBasin.map((s) => stationDisplayName(s.station));
+  const worst = await worstStatus(basin);
+  const title = `${basin} Water Level Today – Live Gauges & Flood Alerts`;
+  const description = `${basin} water level today: ${joinNames(names)} gauges, upstream to downstream.${
+    worst ? ` Now: ${worst}.` : ""
+  } Flood thresholds and forecast, updated hourly.`;
 
   return {
-    title,
+    // absolute: the layout template would push this past ~60 characters.
+    title: { absolute: title },
     description,
     alternates: { canonical: `/${river}` },
     openGraph: {
-      title: `${basin} — Sri Lanka Water Levels`,
+      title,
       description,
       url: `${SITE}/${river}`,
       type: "website",
     },
     twitter: {
-      card: "summary",
-      title: `${basin} — Sri Lanka Water Levels`,
+      card: "summary_large_image",
+      title,
       description,
     },
   };
@@ -74,10 +114,36 @@ export default async function BasinPage({
   const { river } = await params;
 
   let stations: Station[] = [];
+  let outage = false;
   try {
     stations = await fetchStations();
   } catch {
-    notFound();
+    outage = true;
+  }
+
+  if (outage) {
+    // Don't 404 on an upstream outage: the URL is valid, the data is not.
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+          <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            <Link href="/" className="hover:underline">
+              All basins
+            </Link>
+          </nav>
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-900 dark:text-amber-200"
+          >
+            <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+            <p>
+              The Department of Irrigation gauge feed is not responding right now, so live
+              readings for this river cannot be shown. Please try again in a few minutes.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   const basin = resolveBasin(stations, river);
@@ -87,6 +153,7 @@ export default async function BasinPage({
     basin,
     stations.filter((s) => s.basin === basin),
   );
+  const names = onBasin.map((s) => stationDisplayName(s.station));
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
@@ -117,8 +184,21 @@ export default async function BasinPage({
               itemListElement: onBasin.map((s, i) => ({
                 "@type": "ListItem",
                 position: i + 1,
-                name: s.station,
+                name: stationDisplayName(s.station),
                 url: `${SITE}${stationPath(s.basin, s.station)}`,
+                ...(Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
+                  ? {
+                      item: {
+                        "@type": "Place",
+                        name: `${stationDisplayName(s.station)} river gauge`,
+                        geo: {
+                          "@type": "GeoCoordinates",
+                          latitude: s.latitude,
+                          longitude: s.longitude,
+                        },
+                      },
+                    }
+                  : {}),
               })),
             }),
           }}
@@ -140,7 +220,7 @@ export default async function BasinPage({
             {basin}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 max-w-prose">
-            {onBasin.length} river gauges on the {basin} basin, ordered upstream → downstream.
+            {onBasin.length} river gauges on the {basin} basin, upstream → downstream: {joinNames(names)}.
             Tap a station for live readings, thresholds, and a next-hour forecast.
           </p>
         </header>
@@ -157,7 +237,7 @@ export default async function BasinPage({
                   className="group flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 hover:border-sky-400 dark:hover:border-sky-700 transition"
                 >
                   <span className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                    {s.station}
+                    {stationDisplayName(s.station)}
                   </span>
                   <ArrowRight className="size-3.5 text-slate-400 group-hover:text-sky-500 transition" />
                 </Link>
