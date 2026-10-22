@@ -77,6 +77,14 @@ export async function Footer() {
               </Link>
             </li>
             <li>
+              <Link
+                href="/help"
+                className="text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+              >
+                Flood help
+              </Link>
+            </li>
+            <li>
               <a
                 href="https://github.com/shakee93/sl-water-levels"
                 target="_blank"
