@@ -113,6 +113,14 @@ lib/
   secret (open, every 6 h, recovered; also on scheduled-workflow failures). When a source
   changes shape, expect an issue titled "Data source down: ..."; see DOCS.md "Monitoring".
 
+- **CUrW Colombo canal gauges** (pub.curwsl.org/dyn/*.png, 7 chart pages, 33 gauges, m MSL, 15-min):
+  PRIVATE calibration archive, NEVER shown on the site or committed to the (public) repo/`data` branch until
+  CUrW gives permission. No JSON/CSV exists; `scripts/curw-snapshot.mjs` OCRs the chart titles (tesseract) and
+  digitises the plotted line, every 15 min via `.github/workflows/curw-snapshot.yml` (Cloudflare `*/15` cron),
+  into Cloudflare D1 tables `curw_levels` / `curw_status` / `curw_raw` (`d1/0002_curw.sql`). Only gauge counts
+  go to `data:curw/status.json` for the health check. Several gauges (Wellampitiya N, Gothatuwa DS, ...) are
+  offline at the source: that is not an alarm. Request volume: 7 requests per 15 min, User-Agent with the site URL and contact email.
+
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.
 

@@ -1,0 +1,131 @@
+# Private archive of Colombo canal water levels (CUrW public charts, pub.curwsl.org) for calibration.
+# Every 15 minutes: fetch the 7 chart PNGs, read the levels (tesseract OCR + digitising the plotted line, see
+# scripts/curw-snapshot.mjs), write them to the PRIVATE Cloudflare D1 database "sl-water-levels" (d1/0002_curw.sql).
+# The data is deliberately NOT committed to the `data` branch: this repository is public and CUrW has not yet
+# given permission to republish. Only COUNTS of working/offline gauges (no levels, no names) go to data:curw/status.json,
+# which the health check reads.
+# The Cloudflare scheduler (workers/scheduler, the */15 cron) starts this; the cron below is the backup, and a run
+# that follows a successful one within 10 minutes exits without fetching (at most one fetch per 15 min).
+
+name: CUrW snapshot
+
+on:
+  schedule:
+    - cron: "5,20,35,50 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Fetch even if the last successful run was under 10 minutes ago"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: curw-snapshot
+  cancel-in-progress: false
+
+jobs:
+  curw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      status: ${{ steps.read.outputs.status }}
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Skip if fetched recently
+        id: gap
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow curw-snapshot.yml --status success --limit 1 --json createdAt --jq '.[0].createdAt // ""')
+          if [ "$FORCE" != "true" ] && [ -n "$last" ] && [ $(( $(date +%s) - $(date -d "$last" +%s) )) -lt 600 ]; then
+            echo "Last successful run at $last, under 10 minutes ago: skipping."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gap.outputs.go == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.gap.outputs.go == 'true'
+        with:
+          node-version: 22
+
+      - name: Install tesseract
+        if: steps.gap.outputs.go == 'true'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq tesseract-ocr
+
+      - name: Read the charts
+        id: read
+        if: steps.gap.outputs.go == 'true'
+        run: |
+          rc=0
+          node scripts/curw-snapshot.mjs curw.sql --status status.json || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          [ -f status.json ] && echo "status=$(tr -d '\n' < status.json)" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      # Write whatever was read even when the source looked unhealthy (some pages may have worked).
+      - name: Write to D1 (private)
+        if: steps.gap.outputs.go == 'true' && hashFiles('curw.sql') != ''
+        run: npx -y wrangler@4 d1 execute sl-water-levels --remote --yes --file=curw.sql
+
+      # Source problems (nothing readable, a page missing, readings older than 2 h) fail the run so the health
+      # check shows it; offline gauges alone never do.
+      - name: Fail if the source looked unhealthy
+        if: steps.gap.outputs.go == 'true' && steps.read.outputs.rc != '0'
+        run: |
+          echo "::error::curw-snapshot.mjs exited with ${{ steps.read.outputs.rc }} (see the 'Read the charts' step)"
+          exit 1
+
+  status:
+    # Publishes only how many gauges work / are offline (no levels, no names) when that changes.
+    needs: curw
+    if: needs.curw.outputs.status != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: snapshot
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth=1 origin data
+            git worktree add archive FETCH_HEAD
+            git -C archive checkout -B data
+          else
+            git worktree add --orphan -b data archive
+          fi
+
+      - name: Update curw/status.json
+        env:
+          STATUS: ${{ needs.curw.outputs.status }}
+        run: |
+          mkdir -p archive/curw
+          echo "$STATUS" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log(JSON.stringify(j,null,1))})' > archive/curw/status.json
+
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change."
+            exit 0
+          fi
+          git commit -m "CUrW gauge status $(TZ=Asia/Colombo date '+%F %H:%M')"
+          git pull --rebase origin data || true
+          git push origin data

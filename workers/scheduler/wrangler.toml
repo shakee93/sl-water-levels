@@ -11,7 +11,7 @@ compatibility_date = "2026-10-01"
 [triggers]
 # All times UTC. Colombo = UTC+05:30.
 crons = [
-  "*/15 * * * *",  # release snapshots (every 15 min by day, hourly at night: filtered in code)
+  "*/15 * * * *",  # release snapshots (every 15 min by day, hourly at night: filtered in code) + CUrW canal levels (every 15 min, all day)
   "25 * * * *",    # forecast store, hourly
   "7,37 * * * *",  # health check + GSMaP satellite rain (JAXA posts at :01/:31), every 30 min
   "30 7,19 * * *", # gauge snapshot, 13:00 and 01:00 Colombo

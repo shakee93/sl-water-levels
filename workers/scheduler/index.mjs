@@ -3,7 +3,7 @@
 // fine-grained token with "Actions: Read and write" on this repo only.
 
 const BY_CRON = {
-  "*/15 * * * *": ["releases-snapshot.yml"],
+  "*/15 * * * *": ["releases-snapshot.yml", "curw-snapshot.yml"], // curw: private CUrW canal-level archive, all day (no night filter)
   "25 * * * *": ["store-forecasts.yml"],
   "7,37 * * * *": ["health-check.yml", "gsmap-snapshot.yml"], // JAXA publishes at :01/:31
   "30 7,19 * * *": ["snapshot.yml"],

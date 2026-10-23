@@ -469,6 +469,26 @@ async function checkGsmap(deep: boolean): Promise<HealthCheck> {
   });
 }
 
+// Colombo canal gauges (CUrW public charts), archived privately for calibration by curw-snapshot.yml. The
+// data is never shown on the site (CUrW has not given permission), so this reports only counts. A gauge that
+// is offline at the source is normal (several have been for weeks) and never fails the check; only a
+// pipeline that stopped, or charts we can no longer read, do. Counts come from curw/status.json on the data
+// branch (written when they change).
+async function checkCurwGauges(deep: boolean): Promise<HealthCheck> {
+  return run("pipe-curw-gauges", "Colombo canal gauges at the source", "Nothing visible; the private canal-level archive used for calibration has gaps.", async () => {
+    const res = await fetch(`https://raw.githubusercontent.com/${REPO}/data/curw/status.json`, fetchOpts(deep, 300));
+    if (res.status === 404) return { ok: true, detail: "not set up yet (no curw/status.json on the data branch)" };
+    if (!res.ok) return unchecked(`raw.githubusercontent.com HTTP ${res.status}`);
+    const j = (await res.json()) as { total?: number; ok?: number; offline?: number; unreadable?: number };
+    if (typeof j.total !== "number" || typeof j.ok !== "number") return { ok: false, detail: "curw/status.json has no gauge counts" };
+    const offline = j.offline ?? 0, unreadable = j.unreadable ?? 0;
+    const base = `${j.ok} of ${j.total} gauges reporting${offline ? `, ${offline} offline at the source (not an alarm)` : ""}`;
+    if (unreadable > 0) return { ok: false, detail: `${base}; ${unreadable} chart${unreadable === 1 ? "" : "s"} could not be read (the chart layout may have changed)` };
+    if (j.ok === 0) return { ok: false, detail: `${base}; no gauge is reporting` };
+    return { ok: true, detail: base };
+  });
+}
+
 // Vercel reports each production deploy as a GitHub commit status on main. A failed build
 // leaves the previous deploy live, so users see stale pages and fixes silently don't ship
 // (twice on 23 Oct 2026, ETIMEDOUT while prerendering). Flag failures and long-stuck builds.
@@ -494,6 +514,8 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
     checkDeploy(),
     checkGaugeArchive(),
     checkGsmap(deep),
+    checkCurwGauges(deep),
+    checkWorkflow("pipe-curw", "Colombo canal gauge archive (private)", "curw-snapshot.yml", "Nothing visible; the private canal-level archive used for calibration has gaps (each run re-reads the last 24 h, so short gaps heal).", () => 3 * HOUR),
     checkWorkflow("pipe-releases", "Release snapshots (data branch)", "releases-snapshot.yml", "Nothing visible right away; release history and arrival-time learning stop.", (now) => {
       const h = colomboHour(now);
       return (h >= 6 && h < 23 ? 2 : 3) * HOUR; // runs every 15 min by day, hourly overnight
