@@ -1,3 +1,4 @@
+import { releaseAffecting } from "@/lib/releases";
 import { TimeAgo } from "./TimeAgo";
 import { ClampedText } from "./ClampedText";
 import { CloudRain, TriangleAlert } from "lucide-react";
@@ -110,9 +111,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const latest = me?.latest ?? null;
   const status = statusFor(latest?.water_level ?? null, me?.thresholds ?? { alert: null, minor: null, major: null }, latest?.ts);
   const realTier = status.tier;
-  const [advisory, warnings] = await Promise.all([
+  const [advisory, warnings, release] = await Promise.all([
     getAdvisory({ station: selectedStation, river: basin.trim(), district, tier: realTier, forecast: f }),
     warningsP.then((w) => warningsForBasin(w, basin)),
+    releaseAffecting(selectedStation).catch(() => ({ active: false, confirmed: false }) as const),
   ]);
 
   const stale = realTier === "stale";
@@ -142,7 +144,19 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
     : r == null
       ? null
       : directionFor(r);
-  const tone = stale ? "stale" : upgrade(realTier, target, likely, r != null && r > STEADY_M_PER_H);
+  const rising = r != null && r > STEADY_M_PER_H;
+  // A confirmed reservoir release upstream counts as an expected crossing only when
+  // the gauge is already close to alert (within 1 m, or 20% of the alert level) and
+  // rising: a release far below alert, or on a falling river, stays informational
+  // (the release card above the verdict still shows it).
+  const alertLvl = me?.thresholds.alert ?? null;
+  const lvlNow = latest?.water_level ?? null;
+  const gapM = alertLvl != null && lvlNow != null ? (alertLvl - lvlNow) * mpu : null;
+  const nearAlert = gapM != null && gapM > 0 && (gapM <= 1 || gapM <= alertLvl! * mpu * 0.2);
+  const releaseLift = !stale && rising && nearAlert && release.active && release.confirmed;
+  const tone = stale
+    ? "stale"
+    : upgrade(realTier, releaseLift ? Math.max(target, ORDER.indexOf("alert")) : target, likely || releaseLift, rising);
 
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const dc = elevated ? contactsForDistrict(district) : null;
