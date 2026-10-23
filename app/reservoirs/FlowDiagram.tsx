@@ -1,9 +1,11 @@
-// "Where the water goes" for one reservoir: a vertical flow diagram. The reservoir at the top, the
-// river gauges below it in the order the water reaches them (arrival time on each leg), the towns
-// along the way and, when the last gauge is the river's last, the sea. While water is being
-// released the path shows moving dashes. Plain SVG, no JavaScript; every gauge is a real link.
-// Height follows the content. The width is fixed (360) so labels keep their size on a phone.
+// "Where the water goes" for one reservoir: a horizontal flow strip that runs the SAME way as the map
+// above it. Reading order for screen readers is reservoir -> gauges -> sea (an ordered list); on screen
+// the strip is mirrored (flex-row-reverse) when the water flows west on the map, so the sea sits on the
+// left exactly as it does there. The arrival time sits on the connector between two cards; while water
+// is being released the connectors carry moving dashes. No JavaScript; every gauge is a real link.
+// On a phone the strip scrolls sideways (snap, faded edges), never down, so the direction never changes.
 import Link from "next/link";
+import { Clock, Waves } from "lucide-react";
 import type { RV, Status } from "@/lib/reservoirData";
 import type { NationalStation } from "@/lib/arcgis";
 import type { RT } from "@/lib/i18n/reservoirs";
@@ -16,126 +18,104 @@ import { tierLabel, TIER_HEX } from "@/app/tierUi";
 import { fmt } from "./bits";
 import { localName } from "./RvCard";
 
-const W = 360;
-const TX = 30; // trunk x
-const CX = 58; // card x
-const CW = W - CX - 4;
-
 const STATUS_HEX: Record<Status, string> = { spilling: "#f59e0b", releasing: "#0ea5e9", holding: "#10b981", nodata: "#cbd5e1" };
 
-const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
-const halo = "stroke-white dark:stroke-slate-900 [paint-order:stroke]";
+const CARD = "relative flex min-h-[84px] w-[152px] shrink-0 snap-center flex-col justify-center gap-0.5 rounded-xl border-[1.5px] bg-slate-50 dark:bg-slate-800/60 px-3 py-2 sm:w-auto sm:min-w-[144px] sm:flex-1";
 
-type Row =
-  | { k: "res" }
-  | { k: "gauge"; g: RV["gauges"][number]; s: NationalStation | null }
-  | { k: "town"; name: string }
-  | { k: "sea" };
+/** The line between two cards. The dashes move from the card on the reservoir side towards the sea. */
+function Connector({ children, flowing, west }: { children?: React.ReactNode; flowing: boolean; west: boolean }) {
+  return (
+    <div className="flex min-w-[76px] shrink-0 flex-col items-center justify-center gap-1 px-1 sm:min-w-[84px] sm:flex-[0.7] sm:shrink" aria-hidden={children ? undefined : true}>
+      {children}
+      <div className={`flex w-full items-center ${west ? "-scale-x-100" : ""}`} aria-hidden>
+        <svg className="h-2 w-0 min-w-0 flex-1 overflow-visible" height="8">
+          <line x1="0" y1="4" x2="100%" y2="4" strokeWidth="6" strokeLinecap="round" className="stroke-sky-200 dark:stroke-sky-900" />
+          {flowing ? (
+            <line x1="0" y1="4" x2="100%" y2="4" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="1 10" className="rm-flow stroke-amber-500 dark:stroke-amber-400" />
+          ) : (
+            <line x1="0" y1="4" x2="100%" y2="4" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 6" className="stroke-slate-400 dark:stroke-slate-500" />
+          )}
+        </svg>
+        <svg width="9" height="12" viewBox="0 0 9 12" className="shrink-0 -ml-1"><path d="M1 1 L8 6 L1 11" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-500 dark:stroke-sky-400" /></svg>
+      </div>
+    </div>
+  );
+}
 
-export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea }: { rv: RV; byStation: Map<string, NationalStation>; lang: Locale; t: TFn; rt: RT; p: (x: string) => string; sea: boolean }) {
+export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea, flowsWest }: { rv: RV; byStation: Map<string, NationalStation>; lang: Locale; t: TFn; rt: RT; p: (x: string) => string; sea: boolean; flowsWest: boolean }) {
   const releasing = (rv.status === "spilling" || rv.status === "releasing") && !!rv.flow && rv.flow.kind !== "outlets";
   const gauges = [...rv.gauges].sort((a, b) => (a.eta ? a.eta[0] : 1e9) - (b.eta ? b.eta[0] : 1e9));
-  const rows: Row[] = [{ k: "res" }];
   const seenTown = new Set<string>();
-  for (const g of gauges) {
-    rows.push({ k: "gauge", g, s: byStation.get(g.station) ?? null });
-    const st = stationDisplayName(g.station);
-    if (g.town && g.town !== st && !seenTown.has(g.town)) {
-      seenTown.add(g.town);
-      rows.push({ k: "town", name: g.town });
-    }
-  }
-  if (sea) rows.push({ k: "sea" });
+  const flowTxt = releasing ? t("release.cusecs", { n: fmt(rv.flow!.cusecs) }) : null;
 
-  // y of each row's centre
-  const H: Record<Row["k"], number> = { res: 64, gauge: 56, town: 30, sea: 30 };
-  const gapAfter = (prev: Row, next: Row) => (next.k === "gauge" ? 50 : next.k === "town" ? 16 : 22) + (prev.k === "res" ? 0 : 0);
-  let y = 8;
-  const pos: { row: Row; y0: number; cy: number }[] = [];
-  rows.forEach((row, i) => {
-    if (i > 0) y += gapAfter(rows[i - 1], row);
-    pos.push({ row, y0: y, cy: y + H[row.k] / 2 });
-    y += H[row.k];
-  });
-  const height = y + 8;
-  const trunk = `M${TX} ${pos[0].cy} V${pos[pos.length - 1].cy}`;
-  const latin = lang === "en";
-  const cw = latin ? 7 : 7.6;
-
-  const flowCls = "rm-flow stroke-amber-500 dark:stroke-amber-400";
+  const dir = flowsWest ? "flex-row-reverse" : "flex-row";
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} className="mx-auto block w-full max-w-[460px] h-auto" role="group" aria-label={rt("down.listLabel")} style={{ fontSize: 14 }}>
-      {/* the river path */}
-      <path d={trunk} fill="none" strokeWidth="6" strokeLinecap="round" className="stroke-sky-200 dark:stroke-sky-900" aria-hidden />
-      {releasing ? (
-        <path d={trunk} fill="none" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="1 10" className={flowCls} aria-hidden />
-      ) : (
-        <path d={trunk} fill="none" strokeWidth="1.5" strokeDasharray="2 6" strokeLinecap="round" className="stroke-slate-400 dark:stroke-slate-500" aria-hidden />
-      )}
+    <div className="relative">
+      <ol
+        aria-label={rt("down.listLabel")}
+        className={`flex items-stretch overflow-x-auto snap-x snap-proximity pb-1 [scrollbar-width:thin] max-sm:[mask-image:linear-gradient(to_right,transparent,#000_14px,#000_calc(100%-14px),transparent)] sm:overflow-visible ${flowsWest ? "flex-row-reverse" : "flex-row"}`}
+      >
+        <li className="flex max-sm:shrink-0 items-stretch sm:flex-1">
+          <div className={`${CARD} border-sky-600 dark:border-sky-400`}>
+            <div className="flex items-center gap-1.5">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full" style={{ background: STATUS_HEX[rv.status] }} aria-hidden><Waves className="size-3.5 text-white" /></span>
+              <span className="min-w-0 break-words text-[14.5px] font-semibold leading-tight text-slate-900 dark:text-slate-100">{localName(rv, lang)}</span>
+            </div>
+            <span className="text-[13px] leading-tight text-slate-600 dark:text-slate-300">{rt(`s.${rv.status}` as "s.spilling")}</span>
+            {flowTxt && <span className="text-[13px] font-medium leading-tight tabular-nums text-slate-700 dark:text-slate-200">{flowTxt}</span>}
+          </div>
+        </li>
 
-      {pos.map(({ row, y0, cy }, i) => {
-        if (row.k === "res") {
-          const flowTxt = releasing ? `${rt(`s.${rv.status}` as "s.spilling")} · ${t("release.cusecs", { n: fmt(rv.flow!.cusecs) })}` : rt(`s.${rv.status}` as "s.spilling");
-          return (
-            <g key="res">
-              <rect x={CX} y={y0} width={CW} height={H.res} rx="12" strokeWidth="2" className="fill-slate-50 dark:fill-slate-800/60 stroke-sky-600 dark:stroke-sky-400" />
-              <circle cx={TX} cy={cy} r="17" fill={STATUS_HEX[rv.status]} className="stroke-white dark:stroke-slate-900" strokeWidth="3" />
-              <path d={`M${TX - 8} ${cy + 1} q4 -4 8 0 t8 0 M${TX - 8} ${cy + 6} q4 -4 8 0 t8 0`} fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
-              <text x={CX + 14} y={cy - 5} fontSize="16" fontWeight="600" className="fill-slate-900 dark:fill-slate-100">{clip(localName(rv, lang), 28)}</text>
-              <text x={CX + 14} y={cy + 15} fontSize="13.5" className="fill-slate-600 dark:fill-slate-300">{clip(flowTxt, 38)}</text>
-            </g>
-          );
-        }
-        // the leg arriving at this row
-        const prev = pos[i - 1];
-        const leg = (() => {
-          if (row.k !== "gauge") return null;
-          const text = row.g.eta ? `${rt("down.arrives")} ${t("release.eta", { a: row.g.eta[0], b: row.g.eta[1] })}` : row.g.indirect ? rt("down.far") : rt("down.etaUnknown");
-          const w = Math.min(CW, text.length * cw * 0.95 + 38);
-          const my = (prev.y0 + H[prev.row.k] + y0) / 2;
-          return (
-            <g key={`leg-${i}`}>
-              <rect x={CX} y={my - 12} width={w} height="24" rx="12" className={row.g.eta ? "fill-sky-50 dark:fill-sky-950 stroke-sky-300 dark:stroke-sky-800" : "fill-white dark:fill-slate-900 stroke-slate-300 dark:stroke-slate-600"} strokeWidth="1.2" strokeDasharray={row.g.eta ? undefined : "3 3"} />
-              <circle cx={CX + 13} cy={my} r="6" fill="none" strokeWidth="1.5" className="stroke-slate-500 dark:stroke-slate-400" />
-              <path d={`M${CX + 13} ${my - 3} V${my} H${CX + 16}`} fill="none" strokeWidth="1.5" strokeLinecap="round" className="stroke-slate-500 dark:stroke-slate-400" />
-              <text x={CX + 26} y={my + 4.5} fontSize="13" fontWeight="500" className="fill-slate-700 dark:fill-slate-200">{text}</text>
-            </g>
-          );
-        })();
-
-        if (row.k === "gauge") {
-          const name = stationDisplayName(row.g.station);
-          const s = row.s;
+        {gauges.map((g) => {
+          const s = byStation.get(g.station) ?? null;
+          const name = stationDisplayName(g.station);
           const tier = s?.tier ?? "none";
           const lvl = s && s.latest?.water_level != null && s.tier !== "stale" ? formatLevel(s.latest.water_level, s.unit) : null;
-          const sub = s ? [tierLabel(t, s.tier), lvl].filter(Boolean).join(" · ") : rt("down.noReading");
+          const status = s ? tierLabel(t, s.tier) : rt("down.noReading");
+          const town = g.town && g.town !== name && !seenTown.has(g.town) ? g.town : null;
+          if (town) seenTown.add(town);
+          const eta = g.eta ? t("release.eta", { a: g.eta[0], b: g.eta[1] }) : null;
+          const etaFull = eta ? `${rt("down.arrives")} ${eta}` : g.indirect ? rt("down.far") : rt("down.etaUnknown");
           return (
-            <g key={`g-${i}`}>
-              {leg}
-              <Link href={p(stationPath(row.g.basin, row.g.station))} aria-label={`${name}, ${sub}`} className="outline-none group cursor-pointer">
-                <rect x={CX} y={y0} width={CW} height={H.gauge} rx="12" strokeWidth="1.5" className="fill-slate-50 dark:fill-slate-800/60 stroke-slate-200 dark:stroke-slate-700 group-hover:stroke-sky-400 group-focus-visible:stroke-sky-600 group-focus-visible:[stroke-width:2.5]" />
-                <circle cx={TX} cy={cy} r="11" fill={TIER_HEX[tier]} className="stroke-white dark:stroke-slate-900" strokeWidth="3" />
-                <text x={CX + 14} y={cy - 4} fontSize="15.5" fontWeight="600" className="fill-slate-900 dark:fill-slate-100">{clip(name, 28)}</text>
-                <text x={CX + 14} y={cy + 14} fontSize="13.5" className="fill-slate-600 dark:fill-slate-300">{clip(sub, 38)}</text>
+            <li key={g.station} className={`flex max-sm:shrink-0 items-stretch sm:flex-[1.6] ${dir}`}>
+              <Connector flowing={releasing} west={flowsWest}>
+                <span
+                  title={etaFull}
+                  className={`inline-flex max-w-[92px] items-center justify-center gap-1 rounded-full border px-2 py-0.5 text-center text-[12px] font-medium leading-tight sm:max-w-[150px] ${eta ? "border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950 text-slate-700 dark:text-slate-200" : "border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300"}`}
+                >
+                  {eta ? <Clock className="size-3 shrink-0" aria-hidden /> : null}
+                  <span className={eta ? "tabular-nums" : "text-[11px]"}>{eta ?? (g.indirect ? rt("down.far") : rt("down.etaUnknown"))}</span>
+                  {eta && <span className="sr-only">{rt("down.arrives")}</span>}
+                </span>
+              </Connector>
+              <Link
+                href={p(stationPath(g.basin, g.station))}
+                aria-label={`${name}, ${status}${lvl ? ` ${lvl}` : ""}${town ? `, ${town}` : ""}`}
+                className={`${CARD} sm:w-auto border-slate-200 dark:border-slate-700 outline-none hover:border-sky-400 focus-visible:border-sky-600 focus-visible:ring-2 focus-visible:ring-sky-500`}
+               
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="size-3.5 shrink-0 rounded-full border-2 border-white dark:border-slate-900 shadow-[0_0_0_1px_rgba(100,116,139,.35)]" style={{ background: TIER_HEX[tier] }} aria-hidden />
+                  <span className="min-w-0 break-words text-[14.5px] font-semibold leading-tight text-slate-900 dark:text-slate-100">{name}</span>
+                </span>
+                <span className="text-[13px] leading-tight text-slate-600 dark:text-slate-300">{status}</span>
+                {lvl && <span className="text-[14px] font-semibold leading-tight tabular-nums text-slate-800 dark:text-slate-100">{lvl}</span>}
+                {town && <span className="mt-0.5 text-[12px] leading-tight text-slate-500 dark:text-slate-400">{town}</span>}
               </Link>
-            </g>
+            </li>
           );
-        }
-        if (row.k === "town") {
-          return (
-            <g key={`t-${i}`} aria-hidden={false}>
-              <circle cx={TX} cy={cy} r="6" strokeWidth="2.2" className="fill-white dark:fill-slate-900 stroke-slate-500 dark:stroke-slate-400" />
-              <text x={CX + 2} y={cy + 5} fontSize="14.5" fontWeight="500" strokeWidth="3" className={`fill-slate-700 dark:fill-slate-200 ${halo}`}>{clip(row.name, 34)}</text>
-            </g>
-          );
-        }
-        return (
-          <g key="sea">
-            <path d={`M${TX - 9} ${cy - 2} q4.5 -5 9 0 t9 0 M${TX - 9} ${cy + 5} q4.5 -5 9 0 t9 0`} fill="none" strokeWidth="2" strokeLinecap="round" className="stroke-sky-600 dark:stroke-sky-400" />
-            <text x={CX + 2} y={cy + 5} fontSize="14.5" fontStyle="italic" fontWeight="500" className="fill-sky-800 dark:fill-sky-300">{rt("down.sea")}</text>
-          </g>
-        );
-      })}
-    </svg>
+        })}
+
+        {sea && (
+          <li className={`flex max-sm:shrink-0 items-stretch sm:flex-none ${dir}`}>
+            <Connector flowing={releasing} west={flowsWest} />
+            <div className="flex min-h-[84px] w-[84px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-[1.5px] border-sky-200 bg-sky-50 px-2 dark:border-sky-800 dark:bg-sky-950/60 sm:w-[110px]">
+              <Waves className="size-6 text-sky-600 dark:text-sky-400" aria-hidden />
+              <span className="text-[14px] font-medium italic text-sky-800 dark:text-sky-300">{rt("down.sea")}</span>
+            </div>
+          </li>
+        )}
+      </ol>
+    </div>
   );
 }

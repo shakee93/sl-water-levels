@@ -25,6 +25,7 @@ import { BasinWarning } from "@/app/reservoirs/BasinWarning";
 import { displayName, localName } from "@/app/reservoirs/RvCard";
 import { Suspense } from "react";
 import { RiverMap } from "@/app/RiverMap";
+import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
 
 export const revalidate = 600;
 
@@ -202,6 +203,13 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const shape = ourBasin ? shapeFor(ourBasin, orderStations(ourBasin, sameRiverGauges).map((x) => x.station)) : null;
   const mainGauges = shape ? shape.main.filter((x) => !x.startsWith("@")) : [];
   const sea = !!(shape?.sea && lastGauge && lastGauge.station === mainGauges[mainGauges.length - 1] && lastGauge.basin.trim() === ourBasin);
+
+  // The map is a plain lon -> x projection, so "which way does the strip run" is: is the water's end point west of the reservoir?
+  // Rivers wander, so use the end point that lies furthest east or west of the reservoir as the dominant direction.
+  const startLon = RESERVOIR_COORDS[rv.slug]?.lon;
+  const downLons = [...(sea && shape?.sea ? [shape.sea.lon] : []), ...flowGauges.map((g) => byStation.get(g.station)?.longitude)].filter((x): x is number => x != null);
+  const farLon = downLons.reduce<number | null>((m, x) => (startLon != null && (m == null || Math.abs(x - startLon) > Math.abs(m - startLon)) ? x : m), null);
+  const flowsWest = !!ourBasin && startLon != null && farLon != null && farLon < startLon;
 
   const sizeWord = size ? t(`release.size.${size}`) : null;
 
@@ -408,7 +416,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
           {rv.gauges.length === 0 ? (
             <p className={`text-sm ${muted}`}>{rt("down.none")}</p>
           ) : (
-            <FlowDiagram rv={{ ...rv, gauges: flowGauges }} byStation={byStation} lang={lang} t={t} rt={rt} p={p} sea={sea} />
+            <FlowDiagram rv={{ ...rv, gauges: flowGauges }} byStation={byStation} lang={lang} t={t} rt={rt} p={p} sea={sea} flowsWest={flowsWest} />
           )}
           {ourBasin && (
             <p className="mt-3 text-sm">

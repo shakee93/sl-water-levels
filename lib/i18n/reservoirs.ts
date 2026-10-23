@@ -134,7 +134,7 @@ const en = {
   "tank.spill": "Water is flowing over the spillway",
   "down.sea": "Sea",
   "down.arrives": "Water arrives",
-  "down.listLabel": "Path of the water, upstream to downstream",
+  "down.listLabel": "Path of the water, from the reservoir towards the sea",
   "stat.noRain": "No data",
 };
 export type RKey = keyof typeof en;
@@ -271,7 +271,7 @@ const si: RDict = {
   "tank.spill": "වාන් දොරටුව උඩින් ජලය ගලා යයි",
   "down.sea": "මුහුද",
   "down.arrives": "ජලය ළඟා වේ",
-  "down.listLabel": "ජලය ගමන් කරන මාර්ගය, ඉහළ සිට පහළට",
+  "down.listLabel": "ජලය ගමන් කරන මාර්ගය, ජලාශයේ සිට මුහුද දෙසට",
   "stat.noRain": "දත්ත නැත",
 };
 
@@ -406,7 +406,7 @@ const ta: RDict = {
   "tank.spill": "வான் கதவின் மேல் நீர் பாய்கிறது",
   "down.sea": "கடல்",
   "down.arrives": "நீர் வந்தடையும்",
-  "down.listLabel": "நீர் செல்லும் பாதை, மேலிருந்து கீழாக",
+  "down.listLabel": "நீர் செல்லும் பாதை, நீர்த்தேக்கத்திலிருந்து கடல் நோக்கி",
   "stat.noRain": "தரவு இல்லை",
 };
 
