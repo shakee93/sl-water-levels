@@ -15,7 +15,7 @@ export const DATA_BRANCH = `${REPO}/tree/data`;
 export const CONTENT_UPDATED = "2026-10-24";
 
 /** Flip to true when /research is live; the About page then links to it. */
-export const RESEARCH_PAGE_LIVE = false;
+export const RESEARCH_PAGE_LIVE = true;
 
 /** IndexNow key (the file public/<key>.txt must contain exactly this string). Not a secret by design. */
 export const INDEXNOW_KEY = "e003239ac7a5178cc4f97e46e533c488";

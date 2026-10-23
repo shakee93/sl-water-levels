@@ -4,6 +4,7 @@ import { getHistory, historyPath } from "@/lib/history";
 import { getReservoirs } from "@/lib/reservoirData";
 import { PLACES } from "@/lib/places";
 import { CONTENT_UPDATED } from "@/lib/seo";
+import { WF_MODIFIED, WF_PATH } from "@/lib/research";
 import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
 const SITE = "https://sl-water-levels.vercel.app";
@@ -69,6 +70,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...PLACES.flatMap((x) => entry(`/flood/${x.slug}`, stations.find((s) => s.station === x.stations[0])?.latest?.ts)),
     ...entry("/help", contentDay),
     ...entry("/about", contentDay),
+    ...entry("/research", Date.parse(`${WF_MODIFIED}T00:00:00+05:30`)),
+    ...entry(WF_PATH, Date.parse(`${WF_MODIFIED}T00:00:00+05:30`)),
     // English only: the page is for developers and is not translated.
     { url: `${SITE}/data`, lastModified: new Date(contentDay) },
     ...entry("/history"),

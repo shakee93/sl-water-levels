@@ -12,6 +12,7 @@ import { riverName, clock } from "@/lib/i18n/format";
 import { formatLevel, type Unit } from "@/lib/units";
 import type { Thresholds } from "@/lib/readings";
 import { useMyLevel } from "./useMyLevel";
+import { StreetResearchLink } from "./StreetResearchLink";
 
 const t3 = (key: TKey, vars?: Record<string, string | number>): T3 => ({
   en: ttFor("en")(key, vars),
@@ -119,6 +120,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
                   : tt("details.streetNone")}
               </p>
               <p className="mt-1.5">{tt("details.streetHonest")}</p>
+              <StreetResearchLink />
             </div>
           )}
         </div>

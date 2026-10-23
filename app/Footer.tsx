@@ -11,6 +11,7 @@ import { ttFor } from "@/lib/i18n/town";
 
 // si/ta drafts: need native review.
 const MADE_BY: Record<Locale, string> = { en: "Made by", si: "නිර්මාණය කළේ", ta: "உருவாக்கியவர்" };
+const RESEARCH: Record<Locale, string> = { en: "Research", si: "පර්යේෂණ", ta: "ஆய்வுகள்" };
 
 export async function Footer({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
@@ -70,6 +71,7 @@ export async function Footer({ lang }: { lang: Locale }) {
               ["/history", t("footer.floodHistory")],
               ["/help", t("footer.floodHelp")],
               ["/about", t("footer.aboutMethod")],
+              ["/research", RESEARCH[lang]],
               ["/status", statusT(lang)("footer")],
             ].map(([href, label]) => (
               <li key={href}>
