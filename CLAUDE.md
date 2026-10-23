@@ -52,6 +52,7 @@ app/
   BasinFlow.tsx        Server: upstream->downstream strip + sparklines + wave-incoming
   BasinDams.tsx        Server: connected dams + PUCSL live-MW badges
   mcp/route.ts         /mcp MCP server (Streamable HTTP)
+  api/health/route.ts  Data-source health JSON (?deep=1 bypasses caches); /[lang]/status shows it
 
 lib/
   arcgis.ts            All HTTP to services3.arcgis.com. Typed. ISR-cached 60s.
@@ -105,6 +106,12 @@ lib/
   post-event analysis only: `lib/ceb.ts` drops points older than 3 h, so it is
   never shown as live and never a warning. Flat MW is not turbine release (Upper
   Kotmale stayed at 75 MW while its gates were opened).
+
+- **Data-source health**: `lib/health.ts` -> `/api/health` and the public `/status` page.
+  `.github/workflows/health-check.yml` (every 30 min) runs `scripts/health-alert.mjs`: one
+  `data-health` GitHub issue per check failing twice in a row, Slack via the `SLACK_WEBHOOK_URL`
+  secret (open, every 6 h, recovered; also on scheduled-workflow failures). When a source
+  changes shape, expect an issue titled "Data source down: ..."; see DOCS.md "Monitoring".
 
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.

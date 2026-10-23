@@ -328,3 +328,52 @@ English advisory and no official warnings.
   (the latter two machine-translated). Output is rejected if it contains a number not in the fact sheet, lacks "117" at tier
   alert or above, or is not in the right script; the deterministic template is the fallback. Cached per station, forecast hour, tier.
 - `lib/openai.ts`: plain-fetch client and the cost guard (`AI_MAX_CALLS_PER_HOUR`, default 60 per server instance; counts, never content, are logged).
+
+## Monitoring (data-source health)
+
+Sources break silently (a sheet layout change, a moved endpoint, stale data, an exhausted quota), so
+the site watches itself and tells the owner.
+
+- **`GET /api/health`** (`lib/health.ts`): JSON `{ ok, checkedAt, deep, checks: [{ id, name, ok,
+  severity: "critical" | "warn", detail, userImpact, lastGoodAt?, ageMinutes? }] }`. Always HTTP 200;
+  read `ok` per check. Plain mode reuses the cached fetchers; `?deep=1` bypasses the caches so a stale
+  cache can't hide a dead source (only the monitor uses it). Checks:
+  - gauges (critical): >= 35 of the 42 stations have a reading under 3 h old and the newest is under 2 h.
+  - Irrigation reservoir sheet: >= 100 rows, newest row dated today or yesterday (Colombo), expected
+    columns present. Warn; **critical** when 0 rows parse or the columns changed.
+  - Mahaweli WMS PDF (reachable, >= 30 rows, Last-Modified under 48 h), DMC bulletin list, OpenAI key
+    (a free `GET /v1/models`, cached 24 h, so at most one call a day), Open-Meteo rain / ensemble /
+    GloFAS, the two news RSS feeds. All warn.
+  - Our pipelines via the public GitHub API (cached 10 min; 60 requests/hour unauthenticated, and a
+    rate-limited answer counts as "not checked", never a failure): newest gauge-archive commit on
+    `data` under 14 h; last successful `releases-snapshot.yml` run under 2 h (3 h overnight; the
+    run is used instead of a `releases/*.jsonl` commit because the snapshot only commits when
+    something changed); last successful `store-forecasts.yml` run under 2 h; the last run of
+    `snapshot.yml` / `export-predictions.yml` must not have failed. All warn.
+- **`/status`** (all locales, `noindex`, linked from the footer as "Data status"): each source as OK /
+  Delayed (a warn check failing) / Down (a critical one), with "updated 12 min ago". Strings in
+  `lib/i18n/status.ts`. Stale gauges already show the "Data delayed" line on station and home pages
+  (`nat.delayedNone`, `river.delayed`), so nothing else on those pages changes.
+- **`.github/workflows/health-check.yml`** runs every 30 min: fetch `/api/health?deep=1` (retry once),
+  then `scripts/health-alert.mjs`:
+  - A check must fail on 2 consecutive runs before anything happens (single blips are ignored).
+  - Then ONE GitHub issue labelled `data-health`, titled "Data source down: <name>", with the
+    problem, since-when, and what visitors see; never a second one while it is open. It comments
+    (and re-posts to Slack) every 6 h while failing and closes itself with a comment when the check
+    recovers.
+  - State between runs is one issue labelled `data-health-state` (JSON in its body): do not close it.
+  - A confirmed critical failure also fails the workflow run, which makes GitHub email the owner.
+    A missing or invalid health response counts as a critical "Website" failure.
+  - Dry run: `node scripts/health-alert.mjs health.json --dry-run --state /tmp/state.json` prints
+    the issues and Slack messages it would send and touches nothing; run it twice to see an open.
+- **Slack**: the repository secret `SLACK_WEBHOOK_URL` (an incoming webhook) gets a message when a
+  check opens (red), every 6 h while still failing, and when it recovers (green, with how long it
+  was down). The four scheduled workflows (`snapshot`, `releases-snapshot`, `store-forecasts`,
+  `export-predictions`) each end with an `if: failure()` step that posts "Workflow failed: <name> -
+  <run url>". Everything is skipped silently when the secret is empty, and the URL is never printed.
+  Manual runs of the health workflow (`gh workflow run health-check.yml`) first send one test message
+  (untick `slack_test` to skip).
+- **Optional Telegram** (not wired up): to add it, create a bot with @BotFather, add secrets
+  `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, and POST to
+  `https://api.telegram.org/bot<token>/sendMessage` from the `slack()` helper in
+  `scripts/health-alert.mjs`.

@@ -202,7 +202,7 @@ export function parseGatesOpen(remarks: string): number | null {
   return seen ? total : null;
 }
 
-function parseSheetTab(csv: string, tab: "Major" | "Medium"): { sheetDate: string | null; rows: SheetRow[] } {
+export function parseSheetTab(csv: string, tab: "Major" | "Medium"): { sheetDate: string | null; rows: SheetRow[] } {
   const grid = parseCsv(csv);
   const hi = grid.slice(0, 12).findIndex((r) => r.some((c) => c.trim().toUpperCase() === "RESERVOIR"));
   if (hi < 0) throw new Error(`${tab}: header row not found`);

@@ -4,6 +4,7 @@ import { basinPath } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
+import { statusT } from "@/lib/i18n/status";
 
 export async function Footer({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
@@ -85,6 +86,14 @@ export async function Footer({ lang }: { lang: Locale }) {
                 className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
               >
                 {t("footer.floodHelp")}
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={p("/status")}
+                className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
+              >
+                {statusT(lang)("footer")}
               </Link>
             </li>
             <li>

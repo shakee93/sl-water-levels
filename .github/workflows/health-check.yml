@@ -1,0 +1,54 @@
+name: Data health check
+
+# Every 30 minutes: ask the live site how every data source is doing (/api/health?deep=1 bypasses
+# the caches), then scripts/health-alert.mjs opens / updates / closes one GitHub issue per failing
+# check and posts to Slack. A check must fail twice in a row before anything is opened. A confirmed
+# critical failure fails this run, which makes GitHub email the owner.
+# Slack: needs the SLACK_WEBHOOK_URL secret (optional; skipped silently when missing).
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+    inputs:
+      slack_test:
+        description: "Send the one-off 'monitoring is connected' Slack message"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: health-check
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE_URL: https://sl-water-levels.vercel.app
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Slack connection test (manual runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.slack_test
+        run: node scripts/health-alert.mjs --slack-test
+
+      - name: Fetch health
+        run: |
+          # Retry once; a missing/invalid file is treated by the alert script as "site down".
+          for i in 1 2; do
+            if curl -fsS --max-time 100 "$SITE_URL/api/health?deep=1" -o health.json; then break; fi
+            rm -f health.json
+            [ "$i" = 1 ] && sleep 30
+          done
+          if [ -f health.json ]; then node -e 'const r=JSON.parse(require("fs").readFileSync("health.json","utf8")); for (const c of r.checks) console.log((c.ok?"ok  ":"FAIL"), c.severity.padEnd(8), c.id.padEnd(20), c.detail)'; fi
+        continue-on-error: true
+
+      - name: Alert
+        run: node scripts/health-alert.mjs health.json
