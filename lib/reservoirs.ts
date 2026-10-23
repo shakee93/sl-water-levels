@@ -29,6 +29,8 @@ export type GaugeLink = {
   eta: [number, number] | null;
   confidence: Confidence;
   note: string;
+  /** Town shown at the end of the chain "reservoir -> gauge -> town": a gazetteer place (lib/places.ts) this gauge covers, picked by hand as the best-known place downstream. */
+  town?: string;
 };
 
 export type Reservoir = {
@@ -63,6 +65,7 @@ export const RESERVOIRS: Reservoir[] = [
         basin: "Deduru Oya",
         eta: [4, 5],
         confidence: "medium",
+        town: "Chilaw",
         note: "One measured event (21-22 Oct 2026): gauge began to rise 4.5-5 h after the first gates-open report; about 55 km by river.",
       },
     ],
@@ -79,6 +82,7 @@ export const RESERVOIRS: Reservoir[] = [
         basin: "Kala Oya",
         eta: null,
         confidence: "medium",
+        town: "Thambuththegama",
         note: "Same river (the DMC Kala Oya warning names Rajanganaya); no archived readings at Thambuththegama to measure the delay.",
       },
     ],
@@ -97,8 +101,8 @@ export const RESERVOIRS: Reservoir[] = [
     aliases: ["kotmale", "kothmale"],
     basin: "Mahaweli Ganga",
     gauges: [
-      { station: "Nawalapitiya", basin: "Mahaweli Ganga", eta: null, confidence: "medium", note: "Next gauge downstream on the Mahaweli (BASIN_ORDER)." },
-      { station: "Peradeniya", basin: "Mahaweli Ganga", eta: null, confidence: "medium", note: "Further downstream, past Gampola." },
+      { station: "Nawalapitiya", basin: "Mahaweli Ganga", eta: null, confidence: "medium", note: "Next gauge downstream on the Mahaweli (BASIN_ORDER).", town: "Nawalapitiya" },
+      { station: "Peradeniya", basin: "Mahaweli Ganga", eta: null, confidence: "medium", note: "Further downstream, past Gampola.", town: "Kandy" },
     ],
   },
   {
@@ -117,8 +121,8 @@ export const RESERVOIRS: Reservoir[] = [
     exactAliases: ["victoria"],
     basin: "Mahaweli Ganga",
     gauges: [
-      { station: "Weraganthota", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Below Victoria, Randenigala and Rantambe; the chain of reservoirs between delays and softens it." },
-      { station: "Manampitiya", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Far downstream on the Mahaweli." },
+      { station: "Weraganthota", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Below Victoria, Randenigala and Rantambe; the chain of reservoirs between delays and softens it.", town: "Mahiyangana" },
+      { station: "Manampitiya", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Far downstream on the Mahaweli.", town: "Polonnaruwa" },
     ],
   },
   {
@@ -127,8 +131,8 @@ export const RESERVOIRS: Reservoir[] = [
     aliases: ["randenigala"],
     basin: "Mahaweli Ganga",
     gauges: [
-      { station: "Weraganthota", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Below Rantambe, near Mahiyangana." },
-      { station: "Manampitiya", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Far downstream on the Mahaweli." },
+      { station: "Weraganthota", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Below Rantambe, near Mahiyangana.", town: "Mahiyangana" },
+      { station: "Manampitiya", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Far downstream on the Mahaweli.", town: "Polonnaruwa" },
     ],
   },
   {
@@ -137,8 +141,8 @@ export const RESERVOIRS: Reservoir[] = [
     aliases: ["rantambe", "rantembe"],
     basin: "Mahaweli Ganga",
     gauges: [
-      { station: "Weraganthota", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Just below Rantambe, near Mahiyangana." },
-      { station: "Manampitiya", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Far downstream on the Mahaweli." },
+      { station: "Weraganthota", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Just below Rantambe, near Mahiyangana.", town: "Mahiyangana" },
+      { station: "Manampitiya", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Far downstream on the Mahaweli.", town: "Polonnaruwa" },
     ],
   },
   {
@@ -147,7 +151,7 @@ export const RESERVOIRS: Reservoir[] = [
     aliases: ["udawalawe", "udawalawa"],
     basin: "Walawe Ganga",
     gauges: [
-      { station: "Moraketiya", basin: "Walawe Ganga", eta: null, confidence: "medium", note: "The Moraketiya gauge is south of the dam, on the Walawe below it." },
+      { station: "Moraketiya", basin: "Walawe Ganga", eta: null, confidence: "medium", note: "The Moraketiya gauge is south of the dam, on the Walawe below it.", town: "Embilipitiya" },
     ],
   },
   {
@@ -164,7 +168,7 @@ export const RESERVOIRS: Reservoir[] = [
     aliases: ["senanayaka samudraya", "senanayake samudraya", "senanayaka samudra", "senanayake samudra"],
     basin: "Gal Oya",
     gauges: [
-      { station: "Ampara", basin: "Gal Oya", eta: null, confidence: "medium", note: "Gal Oya flows east from the reservoir past Ampara." },
+      { station: "Ampara", basin: "Gal Oya", eta: null, confidence: "medium", note: "Gal Oya flows east from the reservoir past Ampara.", town: "Ampara" },
     ],
   },
   {

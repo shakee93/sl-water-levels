@@ -553,20 +553,58 @@ export const ta: Dict = {
   "nf.allBasins": "எல்லா ஆறுகளும்",
   "nf.back": "← எல்லா நிலையங்களுக்கும் திரும்பு",
   // ---- reservoir releases ----
-  "release.confirmed": "{name} நீர்த்தேக்கத்திலிருந்து தற்போது சுமார் {cusecs} கியூசெக் நீர் திறக்கப்படுகிறது ({source}, {when}).", // needs native review
-  "release.gatesOpen": "{n} வான் கதவுகள் திறந்துள்ளன.", // needs native review
-  "release.etaRange": "நீர் பொதுவாக {gauge} பகுதியை சுமார் {a}–{b} மணி நேரத்தில் சென்றடையும்.", // needs native review
-  "release.mayRise": "{gauge} மற்றும் அதற்குக் கீழுள்ள அளவீட்டு நிலையங்களில் வரும் மணி நேரங்களில் நீர்மட்டம் உயரக்கூடும்.", // needs native review
-  "release.mayRiseRiver": "{river} ஆற்றின் கீழ்ப்பகுதி நிலையங்களில் வரும் மணி நேரங்களில் நீர்மட்டம் உயரக்கூடும்.", // needs native review
+  "release.lead": "{name} நீர்த்தேக்கம் நீரை வெளியேற்றுகிறது", // needs native review
+  "release.leadReported": "{name} நீர்த்தேக்கம்: வான் கதவுகள் திறக்கப்பட்டதாக செய்தி", // needs native review
+  "release.size.small": "சிறியது", // needs native review
+  "release.size.large": "பெரியது", // needs native review
+  "release.size.veryLarge": "மிகப் பெரியது", // needs native review
+  "release.sizeChip": "{size} · ~{n} லி/வி", // needs native review
+  "release.cusecs": "{n} கியூசெக்", // needs native review
+  "release.cusecHelp": "கியூசெக் என்றால் என்ன?", // needs native review
+  "release.cusecExplain": "1 கியூசெக் = ஒரு வினாடிக்கு ஒரு கன அடி நீர், சுமார் 28 லிட்டர்.", // needs native review
+  "release.eta": "~{a}–{b} மணி", // needs native review
+  "release.etaSoon": "அடுத்த சில மணி நேரம்", // needs native review
+  "release.trendDown": "நேற்று {n} இலிருந்து குறைவு", // needs native review
+  "release.trendUp": "நேற்று {n} இலிருந்து அதிகரிப்பு", // needs native review
+  "release.gatesOpen": "{n} கதவுகள் திறப்பு", // needs native review
+  "release.chainLabel": "நீர் {a} இலிருந்து {b} நோக்கிப் பாய்கிறது", // needs native review
+  "release.expect": "ஆற்றோரம் தாழ்வான பகுதிகளில் நீர்மட்டம் உயரக்கூடும்.", // needs native review
   "release.noGaugeBelow": "இந்தத் தளத்தின் எந்த அளவீட்டு நிலையமும் அதற்கு நேரடியாகக் கீழே இல்லை.", // needs native review
-  "release.reported": "{name} இல் வான் கதவுகள் திறக்கப்பட்டதாக செய்தி ({outlet}, {when}).", // needs native review
   "release.reportedNote": "நீர்ப்பாசனத் திணைக்களம் இன்னும் உறுதிப்படுத்தவில்லை.", // needs native review
-  "release.newsLater": "பின்னர்: {name} இல் வான் கதவுகள் திறக்கப்பட்டதாக {outlet} தெரிவித்தது ({when}).", // needs native review
+  "release.newsLater": "{outlet}: வான் கதவுகள் திறப்பு, {when}", // needs native review
   "release.readReport": "செய்தியை வாசிக்க", // needs native review
+  "release.asOf": "{source} · {when}", // needs native review
   "release.src.irrigation": "நீர்ப்பாசனத் திணைக்களம்", // needs native review
   "release.src.mahaweli": "மகாவலி அதிகாரசபை", // needs native review
-  "release.homeConfirmed": "{name} நீர்த்தேக்கத்திலிருந்து சுமார் {cusecs} கியூசெக் நீர் திறக்கப்படுகிறது.", // needs native review
-  "release.homeReported": "{name} இல் வான் கதவுகள் திறக்கப்பட்டதாக செய்தி.", // needs native review
   "release.homeView": "{gauge} ஐப் பார்க்க", // needs native review
   "release.homeViewRiver": "ஆற்றைப் பார்க்க", // needs native review
+  "release.howLink": "நீர் திறப்பு எப்படி இயங்குகிறது", // needs native review
+  // ---- how this site works ----
+  "how.title": "இந்தத் தளம் எப்படி இயங்குகிறது", // needs native review
+  "how.sub": "மழை, நீர்த்தேக்கம், அளவீட்டு நிலையங்கள், உங்கள் நகரம்: ஒரு நிமிடத்தில்.", // needs native review
+  "how.step1": "மலையில் மழை", // needs native review
+  "how.step2": "நீர்த்தேக்கம்", // needs native review
+  "how.step3": "ஆற்றில் நிலையங்கள்", // needs native review
+  "how.step4": "உங்கள் நகரம்", // needs native review
+  "how.diagramAlt": "மழை பெய்யும் மலைகளிலிருந்து நீர்த்தேக்கம், ஆற்று நிலையங்களைக் கடந்து நகரை அடையும் ஆறு.", // needs native review
+  "how.readings.t": "அளவீடுகள் எங்கிருந்து", // needs native review
+  "how.readings.s": "நீர்ப்பாசனத் திணைக்களத்தின் ஆற்று நிலையங்கள், சுமார் மணிக்கு ஒருமுறை.", // needs native review
+  "how.readings.d": "ஒவ்வொரு நிலையத்தின் சமீபத்திய அளவீட்டைக் காட்டுகிறோம். ஒரு நிலையம் தகவல் தராவிட்டால், அதன் கடைசி அளவீடு எவ்வளவு பழையது என்பதைச் சொல்கிறோம்.", // needs native review
+  "how.levels.t": "நிறங்களின் பொருள்", // needs native review
+  "how.levels.s": "எச்சரிக்கை, சிறு வெள்ளம், பெரு வெள்ளம்: அதிகாரப்பூர்வ நிலைகள்.", // needs native review
+  "how.levels.d": "எச்சரிக்கை: ஆறு உயர்ந்துள்ளது. சிறு வெள்ளம்: தாழ்நிலம் மூழ்கத் தொடங்கும். பெரு வெள்ளம்: பரவலான வெள்ளம். உங்கள் தெரு அதிகாரப்பூர்வ நிலைக்கு முன்பே மூழ்கலாம்.", // needs native review
+  "how.forecast.t": "முன்னறிவிப்பு எப்படி", // needs native review
+  "how.forecast.s": "ஆற்றின் போக்கு, மேல்நிலை ஆறுகள், மலை மழை. சோதனை நிலை.", // needs native review
+  "how.forecast.d": "ஆறு எவ்வளவு வேகமாக மாறுகிறது, மேல்நிலை ஆறுகளின் நிலை, மலையில் பெய்யும் மழை ஆகியவற்றைப் பார்க்கிறோம். இது சோதனை நிலை; ஒவ்வொரு மணிநேரமும் எங்கள் முன்னறிவிப்பை நடந்ததுடன் ஒப்பிடுகிறோம்.", // needs native review
+  "how.release.t": "நீர்த்தேக்க நீர் திறப்பு", // needs native review
+  "how.release.s": "கதவுகள் திறந்தால், நீர் கீழ்ப்பகுதிக்கு சில மணி நேரம் கழித்து வரும்.", // needs native review
+  "how.release.d": "நிரம்பிய நீர்த்தேக்கத்திலிருந்து வான் கதவுகள் வழியாக கூடுதல் நீர் வெளியேறும். அது ஆற்றில் பயணிக்க மணிநேரங்கள் ஆகும்; அதனால் அமைதியான நிலையம் திடீரென உயரலாம். கியூசெக் என்பது வினாடிக்கு ஒரு கன அடி நீர், சுமார் 28 லிட்டர்.", // needs native review
+  "how.official.t": "அதிகாரப்பூர்வ எச்சரிக்கை முதலில்", // needs native review
+  "how.official.s": "அனர்த்த முகாமைத்துவ நிலையம், நீர்ப்பாசனத் திணைக்களத்தைப் பின்பற்றுங்கள். 117 ஐ அழைக்கவும்.", // needs native review
+  "how.official.d": "அவர்களின் எச்சரிக்கைகளை நாங்கள் மீண்டும் காட்டுகிறோம், மாற்றுவதில்லை. வெளியேறச் சொன்னால் வெளியேறுங்கள்.", // needs native review
+  "how.limits.t": "எங்களால் உறுதி தர முடியாதவை", // needs native review
+  "how.limits.s": "நிலையங்கள் செயலிழக்கலாம், முன்னறிவிப்பு தவறலாம்.", // needs native review
+  "how.limits.d": "இது அதிகாரப்பூர்வ சேவை அல்ல. முன்கூட்டிய குறிப்பாக மட்டும் பயன்படுத்துங்கள், உத்தரவாதமாக அல்ல.", // needs native review
+  "how.about": "எங்களைப் பற்றி & முறை", // needs native review
+  "how.help": "வெள்ள உதவி", // needs native review
 };

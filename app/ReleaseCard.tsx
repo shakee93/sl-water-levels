@@ -1,19 +1,22 @@
 import Link from "next/link";
-import { ArrowRight, Waves } from "lucide-react";
+import { ArrowRight, ChevronRight, CircleHelp, Clock, Gauge, MapPin, TrendingDown, TrendingUp, Waves } from "lucide-react";
 import { getReleases, type Release } from "@/lib/releases";
-import { reservoirById } from "@/lib/reservoirs";
+import { reservoirById, type GaugeLink } from "@/lib/reservoirs";
+import { releaseTrend, type Trend } from "@/lib/releaseTrend";
+import { SIZE_STEP, litresPerSecond, releaseSize, roundCusecs } from "@/lib/releaseUi";
 import { stationDisplayName } from "@/lib/displayName";
 import { basinPath, stationPath } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
-import { clock, colomboParts, riverName, shortDay, shortStamp } from "@/lib/i18n/format";
+import { clock, colomboParts, shortDay, shortStamp } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
 
-// Reservoir release warnings, in plain words: who is releasing, about how much, and when it
-// should reach this gauge. Official numbers say "Irrigation Department"; a news-only report says
+// Reservoir release warnings, shown as a compact visual row: who is releasing, how big
+// (size chip + 3-step meter), where the water goes (reservoir -> gauge -> town) and when it
+// should arrive. Official numbers say "Irrigation Department"; a news-only report says
 // "reported" and is never presented as official. Fails soft: no data, no card.
 
-const roundCusecs = (c: number) => Math.round(c / 10) * 10;
+const fmt = (n: number) => n.toLocaleString("en-US");
 
 function sourceName(t: TFn, source: string): string {
   if (source === "Irrigation Department") return t("release.src.irrigation");
@@ -30,44 +33,99 @@ function when(t: TFn, iso: string, dayOnly: boolean): string {
   return a.y === b.y && a.m === b.m && a.d === b.d ? clock(ms, t) : shortStamp(ms, t);
 }
 
-function Sentences({ t, lang, rel, station, basin }: { t: TFn; lang: Locale; rel: Release; station?: string; basin?: string }) {
-  const res = reservoirById(rel.reservoirId);
-  const link = station ? res?.gauges.find((g) => g.station === station) : res?.gauges.find((g) => g.basin === basin && g.eta) ?? res?.gauges.find((g) => g.basin === basin);
+const chip =
+  "inline-flex items-center gap-1 rounded-full border border-amber-300/70 dark:border-amber-800 bg-white/60 dark:bg-amber-950/50 px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+const linkCls = "underline underline-offset-2 inline-flex items-center min-h-11 sm:min-h-6 whitespace-nowrap";
+
+function SizeMeter({ step }: { step: 1 | 2 | 3 }) {
+  return (
+    <span className="inline-flex items-end gap-px" aria-hidden>
+      {[1, 2, 3].map((i) => (
+        <span key={i} className={`w-1 rounded-sm ${i === 1 ? "h-1.5" : i === 2 ? "h-2.5" : "h-3.5"} ${i <= step ? "bg-amber-700 dark:bg-amber-300" : "bg-amber-300/70 dark:bg-amber-800"}`} />
+      ))}
+    </span>
+  );
+}
+
+/** Muted cusec figure with a "?" that opens a one-line explanation (no JavaScript needed). */
+function CusecFigure({ t, cusecs }: { t: TFn; cusecs: number }) {
+  return (
+    <details className="group text-xs text-amber-800/80 dark:text-amber-300/80">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 min-h-11 sm:min-h-6 [&::-webkit-details-marker]:hidden">
+        <span className="tabular-nums">{t("release.cusecs", { n: fmt(roundCusecs(cusecs)) })}</span>
+        <CircleHelp className="size-3.5" aria-hidden />
+        <span className="sr-only">{t("release.cusecHelp")}</span>
+      </summary>
+      <span className="block pb-1">{t("release.cusecExplain")}</span>
+    </details>
+  );
+}
+
+function pickLink(res: ReturnType<typeof reservoirById>, station?: string, basin?: string): GaugeLink | undefined {
+  if (!res) return undefined;
+  if (station) return res.gauges.find((g) => g.station === station);
+  return res.gauges.find((g) => g.basin === basin && g.eta) ?? res.gauges.find((g) => g.basin === basin) ?? res.gauges.find((g) => g.eta) ?? res.gauges[0];
+}
+
+function RowBody({ t, rel, trend, link, note }: { t: TFn; rel: Release; trend: Trend | null; link?: GaugeLink; note: boolean }) {
+  const confirmed = rel.kind === "confirmed";
+  const size = confirmed && rel.cusecs ? releaseSize(rel.cusecs) : null;
   const gauge = link ? stationDisplayName(link.station) : null;
-
-  let tail: string;
-  if (!res || res.gauges.length === 0) tail = t("release.noGaugeBelow");
-  else if (link?.eta && gauge) tail = t("release.etaRange", { gauge, a: link.eta[0], b: link.eta[1] });
-  else if (gauge) tail = t("release.mayRise", { gauge });
-  else tail = t("release.mayRiseRiver", { river: riverName(rel.basin, lang) });
-
-  const head =
-    rel.kind === "confirmed"
-      ? t("release.confirmed", {
-          name: rel.name,
-          cusecs: roundCusecs(rel.cusecs ?? 0).toLocaleString("en-US"),
-          source: sourceName(t, rel.source),
-          when: when(t, rel.observedAt, rel.dayOnly),
-        })
-      : t("release.reported", { name: rel.name, outlet: rel.source, when: when(t, rel.observedAt, false) });
-
+  const town = link?.town && link.town !== gauge ? link.town : null;
   return (
     <>
-      {head}
-      {rel.kind === "confirmed" && rel.gatesOpen ? ` ${t("release.gatesOpen", { n: rel.gatesOpen })}` : ""}
-      {" "}
-      {tail}
-      {rel.kind === "reported" && ` ${t("release.reportedNote")}`}
-      {rel.kind === "confirmed" && rel.news && ` ${t("release.newsLater", { outlet: rel.news.outlet, name: rel.name, when: when(t, rel.news.publishedAt, false) })}`}
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-semibold">{t(confirmed ? "release.lead" : "release.leadReported", { name: rel.name })}</span>
+        {size && rel.cusecs && (
+          <span className={chip}>
+            <SizeMeter step={SIZE_STEP[size]} />
+            {t("release.sizeChip", { size: t(`release.size.${size}`), n: fmt(litresPerSecond(rel.cusecs)) })}
+          </span>
+        )}
+        {confirmed && rel.gatesOpen ? <span className={chip}>{t("release.gatesOpen", { n: rel.gatesOpen })}</span> : null}
+      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0">
+        {confirmed && rel.cusecs ? <CusecFigure t={t} cusecs={rel.cusecs} /> : null}
+        {trend && (
+          <span className={chip}>
+            {trend.dir === "down" ? <TrendingDown className="size-3" aria-hidden /> : <TrendingUp className="size-3" aria-hidden />}
+            {t(trend.dir === "down" ? "release.trendDown" : "release.trendUp", { n: fmt(roundCusecs(trend.from)) })}
+          </span>
+        )}
+      </div>
+      {link && gauge && (
+        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs" aria-label={t("release.chainLabel", { a: rel.name, b: gauge })}>
+          <Waves className="size-3.5 shrink-0" aria-hidden />
+          <span>{rel.name}</span>
+          <ChevronRight className="size-3 shrink-0 opacity-60" aria-hidden />
+          <Gauge className="size-3.5 shrink-0" aria-hidden />
+          <span>{gauge}</span>
+          {town && (
+            <>
+              <ChevronRight className="size-3 shrink-0 opacity-60" aria-hidden />
+              <MapPin className="size-3.5 shrink-0" aria-hidden />
+              <span>{town}</span>
+            </>
+          )}
+          <span className={chip}>
+            <Clock className="size-3" aria-hidden />
+            {link.eta ? t("release.eta", { a: link.eta[0], b: link.eta[1] }) : t("release.etaSoon")}
+          </span>
+        </p>
+      )}
+      {note && (
+        <p className="mt-1">{link ? t("release.expect") : t("release.noGaugeBelow")}{rel.kind === "reported" ? ` ${t("release.reportedNote")}` : ""}</p>
+      )}
     </>
   );
 }
 
-const linkCls = "underline underline-offset-2 inline-flex items-center min-h-11 sm:min-h-6 whitespace-nowrap";
+const shell =
+  "flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-900 dark:text-amber-200";
 
 /** Amber card on a gauge page (station) or a river page (basin). Several releases stack. */
 export async function ReleaseCard({ lang, station, basin }: { lang: Locale; station?: string; basin?: string }) {
-  const { t } = getI18n(lang);
+  const { t, p } = getI18n(lang);
   const all = await getReleases().catch(() => null);
   if (!all) return null;
   const b = (basin ?? "").trim();
@@ -77,27 +135,28 @@ export async function ReleaseCard({ lang, station, basin }: { lang: Locale; stat
     return station ? res.gauges.some((g) => g.station === station) : r.basin === b;
   });
   if (mine.length === 0) return null;
+  const trends = await Promise.all(mine.map((r) => releaseTrend(r.reservoirId, r.cusecs)));
   return (
     <div className="mb-4 space-y-2" role="status">
-      {mine.map((rel) => (
-        <div
-          key={rel.reservoirId}
-          className="flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-900 dark:text-amber-200"
-        >
+      {mine.map((rel, i) => (
+        <div key={rel.reservoirId} className={shell}>
           <Waves className="size-4 mt-0.5 shrink-0" aria-hidden />
-          <div className="min-w-0">
-            <p>
-              <Sentences t={t} lang={lang} rel={rel} station={station} basin={b} />
-            </p>
-            <span className="flex flex-wrap items-center gap-x-4">
+          <div className="min-w-0 flex-1">
+            <RowBody t={t} rel={rel} trend={trends[i]} link={pickLink(reservoirById(rel.reservoirId), station, b)} note />
+            <span className="flex flex-wrap items-center gap-x-4 text-xs">
               <a href={rel.url} target="_blank" rel="noopener noreferrer" className={linkCls}>
-                {rel.kind === "confirmed" ? sourceName(t, rel.source) : t("release.readReport")}
+                {rel.kind === "confirmed"
+                  ? t("release.asOf", { source: sourceName(t, rel.source), when: when(t, rel.observedAt, rel.dayOnly) })
+                  : t("release.readReport", { outlet: rel.source })}
               </a>
               {rel.kind === "confirmed" && rel.news && (
                 <a href={rel.news.url} target="_blank" rel="noopener noreferrer" className={linkCls}>
-                  {rel.news.outlet}
+                  {t("release.newsLater", { outlet: rel.news.outlet, when: when(t, rel.news.publishedAt, false) })}
                 </a>
               )}
+              <Link href={`${p("/")}#how-it-works`} className={linkCls}>
+                {t("release.howLink")}
+              </Link>
             </span>
           </div>
         </div>
@@ -106,31 +165,33 @@ export async function ReleaseCard({ lang, station, basin }: { lang: Locale; stat
   );
 }
 
-/** Home page: one line per active release, next to "Needs attention". */
+/** Home page: one compact visual row per active release, next to "Needs attention". */
 export async function ReleaseLines({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
   const all = await getReleases().catch(() => null);
   if (!all || all.releases.length === 0) return null;
+  const trends = await Promise.all(all.releases.map((r) => releaseTrend(r.reservoirId, r.cusecs)));
   return (
     <ul className="mb-5 space-y-2" aria-label={t("needs.heading")}>
-      {all.releases.map((rel) => {
-        const first = rel.stations[0];
+      {all.releases.map((rel, i) => {
+        const link = pickLink(reservoirById(rel.reservoirId));
+        const first = link?.station ?? rel.stations[0];
         const href = first ? stationPath(rel.basin, first) : basinPath(rel.basin);
         return (
-          <li
-            key={rel.reservoirId}
-            className="flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-900 dark:text-amber-200"
-          >
+          <li key={rel.reservoirId} className={shell}>
             <Waves className="size-4 mt-0.5 shrink-0" aria-hidden />
-            <p className="min-w-0 flex-1">
-              {rel.kind === "confirmed"
-                ? t("release.homeConfirmed", { name: rel.name, cusecs: roundCusecs(rel.cusecs ?? 0).toLocaleString("en-US") })
-                : t("release.homeReported", { name: rel.name })}{" "}
-              <Link href={p(href)} className="font-medium underline underline-offset-2 inline-flex items-center gap-1 min-h-11 sm:min-h-6">
-                {first ? t("release.homeView", { gauge: stationDisplayName(first) }) : t("release.homeViewRiver")}
-                <ArrowRight className="size-3" aria-hidden />
-              </Link>
-            </p>
+            <div className="min-w-0 flex-1">
+              <RowBody t={t} rel={rel} trend={trends[i]} link={link} note={false} />
+              <span className="flex flex-wrap items-center gap-x-4">
+                <Link href={p(href)} className="font-medium underline underline-offset-2 inline-flex items-center gap-1 min-h-11 sm:min-h-6">
+                  {first ? t("release.homeView", { gauge: stationDisplayName(first) }) : t("release.homeViewRiver")}
+                  <ArrowRight className="size-3" aria-hidden />
+                </Link>
+                <a href="#how-it-works" className={`${linkCls} text-xs`}>
+                  {t("release.howLink")}
+                </a>
+              </span>
+            </div>
           </li>
         );
       })}

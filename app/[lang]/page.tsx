@@ -11,6 +11,7 @@ import { getSearchStations } from "../PlaceSearchData";
 import { SriLankaMap } from "../SriLankaMap";
 import { NeedsAttention } from "../NeedsAttention";
 import { ReleaseLines } from "../ReleaseCard";
+import { HowItWorks } from "../HowItWorks";
 import { Favourites } from "../Favourites";
 import { NearYou } from "../NearYou";
 import { LegacyRedirect } from "../LegacyRedirect";
@@ -214,6 +215,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             </section>
           </>
         )}
+        <HowItWorks lang={lang} />
       </div>
     </main>
   );

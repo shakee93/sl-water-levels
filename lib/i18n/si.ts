@@ -553,20 +553,58 @@ export const si: Dict = {
   "nf.allBasins": "සියලු ගංගා",
   "nf.back": "← සියලු ස්ථාන වෙත ආපසු",
   // ---- reservoir releases ----
-  "release.confirmed": "{name} ජලාශයෙන් දැනට කියුසෙක් {cusecs}ක් පමණ මුදාහරිනවා ({source}, {when}).", // needs native review
-  "release.gatesOpen": "වාන් දොරටු {n}ක් විවෘතයි.", // needs native review
-  "release.etaRange": "ජලය සාමාන්‍යයෙන් {gauge} වෙත පැය {a}–{b}ක් පමණ ඇතුළත ළඟා වේ.", // needs native review
-  "release.mayRise": "{gauge} සහ ඊට පහළ මාන ඉදිරි පැය කිහිපය තුළ ඉහළ යා හැක.", // needs native review
-  "release.mayRiseRiver": "{river} හි පහළ මාන ඉදිරි පැය කිහිපය තුළ ඉහළ යා හැක.", // needs native review
+  "release.lead": "{name} ජලාශයෙන් ජලය මුදාහරිනවා", // needs native review
+  "release.leadReported": "{name} ජලාශය: වාන් දොරටු විවෘත කළ බව වාර්තා වේ", // needs native review
+  "release.size.small": "කුඩා", // needs native review
+  "release.size.large": "විශාල", // needs native review
+  "release.size.veryLarge": "ඉතා විශාල", // needs native review
+  "release.sizeChip": "{size} · ලීටර් {n}/තත්. පමණ", // needs native review
+  "release.cusecs": "කියුසෙක් {n}", // needs native review
+  "release.cusecHelp": "කියුසෙක් යනු කුමක්ද?", // needs native review
+  "release.cusecExplain": "කියුසෙක් 1 = තත්පරයකට ඝන අඩියක ජලය, ලීටර් 28ක් පමණ.", // needs native review
+  "release.eta": "පැය ~{a}–{b}", // needs native review
+  "release.etaSoon": "ඉදිරි පැය කිහිපය", // needs native review
+  "release.trendDown": "ඊයේ {n} සිට පහළට", // needs native review
+  "release.trendUp": "ඊයේ {n} සිට ඉහළට", // needs native review
+  "release.gatesOpen": "දොරටු {n}ක් විවෘතයි", // needs native review
+  "release.chainLabel": "ජලය {a} සිට {b} දෙසට ගලා යයි", // needs native review
+  "release.expect": "ගංගාව දිගේ පහත් ප්‍රදේශවල ජලය ඉහළ යා හැක.", // needs native review
   "release.noGaugeBelow": "මෙම අඩවියේ කිසිදු මානයක් එයට සෘජුවම පහළින් නැත.", // needs native review
-  "release.reported": "{name} හි වාන් දොරටු විවෘත කළ බව වාර්තා වේ ({outlet}, {when}).", // needs native review
   "release.reportedNote": "වාරිමාර්ග දෙපාර්තමේන්තුව තවම තහවුරු කර නැත.", // needs native review
-  "release.newsLater": "පසුව: {outlet} {name} හි වාන් දොරටු විවෘත කළ බව වාර්තා කළා ({when}).", // needs native review
+  "release.newsLater": "{outlet}: වාන් දොරටු විවෘත කළා, {when}", // needs native review
   "release.readReport": "වාර්තාව කියවන්න", // needs native review
+  "release.asOf": "{source} · {when}", // needs native review
   "release.src.irrigation": "වාරිමාර්ග දෙපාර්තමේන්තුව", // needs native review
   "release.src.mahaweli": "මහවැලි අධිකාරිය", // needs native review
-  "release.homeConfirmed": "{name} ජලාශයෙන් කියුසෙක් {cusecs}ක් පමණ මුදාහරිනවා.", // needs native review
-  "release.homeReported": "{name} හි වාන් දොරටු විවෘත කළ බව වාර්තා වේ.", // needs native review
   "release.homeView": "{gauge} බලන්න", // needs native review
   "release.homeViewRiver": "ගඟ බලන්න", // needs native review
+  "release.howLink": "මුදාහැරීම් ක්‍රියා කරන හැටි", // needs native review
+  // ---- how this site works ----
+  "how.title": "මෙම අඩවිය ක්‍රියා කරන හැටි", // needs native review
+  "how.sub": "වැස්ස, ජලාශ, මාන සහ ඔබේ නගරය, විනාඩියකින්.", // needs native review
+  "how.step1": "කඳුවැටි මත වැසි", // needs native review
+  "how.step2": "ජලාශය", // needs native review
+  "how.step3": "ගඟේ මාන", // needs native review
+  "how.step4": "ඔබේ නගරය", // needs native review
+  "how.diagramAlt": "වැසි වදින කඳුවලින් ජලාශයක් සහ ගං මාන පසු කර නගරයකට ගලා යන ගඟක්.", // needs native review
+  "how.readings.t": "කියවීම් එන්නේ කොහෙන්ද", // needs native review
+  "how.readings.s": "වාරිමාර්ග දෙපාර්තමේන්තුවේ ගං මාන, පැයකට වරක් පමණ.", // needs native review
+  "how.readings.d": "අපි එක් එක් මානයේ අලුත්ම කියවීම පෙන්වනවා. මානයක් නිහඬ වුවහොත්, එහි අවසාන කියවීම කොපමණ පරණදැයි කියනවා.", // needs native review
+  "how.levels.t": "වර්ණවල තේරුම", // needs native review
+  "how.levels.s": "අවවාද, සුළු ගංවතුර, මහා ගංවතුර: නිල මට්ටම් තුන.", // needs native review
+  "how.levels.d": "අවවාද: ගඟ ඉහළයි. සුළු ගංවතුර: පහත් බිම් යට වීමට පටන් ගනී. මහා ගංවතුර: පුළුල් ගංවතුර. ඔබේ වීදිය නිල මට්ටමට පෙර යට විය හැක.", // needs native review
+  "how.forecast.t": "අනාවැකිය ක්‍රියා කරන හැටි", // needs native review
+  "how.forecast.s": "ගඟේ ප්‍රවණතාව, උඩ ගංගා සහ කඳුවල වැසි. පර්යේෂණාත්මකයි.", // needs native review
+  "how.forecast.d": "ගඟ ගලන වේගය, උඩ ගංගාවල තත්ත්වය සහ කඳුවල වැසි බලනවා. මෙය පර්යේෂණාත්මකයි; සෑම පැයකම අපේ අනාවැකි සැබෑවට සිදු වූ දේ සමඟ පරීක්ෂා කරනවා.", // needs native review
+  "how.release.t": "ජලාශ මුදාහැරීම්", // needs native review
+  "how.release.s": "දොරටු විවෘත වී, පහළට ජලය පැය කිහිපයකින් පැමිණේ.", // needs native review
+  "how.release.d": "වාන් දොරටුවලින් පිරුණු ජලාශයකින් අමතර ජලය පිට කරයි. එය ගඟ දිගේ පැය ගණනක් ගමන් කරන නිසා, සන්සුන් මානයක් ඉක්මනින් ඉහළ යා හැක. කියුසෙක් යනු තත්පරයට ඝන අඩියක ජලය, ලීටර් 28ක් පමණ.", // needs native review
+  "how.official.t": "නිල අනතුරු ඇඟවීම් මුලින්ම", // needs native review
+  "how.official.s": "ආපදා කළමනාකරණ මධ්‍යස්ථානය සහ වාරිමාර්ග දෙපාර්තමේන්තුව අනුගමනය කරන්න. 117 අමතන්න.", // needs native review
+  "how.official.d": "අපි ඔවුන්ගේ අනතුරු ඇඟවීම් නැවත පෙන්වනවා මිස ඒවා ප්‍රතිස්ථාපනය නොකරයි. ඉවත් වන්නැයි නිලධාරීන් කීවොත් ඉවත් වන්න.", // needs native review
+  "how.limits.t": "අපට සහතික කළ නොහැකි දේ", // needs native review
+  "how.limits.s": "මාන අක්‍රිය විය හැක, අනාවැකි වැරදිය හැක.", // needs native review
+  "how.limits.d": "මෙය නිල සේවාවක් නොවේ. මුල් ඉඟියක් ලෙස පමණක් භාවිතා කරන්න, සහතිකයක් ලෙස නොවේ.", // needs native review
+  "how.about": "පිළිබඳව සහ ක්‍රමය", // needs native review
+  "how.help": "ගංවතුර උදව්", // needs native review
 };
