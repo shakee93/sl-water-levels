@@ -18,11 +18,11 @@ const ITEMS: { id: string; Icon: typeof Gauge; t: Key; s: Key; d: Key }[] = [
   { id: "limits", Icon: Info, t: "how.limits.t", s: "how.limits.s", d: "how.limits.d" },
 ];
 
-export async function HowItWorks({ lang }: { lang: Locale }) {
+export async function HowItWorks({ lang, className = "mt-10 sm:mt-12" }: { lang: Locale; className?: string }) {
   const { t, p } = getI18n(lang);
   const steps: Key[] = ["how.step1", "how.step2", "how.step3", "how.step4"];
   return (
-    <section aria-labelledby="how-title" className="mt-10 sm:mt-12">
+    <section aria-labelledby="how-title" className={className}>
       <div id="how-it-works" className="scroll-mt-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="px-4 pt-4 pb-2">
           <h2 id="how-title" className="text-base sm:text-lg font-semibold tracking-tight">{t("how.title")}</h2>

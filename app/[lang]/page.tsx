@@ -159,6 +159,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <Suspense fallback={null}><ReleaseLines lang={lang} /></Suspense>
             <Suspense fallback={null}><SpillWatchLine lang={lang} /></Suspense>
 
+            <HowItWorks lang={lang} className="mb-8" />
+
             <SriLankaMap lang={lang} stations={home} />
 
             <section id="rivers" className="scroll-mt-4">
@@ -217,7 +219,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             </section>
           </>
         )}
-        <HowItWorks lang={lang} />
+        {stationsError && <HowItWorks lang={lang} />}
       </div>
     </main>
   );
