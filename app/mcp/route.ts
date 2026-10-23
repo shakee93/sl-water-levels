@@ -10,6 +10,7 @@ import { orderStations } from "@/lib/basinOrder";
 import { ageMinutes } from "@/lib/readings";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { getReleases } from "@/lib/releases";
+import { WEEKLY_PDF, getWeeklyOutcome, windowState } from "@/lib/wmsWeekly";
 import { reservoirById } from "@/lib/reservoirs";
 
 const handler = createMcpHandler(
@@ -173,6 +174,28 @@ const handler = createMcpHandler(
           .filter((r) => (station ? r.gauges.some((g) => g.station.toLowerCase() === station.trim().toLowerCase()) : true));
         return {
           content: [{ type: "text", text: JSON.stringify({ releases, count: releases.length, sources: result.sources }, null, 2) }],
+        };
+      },
+    );
+
+    server.tool(
+      "get_spill_watch",
+      "Get the Mahaweli Authority's weekly 'possible to spill' windows (from the Water Management Secretariat weekly operational meeting PDF). Per reservoir: spillWindow {from,to} (Sri Lanka dates; the meeting expects spilling may happen in that window), state (upcoming / now / ended), plannedMcmPerDay, lastWeekMcm (water released last week, million cubic metres) and the raw remark. It is a weekly plan, not an observation and not a flood warning: gates may open earlier, later or not at all. The file is often published days after the meeting. Includes the meeting date and when the file was last modified.",
+      {
+        reservoir: z.string().optional().describe("Optional reservoir name filter, e.g. 'Upper Kotmale'"),
+        includePast: z.boolean().optional().describe("Also list windows that ended more than a day ago (default false)"),
+      },
+      async ({ reservoir, includePast }) => {
+        const w = await getWeeklyOutcome();
+        if (!w.ok) return { content: [{ type: "text", text: JSON.stringify({ error: w.error }) }] };
+        const q = reservoir?.trim().toLowerCase();
+        const now = Date.now();
+        const items = w.data.items
+          .filter((i) => i.spillWindow && (includePast || windowState(i.spillWindow, now) !== "passed"))
+          .filter((i) => (q ? i.name.toLowerCase().includes(q) : true))
+          .map((i) => ({ ...i, state: windowState(i.spillWindow!, now) }));
+        return {
+          content: [{ type: "text", text: JSON.stringify({ meetingDate: w.data.meetingDate, nextWeek: w.data.nextWeek, lastModified: w.data.lastModified, source: WEEKLY_PDF, items, count: items.length }, null, 2) }],
         };
       },
     );

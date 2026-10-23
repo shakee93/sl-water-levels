@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SpillWatchChip } from "@/app/SpillWatchChip";
 import type { RV } from "@/lib/reservoirData";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { getI18n } from "@/lib/i18n/server";
@@ -40,6 +41,7 @@ export function RvCard({ rv, lang }: { rv: RV; lang: Locale }) {
           <span className="tabular-nums">{t("release.cusecs", { n: fmt(flow.cusecs) })} · {rt("lps", { n: fmt(litresPerSecond(flow.cusecs)) })}</span>
         </span>
       )}
+      <SpillWatchChip lang={lang} slug={rv.slug} catalogueId={rv.catalogueId} className="mt-2" />
     </Link>
   );
 }

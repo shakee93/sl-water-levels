@@ -13,6 +13,7 @@
 // (from 2026-10-23 evening; earlier lines only hold the spilling / discharging / catalogue ones).
 //
 // Line shape: { t, hash, sheet: {sheetDate, fetchedAt, rows[]}, wms: {reportDate, lastModified, fetchedAt, rows[]},
+//               weekly: {meetingDate, nextWeek, lastModified, fetchedAt, items[{reservoirId, slug, name, spillWindow, spillDays, plannedMcmPerDay, lastWeekMcm, rawLine}]},
 //               news: {detections[]}, active: [{reservoirId, kind, cusecs, source, observedAt}] }
 // A source that failed is { error }. A day with no change has no new line; a failed fetch writes nothing.
 
@@ -45,7 +46,7 @@ try {
 
 // Content hash without the times that change on every server-side refresh.
 const stable = JSON.parse(JSON.stringify(data));
-for (const k of ["sheet", "wms"]) if (stable[k]) delete stable[k].fetchedAt;
+for (const k of ["sheet", "wms", "weekly"]) if (stable[k]) delete stable[k].fetchedAt;
 const hash = createHash("sha256").update(JSON.stringify(stable)).digest("hex").slice(0, 16);
 
 const dir = path.join(outDir, "releases", day.slice(0, 4));

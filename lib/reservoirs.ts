@@ -49,6 +49,8 @@ export type Reservoir = {
   barrage?: boolean;
   /** The flood-warning basin whose DMC bulletin figure is this reservoir's release (only where one reservoir is meant). */
   dmcBasin?: string;
+  /** "watch": its water goes into another reservoir or has no river gauge below it, so a gates-opened report is shown as "Reservoir watch", never as a flood warning. */
+  kind?: "watch";
   note?: string;
 };
 
@@ -90,8 +92,9 @@ export const RESERVOIRS: Reservoir[] = [
   {
     id: "upper-kotmale",
     name: "Upper Kotmale",
-    aliases: ["upper kotmale", "upper kothmale"],
+    aliases: ["upper kotmale", "upper kothmale", "upper kotmale reservoir", "upper kotmale dam", "upper kotmale hydropower"],
     basin: "Mahaweli Ganga",
+    kind: "watch",
     gauges: [],
     note: "Its water goes into Kotmale reservoir, which absorbs it; the Kotmale Oya valley has no gauge of ours.",
   },
@@ -144,6 +147,96 @@ export const RESERVOIRS: Reservoir[] = [
       { station: "Weraganthota", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Just below Rantambe, near Mahiyangana.", town: "Mahiyangana" },
       { station: "Manampitiya", basin: "Mahaweli Ganga", eta: null, confidence: "low", note: "Far downstream on the Mahaweli.", town: "Polonnaruwa" },
     ],
+  },
+  // ---- CEB / Mahaweli dams added for the news matcher and the weekly spill watch (WMS weekly meeting).
+  // Their water goes through tunnels, power stations or other reservoirs, so none has a measured travel time.
+  // Gauges are listed only where the next gauge below is clear from the map; the rest are basin-level.
+  {
+    id: "bowatenna",
+    name: "Bowatenna",
+    aliases: ["bowatenna", "bowathenna", "bowatenna reservoir", "bowatenna dam"],
+    basin: "Mahaweli Ganga",
+    gauges: [],
+    note: "Receives the Polgolla diversion; no gauge of ours below it.",
+  },
+  {
+    id: "moragahakanda",
+    name: "Moragahakanda",
+    aliases: ["moragahakanda", "moragaha kanda", "moragahakande", "moragahakanda reservoir", "moragahakanda dam"],
+    basin: "Mahaweli Ganga",
+    gauges: [],
+    note: "Kaluganga/Amban Ganga system; no gauge of ours below it.",
+  },
+  {
+    id: "kaluganga",
+    name: "Kaluganga",
+    aliases: ["kaluganga reservoir", "kalu ganga reservoir", "kaluganga dam", "kalu ganga dam"],
+    exactAliases: ["kaluganga"],
+    basin: "Mahaweli Ganga",
+    gauges: [],
+    note: "The Kaluganga reservoir in Matale (not the Kalu Ganga river at Ratnapura), part of the Moragahakanda scheme.",
+  },
+  {
+    id: "samanalawewa",
+    name: "Samanalawewa",
+    aliases: ["samanalawewa", "samanala wewa", "samanalawawa", "samanalawa", "samanalawewa reservoir", "samanalawewa dam"],
+    basin: "Walawe Ganga",
+    gauges: [],
+    note: "Udawalawe reservoir sits between it and our Moraketiya gauge.",
+  },
+  {
+    id: "castlereagh",
+    name: "Castlereagh",
+    aliases: ["castlereagh", "castlereigh", "castlereagh reservoir", "castlereigh reservoir", "castlereagh dam", "castlereigh dam"],
+    basin: "Kelani Ganga",
+    gauges: [{ station: "Kithulgala", basin: "Kelani Ganga", eta: null, confidence: "low", note: "Laxapana complex water reaches the Kelani above Kithulgala; the route goes through tunnels and power stations.", town: "Kithulgala" }],
+  },
+  {
+    id: "maussakele",
+    name: "Maussakele",
+    aliases: ["maussakele", "moussakele", "maussakelle", "moussakelle", "mousakelle", "maussakale", "mausakelle", "maussakele reservoir", "moussakele reservoir", "maussakele dam", "moussakele dam"],
+    basin: "Kelani Ganga",
+    gauges: [{ station: "Kithulgala", basin: "Kelani Ganga", eta: null, confidence: "low", note: "Laxapana complex water reaches the Kelani above Kithulgala; the route goes through tunnels and power stations.", town: "Kithulgala" }],
+  },
+  {
+    id: "canyon",
+    name: "Canyon",
+    aliases: ["canyon reservoir", "canyon dam", "canyon spill", "canyon power station"],
+    exactAliases: ["canyon"],
+    basin: "Kelani Ganga",
+    gauges: [{ station: "Kithulgala", basin: "Kelani Ganga", eta: null, confidence: "low", note: "Laxapana complex water reaches the Kelani above Kithulgala.", town: "Kithulgala" }],
+  },
+  {
+    id: "norton",
+    name: "Norton",
+    aliases: ["norton reservoir", "norton dam", "norton bridge reservoir", "norton bridge dam"],
+    exactAliases: ["norton"],
+    basin: "Kelani Ganga",
+    gauges: [{ station: "Kithulgala", basin: "Kelani Ganga", eta: null, confidence: "low", note: "Laxapana complex water reaches the Kelani above Kithulgala.", town: "Kithulgala" }],
+  },
+  {
+    id: "laxapana",
+    name: "Laxapana",
+    aliases: ["laxapana", "laksapana", "laxapana reservoir", "laxapana dam", "new laxapana", "old laxapana"],
+    basin: "Kelani Ganga",
+    gauges: [{ station: "Kithulgala", basin: "Kelani Ganga", eta: null, confidence: "low", note: "Laxapana tailrace joins the Kelani above Kithulgala.", town: "Kithulgala" }],
+  },
+  {
+    id: "broadlands",
+    name: "Broadlands",
+    aliases: ["broadlands", "broadlands reservoir", "broadlands dam"],
+    exactAliases: ["broadland"],
+    basin: "Kelani Ganga",
+    gauges: [],
+    note: "Run-of-river station on the Kelani above Glencourse.",
+  },
+  {
+    id: "kukule",
+    name: "Kukule",
+    aliases: ["kukule", "kukule ganga", "kukuleganga", "kukule ganga reservoir", "kukule dam", "kukule ganga dam"],
+    basin: "Kalu Ganga",
+    gauges: [],
+    note: "Kukule Ganga joins the Kalu Ganga below Ratnapura; none of our Kalu Ganga gauges is clearly below it.",
   },
   {
     id: "udawalawe",

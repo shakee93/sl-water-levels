@@ -14,6 +14,7 @@ import { getNational } from "./arcgis";
 import { sanitizeLevel } from "./readings";
 import { getReleaseSources, parseSheetTab, type SheetRow } from "./releases";
 import { aiConfigured } from "./openai";
+import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
 
 export type Severity = "critical" | "warn";
 
@@ -256,6 +257,34 @@ async function checkWms(deep: boolean): Promise<HealthCheck> {
   );
 }
 
+// ---------------------------------------------------------------- Mahaweli weekly meeting PDF
+
+async function checkWmsWeekly(deep: boolean): Promise<HealthCheck> {
+  return run(
+    "wms-weekly",
+    "Mahaweli weekly meeting (PDF)",
+    "The 'spill possible' chips on reservoir pages are missing or out of date.",
+    async () => {
+      const head = await fetch(WEEKLY_PDF, { ...fetchOpts(deep, 3600, 25_000), method: "HEAD" });
+      if (!head.ok) return { ok: false, detail: `PDF unreachable (HTTP ${head.status})` };
+      const lm = head.headers.get("last-modified");
+      const lmMs = lm ? Date.parse(lm) : NaN;
+      const w = await getWeeklyOutcome(); // cached parse
+      const problems: string[] = [];
+      if (!w.ok) problems.push(`PDF could not be parsed: ${w.error}`);
+      else if (w.data.items.length < 5) problems.push(`${w.data.items.length} reservoirs parsed (need 5)`);
+      // The meeting is weekly: only a file untouched for 10 days is worth a warning.
+      if (Number.isFinite(lmMs) && Date.now() - lmMs > 10 * 24 * HOUR) problems.push(`file last modified ${words(mins(Date.now() - lmMs))} ago (limit 10 days)`);
+      const spills = w.ok ? w.data.items.filter((i) => i.spillWindow).length : 0;
+      return {
+        ok: problems.length === 0,
+        detail: problems.length ? problems.join("; ") : `${w.ok ? w.data.items.length : 0} reservoirs parsed, ${spills} with a spill window; meeting ${w.ok ? (w.data.meetingDate ?? "date unknown") : ""}`,
+        ...(Number.isFinite(lmMs) ? fresh(lmMs) : {}),
+      };
+    },
+  );
+}
+
 // ---------------------------------------------------------------- DMC
 
 async function checkDmc(deep: boolean): Promise<HealthCheck> {
@@ -437,17 +466,18 @@ async function checkPipelines(): Promise<HealthCheck[]> {
 // ---------------------------------------------------------------- entry point
 
 export async function runHealthChecks(deep = false): Promise<HealthReport> {
-  const [gauges, sheet, wms, dmc, openai, weather, feeds, pipes] = await Promise.all([
+  const [gauges, sheet, wms, wmsWeekly, dmc, openai, weather, feeds, pipes] = await Promise.all([
     checkGauges(deep),
     checkSheet(deep),
     checkWms(deep),
+    checkWmsWeekly(deep),
     checkDmc(deep),
     checkOpenAi(),
     checkWeather(deep),
     checkFeeds(deep),
     checkPipelines(),
   ]);
-  const checks = [gauges, sheet, wms, dmc, openai, ...weather, ...feeds, ...pipes];
+  const checks = [gauges, sheet, wms, wmsWeekly, dmc, openai, ...weather, ...feeds, ...pipes];
   return { ok: checks.every((c) => c.ok), checkedAt: new Date().toISOString(), deep, checks };
 }
 

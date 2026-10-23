@@ -20,6 +20,7 @@ import { unstable_cache } from "next/cache";
 import { getDocumentProxy } from "unpdf";
 import { aiConfigured, decide } from "./openai";
 import { getOfficialWarnings } from "./warnings";
+import { matchGateStoryWith } from "./gateStory";
 import { RESERVOIRS, matchReservoir, reservoirsForStation, type Reservoir } from "./reservoirs";
 
 // ---------------------------------------------------------------- types
@@ -86,6 +87,8 @@ export type Release = {
   dayOnly: boolean;
   /** A news report newer than the official reading (shown as an extra line). */
   news: NewsDetection | null;
+  /** "Reservoir watch": its water goes into another reservoir, so this is never a flood warning (lib/reservoirs.ts kind "watch"). */
+  watch?: true;
 };
 
 export type ReleasesResult = {
@@ -358,12 +361,6 @@ const wmsCached = unstable_cache(loadWms, ["releases-wms-v1"], { revalidate: HOU
 
 // ---------------------------------------------------------------- news
 
-const GATE = /\bgates?\b/i;
-const OPEN = /\b(open(?:ed|ing|s)?|rais(?:e|ed|ing)|lift(?:ed|ing)?|unclos)/i;
-const CLOSE = /\b(clos(?:e|ed|ing)|shut|lower(?:ed|ing))\b/i;
-// "will be opened", "to open tonight": a plan, not an event.
-const PLANNED = /\b(will|may|might|could|expected to|plans? to|to be|are to|is to|going to)\b[^.]{0,25}\bopen|\bto open\b|\bopen(?:ing|ed)?\s+(?:tonight|tomorrow|later)/i;
-
 type FeedItem = { guid: string; title: string; desc: string; link: string; pubMs: number | null };
 
 function xmlText(block: string, tag: string): string {
@@ -388,22 +385,8 @@ function parseFeed(xml: string): FeedItem[] {
   });
 }
 
-/** Pure keyword matcher: the reservoir and direction of a gates story, or null. */
-export function matchGateStory(title: string, desc: string): { reservoir: Reservoir; action: "opened" | "closed" | "unclear" } | null {
-  const text = `${title}. ${desc}`;
-  if (!GATE.test(text)) return null;
-  const res = matchReservoir(title, "contains") ?? matchReservoir(text, "contains");
-  if (!res) return null;
-  if (PLANNED.test(title)) return null;
-  const decide1 = (s: string) => {
-    const o = OPEN.test(s);
-    const c = CLOSE.test(s);
-    return o && !c ? "opened" : c && !o ? "closed" : o && c ? "unclear" : null;
-  };
-  // The headline is the claim; the description may add "other gates remain closed".
-  const a = decide1(title) ?? decide1(text);
-  return a ? { reservoir: res, action: a } : null;
-}
+/** Pure keyword matcher: the reservoir and direction of a gates story, or null (lib/gateStory.ts, unit tested). */
+export const matchGateStory = (title: string, desc: string) => matchGateStoryWith(matchReservoir, title, desc);
 
 const classifyCached = unstable_cache(
   async (guid: string, title: string, desc: string): Promise<"opened" | "closed" | "unclear"> => {
@@ -521,7 +504,7 @@ function build(res: Reservoir, cands: Candidate[], news: NewsDetection | undefin
   // Newest day wins; on the same day sheet > DMC bulletin > Mahaweli PDF.
   fresh.sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : a.rank - b.rank));
   const best = fresh[0];
-  const base = { reservoirId: res.id, name: res.name, basin: res.basin, stations: res.gauges.map((g) => g.station) };
+  const base = { reservoirId: res.id, name: res.name, basin: res.basin, stations: res.gauges.map((g) => g.station), ...(res.kind === "watch" ? { watch: true as const } : {}) };
   if (best && (best.cusecs ?? 0) >= MIN_NOTABLE_CUSECS) {
     const newer = news && Date.parse(news.publishedAt) > best.atMs ? news : null;
     return {

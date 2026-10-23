@@ -9,6 +9,7 @@ import { basinPath, stationPath } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
 import { clock, colomboParts, shortDay, shortStamp } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
+import { swFor } from "@/lib/i18n/spillWatch";
 import type { TFn } from "@/lib/i18n/translate";
 
 // Reservoir release warnings, shown as a compact visual row: who is releasing, how big
@@ -67,7 +68,8 @@ function pickLink(res: ReturnType<typeof reservoirById>, station?: string, basin
   return res.gauges.find((g) => g.basin === basin && g.eta) ?? res.gauges.find((g) => g.basin === basin) ?? res.gauges.find((g) => g.eta) ?? res.gauges[0];
 }
 
-function RowBody({ t, rel, trend, link, note }: { t: TFn; rel: Release; trend: Trend | null; link?: GaugeLink; note: boolean }) {
+function RowBody({ t, lang, rel, trend, link, note }: { t: TFn; lang: Locale; rel: Release; trend: Trend | null; link?: GaugeLink; note: boolean }) {
+  const sw = swFor(lang);
   const confirmed = rel.kind === "confirmed";
   const size = confirmed && rel.cusecs ? releaseSize(rel.cusecs) : null;
   const gauge = link ? stationDisplayName(link.station) : null;
@@ -75,7 +77,7 @@ function RowBody({ t, rel, trend, link, note }: { t: TFn; rel: Release; trend: T
   return (
     <>
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-semibold">{t(confirmed ? "release.lead" : "release.leadReported", { name: rel.name })}</span>
+        <span className="font-semibold">{rel.watch ? sw("watch.lead", { name: rel.name }) : t(confirmed ? "release.lead" : "release.leadReported", { name: rel.name })}</span>
         {size && rel.cusecs && (
           <span className={chip}>
             <SizeMeter step={SIZE_STEP[size]} />
@@ -114,7 +116,7 @@ function RowBody({ t, rel, trend, link, note }: { t: TFn; rel: Release; trend: T
         </p>
       )}
       {note && (
-        <p className="mt-1">{link ? t("release.expect") : t("release.noGaugeBelow")}{rel.kind === "reported" ? ` ${t("release.reportedNote")}` : ""}</p>
+        <p className="mt-1">{rel.watch ? sw("watch.note") : <>{link ? t("release.expect") : t("release.noGaugeBelow")}{rel.kind === "reported" ? ` ${t("release.reportedNote")}` : ""}</>}</p>
       )}
     </>
   );
@@ -142,7 +144,7 @@ export async function ReleaseCard({ lang, station, basin }: { lang: Locale; stat
         <div key={rel.reservoirId} className={shell}>
           <Waves className="size-4 mt-0.5 shrink-0" aria-hidden />
           <div className="min-w-0 flex-1">
-            <RowBody t={t} rel={rel} trend={trends[i]} link={pickLink(reservoirById(rel.reservoirId), station, b)} note />
+            <RowBody t={t} lang={lang} rel={rel} trend={trends[i]} link={pickLink(reservoirById(rel.reservoirId), station, b)} note />
             <span className="flex flex-wrap items-center gap-x-4 text-xs">
               <a href={rel.url} target="_blank" rel="noopener noreferrer" className={linkCls}>
                 {rel.kind === "confirmed"
@@ -181,7 +183,7 @@ export async function ReleaseLines({ lang }: { lang: Locale }) {
           <li key={rel.reservoirId} className={shell}>
             <Waves className="size-4 mt-0.5 shrink-0" aria-hidden />
             <div className="min-w-0 flex-1">
-              <RowBody t={t} rel={rel} trend={trends[i]} link={link} note={false} />
+              <RowBody t={t} lang={lang} rel={rel} trend={trends[i]} link={link} note={false} />
               <span className="flex flex-wrap items-center gap-x-4">
                 <Link href={p(href)} className="font-medium underline underline-offset-2 inline-flex items-center gap-1 min-h-11 sm:min-h-6">
                   {first ? t("release.homeView", { gauge: stationDisplayName(first) }) : t("release.homeViewRiver")}

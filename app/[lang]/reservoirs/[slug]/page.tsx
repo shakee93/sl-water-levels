@@ -1,3 +1,4 @@
+import { SpillWatchChip } from "@/app/SpillWatchChip";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -193,6 +194,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{name}</h1>
             <StatusChip status={rv.status} rt={rt} />
           </div>
+          <Suspense fallback={null}><SpillWatchChip lang={lang} slug={rv.slug} catalogueId={rv.catalogueId} detail className="mt-2" /></Suspense>
           <p className={`mt-1 text-sm ${muted}`}>
             {[other || null, rv.river ? riverName(rv.river, lang) : null, rv.district].filter(Boolean).join(" · ") || rt(`kind.${rv.kind}` as "kind.major")}
           </p>

@@ -4,11 +4,12 @@
 // Public data only; the sources are cached for 10 minutes to an hour, so repeated hits are cheap.
 
 import { getReleaseSources, getReleases } from "@/lib/releases";
+import { getWeeklyOutcome } from "@/lib/wmsWeekly";
 
 export const revalidate = 300;
 
 export async function GET() {
-  const [src, merged] = await Promise.all([getReleaseSources(), getReleases()]);
+  const [src, merged, weekly] = await Promise.all([getReleaseSources(), getReleases(), getWeeklyOutcome()]);
   const iso = (ms: number) => new Date(ms).toISOString();
   return Response.json({
     // Every sheet row (about 170 reservoirs): the reservoir pages chart each one's water level from this archive.
@@ -27,6 +28,16 @@ export async function GET() {
           rows: src.wms.data.rows,
         }
       : { error: src.wms.error },
+    // Mahaweli weekly meeting decisions: spill windows per reservoir (kept so past windows can be compared with what happened).
+    weekly: weekly.ok
+      ? {
+          meetingDate: weekly.data.meetingDate,
+          nextWeek: weekly.data.nextWeek,
+          lastModified: weekly.data.lastModified,
+          fetchedAt: iso(weekly.data.fetchedAt),
+          items: weekly.data.items,
+        }
+      : { error: weekly.error },
     news: src.news.ok ? { detections: src.news.data } : { error: src.news.error },
     active: merged.releases.map((r) => ({ reservoirId: r.reservoirId, kind: r.kind, cusecs: r.cusecs, source: r.source, observedAt: r.observedAt })),
   });

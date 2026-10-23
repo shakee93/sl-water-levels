@@ -11,6 +11,7 @@ import { getSearchStations } from "../PlaceSearchData";
 import { SriLankaMap } from "../SriLankaMap";
 import { NeedsAttention } from "../NeedsAttention";
 import { ReleaseLines } from "../ReleaseCard";
+import { SpillWatchLine } from "../SpillWatchLine";
 import { HowItWorks } from "../HowItWorks";
 import { Favourites } from "../Favourites";
 import { NearYou } from "../NearYou";
@@ -156,6 +157,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
             <NeedsAttention lang={lang} snapshot={national} serverNow={serverNow} />
             <Suspense fallback={null}><ReleaseLines lang={lang} /></Suspense>
+            <Suspense fallback={null}><SpillWatchLine lang={lang} /></Suspense>
 
             <SriLankaMap lang={lang} stations={home} />
 
