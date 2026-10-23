@@ -6,6 +6,14 @@
 // Hours are keyed by their END in epoch ms (Open-Meteo reports the sum over the preceding hour).
 import { getJson, type Fetched } from "./weather";
 
+/** One quick retry: Open-Meteo sometimes answers 429/5xx under bursts, and a failure would otherwise be cached into the page for its whole ISR window. */
+async function getJsonRetry(url: string, revalidate: number) {
+  const first = await getJson(url, revalidate);
+  if (first.ok) return first;
+  await new Promise((r) => setTimeout(r, 500));
+  return getJson(url, revalidate);
+}
+
 const HOUR_MS = 3_600_000;
 const REVALIDATE_S = 1800;
 /** Rounding the coordinates to 0.1 deg (~11 km, about the model grid) lets nearby towns share one cached response. */
@@ -34,7 +42,7 @@ export async function getTownRain(lat: number, lon: number, now = Date.now()): P
   const la = cell(lat), lo = cell(lon);
   const nowHour = Math.floor(now / HOUR_MS) * HOUR_MS;
   const [det, ens] = await Promise.all([
-    getJson(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=precipitation&past_days=1&forecast_days=2&timezone=UTC`, REVALIDATE_S),
+    getJsonRetry(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=precipitation&past_days=1&forecast_days=2&timezone=UTC`, REVALIDATE_S),
     getJson(`https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${la}&longitude=${lo}&hourly=precipitation&models=ecmwf_ifs025&past_days=0&forecast_days=2&timezone=UTC`, REVALIDATE_S),
   ]);
   if (!det.ok) return { ok: false, reason: `rain forecast unavailable (${det.reason})` };

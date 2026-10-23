@@ -5,7 +5,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { ttFor } from "@/lib/i18n/town";
 import type { Locale } from "@/lib/i18n/config";
 
-const MAX = 24;
+const MAX = 40;
 
 /** Station page: the towns whose flood estimate is based on this gauge, as links. Nothing to show = nothing rendered. */
 export function TownsOnGauge({ lang, station }: { lang: Locale; station: string }) {

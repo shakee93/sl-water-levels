@@ -24,11 +24,15 @@ export function TownRain({ lang, town, rain, reason }: { lang: Locale; town: str
   const slot = W / bars.length;
   const bw = slot * 0.7;
   const plot = H - TOP - BOT;
+  const peak = Math.max(...bars.map((b) => b.mm));
   const a = Math.round(rain.past24hMm), b = Math.round(rain.next24hMm);
   return (
     <section className="mt-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5">
       <h2 className="flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300"><CloudRain className="size-4" aria-hidden />{tt("sec.rain", { town })}</h2>
-      <p className="mt-1 text-sm tabular-nums text-slate-800 dark:text-slate-200" lang={lang}>{tt("sec.rainLegend", { a, b })}</p>
+      <p className="mt-1 text-sm tabular-nums text-slate-800 dark:text-slate-200" lang={lang}>
+        {tt("sec.rainLegend", { a, b })}
+        {peak >= 1 && <span className="text-slate-500 dark:text-slate-400"> · {tt("rain.peak", { mm: Math.round(peak * 10) / 10 })}</span>}
+      </p>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 w-full h-auto" role="img" aria-label={tt("rain.aria", { town, a, b })}>
         <line x1={0} x2={W} y1={H - BOT} y2={H - BOT} className="stroke-slate-200 dark:stroke-slate-700" />
         {bars.map((x, i) => {

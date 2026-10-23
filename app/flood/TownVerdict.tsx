@@ -68,7 +68,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
     return out;
   };
 
-  const note = (g ? (g.km < ON_GAUGE_KM ? tt("note.onGauge", { gauge: g.name }) : tt("note.experimental", { town: townName, gauge: g.name, km: formatKm(g.km, t) })) : tt("note.experimentalGeneric", { town: townName })) + (lang !== "en" ? ` (${t("common.machineTranslated")})` : "");
+  const note = (stale && !g ? tt("note.none", { town: townName }) : g ? (g.km < ON_GAUGE_KM ? tt("note.onGauge", { gauge: g.name }) : tt("note.experimental", { town: townName, gauge: g.name, km: formatKm(g.km, t) })) : tt("note.experimentalGeneric", { town: townName })) + (lang !== "en" ? ` (${t("common.machineTranslated")})` : "");
 
   const dayVars = r.day.vars;
   return (

@@ -74,14 +74,14 @@ export default async function FloodIndex({ params }: { params: Promise<{ lang: s
               "@context": "https://schema.org",
               "@type": "BreadcrumbList",
               itemListElement: [
-                { "@type": "ListItem", position: 1, name: t("crumb.allBasins"), item: SITE + p("/") },
+                { "@type": "ListItem", position: 1, name: t("crumb.home"), item: SITE + p("/") },
                 { "@type": "ListItem", position: 2, name: tt("crumb"), item: SITE + p("/flood") },
               ],
             }),
           }}
         />
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.allBasins")}</Link>{" "}
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.home")}</Link>{" "}
           <span aria-hidden>›</span> <span className="text-slate-700 dark:text-slate-300">{tt("crumb")}</span>
         </nav>
         <header className="mb-5">

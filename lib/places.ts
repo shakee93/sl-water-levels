@@ -86,8 +86,8 @@ const ROWS: Row[] = [
   ["Ja-Ela", "Gampaha", 7.0744, 79.8919, [DU, BG], ["Jaela", "Ja Ela", "Jaella", "ජා-ඇල", "ජාඇල", "ஜா-எல"]],
   ["Ekala", "Gampaha", 7.1030, 79.9000, [DU], ["Ekala", "ඒකල"]],
   ["Seeduwa", "Gampaha", 7.1200, 79.8800, [DU, BG], ["Sheduwa", "Seeduva", "සීදුව"]],
-  ["Katunayake", "Gampaha", 7.1700, 79.8800, [DU, BG], ["Katunayaka", "Katunayake", "Airport", "කටුනායක"]],
-  ["Negombo", "Gampaha", 7.2086, 79.8358, [DU, BG], ["Meegamuwa", "Migamuwa", "මීගමුව", "நீர்கொழும்பு"]],
+  ["Katunayake", "Gampaha", 7.1700, 79.8800, [BG, DU], ["Katunayaka", "Katunayake", "Airport", "කටුනායක"]],
+  ["Negombo", "Gampaha", 7.2086, 79.8358, [BG, DU], ["Meegamuwa", "Migamuwa", "මීගමුව", "நீர்கொழும்பு"]],
   ["Minuwangoda", "Gampaha", 7.1730, 79.9540, [DU, BG], ["Minuwangoda", "මිනුවන්ගොඩ"]],
   ["Veyangoda", "Gampaha", 7.1530, 80.0600, [DU], ["Weyangoda", "Veyangoda", "වේයන්ගොඩ"]],
   ["Attanagalla", "Gampaha", 7.1130, 80.0830, [DU], ["Attanagalle", "Aththanagalla", "Attanagala", "අත්තනගල්ල"]],
@@ -186,13 +186,15 @@ const CANAL_BACKWATER = new Set([
   "Peliyagoda", "Kelaniya", "Kiribathgoda", "Wattala", "Hendala", "Ragama", "Kandana", "Kotikawatta", "Angoda", "Mulleriyawa",
   "Thalangama", "Rajagiriya", "Battaramulla", "Kotte", "Ja-Ela", "Ekala", "Seeduwa", "Katunayake", "Negombo",
 ]);
+// A town with a river gauge inside it (under 1.5 km) is ON that river, whatever the terrain: never "upland".
+// (scripts/town-risk.test.mts checks this against the live station list.)
 const UPLAND = new Set([
   "Malabe", "Hokandara", "Athurugiriya", "Homagama", "Kadawatha", "Maskeliya", "Nuwara Eliya", "Talawakele", "Hatton", "Kegalle",
   "Warakapola", "Gampaha", "Yakkala", "Nittambuwa", "Pugoda", "Veyangoda", "Divulapitiya", "Mirigama", "Kurunegala", "Wariyapola",
   "Kuliyapitiya", "Narammala", "Polgahawela", "Nikaweratiya", "Anamaduwa", "Maho", "Marawila", "Kandy", "Digana", "Kadugannawa",
-  "Teldeniya", "Akurana", "Pelmadulla", "Balangoda", "Morawaka", "Deniyaya", "Pitabeddara", "Ingiriya", "Horana", "Bandaragama",
-  "Monaragala", "Buttala", "Thanamalwila", "Padiyatalawa", "Dehiattakandiya", "Siyambalanduwa", "Kataragama", "Ranala",
-  "Thambuttegama", "Kekirawa", "Anuradhapura", "Medawachchiya", "Ganemulla", "Attanagalla", "Elpitiya",
+  "Teldeniya", "Akurana", "Pelmadulla", "Balangoda", "Morawaka", "Deniyaya", "Ingiriya", "Horana", "Bandaragama",
+  "Monaragala", "Buttala", "Thanamalwila", "Dehiattakandiya", "Ranala",
+  "Thambuttegama", "Kekirawa", "Anuradhapura", "Medawachchiya", "Ganemulla", "Elpitiya",
 ]);
 const slugOf = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 

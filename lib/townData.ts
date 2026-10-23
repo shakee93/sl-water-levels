@@ -11,7 +11,7 @@ import { distanceKm } from "./nearby";
 import { contactsForDistrict } from "./help";
 import { stationPath } from "./slug";
 import type { Place } from "./places";
-import { assessTown, type ForecastIn, type GaugeIn, type Tone, type TownRiskInput, type WarningIn } from "./townRisk";
+import { assessTown, usableGauge, type ForecastIn, type GaugeIn, type Tone, type TownRiskInput, type WarningIn } from "./townRisk";
 import type { Thresholds } from "./readings";
 import type { Unit } from "./units";
 
@@ -72,8 +72,7 @@ export async function loadTown(place: Place, now = Date.now()): Promise<TownData
   const byName = new Map(national.map((s) => [s.station, s]));
   const primary = gaugeIn(byName.get(place.stations[0]), place);
   const secondary = gaugeIn(place.stations[1] ? byName.get(place.stations[1]) : undefined, place);
-  const usable = (g: GaugeIn | null) => !!g && g.tier !== "stale" && g.tier !== "none" && g.level != null;
-  const eff = usable(primary) ? primary : usable(secondary) ? secondary : null;
+  const eff = usableGauge(primary) ? primary : usableGauge(secondary) ? secondary : null;
   const effStation = eff ? byName.get(eff.station)! : null;
 
   const [rainR, warnings, forecast, release] = await Promise.all([
@@ -88,16 +87,19 @@ export async function loadTown(place: Place, now = Date.now()): Promise<TownData
   ]);
 
   // Official warning: the current one that names this river basin or the town's district; strongest wins.
+  // Also when no gauge is usable (stale or without flood levels): a warning is then the only evidence there is,
+  // and the basin is the town's own river (its first listed gauge's).
   let warning: WarningIn | null = null;
-  if (eff) {
-    const key = normaliseBasin(eff.basin);
+  const warnBasin = (eff ?? primary ?? secondary)?.basin ?? null;
+  {
+    const key = warnBasin ? normaliseBasin(warnBasin) : null;
     for (const w of warnings.warnings) {
       if (w.current === false) continue;
-      const byBasin = w.basins.some((b) => normaliseBasin(b) === key);
+      const byBasin = key != null && w.basins.some((b) => normaliseBasin(b) === key);
       const byDistrict = (w.districts ?? []).some((d) => d.trim().toLowerCase() === place.district.toLowerCase());
       if (!byBasin && !byDistrict) continue;
       if (!warning || SEV_RANK.indexOf(w.severity) > SEV_RANK.indexOf(warning.severity)) {
-        warning = { severity: w.severity, source: w.source, area: byBasin ? eff.basin : place.district };
+        warning = { severity: w.severity, source: w.source, area: byBasin ? warnBasin! : place.district };
       }
     }
   }
@@ -141,18 +143,16 @@ export async function loadTown(place: Place, now = Date.now()): Promise<TownData
   };
 }
 
-/** Cheap gauge-only state for every town (the /flood index): no rain, forecast or warnings. */
+/** Cheap gauge-only state for every town (the /flood index): no rain, forecast or warnings. Same gauge choice as the page. */
 export async function loadTownStates(places: Place[]): Promise<Map<string, { tone: Tone; station: string | null }>> {
   const national = await getNational();
   const byName = new Map(national.map((s) => [s.station, s]));
   const out = new Map<string, { tone: Tone; station: string | null }>();
   for (const p of places) {
-    const list = p.stations.map((st) => byName.get(st)).filter((s): s is NationalStation => !!s);
-    const live = list.find((s) => s.tier !== "stale" && s.tier !== "none" && s.latest);
-    out.set(p.slug, {
-      tone: live ? (assessTown({ drainage: p.drainage, primary: gaugeIn(live, p), secondary: null, forecast: null, rain: null, release: null, warning: null, now: 0 }).tone) : "stale",
-      station: (live ?? list[0])?.station ?? null,
-    });
+    const primary = gaugeIn(byName.get(p.stations[0]), p);
+    const secondary = gaugeIn(p.stations[1] ? byName.get(p.stations[1]) : undefined, p);
+    const r = assessTown({ drainage: p.drainage, primary, secondary, forecast: null, rain: null, release: null, warning: null, now: 0 });
+    out.set(p.slug, { tone: r.tone, station: r.gauge?.station ?? primary?.station ?? null });
   }
   return out;
 }

@@ -9,6 +9,7 @@ import { ttFor } from "@/lib/i18n/town";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
+import { stationDisplayName } from "@/lib/displayName";
 import { formatKm } from "@/lib/nearby";
 import { basinPath } from "@/lib/slug";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!isLocale(lang) || !place) return {};
   const tt = ttFor(lang);
   const alternates = pageAlternates(lang, `/flood/${place.slug}`);
-  const gauge = place.stations[0];
+  const gauge = place.stations[0] ? stationDisplayName(place.stations[0]) : null;
   const title = tt("title", { town: place.name });
   const description = gauge ? tt("desc", { town: place.name, gauge }) : tt("descNoGauge", { town: place.name });
   return {
@@ -65,7 +66,7 @@ export default async function TownPage({ params }: Params) {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       itemListElement: [
-        { "@type": "ListItem", position: 1, name: t("crumb.allBasins"), item: SITE + p("/") },
+        { "@type": "ListItem", position: 1, name: t("crumb.home"), item: SITE + p("/") },
         { "@type": "ListItem", position: 2, name: tt("crumb"), item: SITE + p("/flood") },
         { "@type": "ListItem", position: 3, name: place.name, item: SITE + canonical },
       ],
@@ -88,7 +89,7 @@ export default async function TownPage({ params }: Params) {
         ))}
 
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.allBasins")}</Link>{" "}
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.home")}</Link>{" "}
           <span aria-hidden>›</span>{" "}
           <Link href={p("/flood")} className="hover:underline inline-block py-3 -my-3">{tt("crumb")}</Link>{" "}
           <span aria-hidden>›</span>{" "}
@@ -97,7 +98,7 @@ export default async function TownPage({ params }: Params) {
 
         <header className="mb-4 sm:mb-5">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{tt("h1", { town: place.name })}</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{tt("h1sub", { town: place.name, district: place.district })}</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{place.name === place.district ? place.district : tt("h1sub", { town: place.name, district: place.district })}</p>
         </header>
 
         <TownVerdict

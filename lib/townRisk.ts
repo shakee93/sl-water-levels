@@ -37,8 +37,11 @@
 //     evacuation -> minor. (A basin-wide warning does not say this street is under water, so even a
 //     "major flood" warning only floors the town at "Flooding likely"; the Move-to-safety tone comes
 //     from a measured major level at the gauge.)
-//  5. No usable gauge (none fresh, or no flood levels published): tone "stale" ("no estimate") unless
-//     heavy rain or an official warning gives a reason, in which case the same rules start from normal.
+//  5. No usable gauge (none fresh, none within FAR_GAUGE_KM, or no flood levels published): tone "stale"
+//     ("no estimate") unless heavy rain or an official warning gives a reason, in which case the same
+//     rules start from normal. One exception: a fresh gauge that publishes no flood levels (Ampara) still
+//     works for a visitor who has saved their street's level, because that comparison needs no official marks.
+//  Missing data is never zero: no rain feed means no rain lines and no "no heavy rain expected" claim.
 //
 // Constants below are the only tuning knobs.
 import type { Tier } from "./status";
@@ -67,6 +70,8 @@ export const PERSONAL_NEAR = 0.85;
 /** Rain below these totals is not worth a line in the reasons. */
 export const NOTABLE_MM_6H = 10;
 export const NOTABLE_MM_24H = 25;
+/** A gauge farther than this from the town says too little about it to base an estimate on. */
+export const FAR_GAUGE_KM = 40;
 
 export type GaugeIn = {
   station: string;
@@ -150,7 +155,10 @@ export type TownRisk = {
 };
 
 const tierTone = (t: Tier): Tone | null => (t === "stale" || t === "none" ? null : t);
-const usable = (g: GaugeIn | null): g is GaugeIn => !!g && tierTone(g.tier) != null && g.level != null;
+/** A fresh reading against published flood levels, close enough to the town to mean something. */
+export const usableGauge = (g: GaugeIn | null): g is GaugeIn => !!g && tierTone(g.tier) != null && g.level != null && g.km <= FAR_GAUGE_KM;
+/** A fresh reading from a gauge with no published flood levels: usable only against the visitor's own street level. */
+const marksless = (g: GaugeIn | null): g is GaugeIn => !!g && g.tier === "none" && g.level != null && Number.isFinite(g.level) && g.km <= FAR_GAUGE_KM;
 
 export function isHeavyRain(r: RainIn | null): boolean {
   if (!r) return false;
@@ -169,9 +177,13 @@ const WARN_FLOOR: Record<WarningIn["severity"], Tone | null> = {
 const fmtLevel = (v: number, unit: Unit) => `${Number.isInteger(v) ? v : v.toFixed(2).replace(/0$/, "")}${unit ? ` ${unit}` : ""}`;
 const r1 = (v: number) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10);
 
-export function assessTown(input: TownRiskInput, myLevel: number | null = null): TownRisk {
+export function assessTown(input: TownRiskInput, rawMyLevel: number | null = null): TownRisk {
   const { drainage, forecast, rain, release, warning } = input;
-  const gauge = usable(input.primary) ? input.primary : usable(input.secondary) ? input.secondary : null;
+  // a street level only means something as a positive number
+  const myLevel = rawMyLevel != null && Number.isFinite(rawMyLevel) && rawMyLevel > 0 ? rawMyLevel : null;
+  let gauge = usableGauge(input.primary) ? input.primary : usableGauge(input.secondary) ? input.secondary : null;
+  const noMarks = gauge == null && myLevel != null;
+  if (noMarks) gauge = marksless(input.primary) ? input.primary : marksless(input.secondary) ? input.secondary : null;
   const reasons: Reason[] = [];
 
   // ---- 1. river tone
@@ -183,7 +195,8 @@ export function assessTown(input: TownRiskInput, myLevel: number | null = null):
   let forecastReason: Reason | null = null;
   let personalReason: Reason | null = null;
   if (gauge) {
-    river = tierTone(gauge.tier)!;
+    // a gauge with no published marks starts from "normal": only the street's own level can raise it
+    river = tierTone(gauge.tier) ?? "normal";
     // forecast crossing of alert or above within 24 h
     const cross = forecast && forecast.status !== "unavailable"
       ? forecast.crossings
@@ -209,7 +222,7 @@ export function assessTown(input: TownRiskInput, myLevel: number | null = null):
     if (myLevel != null && gauge.level != null) {
       const lvl = gauge.level;
       let p: Tone | null = null;
-      const fMax = forecast?.maxLevel ?? null;
+      const fMax = forecast && forecast.status !== "unavailable" ? forecast.maxLevel : null;
       if (lvl >= myLevel) p = "minor";
       else if (fMax != null && fMax >= myLevel && rising) p = "alert";
       else if (lvl >= myLevel * PERSONAL_NEAR) p = rising ? "alert" : "watch";
@@ -255,21 +268,22 @@ export function assessTown(input: TownRiskInput, myLevel: number | null = null):
   }
   if (personalReason) reasons.push(personalReason);
   if (gauge) {
+    const tt = tierTone(gauge.tier);
     reasons.push({
       kind: "river",
-      key: "r.river",
+      key: tt ? "r.river" : "r.riverNoMarks",
       vars: {
         river: gauge.basin.trim(),
         gauge: gauge.name,
         level: fmtLevel(gauge.level!, gauge.unit),
         dir: `w.${trend === "up" ? (rate! >= 0.05 ? "rising" : "slow") : trend === "down" ? "falling" : "steady"}`,
-        tier: `t.${tierTone(gauge.tier)}`,
+        ...(tt ? { tier: `t.${tt}` } : {}),
       },
-      warn: rank(tierTone(gauge.tier)!) >= rank("watch"),
+      warn: tt != null && rank(tt) >= rank("watch"),
     });
   } else {
-    const ref = input.primary ?? input.secondary;
-    if (ref) reasons.push({ kind: "nogauge", key: "r.noGauge", vars: { gauge: ref.name }, warn: false });
+    const ref = [input.primary, input.secondary].find((x) => x && x.km <= FAR_GAUGE_KM) ?? null;
+    if (ref) reasons.push({ kind: "nogauge", key: ref.tier === "none" ? "r.noMarks" : "r.noGauge", vars: { gauge: ref.name }, warn: false });
   }
   if (forecastReason) reasons.push(forecastReason);
   if (rain) {
@@ -307,7 +321,9 @@ export function assessTown(input: TownRiskInput, myLevel: number | null = null):
     reasons.push({ kind: "canal", key: "r.canal", vars: {}, warn: false });
   }
   if (release && drainage !== "upland") {
-    if (release.confirmed && release.cusecs != null) {
+    if (release.confirmed && release.cusecs == null) {
+      reasons.push({ kind: "release", key: "r.releaseNoFigure", vars: { res: release.reservoir }, warn: rising });
+    } else if (release.confirmed && release.cusecs != null) {
       const withEta = release.etaHours != null && gauge;
       reasons.push({
         kind: "release",
@@ -322,7 +338,7 @@ export function assessTown(input: TownRiskInput, myLevel: number | null = null):
   if (reasons.length === 0 || (tone === "normal" && !reasons.some((r) => r.warn))) {
     if (gauge && tone === "normal") {
       // replace the lone river line with the calmer sentence only when nothing else is notable
-      if (reasons.every((r) => r.kind === "river")) {
+      if (rain && reasons.every((r) => r.kind === "river")) {
         reasons.splice(0, reasons.length, { kind: "calm", key: "r.calm", vars: { river: gauge.basin.trim() }, warn: false });
       }
     }
@@ -337,16 +353,21 @@ export function assessTown(input: TownRiskInput, myLevel: number | null = null):
 
   let day: TownRisk["day"] = { key: "n24.unknown", vars: {} };
   if (gauge || tone != null) {
+    // heavy rain still to come (not merely fallen): the headline for the day ahead
+    const heavyAhead = !!rain && (rain.next6hMm >= HEAVY_MM_6H || rain.next24hMm >= HEAVY_MM_24H);
     if (forecastReason && forecastReason.key.startsWith("r.forecast")) {
       day = { key: forecastReason.key.replace("r.forecast", "n24.reach"), vars: "h" in forecastReason.vars ? { h: forecastReason.vars.h } : {} };
-    } else if (heavy && rain && Math.max(rain.next6hMm >= HEAVY_MM_6H ? rain.next24hMm : 0, rain.next24hMm >= HEAVY_MM_24H ? rain.next24hMm : 0) > 0) {
+    } else if (heavyAhead && rain) {
       day = { key: "n24.rain", vars: { mm: r1(rain.next24hMm) } };
     } else if (rain && rain.next24hP90Mm != null && rain.next24hP90Mm >= HEAVY_MM_24H) {
       day = { key: "n24.rainPossible", vars: { mm: r1(rain.next24hP90Mm) } };
     } else if (tone && rank(tone) >= rank("alert")) {
       day = { key: "n24.stay", vars: {} };
-    } else if (tone === "normal" || tone === "watch") {
-      day = !rain && !forecast ? { key: "n24.unknown", vars: {} } : { key: "n24.none", vars: {} };
+    } else if (tone === "watch") {
+      day = { key: "n24.watch", vars: {} };
+    } else if (tone === "normal") {
+      // no rain feed: say so rather than promise a dry day
+      day = rain ? { key: "n24.none", vars: {} } : { key: "n24.riverOnly", vars: {} };
     }
   }
 
