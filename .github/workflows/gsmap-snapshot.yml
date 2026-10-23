@@ -95,6 +95,24 @@ jobs:
           fi
           node --experimental-strip-types --no-warnings scripts/street-rain-log.mjs archive
 
+      # Web Push alerts for pinned places (scripts/push-notify.mjs): a rise or an all-clear since the last run. After
+      # the rain data is pushed and the street-rain log is written, and never able to fail the snapshot. Skipped
+      # quietly until the VAPID secrets exist.
+      - name: Send push alerts
+        if: steps.secrets.outputs.ready == 'true'
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+        run: |
+          if [ -z "$VAPID_PUBLIC_KEY" ] || [ -z "$VAPID_PRIVATE_KEY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::Push alerts are not set up yet (VAPID secrets missing); skipped."
+            exit 0
+          fi
+          npm install --no-save --no-audit --no-fund web-push@3.6.7
+          node --experimental-strip-types --no-warnings scripts/push-notify.mjs --mode check
+
       - name: Tell Slack the workflow failed
         if: failure()
         env:

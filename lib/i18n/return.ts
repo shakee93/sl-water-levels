@@ -74,6 +74,7 @@ const en = {
   "cl.mixed": "{n} neighbours answered and it was mixed: some had water, some stayed dry. Thank you.",
   "cl.score": "So far we warned on {w} days. Neighbours confirmed water on {c} of the {k} days we could check.",
   "cl.river": "River forecasts: the real level stayed inside our stated range {pct}% of the time over the last 30 days ({n} checks).",
+  "cl.empty": "Not enough neighbour answers yet to judge our recent warnings.",
   "cl.help": "Your answer below makes this more reliable.",
   // ---- After a street-flood answer
   "im.thanks": "Thank you. Your answer joins {n} from {town} this month.",
@@ -166,6 +167,7 @@ const si: Dict = {
   "cl.mixed": "අසල්වැසියන් {n} දෙනෙක් පිළිතුරු දුන්නා; මිශ්‍රයි: සමහරුන්ට වතුර ආවා, සමහරුන්ට වියළිව තිබුණා. ස්තූතියි.",
   "cl.score": "මෙතෙක් අපි දින {w}ක අනතුරු ඇඟවීය. පරීක්ෂා කළ හැකි දින {k}න් {c}ක අසල්වැසියන් වතුර තිබූ බව තහවුරු කළා.",
   "cl.river": "ගංගා අනාවැකි: පසුගිය දින 30 තුළ සැබෑ මට්ටම අපගේ සඳහන් පරාසය තුළ {pct}%ක් පැවතුණා (පරීක්ෂා {n}).",
+  "cl.empty": "අපගේ මෑත අනතුරු ඇඟවීම් විනිශ්චය කිරීමට අසල්වැසි පිළිතුරු තවම ප්‍රමාණවත් නැත.",
   "cl.help": "පහත ඔබේ පිළිතුර මෙය තවත් විශ්වසනීය කරයි.",
   "im.thanks": "ස්තූතියි. ඔබේ පිළිතුර මෙම මාසයේ {town} සිට ලැබුණු {n}ට එකතු වේ.",
   "im.first": "ස්තූතියි. මෙම මාසයේ {town} සිට ලැබුණු මුල්ම පිළිතුරු අතර ඔබේ එකක් වන අතර, සෑම එකක්ම උදව් වේ.",
@@ -253,6 +255,7 @@ const ta: Dict = {
   "cl.mixed": "{n} அண்டை வீட்டார் பதிலளித்தனர்; கலவையான பதில்: சிலருக்கு நீர் வந்தது, சிலருக்கு வறண்டிருந்தது. நன்றி.",
   "cl.score": "இதுவரை {w} நாட்கள் எச்சரித்தோம். சரிபார்க்க முடிந்த {k} நாட்களில் {c} நாட்களில் அண்டை வீட்டார் நீர் இருந்ததை உறுதிப்படுத்தினர்.",
   "cl.river": "ஆற்று முன்னறிவிப்புகள்: கடந்த 30 நாட்களில் உண்மையான மட்டம் நாங்கள் கூறிய வரம்புக்குள் {pct}% நேரம் இருந்தது ({n} சரிபார்ப்புகள்).",
+  "cl.empty": "எங்கள் சமீபத்திய எச்சரிக்கைகளை மதிப்பிட அண்டை வீட்டாரின் பதில்கள் இன்னும் போதவில்லை.",
   "cl.help": "கீழே உங்கள் பதில் இதை மேலும் நம்பகமாக்கும்.",
   "im.thanks": "நன்றி. உங்கள் பதில் இந்த மாதம் {town} இலிருந்து வந்த {n} பதில்களுடன் சேர்கிறது.",
   "im.first": "நன்றி. இந்த மாதம் {town} இலிருந்து வந்த முதல் பதில்களில் உங்களுடையதும் ஒன்று; ஒவ்வொன்றும் உதவும்.",

@@ -10,6 +10,7 @@ import { LocationPrompt } from "../LocationPrompt";
 import { LocaleProvider } from "../LocaleProvider";
 import { LangSideEffects } from "../LanguageBar";
 import { ThemeSync } from "../ThemeSync";
+import { ReturnShell } from "../ReturnShell";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { HTML_LANG, LOCALES, OG_LOCALE, isLocale } from "@/lib/i18n/config";
 import { DICTS, getI18n } from "@/lib/i18n/server";
@@ -133,6 +134,7 @@ export default async function RootLayout({
           <LangSideEffects />
           <ThemeSync />
           <LocationPrompt variant="banner" />
+          <ReturnShell />
           <div className="flex-1">{children}</div>
           <Suspense fallback={null}>
             <Footer lang={lang} />

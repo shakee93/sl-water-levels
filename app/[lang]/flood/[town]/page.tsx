@@ -13,6 +13,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { formatKm } from "@/lib/nearby";
 import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
+import { TownOutcome } from "@/app/flood/TownOutcome";
 import { d1Configured } from "@/lib/d1";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
@@ -148,6 +149,7 @@ export default async function TownPage({ params }: Params) {
         <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} />
 
         {/* Hidden until the site can save answers (CLOUDFLARE_API_TOKEN set), so nobody sees an error. */}
+        {d1Configured() && place.rainZone && <TownOutcome slug={place.slug} />}
         {d1Configured() && <FloodReport slug={place.slug} town={place.name} />}
 
         {g && (

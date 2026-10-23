@@ -1,0 +1,88 @@
+# Web Push alerts for pinned places (scripts/push-notify.mjs).
+#   - The "something changed" check runs at the end of gsmap-snapshot.yml (every 30 minutes, right after the new
+#     satellite rain is in), so it is not scheduled here.
+#   - This workflow: the optional morning summary (06:10 Colombo) and manual runs. Run it by hand with
+#     mode = test to send one test push to the most recent subscription (to check delivery end to end).
+# Needs the repository secrets CLOUDFLARE_API_TOKEN, VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY. Without the VAPID pair the
+# job exits quietly with a warning. See DOCS.md "Reasons to come back".
+
+name: Push alerts
+
+on:
+  schedule:
+    - cron: "40 0 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check = look for changes now, morning = send the morning summary now, test = one test push to the newest subscription"
+        type: choice
+        options: [check, morning, test]
+        default: check
+      dry_run:
+        description: "Print what would be sent, send nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-notify
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secrets
+        id: secrets
+        env:
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$VAPID_PUBLIC_KEY" ] || [ -z "$VAPID_PRIVATE_KEY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and/or CLOUDFLARE_API_TOKEN secrets are missing; skipping."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Install the push library
+        if: steps.secrets.outputs.ready == 'true'
+        run: npm install --no-save --no-audit --no-fund web-push@3.6.7
+
+      - name: Send
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          MODE: ${{ github.event.inputs.mode || 'morning' }}
+          DRY: ${{ github.event.inputs.dry_run }}
+        run: |
+          args=""
+          [ "$DRY" = "true" ] && args="--dry-run"
+          if [ "$MODE" = "test" ]; then
+            node --experimental-strip-types --no-warnings scripts/push-notify.mjs --test latest $args
+          else
+            node --experimental-strip-types --no-warnings scripts/push-notify.mjs --mode "$MODE" $args
+          fi
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true

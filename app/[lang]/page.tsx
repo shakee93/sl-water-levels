@@ -12,7 +12,7 @@ import { NeedsAttention } from "../NeedsAttention";
 import { ReleaseLines } from "../ReleaseCard";
 import { SpillWatchLine } from "../SpillWatchLine";
 import { HowItWorks } from "../HowItWorks";
-import { Favourites } from "../Favourites";
+import { MyPlaces } from "../MyPlaces";
 import { NearYou } from "../NearYou";
 import { RiverList } from "../RiverList";
 import { LegacyRedirect } from "../LegacyRedirect";
@@ -124,9 +124,10 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               </Link>
             </div>
 
-            <NearYou stations={home} />
+            {/* the answer for the places this visitor saved comes first; nothing when none are saved */}
+            <MyPlaces stations={home} />
 
-            <Favourites stations={home} serverNow={serverNow} />
+            <NearYou stations={home} />
 
             <NeedsAttention lang={lang} snapshot={national} serverNow={serverNow} />
             <Suspense fallback={null}><ReleaseLines lang={lang} /></Suspense>

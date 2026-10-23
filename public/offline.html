@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Offline - Sri Lanka Water Levels</title>
+<style>
+  :root { --bg:#f8fafc; --fg:#0f172a; --muted:#475569; --line:#e2e8f0; --card:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#020617; --fg:#f1f5f9; --muted:#94a3b8; --line:#1e293b; --card:#0f172a; } }
+  body { margin:0; font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--fg); }
+  main { max-width:32rem; margin:0 auto; padding:2.5rem 1rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:.75rem; padding:1rem 1.25rem; }
+  h1 { font-size:1.25rem; margin:0 0 .5rem; }
+  p { margin:.5rem 0; color:var(--muted); }
+  a, button { display:inline-flex; align-items:center; min-height:44px; padding:0 1rem; border-radius:.375rem; border:1px solid var(--line); background:var(--card); color:var(--fg); font:inherit; text-decoration:none; cursor:pointer; }
+  a:focus-visible, button:focus-visible { outline:2px solid #0ea5e9; outline-offset:2px; }
+  strong { color:var(--fg); }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>You are offline</h1>
+    <p>This page was not saved on your phone yet, and there is no connection right now.</p>
+    <p><strong>In an emergency, call 117</strong> (Disaster Management Centre).</p>
+    <p><button type="button" onclick="location.reload()">Try again</button></p>
+  </div>
+</main>
+</body>
+</html>

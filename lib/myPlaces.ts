@@ -83,10 +83,10 @@ const TONE_RANK: Record<GlanceTone, number> = { normal: 0, none: 0, stale: 0, wa
 
 /**
  * One number for "how worried should this place make us": 0 calm, 1 keep an eye, 2 get ready (or street water
- * possible), 3 flooding likely (or street water likely), 4 move to safety. null = we cannot say (no fresh data).
+ * possible), 3 flooding likely (or street water likely), 4 move to safety. null = we cannot say (no fresh data, or no flood levels published).
  */
 export function levelOf(g: Pick<Glance, "tone" | "street">): number | null {
-  if (g.tone === "stale" && !g.street) return null;
+  if ((g.tone === "stale" || g.tone === "none") && !g.street) return null;
   let l = TONE_RANK[g.tone];
   if (g.street === "possible") l = Math.max(l, 2);
   if (g.street === "likely") l = Math.max(l, 3);

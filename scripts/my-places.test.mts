@@ -28,6 +28,7 @@ assert.equal(levelOf(g({ tone: "normal", street: "possible" })), 2);
 assert.equal(levelOf(g({ tone: "watch", street: "likely" })), 3);
 assert.equal(levelOf(g({ tone: "minor", street: "possible" })), 3);
 assert.equal(levelOf(g({ tone: "stale" })), null, "no data is unknown, never calm");
+assert.equal(levelOf(g({ tone: "none" })), null, "no published flood levels is unknown, never calm");
 assert.equal(levelOf(g({ tone: "stale", street: "possible" })), 2);
 assert.equal(overall([]).kind, "empty");
 assert.deepEqual(overall([g({}), g({})]), { kind: "calm", n: 2 });
