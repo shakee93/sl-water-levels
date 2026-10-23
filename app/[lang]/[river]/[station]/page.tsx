@@ -239,7 +239,7 @@ export default async function StationPage({
             </Suspense>
 
             <Suspense key={`chart-${station}`} fallback={<StationCardSkeleton />}>
-              <StationCard lang={lang} stationName={station} />
+              <StationCard lang={lang} stationName={station} basin={basin} />
             </Suspense>
 
             {/* A river with one gauge has no river page to hold its map: it lives here, under the water-level chart. */}

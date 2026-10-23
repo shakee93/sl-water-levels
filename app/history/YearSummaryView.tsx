@@ -10,9 +10,9 @@ import { useSyncExternalStore } from "react";
 import { type DayLevel, type RecordedYear, type YearRow, myLevelStats } from "@/lib/yearStats";
 import { TIER_HEX } from "../tierUi";
 
-export const MY_LEVELS_KEY = "sl_my_levels";
-/** Dispatch this on window after writing MY_LEVELS_KEY so open pages update in the same tab. */
-export const MY_LEVELS_EVENT = "sl_my_levels_change";
+import { MY_LEVELS_EVENT, MY_LEVELS_KEY } from "@/lib/myLevels";
+
+export { MY_LEVELS_EVENT, MY_LEVELS_KEY };
 
 /** "{name}"-style templates; every visible string. */
 export type YearSummaryLabels = {
