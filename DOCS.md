@@ -349,7 +349,11 @@ the site watches itself and tells the owner.
     `data` under 14 h; last successful `releases-snapshot.yml` run under 2 h (3 h overnight; the
     run is used instead of a `releases/*.jsonl` commit because the snapshot only commits when
     something changed); last successful `store-forecasts.yml` run under 2 h; the last run of
-    `snapshot.yml` / `export-predictions.yml` must not have failed. All warn.
+    `snapshot.yml` / `export-predictions.yml` must not have failed; last successful
+    `gsmap-snapshot.yml` run under 75 min; and the **scheduler** check (`pipe-scheduler`): the newest
+    completed `health-check.yml` run must have started under 70 min ago (it runs every 30 min, started
+    by the Cloudflare worker and GitHub's cron; the run asking is still running, so it is ignored).
+    All warn.
 - **`/status`** (all locales, `noindex`, linked from the footer as "Data status"): each source as OK /
   Delayed (a warn check failing) / Down (a critical one), with "updated 12 min ago". Strings in
   `lib/i18n/status.ts`. Stale gauges already show the "Data delayed" line on station and home pages
@@ -377,3 +381,44 @@ the site watches itself and tells the owner.
   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, and POST to
   `https://api.telegram.org/bot<token>/sendMessage` from the `slack()` helper in
   `scripts/health-alert.mjs`.
+
+## Street-flood validation (is the satellite-rain rule right?)
+
+The rule in `lib/townRisk.ts` step 6 (24 h satellite rain over the Greater Colombo east box: 60 mm =
+"possible", 100 mm = "likely") was backtested on 14 documented floods (`research/wellampitiya-flood-rule-backtest.md`).
+This is how it is checked live. Everything lands in the Cloudflare D1 database `sl-water-levels` (the prediction
+log's database) and is **private**: nothing public reads it and nothing about other people's answers is shown.
+Tables are in `d1/0003_street_flood.sql`.
+
+- **Rain log** (`street_rain_log`): `scripts/street-rain-log.mjs`, a step in `gsmap-snapshot.yml` after the data push,
+  stores per run (about every 30 min) the zone's 1 / 3 / 6 / 24 h rain and the rule state (`none` / `possible` /
+  `likely`). **State changes** go to `street_rain_changes`. The script applies the migration itself every run.
+  State logic: `lib/streetRainLog.ts`.
+- **Owner ping**: on a rise (none to possible or likely, possible to likely) and when it clears, one Slack message
+  via `SLACK_WEBHOOK_URL` with the rain numbers, the Wellampitiya page link and "Did your street flood?". A rise within
+  3 h of the previous rise message is held back; likely to possible is silent. A message that failed is retried for 6 h.
+  Dry run: `node --experimental-strip-types scripts/street-rain-log.mjs <dir containing gsmap/latest.json> --dry-run --prev none`.
+- **Resident answers** (`street_flood_reports`): the "Did the streets near you get water today?" control
+  (`app/flood/FloodReport.tsx`) on every town page posts to `POST /api/flood-report`. Stored: town slug, answer
+  (`deep` ankle or more / `little` / `dry`), optional `now` / `earlier`, page language, time, and a per-day salted
+  HMAC of the IP address (rate limiting only; rotates daily; the address is never stored). One answer per browser
+  per town per day (cookie `sl_fr_<town>`), caps per address, a hidden honeypot field and a minimum time on the page
+  (bots get a quiet "thanks", nothing stored). The Vercel site has no D1 binding, so the route uses the D1 HTTP API
+  (`lib/d1.ts`) and needs **`CLOUDFLARE_API_TOKEN`** (token with D1 Edit) in the Vercel environment variables;
+  optional `FLOOD_REPORT_SALT`. Without the token the route answers 503 and the page says "try again later".
+- **Monthly review**: `scripts/export-street-flood.sh YYYY-MM <outDir>` (wrangler logged in) writes `rain_log.json`,
+  `changes.json`, `reports.json` and `reports_by_day.json` (answers per town and day next to that day's highest 24 h rain
+  and rule state). Keep the output private. Handy ad-hoc SQL (`npx wrangler d1 execute sl-water-levels --remote --command "..."`):
+
+  ```sql
+  -- state changes, newest first
+  SELECT datetime((changed_ms+19800000)/1000,'unixepoch') AS colombo, from_state, to_state, mm1h, mm6h, mm24h, notified
+    FROM street_rain_changes ORDER BY changed_ms DESC LIMIT 20;
+  -- answers vs the rule, per day (hits = "deep"/"little" answers on days the rule said possible/likely)
+  SELECT r.day, r.town, SUM(r.answer='deep') deep, SUM(r.answer='little') little, SUM(r.answer='dry') dry,
+         (SELECT MAX(mm24h) FROM street_rain_log WHERE date((data_end_ms+19800000)/1000,'unixepoch') = r.day) max_mm24h
+    FROM street_flood_reports r GROUP BY r.day, r.town ORDER BY r.day DESC;
+  ```
+  How to read it: days with `deep` answers and no `possible` / `likely` state are misses; `possible` / `likely` days
+  with only `dry` answers are false alarms. Answers are self-selected (people who flooded answer more), so count
+  towns and days, not people.

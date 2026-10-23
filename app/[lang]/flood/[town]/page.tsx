@@ -12,6 +12,7 @@ import { riverName } from "@/lib/i18n/format";
 import { stationDisplayName } from "@/lib/displayName";
 import { formatKm } from "@/lib/nearby";
 import { basinPath } from "@/lib/slug";
+import { FloodReport } from "@/app/flood/FloodReport";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
 import { TownVerdict } from "@/app/flood/TownVerdict";
@@ -122,6 +123,8 @@ export default async function TownPage({ params }: Params) {
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
 
         <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} />
+
+        <FloodReport slug={place.slug} town={place.name} />
 
         {g && (
           <div className="mt-4">

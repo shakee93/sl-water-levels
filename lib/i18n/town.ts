@@ -125,6 +125,20 @@ const en = {
   "details.streetNow": "Satellite rain (JAXA GSMaP) now: {mm24} mm in the last 24 hours, {mm6} mm in the last 6 hours, up to {time}.",
   "details.streetNone": "Satellite rain is not available right now, so the street rain rule is off. That does not mean it is dry.",
   "details.streetHonest": "In past years the 60 mm level caught about 7 in 10 floods here and gave about 5 false alarms a year; the 100 mm level caught about 6 in 10 with about 2 false alarms a year.",
+  // Street-flood reports ("Did your street flood?", app/flood/FloodReport.tsx)
+  "fr.title": "Did the streets near you get water today?",
+  "fr.intro": "Your answer helps us check our warnings. It is anonymous: we save only the town and your answer, and show nothing to anyone else yet.",
+  "fr.when": "When? (optional)",
+  "fr.now": "Right now",
+  "fr.earlier": "Earlier today",
+  "fr.deep": "Yes, ankle-deep or more",
+  "fr.little": "A little water on the road",
+  "fr.dry": "No, it is dry",
+  "fr.sending": "Sending…",
+  "fr.thanks": "Thank you. Your answer helps us check our warnings.",
+  "fr.already": "You have already answered for {town} today. Thank you.",
+  "fr.error": "We could not save your answer right now. Please try again later.",
+  "fr.limit": "There have been a lot of answers from this connection today. Thank you for helping.",
   "ld.name": "{town} flood estimate",
 } as const;
 
@@ -253,6 +267,20 @@ const si: D = {
   "details.streetNow": "චන්ද්‍රිකා වැසි (JAXA GSMaP) දැන්: පසුගිය පැය 24 තුළ මි.මී. {mm24}, පැය 6 තුළ මි.මී. {mm6}, {time} දක්වා.",
   "details.streetNone": "චන්ද්‍රිකා වැසි දත්ත දැනට නොමැති බැවින් වීදි වැසි නීතිය ක්‍රියාත්මක නොවේ. එයින් වියළි බව අදහස් නොවේ.",
   "details.streetHonest": "පසුගිය වසරවල මි.මී. 60 මට්ටම මෙහි ගංවතුරවලින් 10කින් 7ක් පමණ හඳුනාගත් අතර වසරකට වැරදි අනතුරු ඇඟවීම් 5ක් පමණ දුන්නේය; මි.මී. 100 මට්ටම 10කින් 6ක් පමණ හඳුනාගත් අතර වසරකට වැරදි අනතුරු ඇඟවීම් 2ක් පමණ දුන්නේය.",
+  // Street-flood reports (draft, needs native review)
+  "fr.title": "අද ඔබ අවට වීදිවලට වතුර ආවාද?",
+  "fr.intro": "ඔබේ පිළිතුර අපගේ අනතුරු ඇඟවීම් පරීක්ෂා කිරීමට උපකාර වේ. එය නිර්නාමික ය: අපි සුරකින්නේ නගරය සහ ඔබේ පිළිතුර පමණි; තවම වෙන කිසිවෙකුට කිසිවක් පෙන්වන්නේ නැත.",
+  "fr.when": "කවදාද? (අත්‍යවශ්‍ය නොවේ)",
+  "fr.now": "දැන්",
+  "fr.earlier": "අද කලින්",
+  "fr.deep": "ඔව්, වළලුකර දක්වා හෝ ඊට වැඩි",
+  "fr.little": "පාරේ තරමක් වතුර තිබුණා",
+  "fr.dry": "නැහැ, වියළියි",
+  "fr.sending": "යවමින්…",
+  "fr.thanks": "ස්තූතියි. ඔබේ පිළිතුර අපගේ අනතුරු ඇඟවීම් පරීක්ෂා කිරීමට උපකාර වේ.",
+  "fr.already": "අද {town} සඳහා ඔබ දැනටමත් පිළිතුරු දී ඇත. ස්තූතියි.",
+  "fr.error": "ඔබේ පිළිතුර දැන් සුරැකීමට නොහැකි විය. කරුණාකර පසුව නැවත උත්සාහ කරන්න.",
+  "fr.limit": "අද මෙම සම්බන්ධතාවයෙන් පිළිතුරු වැඩි ගණනක් ලැබී ඇත. උදව් කිරීමට ස්තූතියි.",
   "ld.name": "{town} ගංවතුර ඇස්තමේන්තුව",
 };
 
@@ -378,6 +406,20 @@ const ta: D = {
   "details.streetNow": "செயற்கைக்கோள் மழை (JAXA GSMaP) இப்போது: கடந்த 24 மணி நேரத்தில் {mm24} மி.மீ, 6 மணி நேரத்தில் {mm6} மி.மீ, {time} வரை.",
   "details.streetNone": "செயற்கைக்கோள் மழைத் தரவு தற்போது இல்லை, எனவே தெரு மழை விதி செயல்படவில்லை. அதற்காக மழை இல்லை என்று அர்த்தமல்ல.",
   "details.streetHonest": "கடந்த ஆண்டுகளில் 60 மி.மீ நிலை இங்கு ஏற்பட்ட வெள்ளங்களில் 10-ல் 7-ஐ கண்டறிந்தது; ஆண்டுக்கு சுமார் 5 தவறான எச்சரிக்கைகள் தந்தது. 100 மி.மீ நிலை 10-ல் 6-ஐ கண்டறிந்தது; ஆண்டுக்கு சுமார் 2 தவறான எச்சரிக்கைகள்.",
+  // Street-flood reports (draft, needs native review)
+  "fr.title": "இன்று உங்கள் அருகிலுள்ள தெருக்களில் நீர் வந்ததா?",
+  "fr.intro": "உங்கள் பதில் எங்கள் எச்சரிக்கைகளைச் சரிபார்க்க உதவும். இது பெயரில்லாதது: நகரத்தையும் உங்கள் பதிலையும் மட்டுமே சேமிக்கிறோம்; இப்போதைக்கு வேறு யாருக்கும் எதையும் காட்டுவதில்லை.",
+  "fr.when": "எப்போது? (விருப்பம்)",
+  "fr.now": "இப்போது",
+  "fr.earlier": "இன்று முன்னதாக",
+  "fr.deep": "ஆம், கணுக்கால் அளவு அல்லது அதற்கு மேல்",
+  "fr.little": "சாலையில் சிறிது நீர்",
+  "fr.dry": "இல்லை, வறண்டுள்ளது",
+  "fr.sending": "அனுப்புகிறது…",
+  "fr.thanks": "நன்றி. உங்கள் பதில் எங்கள் எச்சரிக்கைகளைச் சரிபார்க்க உதவும்.",
+  "fr.already": "இன்று {town} க்கு நீங்கள் ஏற்கெனவே பதிலளித்துள்ளீர்கள். நன்றி.",
+  "fr.error": "உங்கள் பதிலை இப்போது சேமிக்க முடியவில்லை. பிறகு மீண்டும் முயலவும்.",
+  "fr.limit": "இன்று இந்த இணைப்பிலிருந்து அதிகப் பதில்கள் வந்துள்ளன. உதவியதற்கு நன்றி.",
   "ld.name": "{town} வெள்ள மதிப்பீடு",
 };
 

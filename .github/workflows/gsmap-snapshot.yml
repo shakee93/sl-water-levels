@@ -78,6 +78,23 @@ jobs:
           git pull --rebase origin data || true
           git push origin data
 
+      # Live validation of the street-rain rule (scripts/street-rain-log.mjs): log what the rule says into
+      # Cloudflare D1, record state changes, and tell Slack when it rises or clears. After the push, so a D1
+      # or Slack problem never delays the rain data itself. Needs CLOUDFLARE_API_TOKEN (already used by
+      # store-forecasts.yml); skipped with a warning without it.
+      - name: Log the street-rain rule and notify
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is missing; the street-rain log is skipped."
+            exit 0
+          fi
+          node --experimental-strip-types --no-warnings scripts/street-rain-log.mjs archive
+
       - name: Tell Slack the workflow failed
         if: failure()
         env:

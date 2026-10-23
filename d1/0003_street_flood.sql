@@ -1,0 +1,56 @@
+-- Live validation of the street-flood rain rule (lib/townRisk.ts step 6, research/wellampitiya-flood-rule-backtest.md).
+-- Three tables: what the satellite-rain rule said (every run), when its state changed, and what residents
+-- reported. Written by scripts/street-rain-log.mjs (after every GSMaP snapshot, .github/workflows/gsmap-snapshot.yml,
+-- which repeats this file at the top of every run: all statements are idempotent, so there is no manual migration
+-- step) and by app/api/flood-report/route.ts (which creates the reports table itself if it is missing).
+-- PRIVATE: never read by the website and never published (the repository and its data branch are public).
+-- Times are epoch milliseconds (UTC); "day" is the Asia/Colombo calendar date (YYYY-MM-DD).
+-- Monthly review: scripts/export-street-flood.sh, or the SQL in DOCS.md ("Street-flood validation").
+
+-- One row per snapshot run per rain zone (zone 'colombo-east' covers Wellampitiya, Kolonnawa and the other rule towns).
+-- state: the rule's verdict from mm24h (none < 60 mm <= possible < 100 mm <= likely); NULL = the 24 h total was missing.
+CREATE TABLE IF NOT EXISTS street_rain_log (
+  zone        TEXT    NOT NULL,
+  data_end_ms INTEGER NOT NULL,            -- end of the newest satellite hour this row describes
+  run_ms      INTEGER NOT NULL,            -- when the logging run happened
+  rate_mm_h   REAL,
+  mm1h        REAL,
+  mm3h        REAL,
+  mm6h        REAL,
+  mm24h       REAL,
+  state       TEXT,                        -- none | possible | likely | NULL
+  PRIMARY KEY (zone, data_end_ms)
+);
+
+-- One row each time the state changes (none -> possible, possible -> likely, likely -> none ...).
+-- notified: 0 = Slack message still to send, 1 = sent, 2 = deliberately skipped (e.g. likely -> possible, or a flap).
+CREATE TABLE IF NOT EXISTS street_rain_changes (
+  zone         TEXT    NOT NULL,
+  changed_ms   INTEGER NOT NULL,           -- data_end_ms of the run that first showed the new state
+  from_state   TEXT,
+  to_state     TEXT    NOT NULL,
+  mm1h         REAL,
+  mm6h         REAL,
+  mm24h        REAL,
+  towns        TEXT    NOT NULL,           -- comma-separated town slugs the rule covers
+  notified     INTEGER NOT NULL DEFAULT 0,
+  notified_ms  INTEGER,
+  PRIMARY KEY (zone, changed_ms)
+);
+
+-- "Did the streets near you get water today?" answers. No name, no free text, no location: the town slug,
+-- one of three answers, an optional "now / earlier today", the page language, and a salted per-day hash of the IP
+-- address (rotates every day, used only to rate-limit; the address itself is never stored).
+CREATE TABLE IF NOT EXISTS street_flood_reports (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_ms INTEGER NOT NULL,
+  day        TEXT    NOT NULL,             -- Asia/Colombo date of the report
+  town       TEXT    NOT NULL,             -- places.ts slug
+  answer     TEXT    NOT NULL,             -- deep | little | dry
+  when_hint  TEXT,                         -- now | earlier | NULL (not given)
+  lang       TEXT,                         -- en | si | ta
+  ip_hash    TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_sfr_town_day ON street_flood_reports (town, day);
+CREATE INDEX IF NOT EXISTS idx_sfr_ip ON street_flood_reports (ip_hash, created_ms);
+CREATE INDEX IF NOT EXISTS idx_src_zone_time ON street_rain_changes (zone, changed_ms);

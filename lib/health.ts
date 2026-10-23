@@ -375,7 +375,7 @@ async function checkFeeds(deep: boolean): Promise<HealthCheck[]> {
 
 // ---------------------------------------------------------------- our own pipelines (GitHub)
 
-type GhRun = { status: string; conclusion: string | null; updated_at: string; html_url: string };
+type GhRun = { status: string; conclusion: string | null; updated_at: string; html_url: string; created_at?: string; run_started_at?: string; event?: string };
 type GhResult = { ok: true; runs: GhRun[] } | { ok: false; why: string };
 
 async function ghGet(path: string): Promise<{ ok: true; json: unknown } | { ok: false; why: string }> {
@@ -429,6 +429,26 @@ async function checkWorkflow(
       detail: problems.length ? problems.join("; ") : okMs ? `last success ${words(mins(now - okMs))} ago` : "no runs yet",
       ...fresh(okMs),
     };
+  });
+}
+
+// Is the scheduler alive? The Cloudflare worker (workers/scheduler) and GitHub's own cron both start
+// health-check.yml every 30 min, and that job in turn starts the GSMaP and CUrW snapshots. If it stops, nothing
+// else runs on time. This is asked by the health check itself, so its own (still running) run is ignored: the
+// newest COMPLETED run must have started within 70 min (two missed cycles). The run's result does not matter,
+// a health run that fails because some source is down still proves the scheduler is alive.
+async function checkScheduler(): Promise<HealthCheck> {
+  return run("pipe-scheduler", "Scheduler (starts the data jobs)", "Nothing visible right away; the satellite-rain snapshot, hourly forecast store and alerts stop running on time.", async () => {
+    const r = await ghGet("actions/workflows/health-check.yml/runs?per_page=10");
+    if (!r.ok) return unchecked(r.why);
+    const runs = ((r.json as { workflow_runs?: GhRun[] }).workflow_runs ?? []).filter((x) => x.status === "completed");
+    const last = runs[0];
+    const startedMs = last ? Date.parse(last.run_started_at ?? last.created_at ?? last.updated_at) : NaN;
+    if (!Number.isFinite(startedMs)) return { ok: false, detail: "no completed health-check run found; the Cloudflare scheduler (workers/scheduler) and the GitHub cron may both have stopped" };
+    const age = Date.now() - startedMs;
+    return age > 70 * MIN
+      ? { ok: false, detail: `the last health-check run started ${words(mins(age))} ago (expected every 30 min, limit 70 min): check the Cloudflare scheduler worker (its GITHUB_TOKEN may have expired) and GitHub Actions`, ...fresh(startedMs) }
+      : { ok: true, detail: `last health-check run started ${words(mins(age))} ago`, ...fresh(startedMs) };
   });
 }
 
@@ -514,6 +534,8 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
     checkDeploy(),
     checkGaugeArchive(),
     checkGsmap(deep),
+    checkScheduler(),
+    checkWorkflow("pipe-gsmap-runs", "Satellite rain snapshot runs", "gsmap-snapshot.yml", "The 'Satellite rain' figures and the street-water rule go quiet once the newest rain is 3 h old; the rain log has gaps.", () => 75 * MIN),
     checkCurwGauges(deep),
     checkWorkflow("pipe-curw", "Colombo canal gauge archive (private)", "curw-snapshot.yml", "Nothing visible; the private canal-level archive used for calibration has gaps (each run re-reads the last 24 h, so short gaps heal).", () => 3 * HOUR),
     checkWorkflow("pipe-releases", "Release snapshots (data branch)", "releases-snapshot.yml", "Nothing visible right away; release history and arrival-time learning stop.", (now) => {
