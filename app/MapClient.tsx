@@ -39,7 +39,7 @@ export function MapClient({
   const [ref, seen] = useInView<HTMLDivElement>("500px");
   const [hover, setHover] = useState<string | null>(null);
   return (
-    <div className="grid lg:grid-cols-[480px_minmax(0,1fr)]">
+    <div className="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
       <div ref={ref} className="relative h-[520px] w-full sm:mx-auto sm:h-[640px] sm:max-w-[560px] lg:h-[720px] lg:max-w-none">
         {seen ? <MapLeaflet stations={stations} lakes={lakes} hover={hover} /> : <MapSkeleton />}
       </div>

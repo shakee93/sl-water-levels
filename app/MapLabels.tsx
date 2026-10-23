@@ -27,12 +27,12 @@ const TOWNS: [string, number, number][] = [
 type Box = { x0: number; y0: number; x1: number; y1: number };
 type Item = { kind: "text"; key: string; x: number; y: number; w: number; h: number; text: string; cls: string; level?: { text: string; color: string; dark: boolean }; rot?: number; dot?: { x: number; y: number } };
 
-const FONT = '11px Arial, Helvetica, "Noto Sans Sinhala", "Noto Sans Tamil", sans-serif';
+const FAMILY = 'Arial, Helvetica, "Noto Sans Sinhala", "Noto Sans Tamil", sans-serif';
 let ctx: CanvasRenderingContext2D | null = null;
-function textW(s: string, bold = false): number {
+function textW(s: string, bold = false, px = 11): number {
   if (!ctx) ctx = document.createElement("canvas").getContext("2d");
   if (!ctx) return s.length * 6.2;
-  ctx.font = bold ? `600 ${FONT}` : FONT;
+  ctx.font = `${bold ? 600 : 400} ${px}px ${FAMILY}`;
   return ctx.measureText(s).width;
 }
 
@@ -50,16 +50,24 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
     const W = size.x, H = size.y;
     const P = (lat: number, lon: number) => map.latLngToContainerPoint([lat, lon]);
     const inView = (x: number, y: number, m = 6) => x > m && x < W - m && y > m && y < H - m;
+    const phone = typeof window !== "undefined" && window.innerWidth < 640;
+    const gfs = phone ? 10 : 11.5; // normal gauge names
+    const rfs = phone ? 10 : 11; // river names
     const placed: Box[] = [];
+    const solid: Box[] = []; // markers a river name must never cover
     // the dots and icons are obstacles
     for (const s of stations) {
       const p = P(s.latitude, s.longitude);
       const r = (s.tier === "watch" || s.tier === "alert" || s.tier === "minor" || s.tier === "major" ? 8 : 6) + 2;
-      placed.push({ x0: p.x - r, y0: p.y - r, x1: p.x + r, y1: p.y + r });
+      const bx = { x0: p.x - r, y0: p.y - r, x1: p.x + r, y1: p.y + r };
+      placed.push(bx);
+      if (r > 9) solid.push(bx);
     }
     for (const l of lakes) {
       const p = P(l.lat, l.lon);
-      placed.push({ x0: p.x - 10, y0: p.y - 8, x1: p.x + 10, y1: p.y + 8 });
+      const bx = { x0: p.x - 10, y0: p.y - 8, x1: p.x + 10, y1: p.y + 8 };
+      placed.push(bx);
+      solid.push(bx);
     }
     if (user) {
       const p = P(user.lat, user.lon);
@@ -77,12 +85,12 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
     const put = (b: Box) => { placed.push(b); labelBoxes.push(b); };
 
     /** A label beside a point: right, left, above, below. */
-    const beside = (key: string, x: number, y: number, text: string, cls: string, opts: { bold?: boolean; level?: { text: string; color: string; dark: boolean }; gap?: number; dot?: boolean; force?: boolean } = {}) => {
+    const beside = (key: string, x: number, y: number, text: string, cls: string, opts: { bold?: boolean; level?: { text: string; color: string; dark: boolean }; gap?: number; dot?: boolean; force?: boolean; px?: number } = {}) => {
       if (!inView(x, y, 2)) return;
       const gap = opts.gap ?? 9;
       const lw = opts.level ? textW(opts.level.text, true) + 8 : 0;
-      const w = textW(text, opts.bold) + (opts.level ? lw + 4 : 0);
-      const h = opts.level ? 16 : 13;
+      const w = textW(text, opts.bold, opts.px) + (opts.level ? lw + 4 : 0);
+      const h = opts.level ? 16 : (opts.px ?? 11) + 3;
       const cands: [number, number][] = [
         [x + gap, y - h / 2], [x - gap - w, y - h / 2], [x - w / 2, y - gap - h + 2], [x - w / 2, y + gap - 2],
         [x + gap * 0.7, y - gap - h + 4], [x - gap * 0.7 - w, y - gap - h + 4], [x + gap * 0.7, y + gap - 4], [x - gap * 0.7 - w, y + gap - 4],
@@ -110,7 +118,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
       const lvl = s.level != null && s.tier !== "stale" && s.tier !== "none" ? formatLevel(s.level, s.unit) : null;
       const key = `g:${s.basin}|${s.station}`;
       if (!hot(s)) {
-        beside(key, p.x, p.y, stationDisplayName(s.station), "text-[10px] text-slate-600 dark:text-slate-400", { gap: 10 });
+        beside(key, p.x, p.y, stationDisplayName(s.station), phone ? "text-[10px] text-slate-700 dark:text-slate-300" : "text-[11.5px] font-medium text-slate-700 dark:text-slate-300", { gap: 10, px: gfs });
         return;
       }
       beside(key, p.x, p.y, stationDisplayName(s.station), "font-semibold text-slate-800 dark:text-slate-100", {
@@ -129,7 +137,6 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
       beside(`l:${l.slug}`, p.x, p.y, l.name, "font-medium text-sky-800 dark:text-sky-200", { gap: 12, force: true });
     }
     // 3. rivers: the name beside the line, turned with it, on the straightest stretch that is free
-    const phone = typeof window !== "undefined" && window.innerWidth < 640;
     const riverItem = (basin: string, pts: [number, number][]) => {
       const px = pts.map((q) => P(q[0], q[1]));
       const cum = [0];
@@ -146,9 +153,11 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
       };
       // a river runs through its gauges, so a name may brush one plain dot; never another label
       const dots = (b: Box) => placed.filter((q) => !labelBoxes.includes(q) && hit(q, b)).length;
-      const inB = (b: Box) => b.x0 >= 2 && b.y0 >= 2 && b.x1 <= W - 2 && b.y1 <= H - 2 && !labelBoxes.some((q) => hit(q, b));
+      const inB = (b: Box) => b.x0 >= 2 && b.y0 >= 2 && b.x1 <= W - 2 && b.y1 <= H - 2 && !labelBoxes.some((q) => hit(q, b)) && !solid.some((q) => hit(q, b));
+      // a reservoir with the river's name is already labelled: don't say it twice
+      if (lakes.some((l) => { const n = l.name.toLowerCase(), b = basin.trim().toLowerCase().replace(/\s+(ganga|oya)$/, ''); return n === basin.trim().toLowerCase() || n === b || n.startsWith(b + ' '); })) return;
       for (const text of short !== full ? [full, short] : [full]) {
-        const w = textW(text) * 0.92 + 2;
+        const w = textW(text, false, rfs) * 0.95 + 2;
         if (total < w + 16) continue;
         type Cand = { cx: number; cy: number; ang: number; bx: Box; straight: number };
         const cands: Cand[] = [];
@@ -173,7 +182,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
         const pick = cands.find((c) => inB(c.bx) && dots(c.bx) === 0) ?? cands.find((c) => inB(c.bx) && dots(c.bx) <= 2);
         if (!pick) continue;
         put(pick.bx);
-        out.push({ kind: "text", key: `r:${basin}`, x: pick.cx - w / 2, y: pick.cy - 6, w, h: 12, text, cls: "italic text-[10px] font-medium text-sky-700 dark:text-sky-300", rot: (pick.ang * 180) / Math.PI });
+        out.push({ kind: "text", key: `r:${basin}`, x: pick.cx - w / 2, y: pick.cy - 6, w, h: 12, text, cls: phone ? "italic text-[10px] font-medium text-sky-800 dark:text-sky-200" : "italic text-[11px] font-semibold text-sky-800 dark:text-sky-200", rot: (pick.ang * 180) / Math.PI });
         return;
       }
     };
@@ -186,7 +195,11 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
       beside(`t:${name}`, p.x, p.y, name, "text-slate-500 dark:text-slate-400", { gap: 6, dot: true });
     }
     // 5. every other gauge once zoomed in; the other rivers
-    if (!phone || z >= 9) for (const s of stations.filter((x) => !hot(x))) gaugeLabel(s);
+    // the crowded south-west (Kelani, Kalu, Gin) names only a few anchor gauges until zoomed in
+    const ANCHORS = new Set(["Hanwella", "Nagalagam Street", "Rathnapura", "Baddegama", "Glencourse"]);
+    const crowded = (s: HomeStation) => s.latitude > 5.9 && s.latitude < 7.3 && s.longitude > 79.8 && s.longitude < 80.6;
+    const plain = stations.filter((x) => !hot(x)).sort((a, b) => Number(ANCHORS.has(b.station)) - Number(ANCHORS.has(a.station)));
+    if (!phone || z >= 9) for (const s of plain) if (z >= 9 || !crowded(s) || ANCHORS.has(s.station)) gaugeLabel(s);
     if (!phone) for (const r of rivers.slice(nMajor)) riverItem(r.basin, r.pts);
     else if (z >= 8) for (const r of rivers.slice(nMajor)) riverItem(r.basin, r.pts);
     setItems(out);
@@ -210,7 +223,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
   }, [schedule, map]);
 
   const halo = useMemo(
-    () => (scheme === "dark" ? "0 0 3px #0f172a,0 0 3px #0f172a,0 0 2px #0f172a,0 0 2px #0f172a" : "0 0 3px #fff,0 0 3px #fff,0 0 2px #fff,0 0 2px #fff"),
+    () => (scheme === "dark" ? "0 0 3px #0f172a,0 0 3px #0f172a,0 0 3px #0f172a,0 0 2px #0f172a,0 0 2px #0f172a" : "0 0 3px #fff,0 0 3px #fff,0 0 3px #fff,0 0 2px #fff,0 0 2px #fff"),
     [scheme],
   );
 
