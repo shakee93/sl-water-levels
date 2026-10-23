@@ -53,10 +53,12 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
         </header>
 
         <section className="space-y-5 sm:space-y-8">
+          <div id="data-sources" className="scroll-mt-20">
           <Card icon={<Database className="size-5" />} title={t("about.src.h")}>
             <p>{t("about.src.p1")}</p>
             <p>{t("about.src.p2")}</p>
           </Card>
+          </div>
 
           <Card icon={<AlertTriangle className="size-5" />} title={t("about.levels.h")}>
             <ul className="list-disc pl-5 space-y-1.5">

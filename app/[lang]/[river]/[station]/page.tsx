@@ -304,8 +304,11 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
     url: `${SITE}${canonical}`,
     inLanguage: lang,
     isAccessibleForFree: true,
+    // Google's Dataset rich result only accepts Organization/Person for creator.
+    // license: the agencies publish no licence text; this page states the sources and terms.
+    license: "https://sl-water-levels.vercel.app/about#data-sources",
     creator: {
-      "@type": "GovernmentOrganization",
+      "@type": "Organization",
       name: "Department of Irrigation, Sri Lanka",
       url: "https://www.irrigation.gov.lk",
     },
