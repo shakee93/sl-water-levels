@@ -85,7 +85,7 @@ function queryUrl(path: string, params: Record<string, string>): string {
  * Callers MUST pass a deterministic `orderByFields` (ideally with a unique
  * tie-breaker) or pages can overlap/skip rows.
  */
-async function arcgis(path: string, params: Record<string, string>): Promise<ArcgisPage["features"]> {
+export async function arcgis(path: string, params: Record<string, string>): Promise<ArcgisPage["features"]> {
   const out: ArcgisPage["features"] = [];
   for (let page = 0; page < MAX_PAGES; page++) {
     const res = await fetchPage(

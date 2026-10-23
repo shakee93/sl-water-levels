@@ -7,6 +7,7 @@ import { MobileMenu } from "./MobileMenu";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
+import { rtFor } from "@/lib/i18n/reservoirs";
 import { getSearchStations, type SearchStation } from "./PlaceSearchData";
 
 export async function Header({ lang }: { lang: Locale }) {
@@ -72,6 +73,14 @@ export async function Header({ lang }: { lang: Locale }) {
           )}
 
           <Link
+            href={p("/reservoirs")}
+            data-umami-event="reservoirs_nav_click"
+            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            {rtFor(lang)("nav")}
+          </Link>
+
+          <Link
             href={p("/history")}
             data-umami-event="history_nav_click"
             className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
@@ -108,6 +117,7 @@ export async function Header({ lang }: { lang: Locale }) {
           <LangSwitch />
 
           <MobileMenu
+            reservoirsLabel={rtFor(lang)("nav")}
             rivers={basins.map((b) => ({ href: p(basinPath(b)), label: riverName(b, lang), slug: b.trim() }))}
           />
         </nav>

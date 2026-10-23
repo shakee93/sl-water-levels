@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getNational } from "@/lib/arcgis";
 import { getHistory, historyPath } from "@/lib/history";
+import { getReservoirs } from "@/lib/reservoirData";
 import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
 const SITE = "https://sl-water-levels.vercel.app";
@@ -50,8 +51,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     }));
 
+  // Reservoir pages: lastModified is the source date. Fails soft (the sheet is a separate source).
+  const rsv = await getReservoirs().catch(() => null);
+  const dayMs = (d: string | null) => (d ? Date.parse(`${d}T09:00:00+05:30`) : null);
+  const rsvDay = [rsv?.sheetDate, rsv?.wmsDate].filter((d): d is string => !!d).sort().pop() ?? null;
+
   return [
     ...entry("/", newest),
+    ...(rsv ? entry("/reservoirs", dayMs(rsvDay)) : []),
+    ...(rsv?.items ?? []).flatMap((r) => entry(`/reservoirs/${r.slug}`, dayMs(r.latestDay))),
     ...entry("/help"),
     ...entry("/about"),
     ...entry("/history"),

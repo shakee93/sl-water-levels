@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LifeBuoy, Info, History, Menu, X } from "lucide-react";
+import { LifeBuoy, Info, History, Menu, Waves, X } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
 
 const ring =
@@ -14,7 +14,7 @@ const ring =
 
 export type MenuRiver = { href: string; label: string; slug: string };
 
-export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
+export function MobileMenu({ rivers, reservoirsLabel }: { rivers: MenuRiver[]; reservoirsLabel?: string }) {
   const { t, p } = useI18n();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -62,6 +62,7 @@ export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
   };
 
   const main = [
+    ...(reservoirsLabel ? [{ href: p("/reservoirs"), label: reservoirsLabel, icon: Waves, event: "reservoirs_nav_click" }] : []),
     { href: p("/help"), label: t("nav.help"), icon: LifeBuoy, event: "help_nav_click" },
     { href: p("/history"), label: t("nav.history"), icon: History, event: "history_nav_click" },
     { href: p("/about"), label: t("nav.about"), icon: Info, event: "about_nav_click" },

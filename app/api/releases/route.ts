@@ -4,22 +4,19 @@
 // Public data only; the sources are cached for 10 minutes to an hour, so repeated hits are cheap.
 
 import { getReleaseSources, getReleases } from "@/lib/releases";
-import { RESERVOIRS } from "@/lib/reservoirs";
 
 export const revalidate = 300;
 
 export async function GET() {
   const [src, merged] = await Promise.all([getReleaseSources(), getReleases()]);
-  const ids = new Set(RESERVOIRS.map((r) => r.id));
   const iso = (ms: number) => new Date(ms).toISOString();
   return Response.json({
-    // Only reservoirs that are spilling, have any sheet discharge, or are in our catalogue: the
-    // full sheet is ~170 rows of tanks that are not releasing anything.
+    // Every sheet row (about 170 reservoirs): the reservoir pages chart each one's water level from this archive.
     sheet: src.sheet.ok
       ? {
           sheetDate: src.sheet.data.sheetDate,
           fetchedAt: iso(src.sheet.data.fetchedAt),
-          rows: src.sheet.data.rows.filter((r) => r.spilling || (r.spillCusecs ?? 0) > 0 || (r.sluiceCusecs ?? 0) > 0 || (r.reservoirId && ids.has(r.reservoirId))),
+          rows: src.sheet.data.rows,
         }
       : { error: src.sheet.error },
     wms: src.wms.ok

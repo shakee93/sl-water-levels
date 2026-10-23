@@ -9,8 +9,8 @@
 //
 // The site's own /api/releases does the parsing (sheet + Mahaweli PDF + news detections), so this
 // script needs no dependencies. A line is written only when the content changed since the last line
-// of the day (hash over everything except fetch times). Sheet rows are the ones that are spilling,
-// have any discharge, or are in the reservoir catalogue; WMS rows are all reservoirs.
+// of the day (hash over everything except fetch times). Sheet rows and WMS rows are all reservoirs
+// (from 2026-10-23 evening; earlier lines only hold the spilling / discharging / catalogue ones).
 //
 // Line shape: { t, hash, sheet: {sheetDate, fetchedAt, rows[]}, wms: {reportDate, lastModified, fetchedAt, rows[]},
 //               news: {detections[]}, active: [{reservoirId, kind, cusecs, source, observedAt}] }

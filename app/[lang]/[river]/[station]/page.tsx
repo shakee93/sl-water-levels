@@ -25,6 +25,7 @@ import { Forecast } from "@/app/Forecast";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { Anomaly } from "@/app/Anomaly";
 import { ReleaseCard } from "@/app/ReleaseCard";
+import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { StationNearby } from "@/app/StationNearby";
 
 export const revalidate = 60;
@@ -263,6 +264,8 @@ export default async function StationPage({
             <Suspense key={`flow-${station}`} fallback={null}>
               <BasinFlow lang={lang} basin={basin} selectedStation={station} />
             </Suspense>
+
+            <Suspense key={`reservoirs-${station}`} fallback={null}><RiverReservoirs lang={lang} station={station} /></Suspense>
 
             <Suspense key={`dams-${station}`} fallback={null}>
               <BasinDams basin={basin} lang={lang} />
