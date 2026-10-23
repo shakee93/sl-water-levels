@@ -18,7 +18,7 @@ import {
   type StationAttention,
 } from "@/lib/attention";
 import { basinPath } from "@/lib/slug";
-import { detectUnit, formatLevel, type Unit } from "@/lib/units";
+import { detectUnit, formatDelta, formatLevel, type Unit } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { TimeAgo } from "./TimeAgo";
 import { getI18n } from "@/lib/i18n/server";
@@ -73,8 +73,8 @@ const TIER_STYLE: Record<AttentionTier, TierStyle> = {
 };
 
 // Direction comes from the metre-normalised 3h rate so feet and metre gauges
-// share one "steady" cut-off; the printed number stays in the gauge's own unit.
-function Trend({ t, rateM, rate }: { t: TFn; rateM: number | null; rate: number | null }) {
+// share one "steady" cut-off; the printed number is in feet like every other level.
+function Trend({ t, rateM, rate, unit }: { t: TFn; rateM: number | null; rate: number | null; unit: Unit }) {
   if (rateM == null || rate == null) return null;
   if (Math.abs(rateM) < RISING_M_PER_H) {
     return (
@@ -84,7 +84,7 @@ function Trend({ t, rateM, rate }: { t: TFn; rateM: number | null; rate: number 
       </span>
     );
   }
-  const text = `${rate >= 0 ? "+" : ""}${rate.toFixed(2)}/h`;
+  const text = `${formatDelta(rate, unit, { sign: true })}/h`;
   return rateM > 0 ? (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 tabular-nums">
       <ArrowUp className="size-3" aria-hidden />
@@ -199,8 +199,8 @@ function BasinCard({
         {b.lead.gap && (
           <div className={`mt-0.5 text-xs tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
             {b.lead.gap.crossed
-              ? t("gap.above", { amount: b.lead.gap.amount.toFixed(2), mark: markText(t, b.lead.gap.label) })
-              : t("gap.below", { amount: b.lead.gap.amount.toFixed(2), mark: markText(t, b.lead.gap.label) })}
+              ? t("gap.above", { amount: formatDelta(b.lead.gap.amount, unit), mark: markText(t, b.lead.gap.label) })
+              : t("gap.below", { amount: formatDelta(b.lead.gap.amount, unit), mark: markText(t, b.lead.gap.label) })}
           </div>
         )}
 
@@ -210,7 +210,7 @@ function BasinCard({
           {b.lead.stale ? (
             <span className="text-xs text-slate-500 dark:text-slate-400">{t("needs.lastKnown")}</span>
           ) : (
-            <Trend t={t} rateM={rateM} rate={b.lead.ratePerHour} />
+            <Trend t={t} rateM={rateM} rate={b.lead.ratePerHour} unit={unit} />
           )}
         </div>
 
