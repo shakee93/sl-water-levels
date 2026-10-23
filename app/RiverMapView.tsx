@@ -30,6 +30,7 @@ const RES_FILL: Record<NonNullable<MapNode["status"]>, string> = {
   nodata: "#cbd5e1",
 };
 
+const num1 = (n: number) => Math.round(n * 10) / 10;
 const halo = "stroke-white dark:stroke-slate-900 [paint-order:stroke]";
 const labelCls = `fill-slate-700 dark:fill-slate-200 ${halo}`;
 
@@ -38,6 +39,7 @@ export function RiverMapView({ model, strings, extras = {} }: { model: MapModel;
   const wasSel = useRef<boolean | null>(null);
   const picked = model.nodes.find((n) => n.id === sel) ?? null;
   const interactive = model.nodes.filter((n) => n.href);
+  const geo = model.geo;
 
   function onClick(e: React.MouseEvent, id: string) {
     const was = wasSel.current ?? true; // null = keyboard: the card is already open from focus
@@ -52,15 +54,36 @@ export function RiverMapView({ model, strings, extras = {} }: { model: MapModel;
     <div>
       <svg
         viewBox={`0 0 ${model.w} ${model.h}`}
-        className="mx-auto block w-full max-w-[480px] h-auto select-none"
+        className={`mx-auto block w-full ${geo ? (model.h > 340 ? "max-w-[440px]" : "max-w-[560px]") + " rounded-lg" : "max-w-[480px]"} h-auto select-none`}
         role="group"
         aria-label={strings.aria}
         style={{ fontSize: 10.5 }}
       >
+        {geo && (
+          <g aria-hidden>
+            <rect width={model.w} height={model.h} className="fill-[#e3eef7] dark:fill-[#0b1522]" />
+            {geo.land.map((d, i) => (
+              <path key={i} d={d} strokeWidth={0.9} strokeLinejoin="round" className="fill-[#f6f5f1] stroke-[#b9c7d3] dark:fill-[#1a2433] dark:stroke-[#33465c]" />
+            ))}
+            {geo.context.map((d, i) => (
+              <path key={i} d={d} fill="none" strokeWidth={0.9} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-300/70 dark:stroke-slate-600/80" />
+            ))}
+          </g>
+        )}
+        {geo?.lakes.map((l) => (
+          <path key={l.id} d={l.d} strokeWidth={1.6} strokeLinejoin="round" aria-hidden stroke={l.status === "nodata" ? "#94a3b8" : RES_FILL[l.status]} className="fill-sky-200 dark:fill-sky-900" />
+        ))}
         {/* river */}
         {model.lines.map((l) => (
           <g key={l.id} aria-hidden>
-            <path d={l.d} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth={l.trib ? 3 : 4.5} className="stroke-sky-200 dark:stroke-sky-900" />
+            <path
+              d={l.d}
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={geo ? (l.trib ? 1.6 : 2.6) : l.trib ? 3 : 4.5}
+              className={geo ? "stroke-sky-500 dark:stroke-sky-400" : "stroke-sky-200 dark:stroke-sky-900"}
+            />
           </g>
         ))}
         {/* links from a dam to the river */}
@@ -75,6 +98,23 @@ export function RiverMapView({ model, strings, extras = {} }: { model: MapModel;
         {model.nodes.map((n) => (
           <Node key={n.id} n={n} selected={sel === n.id} strings={strings} onSelect={() => setSel(n.id)} onDown={() => (wasSel.current = sel === n.id)} onClick={(e) => onClick(e, n.id)} />
         ))}
+
+        {geo && (
+          <g aria-hidden className="fill-slate-500 dark:fill-slate-400" fontSize={8.5}>
+            {/* north arrow */}
+            <g transform={`translate(${geo.northX} 14)`}>
+              <path d="M0 -9L4.5 5L0 2.5L-4.5 5Z" className="fill-slate-600 dark:fill-slate-300" />
+              <text y="16" textAnchor="middle" fontWeight={600} className={halo} strokeWidth={2.5}>N</text>
+            </g>
+            {geo.scale && (
+              <g transform={`translate(${geo.scale.x} ${geo.scale.y})`}>
+                <path d={`M0 -4V0H${num1(geo.scale.px)}V-4`} fill="none" strokeWidth={1.4} className="stroke-slate-600 dark:stroke-slate-300" />
+                <text x={num1(geo.scale.px) / 2} y={-7} textAnchor="middle" className={halo} strokeWidth={2.5}>{geo.scale.label}</text>
+              </g>
+            )}
+            <text x={model.w - 4} y={model.h - 5} textAnchor="end" fontSize={7.5} className={halo} strokeWidth={2.5}>© OpenStreetMap contributors</text>
+          </g>
+        )}
       </svg>
 
       {/* legend + hint */}
@@ -109,7 +149,7 @@ export function RiverMapView({ model, strings, extras = {} }: { model: MapModel;
             </Link>
           </div>
         ) : (
-          <p className="text-xs text-slate-500 dark:text-slate-400">{strings.hint} {strings.simplified}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{strings.hint}{geo ? "" : ` ${strings.simplified}`}</p>
         )}
       </div>
 
@@ -127,9 +167,10 @@ export function RiverMapView({ model, strings, extras = {} }: { model: MapModel;
 }
 
 function Tank({ fill }: { fill: string }) {
+  // a small lake, not a box
   return (
     <>
-      <rect x="-6.5" y="-5" width="13" height="10" rx="2.5" fill={fill} className="stroke-white dark:stroke-slate-900" strokeWidth="1.5" />
+      <path d="M-7 0.5C-7.5-4-2-6.5 2.5-5.5 7-5 8.5-1 6.5 3 4.5 6.5-3 6.8-5.8 4-6.8 2.6-7 1.4-7 0.5Z" fill={fill} className="stroke-white dark:stroke-slate-900" strokeWidth="1.5" strokeLinejoin="round" />
       <path d="M-4 0.4q2-2 4 0t4 0" fill="none" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" opacity="0.9" />
     </>
   );
@@ -146,7 +187,7 @@ function Node({
   onClick: (e: React.MouseEvent) => void;
 }) {
   const label = n.label && (
-    <text x={n.label.x} y={n.label.y} textAnchor={n.label.anchor} aria-hidden strokeWidth={3} strokeLinejoin="round" className={n.kind === "sea" ? `fill-sky-700 dark:fill-sky-300 italic ${halo}` : n.kind === "town" ? `fill-slate-500 dark:fill-slate-400 ${halo}` : labelCls} fontWeight={n.kind === "gauge" || n.highlight ? 600 : 400}>
+    <text x={n.label.x} y={n.label.y} textAnchor={n.label.anchor} aria-hidden strokeWidth={3} strokeLinejoin="round" className={n.kind === "sea" ? `fill-sky-700 dark:fill-sky-300 italic ${halo}` : n.kind === "town" ? `fill-slate-500 dark:fill-slate-400 ${halo}` : labelCls} fontWeight={n.kind === "gauge" || n.highlight || n.focus ? 600 : 400}>
       {n.label.text}
       {n.label.sub && (
         <tspan x={n.label.x} dy={12} className="fill-slate-500 dark:fill-slate-400" fontWeight={400}>{n.label.sub}</tspan>
@@ -179,7 +220,7 @@ function Node({
         <title>{`${n.name} · ${n.detail}`}</title>
         {/* 32 px touch target */}
         <circle cx={n.x} cy={n.y} r={16} fill="transparent" />
-        {(selected || n.highlight) && <circle cx={n.x} cy={n.y} r={n.kind === "gauge" ? 9 : 11} fill="none" strokeWidth="1.6" className="stroke-sky-600 dark:stroke-sky-300" />}
+        {(selected || n.highlight || n.focus) && <circle cx={n.x} cy={n.y} r={n.kind === "gauge" ? 9 : 11} fill="none" strokeWidth="1.6" className="stroke-sky-600 dark:stroke-sky-300" />}
         <circle cx={n.x} cy={n.y} r={13} fill="none" strokeWidth="2" className="stroke-sky-600 dark:stroke-sky-300 opacity-0 group-focus-visible:opacity-100" />
         {n.kind === "gauge" ? (
           <circle cx={n.x} cy={n.y} r={n.tier === "normal" || n.tier === "none" || n.tier === "stale" ? 5 : 6} fill={TIER_HEX[n.tier ?? "none"]} strokeWidth="1.6" className="stroke-white dark:stroke-slate-900" />

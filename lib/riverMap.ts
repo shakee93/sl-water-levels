@@ -65,6 +65,8 @@ export type MapNode = {
   status?: ReservoirIn["status"];
   active?: boolean;
   highlight?: boolean;
+  /** The station or reservoir this page is about: its label is placed first. */
+  focus?: boolean;
   href?: string;
   /** Plain text for the tooltip, sheet and list. */
   name: string;
@@ -81,6 +83,14 @@ export type MapModel = {
   /** Flow pulses along the river from an active reservoir to its gauges. */
   flows: { id: string; d: string }[];
   nodes: MapNode[];
+  /** Real geometry (lib/riverMapGeo.ts); absent on the schematic fallback. */
+  geo?: {
+    land: string[];
+    context: string[];
+    lakes: { id: string; d: string; status: NonNullable<MapNode["status"]>; active: boolean }[];
+    scale: { x: number; y: number; px: number; label: string } | null;
+    northX: number;
+  };
 };
 
 type V = { x: number; y: number; ref?: string };
@@ -111,7 +121,7 @@ function nearestOnLines(p: { x: number; y: number }, lines: Line[], only?: Line[
 
 const pathOf = (pts: { x: number; y: number }[]) => pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join("");
 
-type Box = { x0: number; y0: number; x1: number; y1: number };
+export type Box = { x0: number; y0: number; x1: number; y1: number };
 const hit = (a: Box, b: Box) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
 export function buildMap(input: {
@@ -313,11 +323,11 @@ function routeTo(attach: { line: Line; seg: number; x: number; y: number }, targ
   return null;
 }
 
-function placeLabels(nodes: MapNode[], h: number) {
+export function placeLabels(nodes: MapNode[], h: number, obstacles: Box[] = []) {
   const R: Record<MapNode["kind"], number> = { gauge: 6, reservoir: 8, town: 3, sea: 6 };
-  const placed: Box[] = nodes.map((n) => ({ x0: n.x - R[n.kind] - 1, y0: n.y - R[n.kind] - 1, x1: n.x + R[n.kind] + 1, y1: n.y + R[n.kind] + 1 }));
+  const placed: Box[] = [...obstacles, ...nodes.map((n) => ({ x0: n.x - R[n.kind] - 1, y0: n.y - R[n.kind] - 1, x1: n.x + R[n.kind] + 1, y1: n.y + R[n.kind] + 1 }))];
   // Priority: gauges, then highlighted/active reservoirs, other labelled reservoirs, sea, towns.
-  const prio = (n: MapNode) => (n.kind === "gauge" ? 0 : n.kind === "reservoir" ? (n.highlight || n.active ? 1 : n.onRiver ? 2 : 5) : n.kind === "sea" ? 3 : 4);
+  const prio = (n: MapNode) => (n.focus ? -1 : n.kind === "gauge" ? 0 : n.kind === "reservoir" ? (n.highlight || n.active ? 1 : n.onRiver ? 2 : 5) : n.kind === "sea" ? 3 : 4);
   const order = nodes.map((n, i) => ({ n, i })).sort((a, b) => prio(a.n) - prio(b.n) || a.i - b.i);
   for (const { n } of order) {
     if (!n.label) continue;

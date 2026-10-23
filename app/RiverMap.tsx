@@ -5,6 +5,7 @@ import { reservoirById } from "@/lib/reservoirs";
 import { PLACES } from "@/lib/places";
 import { orderStations } from "@/lib/basinOrder";
 import { shapeFor } from "@/lib/riverTopology";
+import { buildGeoMap } from "@/lib/riverMapGeo";
 import { buildMap, type GaugeIn, type ReservoirIn, type TownIn } from "@/lib/riverMap";
 import { stationDisplayName } from "@/lib/displayName";
 import { formatLevel } from "@/lib/units";
@@ -26,7 +27,7 @@ const SITE = "https://sl-water-levels.vercel.app";
  *
  * `highlight` marks one reservoir (its own page); `jsonLd` adds the places as a schema.org ItemList.
  */
-export async function RiverMap({ lang, basin, highlight, jsonLd }: { lang: Locale; basin: string; highlight?: string; jsonLd?: boolean }) {
+export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation }: { lang: Locale; basin: string; highlight?: string; jsonLd?: boolean; focusStation?: string }) {
   const { t, p } = getI18n(lang);
   const rt = rtFor(lang);
   const b = basin.trim();
@@ -86,7 +87,11 @@ export async function RiverMap({ lang, basin, highlight, jsonLd }: { lang: Local
   if (gauges.length < 2 && reservoirs.length === 0 && !shape.sea) return null;
   if (gauges.length === 1 && reservoirs.length === 0) return null;
 
-  const model = buildMap({ gauges, reservoirs, towns, shape, seaLabel: rt("map.sea") });
+  // Real river geometry (OpenStreetMap) where it exists for this basin; otherwise the old schematic.
+  const townCands: TownIn[] = PLACES.filter((x) => x.stations.some((st) => stationsHere.has(st))).map((x) => ({ id: x.name, lat: x.lat, lon: x.lon, label: x.name }));
+  const model =
+    buildGeoMap({ basin: b, gauges, reservoirs, towns: townCands, seaLabel: rt("map.sea"), focusStation }) ??
+    buildMap({ gauges, reservoirs, towns, shape, seaLabel: rt("map.sea") });
   const rn = riverName(b, lang);
 
   const ld = jsonLd

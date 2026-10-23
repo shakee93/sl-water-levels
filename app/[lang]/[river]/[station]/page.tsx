@@ -225,7 +225,7 @@ export default async function StationPage({
 
             {/* A river with one gauge has no river page to hold its map: it lives here. */}
             {stations.filter((s) => s.basin === basin).length === 1 && (
-              <Suspense key={`map-${station}`} fallback={null}><RiverMap lang={lang} basin={basin} /></Suspense>
+              <Suspense key={`map-${station}`} fallback={null}><RiverMap lang={lang} basin={basin} focusStation={station} /></Suspense>
             )}
 
             <StationNearby
