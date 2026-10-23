@@ -34,6 +34,8 @@ import { AnswerLine, FaqList } from "@/app/Answer";
 import { reservoirFaq } from "@/lib/answers";
 import { faqLd, webPageLd, DATA_BRANCH, PUBLISHER_ID } from "@/lib/seo";
 import { KnownChip, NearSpillChip } from "@/app/reservoirs/KnownChip";
+import { ReservoirPhotos } from "@/app/ReservoirPhotos";
+import { photoLd, photosFor } from "@/lib/reservoirPhotoData";
 
 
 const nowMs = () => Date.now();
@@ -136,6 +138,9 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
   const covStart = history.firstDay ?? lastDay ?? new Date(now).toISOString().slice(0, 10);
   const covEnd = lastDay && lastDay > covStart ? lastDay : covStart;
+  // Only photos that are shown on the page go into the structured data.
+  const photos = photosFor(rv.slug);
+  const imageLd = photos.length ? { image: photos.map(photoLd) } : {};
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -151,6 +156,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         "@type": "Place",
         name: `${rv.name} reservoir`,
         url: SITE + canonical,
+        ...imageLd,
         ...(RESERVOIR_COORDS[rv.slug] ? { geo: { "@type": "GeoCoordinates", latitude: RESERVOIR_COORDS[rv.slug].lat, longitude: RESERVOIR_COORDS[rv.slug].lon } } : {}),
         containedInPlace: { "@type": "Place", name: [rv.district, "Sri Lanka"].filter(Boolean).join(", ") },
         ...(rv.river ? { additionalProperty: { "@type": "PropertyValue", name: "River basin", value: rv.river } } : {}),
@@ -160,6 +166,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         name: `${rv.name} reservoir storage and spill`,
         description,
         url: SITE + canonical,
+        ...imageLd,
         inLanguage: lang,
         isAccessibleForFree: true,
         license: "https://sl-water-levels.vercel.app/about#data-sources",
@@ -295,6 +302,8 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             <BasinWarning basin={rv.river} lang={lang} />
           </Suspense>
         )}
+
+        <ReservoirPhotos photos={photos} name={name} variant="hero" />
 
         <div className="grid gap-3 md:grid-cols-2">
           {/* ---- storage */}
@@ -520,6 +529,8 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             )}
           </section>
         )}
+
+        {photos.length > 1 && <ReservoirPhotos photos={photos} name={name} variant="gallery" />}
 
         <p className={`mt-6 text-xs ${muted}`}>{rt("src.note")}</p>
 

@@ -626,6 +626,13 @@ export const si: Dict = {
   "img.zoom": "විශාල කරන්න", // needs native review
   "img.fit": "තිරයට ගළපන්න", // needs native review
   "img.close": "වසන්න", // needs native review
+  "photos.title": "ඡායාරූප", // needs native review
+  "photos.credit": "ඡායාරූපය:", // needs native review
+  "photos.via": "Wikimedia Commons හරහා", // needs native review
+  "photos.open": "විශාල කර බලන්න: {name}", // needs native review
+  "photos.prev": "කලින් ඡායාරූපය", // needs native review
+  "photos.next": "ඊළඟ ඡායාරූපය", // needs native review
+  "photos.count": "{n} න් {i}", // needs native review
   "how.readings.t": "කියවීම් එන්නේ කොහෙන්ද", // needs native review
   "how.readings.s": "වාරිමාර්ග දෙපාර්තමේන්තුවේ ගං මාන, පැයකට වරක් පමණ.", // needs native review
   "how.readings.d": "අපි එක් එක් මානයේ අලුත්ම කියවීම පෙන්වනවා. මානයක් නිහඬ වුවහොත්, එහි අවසාන කියවීම කොපමණ පරණදැයි කියනවා.", // needs native review

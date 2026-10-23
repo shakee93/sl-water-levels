@@ -626,6 +626,13 @@ export const ta: Dict = {
   "img.zoom": "பெரிதாக்கு", // needs native review
   "img.fit": "திரைக்குப் பொருத்து", // needs native review
   "img.close": "மூடு", // needs native review
+  "photos.title": "புகைப்படங்கள்", // needs native review
+  "photos.credit": "புகைப்படம்:", // needs native review
+  "photos.via": "Wikimedia Commons வழியாக", // needs native review
+  "photos.open": "பெரிதாகப் பார்க்க: {name}", // needs native review
+  "photos.prev": "முந்தைய படம்", // needs native review
+  "photos.next": "அடுத்த படம்", // needs native review
+  "photos.count": "{n} இல் {i}", // needs native review
   "how.readings.t": "அளவீடுகள் எங்கிருந்து", // needs native review
   "how.readings.s": "நீர்ப்பாசனத் திணைக்களத்தின் ஆற்று நிலையங்கள், சுமார் மணிக்கு ஒருமுறை.", // needs native review
   "how.readings.d": "ஒவ்வொரு நிலையத்தின் சமீபத்திய அளவீட்டைக் காட்டுகிறோம். ஒரு நிலையம் தகவல் தராவிட்டால், அதன் கடைசி அளவீடு எவ்வளவு பழையது என்பதைச் சொல்கிறோம்.", // needs native review
