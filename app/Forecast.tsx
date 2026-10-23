@@ -1,3 +1,4 @@
+import { TimeAgo } from "./TimeAgo";
 import { ClampedText } from "./ClampedText";
 import { CloudRain, TriangleAlert } from "lucide-react";
 import { fetchBasinSnapshot } from "@/lib/arcgis";
@@ -34,7 +35,10 @@ function hoursPhrase(n: number): T3 {
 }
 
 /** One forecast fact, or null. Never numbers beyond the ETA, never probabilities. */
-function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | null; target: number } {
+// Render time for the live age label (outside the component so render stays pure).
+const renderedAt = () => Date.now();
+
+function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | null; target: number; likely?: boolean } {
   const c = f.crossings
     .filter((x) => x.wording === "likely" || x.wording === "possible")
     .sort((a, b) => (a.etaTs ?? Infinity) - (b.etaTs ?? Infinity))[0];
@@ -44,11 +48,13 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
       ? { en: "flood level", si: "ගංවතුර මට්ටම", ta: "வெள்ள மட்டத்தை" }
       : { en: "alert level", si: "අනතුරු ඇඟවීමේ මට්ටම", ta: "எச்சரிக்கை மட்டத்தை" };
     const target = ORDER.indexOf(c.threshold);
+    const likely = c.wording === "likely";
     if (c.etaTs != null) {
       const n = Math.max(1, Math.round((c.etaTs - now) / HOUR));
       const h = hoursPhrase(n);
       return {
         target,
+        likely,
         fact: {
           en: `Could reach ${lvl.en} in ${h.en}`,
           si: `${h.si} ඇතුළත ${lvl.si}ට ළඟා විය හැක`,
@@ -58,6 +64,7 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
     }
     return {
       target,
+      likely,
       fact: {
         en: `Could reach ${lvl.en} within 24 hours`,
         si: `පැය 24ක් ඇතුළත ${lvl.si}ට ළඟා විය හැක`,
@@ -79,11 +86,14 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
 
 /**
  * Verdict tier: the real tier, upgraded to "alert" (Get ready) when a crossing is
- * forecast within 24h. Never upgrades into "Flooding now" / "Move to safety": those
- * describe what is happening, so they only come from the measured level.
+ * forecast within 24h AND it's either "likely" (>=50%) or the river is rising now.
+ * A merely "possible" crossing on a falling river (e.g. Ratnapura 1.5 m below alert,
+ * falling, with forecast rain) stays Normal; the 24h tile still says "Could reach".
+ * Never upgrades into "Flooding now" / "Move to safety": those describe what is
+ * happening, so they only come from the measured level.
  */
-function upgrade(tier: VerdictTone, target: number): VerdictTone {
-  if ((tier === "normal" || tier === "watch") && target >= ORDER.indexOf("alert")) return "alert";
+function upgrade(tier: VerdictTone, target: number, likely: boolean, rising: boolean): VerdictTone {
+  if ((tier === "normal" || tier === "watch") && target >= ORDER.indexOf("alert") && (likely || rising)) return "alert";
   return tier;
 }
 
@@ -107,12 +117,11 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
 
   const stale = realTier === "stale";
   const now = f.asOfTs ?? latest?.ts ?? 0;
-  const { fact: rawFact, target } = stale ? { fact: null, target: -1 } : forecastFact(f, realTier, now);
+  const { fact: rawFact, target, likely = false } = stale ? { fact: null, target: -1 } : forecastFact(f, realTier, now);
   // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
   const fact: T3 | null = stale
     ? null
     : (rawFact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
-  const tone = stale ? "stale" : upgrade(realTier, target);
 
   // "Next hour": the forecast's 1 h change when there is one (metres, unit-aware),
   // otherwise the recent 3 h rate as a persistence guess.
@@ -133,13 +142,22 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
     : r == null
       ? null
       : directionFor(r);
+  const tone = stale ? "stale" : upgrade(realTier, target, likely, r != null && r > STEADY_M_PER_H);
 
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const dc = elevated ? contactsForDistrict(district) : null;
   const name = stationDisplayName(selectedStation);
   const unit = me?.unit ?? null;
   const level = latest?.water_level ?? null;
-  const footer = latest ? t("common.updated", { time: clock(latest.ts, t) }) : t("common.noReading");
+  // "Reading at 11:10 am · 55 min ago": the time the gauge measured, plus a live age,
+  // so a cached page can't pass off an hour-old reading as fresh.
+  const footer = latest ? (
+    <>
+      {t("common.readingAt", { time: clock(latest.ts, t) })} · <TimeAgo ts={latest.ts} serverNow={renderedAt()} />
+    </>
+  ) : (
+    t("common.noReading")
+  );
   const levelText = level != null ? formatLevel(level, unit) : null;
   const rn = riverName(basin, lang);
   const shareText = stale

@@ -92,6 +92,7 @@ export const si: Dict = {
   "common.closeLower": "වසන්න",
   "common.loading": "පූරණය වෙමින්",
   "common.updated": "යාවත්කාලීන කළේ {time}",
+  "common.readingAt": "{time} කියවීම",
   "common.noReading": "කියවීමක් නැත",
   "common.officialWarning": "නිල අනතුරු ඇඟවීම:",
   "common.englishNote": "(ඉංග්‍රීසියෙන්)",

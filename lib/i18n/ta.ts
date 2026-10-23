@@ -92,6 +92,7 @@ export const ta: Dict = {
   "common.closeLower": "மூடு",
   "common.loading": "ஏற்றுகிறது",
   "common.updated": "புதுப்பிப்பு {time}",
+  "common.readingAt": "{time} அளவீடு",
   "common.noReading": "அளவீடு இல்லை",
   "common.officialWarning": "அதிகாரப்பூர்வ எச்சரிக்கை:",
   "common.englishNote": "(ஆங்கிலத்தில்)",

@@ -98,6 +98,7 @@ export const en = {
   "common.closeLower": "close",
   "common.loading": "Loading",
   "common.updated": "Updated {time}",
+  "common.readingAt": "Reading at {time}",
   "common.noReading": "No reading",
   "common.officialWarning": "Official warning:",
   "common.englishNote": "(English)",

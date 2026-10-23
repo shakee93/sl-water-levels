@@ -30,9 +30,11 @@ export async function GET() {
       if (!s.latest) continue;
       try {
         const f = await loadForecast(basin, snapshot, s.station);
-        // Same rule as the station card: a forecast crossing lifts normal/watch to alert.
+        // Same rule as the station card: a forecast crossing lifts normal/watch to alert
+        // when it's likely, or possible while the river is rising.
+        const rising = (s.rate3hM ?? 0) > 0.006;
         const crossing = f.crossings.some(
-          (c) => c.wording === "likely" || c.wording === "possible",
+          (c) => c.wording === "likely" || (c.wording === "possible" && rising),
         );
         const verdict =
           s.tier !== "stale" && crossing && RANK.indexOf(s.tier as (typeof RANK)[number]) <= 1 ? "alert" : s.tier;

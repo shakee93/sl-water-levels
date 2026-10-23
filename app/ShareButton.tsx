@@ -237,7 +237,7 @@ export function VerdictCard({
   /** Label for the 117 button; null hides the call buttons. */
   call: T3 | null;
   office: { label: string; tel: string } | null;
-  footer: string;
+  footer: React.ReactNode;
   /** Current level with unit, shown large beside the verdict. */
   level?: string | null;
   /** Horizontal gauge data; omitted when the gauge has no flood levels or no reading. */
