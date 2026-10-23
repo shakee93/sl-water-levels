@@ -4,17 +4,20 @@
 //   /api/reservoirs?status=spilling  only spilling | releasing | holding | nodata
 // The sources (Irrigation Department sheet, Mahaweli Authority report) update about once a day:
 // every record carries the day of the reading, and a missing figure is null, never zero.
+import { connection } from "next/server";
 import { getReservoirs } from "@/lib/reservoirData";
 import { CORS } from "@/lib/apiData";
 import { SITE } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// Per request, not prerendered (a build must not depend on the data sources). Not `dynamic = "force-dynamic"`:
+// that also switches off unstable_cache, so every call re-fetched ArcGIS (llms.txt took 3 s on a miss).
 
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS });
 }
 
 export async function GET(req: Request) {
+  await connection();
   const q = new URL(req.url).searchParams;
   const data = await getReservoirs().catch(() => null);
   if (!data) return Response.json({ error: "Source temporarily unavailable" }, { status: 503, headers: { ...CORS, "Cache-Control": "no-store" } });

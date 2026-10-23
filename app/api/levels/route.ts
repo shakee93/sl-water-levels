@@ -4,19 +4,22 @@
 //   /api/levels?station=hanwella    one gauge (slug as in the page URL)
 //   /api/levels?town=wellampitiya   the gauges the town page is based on
 // Cached at the edge for a minute; the underlying source refreshes about hourly.
+import { connection } from "next/server";
 import { getNational } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 import { API_META, CORS, levelRecord } from "@/lib/apiData";
 import { placeBySlug } from "@/lib/places";
 import { basinSlug, stationSlug } from "@/lib/slug";
 
-export const dynamic = "force-dynamic";
+// Per request, not prerendered (a build must not depend on the data sources). Not `dynamic = "force-dynamic"`:
+// that also switches off unstable_cache, so every call re-fetched ArcGIS (llms.txt took 3 s on a miss).
 
 export function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS });
 }
 
 export async function GET(req: Request) {
+  await connection();
   const q = new URL(req.url).searchParams;
   let all;
   try {

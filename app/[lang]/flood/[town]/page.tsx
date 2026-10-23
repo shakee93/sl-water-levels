@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LifeBuoy } from "lucide-react";
 import { placeBySlug } from "@/lib/places";
-import { loadTown } from "@/lib/townData";
+import { loadTown, PAGE_BUDGET_MS } from "@/lib/townData";
 import { ttFor } from "@/lib/i18n/town";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
@@ -25,14 +26,10 @@ import { breadcrumbLd, faqLd, placeLd, webPageLd } from "@/lib/seo";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 
-// Town pages are rendered on first request and then ISR-cached, never at build time: a build that had
-// to fetch rain, gauges and warnings for 135 towns would depend on every upstream being up.
-export const revalidate = 600;
+// Town pages are rendered per request and CDN-cached for 60 s (proxy.ts), never at build time: a build that had
+// to fetch rain, gauges and warnings for 135 towns would depend on every upstream being up, and an ISR render
+// would wait for every Suspense boundary before the first byte.
 const SITE = "https://sl-water-levels.vercel.app";
-
-export async function generateStaticParams() {
-  return [];
-}
 
 type Params = { params: Promise<{ lang: string; town: string }> };
 
@@ -55,6 +52,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function TownPage({ params }: Params) {
+  await connection();
   const { lang: rawLang, town } = await params;
   if (!isLocale(rawLang)) notFound();
   const lang: Locale = rawLang;
@@ -63,7 +61,7 @@ export default async function TownPage({ params }: Params) {
 
   const { t, p } = getI18n(lang);
   const tt = ttFor(lang);
-  const data = await loadTown(place);
+  const data = await loadTown(place, undefined, { budgetMs: PAGE_BUDGET_MS });
   const g = data.gauge;
   const canonical = p(`/flood/${place.slug}`);
   const serverNow = data.input.now;

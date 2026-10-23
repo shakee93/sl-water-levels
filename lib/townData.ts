@@ -7,6 +7,10 @@ import { getGsmapZone } from "./gsmap";
 import { getTownRain, type TownRain } from "./townWeather";
 import { releaseAffecting } from "./releases";
 import { getOfficialWarnings } from "./warnings";
+import { soft } from "./soft";
+
+/** Longest the town PAGE waits for rain, bulletins or the release lookup before going without them (its first byte depends on it). */
+export const PAGE_BUDGET_MS = 1500;
 import { normaliseBasin } from "./basinOrder";
 import { distanceKm } from "./nearby";
 import { contactsForDistrict } from "./help";
@@ -68,7 +72,10 @@ function forecastIn(f: Forecast, mpu: number): ForecastIn {
   };
 }
 
-export async function loadTown(place: Place, now = Date.now()): Promise<TownData> {
+export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?: number } = {}): Promise<TownData> {
+  // Only the page passes a budget. Push/glance callers wait for the real answer: a verdict made without
+  // rain or bulletins must never drive a notification.
+  const box = <T,>(p: Promise<T>, fallback: T): Promise<T> => (opts.budgetMs ? soft(p, opts.budgetMs, fallback) : p);
   const national = await getNational().catch(() => [] as NationalStation[]);
   const byName = new Map(national.map((s) => [s.station, s]));
   const primary = gaugeIn(byName.get(place.stations[0]), place);
@@ -77,14 +84,15 @@ export async function loadTown(place: Place, now = Date.now()): Promise<TownData
   const effStation = eff ? byName.get(eff.station)! : null;
 
   const [rainR, warnings, forecast, release, zone] = await Promise.all([
-    getTownRain(place.lat, place.lon, now),
-    getOfficialWarnings(now).catch(() => ({ warnings: [] })),
+    box(getTownRain(place.lat, place.lon, now), { ok: false, reason: "rain feed too slow" } as Awaited<ReturnType<typeof getTownRain>>),
+    // Time-boxed: a cold bulletin list/analysis must not hold the whole town page (it keeps running and fills the cache).
+    box(getOfficialWarnings(), { warnings: [] } as Awaited<ReturnType<typeof getOfficialWarnings>>).catch(() => ({ warnings: [] })),
     eff && effStation
       ? fetchBasinSnapshot(eff.basin)
           .then((snap) => (snap.length ? loadForecast(eff.basin, snap, eff.station) : null))
           .catch(() => null)
       : Promise.resolve(null),
-    eff ? releaseAffecting(eff.station).catch(() => null) : Promise.resolve(null),
+    eff ? box(releaseAffecting(eff.station).catch(() => null), null) : Promise.resolve(null),
     place.rainZone ? getGsmapZone(place.rainZone, now).catch(() => null) : Promise.resolve(null),
   ]);
 

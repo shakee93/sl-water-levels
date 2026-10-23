@@ -8,6 +8,7 @@
 
 import { createHash } from "node:crypto";
 import { unstable_cache } from "next/cache";
+import { soft } from "./soft";
 import type { Forecast } from "./forecast";
 import { formatLevel } from "./units";
 import type { Tier } from "./status";
@@ -164,6 +165,7 @@ const generateCached = unstable_cache(
 
 const failedUntil = new Map<string, number>();
 const BACKOFF_MS = 5 * 60_000;
+const MODEL_WAIT_MS = 1500;
 
 export async function getAdvisory(i: AdvisoryInput): Promise<Advisory> {
   const base = (en: string, source: Advisory["source"], si: string | null = null, ta: string | null = null): Advisory => ({ en, si, ta, source, machineTranslated: true, tier: i.tier });
@@ -174,15 +176,16 @@ export async function getAdvisory(i: AdvisoryInput): Promise<Advisory> {
     const hour = i.forecast.asOfTs != null ? Math.floor(i.forecast.asOfTs / 3_600_000) : 0;
     const key = `${i.station}|${hour}|${i.tier}|${createHash("sha256").update(facts).digest("hex").slice(0, 12)}`;
     if ((failedUntil.get(key) ?? 0) > Date.now()) return base(template, "template");
-    try {
-      const v = await generateCached(key, facts, i.tier);
-      // The English line the model wrote replaced by the template is never worse, so use the
-      // model's English only when it validated; otherwise keep the template.
-      return base(v.en ?? template, "model", v.si, v.ta);
-    } catch {
-      failedUntil.set(key, Date.now() + BACKOFF_MS);
-      return base(template, "template");
-    }
+    // The model call can take many seconds and the page streams it, but a slow call still delays the
+    // end of the page (and what the CDN stores), so wait at most MODEL_WAIT_MS and show the template
+    // line. The call keeps running (soft() keeps the function alive) and fills the cache, so the next
+    // render shows the model's sentence.
+    const pending = generateCached(key, facts, i.tier);
+    pending.catch(() => failedUntil.set(key, Date.now() + BACKOFF_MS));
+    const v = await soft(pending, MODEL_WAIT_MS, null);
+    // The English line the model wrote replaced by the template is never worse, so use the
+    // model's English only when it validated; otherwise keep the template.
+    return v ? base(v.en ?? template, "model", v.si, v.ta) : base(template, "template");
   } catch {
     return base(template, "template");
   }

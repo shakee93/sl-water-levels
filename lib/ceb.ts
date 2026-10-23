@@ -13,6 +13,8 @@
 //      ?dateAggregation=15min&from=<ISO>&to=<ISO>
 // Response: { data: [{ reportTimeStamp, powerPlantId, powerInMw }] }
 
+import { unstable_cache } from "next/cache";
+
 const PUCSL_API = "https://gendata.pucsl.gov.lk/api/day-ahead-dispatch";
 
 export type HydroPoint = {
@@ -24,17 +26,42 @@ export type HydroPoint = {
 /** Older points are history, not "now": never shown as live. */
 const LIVE_MAX_AGE_H = 3;
 
+const BUCKET_MS = 5 * 60_000;
+
+// The window end is rounded down to 5 minutes: with a per-millisecond `to` every request was a new URL,
+// so nothing was ever cached and each cold page waited 3-10 s on this feed. The big raw response
+// (> 2 MB) cannot go in the fetch cache, so the small filtered list is what unstable_cache stores.
+// A failure is not cached (it throws) and the caller falls back to [].
+const hydroCached = unstable_cache(
+  async (bucket: number, hours: number): Promise<HydroPoint[]> => {
+    const r = await loadHydro(bucket, hours);
+    if (!r) throw new Error("PUCSL unavailable");
+    return r;
+  },
+  ["pucsl-hydro-v1"],
+  { revalidate: 300 },
+);
+
 export async function fetchHydroGeneration(hours = 24): Promise<HydroPoint[]> {
-  const to = new Date();
+  const bucket = Math.floor(Date.now() / BUCKET_MS) * BUCKET_MS;
+  try {
+    return await hydroCached(bucket, hours);
+  } catch {
+    return [];
+  }
+}
+
+async function loadHydro(bucket: number, hours: number): Promise<HydroPoint[] | null> {
+  const to = new Date(bucket);
   const from = new Date(to.getTime() - hours * 3_600_000);
   const url = `${PUCSL_API}?dateAggregation=15min&from=${from.toISOString()}&to=${to.toISOString()}`;
   try {
-    const res = await fetch(url, { next: { revalidate: 300 } });
-    if (!res.ok) return [];
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) return null;
     const json = (await res.json()) as {
       data?: { reportTimeStamp: string; powerPlantId: number; powerInMw: number | null }[];
     };
-    if (!Array.isArray(json.data)) return [];
+    if (!Array.isArray(json.data)) return null;
     return json.data
       .filter((r) => r.powerInMw != null && Number.isFinite(r.powerInMw))
       .filter((r) => to.getTime() - new Date(r.reportTimeStamp).getTime() <= LIVE_MAX_AGE_H * 3600000)
@@ -44,7 +71,7 @@ export async function fetchHydroGeneration(hours = 24): Promise<HydroPoint[]> {
         powerMW: r.powerInMw as number,
       }));
   } catch {
-    return [];
+    return null;
   }
 }
 

@@ -1,18 +1,21 @@
 // Atom feed of what needs attention: gauges at alert level or above, and reservoirs spilling or
 // releasing water. English. Entries are stable per (item, state), so a reader sees a new entry when
 // something changes state, not on every refresh. An empty feed is valid: it means all is calm.
+import { connection } from "next/server";
 import { getNational } from "@/lib/arcgis";
 import { levelRecord } from "@/lib/apiData";
 import { getReservoirs } from "@/lib/reservoirData";
 import { SITE, SITE_NAME, OWNER } from "@/lib/seo";
 
-export const dynamic = "force-dynamic";
+// Per request, not prerendered (a build must not depend on the data sources). Not `dynamic = "force-dynamic"`:
+// that also switches off unstable_cache, so every call re-fetched ArcGIS (llms.txt took 3 s on a miss).
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 type Entry = { id: string; title: string; url: string; updated: string; summary: string };
 
 export async function GET() {
+  await connection();
   const now = Date.now();
   const [national, rsv] = await Promise.all([getNational().catch(() => null), getReservoirs().catch(() => null)]);
   if (!national && !rsv) return new Response("Source temporarily unavailable", { status: 503, headers: { "Cache-Control": "no-store" } });

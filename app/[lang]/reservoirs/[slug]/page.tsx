@@ -24,6 +24,7 @@ import { HistoryChart } from "@/app/reservoirs/HistoryChart";
 import { BasinWarning } from "@/app/reservoirs/BasinWarning";
 import { displayName, localName } from "@/app/reservoirs/RvCard";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { RiverMap } from "@/app/RiverMap";
 import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
 import { FSL_SOURCE_URL, getKnownStatus, type KnownStatus } from "@/lib/reservoirStatus";
@@ -34,18 +35,16 @@ import { reservoirFaq } from "@/lib/answers";
 import { faqLd, webPageLd, DATA_BRANCH, PUBLISHER_ID } from "@/lib/seo";
 import { KnownChip, NearSpillChip } from "@/app/reservoirs/KnownChip";
 
-export const revalidate = 600;
 
 const nowMs = () => Date.now();
 
 const SITE = "https://sl-water-levels.vercel.app";
 
-// Rendered on first request and then ISR-cached, not at build time: prerendering every
-// page made each deploy depend on ArcGIS, Google Sheets and the Mahaweli/DMC servers, and one
-// ETIMEDOUT during a build (seen twice on 23 Oct) failed the whole deploy.
-export async function generateStaticParams() {
-  return [];
-}
+// Rendered per request (see `await connection()` in the page) and cached by the CDN for 60 s with a
+// 5 min stale window (proxy.ts sets the header), not prerendered and not ISR: an ISR render waits for
+// every Suspense boundary before sending a byte, while a dynamic render sends the heading and the
+// answer as soon as the station list and gauge snapshot are in and streams the rest. Nothing is
+// prerendered at build, so a deploy never depends on ArcGIS, Google Sheets or the Mahaweli/DMC servers.
 
 type Src = "Irrigation Department" | "Mahaweli Authority";
 const srcName = (t: TFn, s: Src) => t(s === "Irrigation Department" ? "release.src.irrigation" : "release.src.mahaweli");
@@ -95,6 +94,7 @@ const muted = "text-slate-500 dark:text-slate-400";
 const gone = "text-slate-400 dark:text-slate-500";
 
 export default async function ReservoirPage({ params }: { params: Promise<{ lang: string; slug: string }> }) {
+  await connection();
   const { lang: rawLang, slug } = await params;
   if (!isLocale(rawLang)) notFound();
   const lang: Locale = rawLang;

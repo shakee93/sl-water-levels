@@ -1,5 +1,6 @@
 import { ClampedText } from "@/app/ClampedText";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
@@ -24,8 +25,6 @@ import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { TFn } from "@/lib/i18n/translate";
-
-export const revalidate = 60;
 
 const nowMs = () => Date.now();
 
@@ -53,12 +52,11 @@ function joinNames(names: string[], and: string): string {
   return `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
 }
 
-// Rendered on first request and then ISR-cached, not at build time: prerendering every
-// page made each deploy depend on ArcGIS, Google Sheets and the Mahaweli/DMC servers, and one
-// ETIMEDOUT during a build (seen twice on 23 Oct) failed the whole deploy.
-export async function generateStaticParams() {
-  return [];
-}
+// Rendered per request (see `await connection()` in the page) and cached by the CDN for 60 s with a
+// 5 min stale window (proxy.ts sets the header), not prerendered and not ISR: an ISR render waits for
+// every Suspense boundary before sending a byte, while a dynamic render sends the heading and the
+// answer as soon as the station list and gauge snapshot are in and streams the rest. Nothing is
+// prerendered at build, so a deploy never depends on ArcGIS, Google Sheets or the Mahaweli/DMC servers.
 
 export async function generateMetadata({
   params,
@@ -117,6 +115,7 @@ export default async function BasinPage({
 }: {
   params: Promise<{ lang: string; river: string }>;
 }) {
+  await connection();
   const { lang: rawLang, river } = await params;
   if (!isLocale(rawLang)) notFound();
   const lang: Locale = rawLang;

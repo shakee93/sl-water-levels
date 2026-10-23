@@ -16,6 +16,7 @@
 // figure printed next to GO is the gate setting's discharge, not a measured flow, so it is never
 // shown as the flow: the headline number always comes from the Spilling (Cusec) column.
 
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { getDocumentProxy } from "unpdf";
 import { aiConfigured, decide } from "./openai";
@@ -545,14 +546,20 @@ async function soft<T>(f: () => Promise<T>): Promise<SourceOutcome<T>> {
 }
 
 /** All raw source data, for the archive and diagnostics. */
-export async function getReleaseSources() {
+export const getReleaseSources = cache(async () => {
   const [sheet, wms, news] = await Promise.all([soft(sheetCached), soft(wmsCached), soft(newsCached)]);
   return { sheet, wms, news };
-}
+});
 
 /** Active reservoir releases from every source, merged per reservoir. Never throws. */
-export async function getReleases(now = Date.now()): Promise<ReleasesResult> {
-  const [{ sheet, wms, news }, warn] = await Promise.all([getReleaseSources(), soft(() => getOfficialWarnings(now))]);
+export function getReleases(now?: number): Promise<ReleasesResult> {
+  return now === undefined ? releasesThisRequest() : computeReleases(now);
+}
+// ReleaseCard, the verdict (releaseAffecting) and the reservoir list all ask in one render.
+const releasesThisRequest = cache(() => computeReleases(Date.now()));
+
+async function computeReleases(now: number): Promise<ReleasesResult> {
+  const [{ sheet, wms, news }, warn] = await Promise.all([getReleaseSources(), soft(() => getOfficialWarnings())]);
   const newsMap = news.ok ? activeNews(news.data, now) : new Map<string, NewsDetection>();
 
   const releases: Release[] = [];

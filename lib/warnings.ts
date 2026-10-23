@@ -16,6 +16,7 @@
 // reduce the result, and `reason` says why.
 
 import { createHash } from "node:crypto";
+import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { extractText, getDocumentProxy } from "unpdf";
 import { fetchStations } from "./arcgis";
@@ -319,7 +320,14 @@ function templateSummary(title: string, basins: string[], severity: WarningSever
  * The latest official bulletins from the last 24h that name at least one of our basins or carry a
  * warning level. Never throws; `reason` explains an empty or partial result.
  */
-export async function getOfficialWarnings(now = Date.now()): Promise<WarningsResult> {
+export function getOfficialWarnings(now?: number): Promise<WarningsResult> {
+  // Without an explicit time, one result per render: the verdict, the release lines and the river
+  // line all ask, and each used to start its own listing/analysis pass.
+  return now === undefined ? warningsThisRequest() : loadOfficialWarnings(now);
+}
+const warningsThisRequest = cache(() => loadOfficialWarnings(Date.now()));
+
+async function loadOfficialWarnings(now: number): Promise<WarningsResult> {
   try {
     if (!aiConfigured()) return { warnings: [], reason: "OPENAI_API_KEY is not set, so bulletins are not analysed" };
     const [{ rows, errors }, stations] = await Promise.all([listBulletins(now), fetchStations().catch(() => [])]);

@@ -24,6 +24,7 @@
 //  6. Horizons whose out-of-sample error was no better than "level stays put" (24h so
 //     far) ship as persistence with the observed change distribution as the band.
 
+import { cache } from "react";
 import type { BasinStation } from "./arcgis";
 import { normaliseBasin, orderStations } from "./basinOrder";
 import { ageMinutes, HOUR_MS, isStale, rainTotal, rate, STALE_MINUTES } from "./readings";
@@ -131,7 +132,8 @@ export type ForecastInput = {
 };
 
 /** Fetch weather + GloFAS (both fail soft) and build the forecast. */
-export async function loadForecast(basin: string, snapshot: BasinStation[], station: string): Promise<Forecast> {
+// Forecast and StationCard (the chart) both ask for the same forecast in one render: compute it once.
+export const loadForecast = cache(async function loadForecast(basin: string, snapshot: BasinStation[], station: string): Promise<Forecast> {
   const key = normaliseBasin(basin);
   const covered = COEFFS[station] && normaliseBasin(COEFFS[station].basin) === key;
   // Rain is fetched for every gauge that has a grid (trend-only gauges show it too); GloFAS only matters to fitted models.
@@ -139,7 +141,7 @@ export async function loadForecast(basin: string, snapshot: BasinStation[], stat
     ? await Promise.all([getBasinWeather(key, station), covered ? getGlofas(key) : null])
     : [null, null];
   return makeForecast({ basin, snapshot, station, weather, glofas });
-}
+});
 
 const r5 = (p: number) => Math.round(p * 20) / 20;
 const nameOf: Record<ThresholdName, string> = { alert: "alert level", minor: "minor flood level", major: "major flood level" };

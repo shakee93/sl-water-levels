@@ -1,5 +1,6 @@
 import { Droplet, Zap, ArrowRightLeft, Sprout } from "lucide-react";
 import { DAMS_BY_BASIN, type Dam } from "@/lib/dams";
+import { soft } from "@/lib/soft";
 import { fetchHydroGeneration, currentByPlant, peakInLast } from "@/lib/ceb";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
@@ -33,7 +34,8 @@ export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }
   const dams = DAMS_BY_BASIN[basin];
   if (!dams || dams.length === 0) return null;
 
-  const dispatch = await fetchHydroGeneration(24);
+  // The feed is days late today (the badges are hidden), so it must never hold the page up: 1.5 s, then render without.
+  const dispatch = await soft(fetchHydroGeneration(24), 1500, []);
   const live = currentByPlant(dispatch);
   const anyLiveMW = [...live.values()].some((p) => p.powerMW > 0);
   // No live MW (PUCSL feed is all-null today): nothing worth showing, render nothing.

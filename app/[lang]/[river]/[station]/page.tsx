@@ -4,6 +4,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { TFn } from "@/lib/i18n/translate";
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -36,16 +37,14 @@ import { RiverMap } from "@/app/RiverMap";
 import { StationNearby } from "@/app/StationNearby";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
-export const revalidate = 60;
-
 const SITE = "https://sl-water-levels.vercel.app";
 
-// Rendered on first request and then ISR-cached, not at build time: prerendering every
-// page made each deploy depend on ArcGIS, Google Sheets and the Mahaweli/DMC servers, and one
-// ETIMEDOUT during a build (seen twice on 23 Oct) failed the whole deploy.
-export async function generateStaticParams() {
-  return [];
-}
+// Rendered per request (see `await connection()` in the page) and cached by the CDN for 60 s with a
+// 5 min stale window (proxy.ts sets the header), not prerendered and not ISR: an ISR render waits for
+// every Suspense boundary before sending a byte (9-12 s on a cache miss, measured 24 Oct), while a
+// dynamic render sends the heading, the answer sentence and the shell as soon as the station list and
+// gauge snapshot are in and streams the slow parts. Nothing is prerendered at build either, so a
+// deploy never depends on ArcGIS, Google Sheets or the Mahaweli/DMC servers.
 
 /** "Hanwella Kelani Ganga water level": the river is in the heading because people search town + river. */
 function heading(t: TFn, station: string, basin: string | null | undefined, lang: Locale): string {
@@ -134,11 +133,14 @@ export default async function StationPage({
 }: {
   params: Promise<{ lang: string; river: string; station: string }>;
 }) {
+  await connection();
   const { lang: rawLang, river, station: stationParam } = await params;
   if (!isLocale(rawLang)) notFound();
   const lang: Locale = rawLang;
   const { t, p } = getI18n(lang);
 
+  // Start the gauge snapshot together with the station list (they used to run one after the other).
+  const nationalP = getNational().catch(() => [] as NationalStation[]);
   let stations: Station[] = [];
   let stationsError: string | null = null;
   try {
@@ -158,7 +160,7 @@ export default async function StationPage({
   const canonical = p(`/${river}/${stationParam}`);
 
   // The one-sentence answer and FAQ come from the same snapshot the chart and verdict use.
-  const nat = resolved ? ((await getNational().catch(() => [] as NationalStation[])).find((x) => x.station === resolved.station) ?? null) : null;
+  const nat = resolved ? ((await nationalP).find((x) => x.station === resolved.station) ?? null) : null;
   const answer = nat ? stationAnswer(lang, t, nat) : null;
   const faq = nat && answer ? stationFaq(lang, nat, answer) : [];
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;

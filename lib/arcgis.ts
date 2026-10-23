@@ -49,7 +49,7 @@ type ArcgisPage = {
 // full revalidate window, so the request is made INSIDE unstable_cache and
 // validated before returning: a throw is never cached, and a previously cached
 // good value keeps being served while a refresh fails.
-const fetchPage = unstable_cache(
+const fetchPageCached = unstable_cache(
   async (url: string): Promise<ArcgisPage> => {
     let lastErr: Error | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -72,6 +72,18 @@ const fetchPage = unstable_cache(
   ["arcgis-page"],
   { revalidate: 60 },
 );
+
+// generateMetadata, the page and its Suspense children ask for the same URL at the same moment; on a
+// cold data cache unstable_cache would run the request once per caller.
+const inflight = new Map<string, Promise<ArcgisPage>>();
+function fetchPage(url: string): Promise<ArcgisPage> {
+  let p = inflight.get(url);
+  if (!p) {
+    p = fetchPageCached(url).finally(() => inflight.delete(url));
+    inflight.set(url, p);
+  }
+  return p;
+}
 
 function queryUrl(path: string, params: Record<string, string>): string {
   const url = new URL(`${SERVICES}/${path}`);
@@ -336,9 +348,9 @@ function priorOf(s: NationalStation): Reading | null {
 }
 
 /** Stations of one basin (matched on the trimmed name or its slug). */
-export async function fetchBasinSnapshot(basinName: string): Promise<BasinStation[]> {
+export const fetchBasinSnapshot = cache(async (basinName: string): Promise<BasinStation[]> => {
   const national = await getNational();
   const wantSlug = basinSlug(basinName);
   if (!wantSlug) return [];
   return national.filter((s) => basinSlug(s.basin) === wantSlug).map((s) => ({ ...s, prior: priorOf(s) }));
-}
+});
