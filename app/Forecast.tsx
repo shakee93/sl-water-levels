@@ -10,7 +10,7 @@ import { getGsmapForStation, GSMAP_CREDIT } from "@/lib/gsmap";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { contactsForDistrict } from "@/lib/help";
 import { statusFor } from "@/lib/status";
-import { formatLevel } from "@/lib/units";
+import { formatDelta, formatLevel, publishedAs, shownNumber } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { stationPath } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
@@ -188,7 +188,15 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
       });
 
   const w = warnings[0];
-  const fu = f.unit ? ` ${f.unit}` : "";
+  const fu = f.unit ? " ft" : "";
+  // Metre gauges are shown in feet; the official figures stay one line away so bulletins can be matched.
+  const pubLevel = publishedAs(level, unit);
+  const pubMarks = me
+    ? (["alert", "minor", "major"] as const)
+        .filter((k) => me.thresholds[k] != null && me.thresholds[k]! > 0)
+        .map((k) => `${t(`mark.${k}` as "mark.alert").toLowerCase()} ${publishedAs(me.thresholds[k], unit, 1)}`)
+        .join(", ")
+    : "";
   const hasRain = (f.signals.rainAtStation6h ?? 0) + (f.signals.rainUpstream6h ?? 0) > 1;
 
   return (
@@ -262,6 +270,12 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
           <p className="font-medium">{f.headline}</p>
+          {pubLevel && (
+            <p data-published-as className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {t("unit.publishedAs", { v: pubLevel })}
+              {pubMarks ? ` (${pubMarks})` : ""}
+            </p>
+          )}
           {f.outlook === "elevated" && (
               <p className="mb-2 text-orange-700 dark:text-orange-400">{t("fc.elevated")}</p>
             )}
@@ -279,8 +293,8 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
                   {f.horizons.map((h) => (
                     <tr key={h.h}>
                       <td className="py-0.5">{h.h}h</td>
-                      <td className="py-0.5 font-medium">{h.level.toFixed(2)}{fu}</td>
-                      <td className="py-0.5">{h.low != null && h.high != null ? `${h.low.toFixed(2)} ${t("fc.to")} ${h.high.toFixed(2)}` : t("common.na")}</td>
+                      <td className="py-0.5 font-medium">{shownNumber(h.level, f.unit)}{fu}</td>
+                      <td className="py-0.5">{h.low != null && h.high != null ? `${shownNumber(h.low, f.unit)} ${t("fc.to")} ${shownNumber(h.high, f.unit)}` : t("common.na")}</td>
                       <td className="py-0.5">{fmtTime(h.ts)}</td>
                     </tr>
                   ))}
@@ -293,7 +307,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
                   <li key={c.threshold}>
                     {t("fc.crossing", {
                       threshold: t(`mark.${c.threshold}` as "mark.alert"),
-                      level: `${c.level}${fu}`,
+                      level: formatLevel(c.level, f.unit),
                       wording: t(`fc.w.${c.wording}` as "fc.w.likely"),
                       p: Math.round(c.probability * 100),
                       eta: c.etaTs ? t("fc.crossingEta", { time: fmtTime(c.etaTs) }) : "",
@@ -303,10 +317,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
               </ul>
             )}
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-2 text-xs">
-              <Cell label={t("fc.localTrend")}>{f.signals.localRatePerH != null ? `${f.signals.localRatePerH >= 0 ? "+" : ""}${f.signals.localRatePerH.toFixed(2)}/h` : "—"}</Cell>
+              <Cell label={t("fc.localTrend")}>{f.signals.localRatePerH != null ? `${formatDelta(f.signals.localRatePerH, f.unit, { sign: true })}/h` : "—"}</Cell>
               <Cell label={t("fc.upstreamAvg")}>
                 {f.signals.upstreamRatePerH != null
-                  ? `${f.signals.upstreamRatePerH >= 0 ? "+" : ""}${f.signals.upstreamRatePerH.toFixed(2)}/h`
+                  ? `${formatDelta(f.signals.upstreamRatePerH, f.unit, { sign: true })}/h`
                   : f.signals.upstreamCount === 0 ? t("fc.upstreamTop") : "—"}
               </Cell>
               <Cell label={t("fc.rainHere")}>{fmtRain(f.signals.rainAtStation6h, t)}</Cell>

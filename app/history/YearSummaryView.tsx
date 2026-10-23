@@ -6,6 +6,7 @@
 // Props are plain data (labels are string templates) so a server component
 // can render this.
 
+import { formatLevel, type Unit } from "@/lib/units";
 import { useSyncExternalStore } from "react";
 import { type DayLevel, type RecordedYear, type YearRow, myLevelStats } from "@/lib/yearStats";
 import { TIER_HEX } from "../tierUi";
@@ -152,7 +153,7 @@ export function YearSummaryView(p: YearSummaryViewProps) {
   const stored = useStoredLevel(p.myLevel == null ? (p.personal?.station ?? null) : null);
   const myLevel = p.personal ? (p.myLevel ?? stored) : null;
   const mine = myLevel != null && p.personal ? myLevelStats(p.personal.recorded, myLevel) : null;
-  const levelText = myLevel != null ? `${myLevel}${p.personal?.unit ? ` ${p.personal.unit}` : ""}` : "";
+  const levelText = myLevel != null ? formatLevel(myLevel, (p.personal?.unit ?? null) as Unit) : "";
   const recordedYears = new Map(p.personal?.recorded.map((y) => [y.year, y]) ?? []);
 
   const manual = (iso: string) =>

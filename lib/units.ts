@@ -87,12 +87,55 @@ export function detectUnit(thresholds: Thresholds, station?: string | null): Uni
   return null;
 }
 
-export function formatLevel(
-  v: number | null | undefined,
-  unit: Unit,
-  digits = 2,
-): string {
+// ---- Display: the site always shows feet ----------------------------------------------------------
+// Gauges publish in their own unit (above) and every stored/computed number stays in it. Only what is
+// drawn is converted: metre gauges to feet. A gauge with an unknown unit (null) is never converted.
+// 1 ft = 0.3048 m exactly.
+export const FT_IN_M = 0.3048;
+
+/** The unit a gauge is shown in: feet for ft and m gauges, none for an unknown unit. */
+export const shownUnit = (u: Unit): Unit => (u == null ? null : "ft");
+
+/** A value in the gauge's published unit, expressed in the shown unit (m -> ft). */
+export const toShown = (v: number, u: Unit): number => (u === "m" ? v / FT_IN_M : v);
+
+/** The inverse, for what a visitor types: shown unit back to the gauge's own unit (ft -> m). */
+export const fromShown = (v: number, u: Unit): number => (u === "m" ? v * FT_IN_M : v);
+
+/** Feet to 1 decimal. Unknown-unit gauges keep `digits` decimals and no unit. */
+export function shownNumber(v: number, u: Unit, digits = 2): string {
+  return (u == null ? v : toShown(v, u)).toFixed(u == null ? digits : 1);
+}
+
+/** "24.6 ft"; a bare number for an unknown unit. */
+export function formatLevel(v: number | null | undefined, unit: Unit, digits = 2): string {
   if (v == null) return "—";
-  const s = v.toFixed(digits);
-  return unit ? `${s} ${unit}` : s;
+  const s = shownNumber(v, unit, digits);
+  return unit ? `${s} ft` : s;
+}
+
+/** A difference or rate, signed when asked: "+0.3 ft", "-0.05 ft" (2 decimals when a foot tenth would round it away). */
+export function formatDelta(v: number, unit: Unit, o: { sign?: boolean; digits?: number } = {}): string {
+  const x = toShown(v, unit);
+  const d = unit == null ? (o.digits ?? 2) : x !== 0 && Math.abs(x) < 0.1 ? 2 : 1;
+  let s = x.toFixed(d);
+  if (Number(s) === 0) s = s.replace(/^-/, "");
+  if (o.sign && x > 0 && Number(s) !== 0) s = `+${s}`;
+  return unit ? `${s} ft` : s;
+}
+
+/** A rate given in metres per hour, as feet per hour without the unit: "0.3", "0.05". */
+export function feetPerHour(rateM: number): string {
+  const ft = Math.abs(rateM) / FT_IN_M;
+  return ft.toFixed(ft >= 0.1 ? 1 : 2);
+}
+
+/** At most 1 decimal in feet (2 unitless), none trailing: "21.3", "7.5", "15". Axis ticks and inputs. */
+export function plainShown(v: number, unit: Unit): string {
+  return String(Number(v.toFixed(unit == null ? 2 : 1)));
+}
+
+/** The official figure for a metre gauge ("7.50 m"), to sit beside the feet value; null when nothing was converted. */
+export function publishedAs(v: number | null | undefined, unit: Unit, digits = 2): string | null {
+  return v == null || unit !== "m" ? null : `${v.toFixed(digits)} m`;
 }

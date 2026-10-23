@@ -5,6 +5,7 @@ import { Area, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceDot, 
 import { MapPin } from "lucide-react";
 import type { Reading, StationData } from "@/lib/arcgis";
 import { buildYScale, plain } from "@/lib/chartAxis";
+import { fromShown, publishedAs, toShown } from "@/lib/units";
 import { MY_LEVELS_EVENT, parseMyLevel, readMyLevelsRaw, writeMyLevel } from "@/lib/myLevels";
 import { useDays } from "./RangePicker";
 import { useI18n } from "./LocaleProvider";
@@ -80,23 +81,52 @@ function timeTicks(from: number, to: number, plotW: number, days: number): numbe
 
 export function LevelChart({
   station,
-  readings,
-  thresholds,
+  readings: readingsPub,
+  thresholds: thresholdsPub,
   unit,
-  forecast,
+  forecast: forecastPub,
 }: {
   station: string;
   readings: Reading[];
+  /** Everything arrives in the gauge's published unit; the chart draws in feet (metres are converted here). */
   thresholds: Marks;
   unit?: "ft" | "m" | null;
   forecast?: ChartForecast | null;
 }) {
   const days = useDays();
+  const pu = unit ?? null;
+  const readings = useMemo(
+    () => (pu === "m" ? readingsPub.map((r) => (r.water_level == null ? r : { ...r, water_level: toShown(r.water_level, pu) })) : readingsPub),
+    [readingsPub, pu],
+  );
+  const thresholds = useMemo<Marks>(
+    () => ({
+      alert: thresholdsPub.alert == null ? null : toShown(thresholdsPub.alert, pu),
+      minor: thresholdsPub.minor == null ? null : toShown(thresholdsPub.minor, pu),
+      major: thresholdsPub.major == null ? null : toShown(thresholdsPub.major, pu),
+    }),
+    [thresholdsPub, pu],
+  );
+  const forecast = useMemo<ChartForecast | null>(
+    () =>
+      forecastPub && pu === "m"
+        ? {
+            points: forecastPub.points.map((p) => ({
+              ts: p.ts,
+              level: toShown(p.level, pu),
+              low: p.low == null ? null : toShown(p.low, pu),
+              high: p.high == null ? null : toShown(p.high, pu),
+            })),
+          }
+        : (forecastPub ?? null),
+    [forecastPub, pu],
+  );
   const { t } = useI18n();
   const uid = useId().replace(/:/g, "");
   const [wrapRef, { w, h }] = useSize();
   const myRaw = useSyncExternalStore(subscribe, readMyLevelsRaw, () => null);
-  const my = parseMyLevel(myRaw, station);
+  const myPub = parseMyLevel(myRaw, station);
+  const my = myPub == null ? null : toShown(myPub, pu); // stored in the gauge's own unit
   const narrow = w > 0 && w < 480;
 
   const model = useMemo(() => {
@@ -144,8 +174,11 @@ export function LevelChart({
 
   const { rows, actual, last, from, end, lo, hi, hasForecast, fcEnd } = model;
   const [dLo, dHi] = y.domain;
-  const u = unit ?? "";
-  const withUnit = (v: number) => (u ? `${plain(v)} ${u}` : plain(v));
+  const u = pu ? "ft" : "";
+  const withUnit = (v: number) => (pu ? `${v.toFixed(1)} ft` : plain(v));
+  const deltaUnit = (v: number) => (pu ? `${v.toFixed(v !== 0 && Math.abs(v) < 0.1 ? 2 : 1)} ft` : plain(v));
+  // the official figure for a metre gauge, to match bulletins (null for ft / unknown gauges)
+  const pubText = (v: number) => publishedAs(fromShown(v, pu), pu);
   const plotW = Math.max(w - AXIS_W - M_RIGHT, 1);
   const plotH = Math.max(h - M_TOP - AXIS_H, 1);
   const yPx = (v: number) => M_TOP + ((dHi - v) / (dHi - dLo)) * plotH;
@@ -340,7 +373,7 @@ export function LevelChart({
                   fontSize={11}
                   className={y.markTicks.has(p.payload?.value ?? NaN) ? "fill-slate-800 dark:fill-slate-200 font-semibold" : tickText}
                 >
-                  {plain(p.payload?.value ?? 0)}
+                  {pu ? String(Number((p.payload?.value ?? 0).toFixed(1))) : plain(p.payload?.value ?? 0)}
                 </text>
               )}
               allowDataOverflow
@@ -403,7 +436,7 @@ export function LevelChart({
               content={(p: { active?: boolean; payload?: ReadonlyArray<{ payload?: Row }> }) => {
                 const row = p.active ? p.payload?.[0]?.payload : undefined;
                 if (!row) return null;
-                return <Tip row={row} t={t} marks={thresholds} withUnit={withUnit} prev={row.level != null ? prevOf(row.ts) : null} />;
+                return <Tip row={row} t={t} marks={thresholds} withUnit={withUnit} deltaUnit={deltaUnit} pubText={pubText} prev={row.level != null ? prevOf(row.ts) : null} />;
               }}
             />
           </ComposedChart>
@@ -425,7 +458,7 @@ export function LevelChart({
               {t("chart.forecast")}
             </span>
           )}
-          <MyLevelControl station={station} unit={unit ?? null} current={my} t={t} />
+          <MyLevelControl station={station} unit={pu} current={my} t={t} />
         </div>
       </div>
     </div>
@@ -474,14 +507,14 @@ function MyLabel({ text, above, viewBox }: { text: string; above: boolean; viewB
   );
 }
 
-function Tip({ row, t, marks, withUnit, prev }: { row: Row; t: TFn; marks: Marks; withUnit: (v: number) => string; prev: number | null }) {
+function Tip({ row, t, marks, withUnit, deltaUnit, pubText, prev }: { row: Row; t: TFn; marks: Marks; withUnit: (v: number) => string; deltaUnit: (v: number) => string; pubText: (v: number) => string | null; prev: number | null }) {
   const isFc = row.level == null;
   const level = (row.level ?? row.fc) as number;
   const zone = zoneOf(level, marks);
   let change: string | null = null;
   if (prev != null && !isFc) {
     const d = level - prev;
-    change = Math.abs(d) < 0.005 ? t("chart.steady") : t(d > 0 ? "chart.up" : "chart.down", { d: withUnit(Math.abs(d)) });
+    change = Math.abs(d) < 0.01 ? t("chart.steady") : t(d > 0 ? "chart.up" : "chart.down", { d: deltaUnit(Math.abs(d)) });
   }
   return (
     <div className="min-w-44 max-w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-lg px-3 py-2 text-sm">
@@ -489,6 +522,9 @@ function Tip({ row, t, marks, withUnit, prev }: { row: Row; t: TFn; marks: Marks
       <div className="mt-1 flex items-baseline gap-2">
         <span className="text-base font-semibold tabular-nums">{isFc ? "~" : ""}{withUnit(level)}</span>
       </div>
+      {pubText(level) && (
+        <div className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">{t("unit.publishedAs", { v: `${isFc ? "~" : ""}${pubText(level)}` })}</div>
+      )}
       {zone !== "none" && (
         <div className="mt-0.5 flex items-center gap-1.5 text-xs">
           <span aria-hidden className="inline-block size-2 rounded-full" style={{ background: ZONE_COLOR[zone] }} />
@@ -506,7 +542,9 @@ function Tip({ row, t, marks, withUnit, prev }: { row: Row; t: TFn; marks: Marks
   );
 }
 
+/** `unit` is the gauge's published unit; `current` and the typed number are in feet (stored back in `unit`). */
 function MyLevelControl({ station, unit, current, t }: { station: string; unit: "ft" | "m" | null; current: number | null; t: TFn }) {
+  const shown = unit ? "ft" : null;
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [bad, setBad] = useState(false);
@@ -537,7 +575,7 @@ function MyLevelControl({ station, unit, current, t }: { station: string; unit: 
       setBad(true);
       return;
     }
-    writeMyLevel(station, Math.round(v * 100) / 100);
+    writeMyLevel(station, unit === "m" ? Math.round(fromShown(v, unit) * 1000) / 1000 : Math.round(v * 100) / 100);
     close();
   }
 
@@ -550,7 +588,7 @@ function MyLevelControl({ station, unit, current, t }: { station: string; unit: 
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
-          setText(current != null ? plain(current) : "");
+          setText(current != null ? plain(Number(current.toFixed(unit ? 1 : 2))) : "");
           setBad(false);
           setOpen((o) => !o);
         }}
@@ -560,7 +598,7 @@ function MyLevelControl({ station, unit, current, t }: { station: string; unit: 
         {current != null ? (
           <>
             <span>{t("chart.yourStreetShort")}</span>
-            <span className="font-semibold tabular-nums">{plain(current)}{unit ? ` ${unit}` : ""}</span>
+            <span className="font-semibold tabular-nums">{plain(Number(current.toFixed(unit ? 1 : 2)))}{shown ? ` ${shown}` : ""}</span>
             <span className="text-sky-700 dark:text-sky-400">{t("chart.changeLevel")}</span>
           </>
         ) : (
@@ -598,10 +636,10 @@ function MyLevelControl({ station, unit, current, t }: { station: string; unit: 
               aria-describedby={`${id}-hint`}
               className={`h-10 w-28 rounded-md border bg-white dark:bg-slate-950 px-2.5 text-base tabular-nums ${bad ? "border-red-500" : "border-slate-300 dark:border-slate-600"} ${ring}`}
             />
-            {unit && <span className="text-slate-600 dark:text-slate-400">{unit}</span>}
+            {shown && <span className="text-slate-600 dark:text-slate-400">{shown}</span>}
           </div>
           <p id={`${id}-hint`} className={`mt-1.5 text-xs ${bad ? "text-red-600 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}>
-            {bad ? t("chart.levelInvalid") : unit ? t("chart.levelHint", { unit }) : t("chart.levelHintNoUnit")}
+            {bad ? t("chart.levelInvalid") : shown ? t("chart.levelHint", { unit: shown }) : t("chart.levelHintNoUnit")}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="submit" className={`h-10 px-4 rounded-md bg-sky-600 text-white font-medium hover:bg-sky-700 ${ring}`}>

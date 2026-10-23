@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Minus, TrendingUp } from "lucide-react";
 import { fetchBasinSnapshot, statusFor, type BasinStation } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 import { stationPath } from "@/lib/slug";
-import { formatLevel, type Unit } from "@/lib/units";
+import { feetPerHour, formatDelta, formatLevel, type Unit } from "@/lib/units";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
@@ -26,8 +26,7 @@ function pct(level: number | null, threshold: number | null) {
 const STEADY_M_PER_H = 0.006;
 
 function fmtRate(rateM: number, t: TFn) {
-  const cm = Math.abs(rateM) * 100;
-  const v = cm >= 100 ? `${(cm / 100).toFixed(1)} ${t("unit.mPerH")}` : `${Math.max(1, Math.round(cm))} ${t("unit.cmPerH")}`;
+  const v = `${feetPerHour(rateM)} ${t("unit.ftPerH")}`;
   return `${rateM > 0 ? "+" : "-"}${v}`;
 }
 
@@ -108,17 +107,17 @@ function relativeToThreshold(
 ): { label: string; tone: keyof RelToneClass } | null {
   if (level == null) return null;
   if (t.major != null && level >= t.major) {
-    return { label: tt("flow.aboveMajor", { amount: `${(level - t.major).toFixed(2)}${unit ? ` ${unit}` : ""}` }), tone: "red" };
+    return { label: tt("flow.aboveMajor", { amount: formatDelta(level - t.major, unit) }), tone: "red" };
   }
   if (t.minor != null && level >= t.minor) {
-    return { label: tt("flow.aboveMinor", { amount: `${(level - t.minor).toFixed(2)}${unit ? ` ${unit}` : ""}` }), tone: "orange" };
+    return { label: tt("flow.aboveMinor", { amount: formatDelta(level - t.minor, unit) }), tone: "orange" };
   }
   if (t.alert != null && level >= t.alert) {
-    return { label: tt("flow.aboveAlert", { amount: `${(level - t.alert).toFixed(2)}${unit ? ` ${unit}` : ""}` }), tone: "yellow" };
+    return { label: tt("flow.aboveAlert", { amount: formatDelta(level - t.alert, unit) }), tone: "yellow" };
   }
   if (t.alert != null) {
     return {
-      label: tt("flow.belowAlert", { amount: `${(t.alert - level).toFixed(2)}${unit ? ` ${unit}` : ""}` }),
+      label: tt("flow.belowAlert", { amount: formatDelta(t.alert - level, unit) }),
       tone: "neutral",
     };
   }

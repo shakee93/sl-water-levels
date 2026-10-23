@@ -9,6 +9,7 @@
 import { createHash } from "node:crypto";
 import { unstable_cache } from "next/cache";
 import type { Forecast } from "./forecast";
+import { formatLevel } from "./units";
 import type { Tier } from "./status";
 import { aiConfigured, respondJson } from "./openai";
 
@@ -47,7 +48,7 @@ const TIER_PHRASE: Record<Tier, string> = {
 
 
 function levelText(f: Forecast): string | null {
-  return f.currentLevel == null ? null : `${f.currentLevel.toFixed(2)}${f.unit ? ` ${f.unit}` : ""}`;
+  return f.currentLevel == null ? null : formatLevel(f.currentLevel, f.unit);
 }
 
 /** The fact sheet the model sees. Every number the model may use is in here (plus "117"). */

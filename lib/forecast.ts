@@ -27,7 +27,7 @@
 import type { BasinStation } from "./arcgis";
 import { normaliseBasin, orderStations } from "./basinOrder";
 import { ageMinutes, HOUR_MS, isStale, rainTotal, rate, STALE_MINUTES } from "./readings";
-import type { Unit } from "./units";
+import { formatDelta, formatLevel, type Unit } from "./units";
 import { getBasinWeather, getGlofas, hasCatchment, type BasinWeather, type Fetched, type Glofas, type RainSeries } from "./weather";
 import coefficientsJson from "./model/coefficients.json";
 import {
@@ -233,7 +233,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
   const headline =
     pred == null
       ? "No forecast: not enough recent readings to see a trend."
-      : `${word}: about ${pred.toFixed(2)}${me.unit ? ` ${me.unit}` : ""} in an hour.`;
+      : `${word}: about ${formatLevel(pred, me.unit)} in an hour.`;
   // The headline is user-facing (and feeds the AI line); the method reason is in notes below.
   const notes = t.notes.filter((n) => !(w && n.startsWith("No rain data reported nearby")));
   if (w && rain) {
@@ -417,7 +417,7 @@ function fromModel(
     );
   }
   if (Math.max(...hs.map((x) => x.high)) > coef.levelMax) {
-    notes.push(`Part of the range is above the highest level this model has seen (${coef.levelMax.toFixed(2)}${unit ? ` ${unit}` : ""}); treat it as a rough guide.`);
+    notes.push(`Part of the range is above the highest level this model has seen (${formatLevel(coef.levelMax, unit)}); treat it as a rough guide.`);
   }
   const noSkill = hs.filter((x) => x.persistence).map((x) => `${x.h} h`);
   if (noSkill.length) notes.push(`In testing the model was no better than 'level stays the same' at ${noSkill.join(", ")}, so those hours blend that with the earlier outlook and carry a wide range.`);
@@ -438,7 +438,7 @@ function fromModel(
     `${c.wording === "likely" ? "likely to reach" : "could reach"} ${nameOf[c.threshold]}${c.etaTs ? ` ${whenPhrase(c.etaTs, now)}` : " within the next 24 hours"} (about ${Math.round(c.probability * 100)}% chance)`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const hLast = hs[hs.length - 1];
-  const fmtL = (v: number) => `${v.toFixed(2)}${unit ? ` ${unit}` : ""}`;
+  const fmtL = (v: number) => formatLevel(v, unit);
   let headline: string;
   if (above && upcoming) headline = `Above ${nameOf[above.threshold]} now and ${reach(upcoming)}.`;
   else if (above) {
@@ -462,7 +462,7 @@ function fromModel(
   }
   const skilled = hs.filter((x) => !x.persistence).map((x) => `${x.h} h`);
   const m6 = coef.horizons["6"];
-  if (m6?.mae != null && !m6.persistence) basis.push(`Fitted to ${coef.trainDays} days of readings; out-of-sample 6-hour error about ${(m6.mae).toFixed(2)}${unit ? ` ${unit}` : ""} (a 'no change' guess: ${m6.maePersistence.toFixed(2)}).`);
+  if (m6?.mae != null && !m6.persistence) basis.push(`Fitted to ${coef.trainDays} days of readings; out-of-sample 6-hour error about ${formatDelta(m6.mae, unit)} (a 'no change' guess: ${m6.maePersistence.toFixed(2)}).`);
   else basis.push(`Fitted to ${coef.trainDays} days of readings; it beat a 'no change' guess out-of-sample only at ${skilled.join(", ") || "no horizon"}.`);
 
   return {

@@ -1,5 +1,6 @@
 import type { BasinStation } from "./arcgis";
 import { orderStations } from "./basinOrder";
+import { formatDelta } from "./units";
 import { isStale, rainTotal, rate } from "./readings";
 
 export type AnomalyDetection = {
@@ -64,7 +65,7 @@ export function detectAnomaly(
   const me = ordered[myIdx];
   const unit = me.unit;
   const mpu = me.metresPerUnit;
-  const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}${unit ? ` ${unit}` : ""}/h`;
+  const fmt = (v: number) => `${formatDelta(v, unit, { sign: true, digits: 2 })}/h`;
 
   // Basin-wide 6h rain, only from gauges that actually report rain.
   const rains = ordered

@@ -19,6 +19,7 @@ export const ta: Dict = {
   "theme.light": "ஒளி", // needs native review
   "theme.dark": "இருள்", // needs native review
   "theme.system": "சாதனம்", // needs native review
+  "unit.publishedAs": "வெளியிடப்பட்ட அளவு {v}", // needs native review
   "lang.suggest.si": "සිංහලෙන් බලන්න",
   "lang.suggest.ta": "தமிழில் பார்க்க",
   "lang.suggest.dismiss": "மூடு",
@@ -79,6 +80,7 @@ export const ta: Dict = {
   "trend.falling": "குறைகிறது",
   "unit.cmPerH": "செ.மீ/மணி",
   "unit.mPerH": "மீ/மணி",
+  "unit.ftPerH": "அடி/மணி", // needs native review
   "unit.perH": "/மணி",
   "unit.km": "கி.மீ",
   "unit.under1km": "1 கி.மீக்கு குறைவு",

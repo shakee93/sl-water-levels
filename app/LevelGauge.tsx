@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "./LocaleProvider";
+import { formatLevel, type Unit } from "@/lib/units";
 
 // Horizontal river gauge for the verdict card: how far the water is from each
 // flood mark, at a glance. Fill = current level, faint extension = the 24 h
@@ -24,7 +25,6 @@ const MARKS = [
   { key: "major", label: "mark.major", tick: "bg-red-600" },
 ] as const;
 
-const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(v < 10 ? 2 : 1).replace(/0$/, ""));
 
 export function LevelGauge({
   tone,
@@ -36,7 +36,7 @@ export function LevelGauge({
   tone: Tone;
   level: number;
   next24: number | null;
-  unit: string | null;
+  unit: Unit;
   thresholds: { alert: number | null; minor: number | null; major: number | null };
 }) {
   const { t } = useI18n();
@@ -48,8 +48,8 @@ export function LevelGauge({
   const pct = (v: number) => Math.max(0, Math.min(100, ((v - bottom) / (top - bottom)) * 100));
   const now = pct(level);
   const ahead = next24 != null ? pct(next24) : now;
-  const u = unit ? ` ${unit}` : "";
-  const label = t("gauge.aria", { level: `${fmt(level)}${u}`, marks: marks.map((m) => `${t(m.label).toLowerCase()} ${fmt(thresholds[m.key]!)}${u}`).join(", ") });
+  const fmt = (v: number) => formatLevel(v, unit, 2);
+  const label = t("gauge.aria", { level: fmt(level), marks: marks.map((m) => `${t(m.label).toLowerCase()} ${fmt(thresholds[m.key]!)}`).join(", ") });
 
   return (
     <div className="mt-4" role="img" aria-label={label}>
@@ -75,7 +75,6 @@ export function LevelGauge({
           <span key={m.key} className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span className={`inline-block w-0.5 h-3 rounded-full ${m.tick}`} />
             {t(m.label)} {fmt(thresholds[m.key]!)}
-            {u}
           </span>
         ))}
       </div>

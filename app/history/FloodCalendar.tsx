@@ -1,5 +1,6 @@
 "use client";
 
+import { formatLevel } from "@/lib/units";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -493,7 +494,7 @@ function DayDetail({
           {level != null && (
             <span className="text-slate-500 dark:text-slate-400">
               {" "}
-              · {t("hist.cal.peakLevel", { level: `${level}${s.unit ? ` ${s.unit}` : ""}` })}
+              · {t("hist.cal.peakLevel", { level: formatLevel(level, s.unit) })}
             </span>
           )}
         </span>

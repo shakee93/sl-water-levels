@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Ruler } from "lucide-react";
 import { writeMyLevel } from "@/lib/myLevels";
 import { ttFor } from "@/lib/i18n/town";
-import { formatLevel, type Unit } from "@/lib/units";
+import { formatLevel, fromShown, shownUnit, type Unit } from "@/lib/units";
 import { useI18n } from "../LocaleProvider";
 import { useMyLevel } from "./useMyLevel";
 
@@ -26,7 +26,7 @@ export function MyStreetLevel({ station, name, unit, level }: { station: string;
       return;
     }
     setBad(false);
-    writeMyLevel(station, Math.round(v * 100) / 100);
+    writeMyLevel(station, unit === "m" ? Math.round(fromShown(v, unit) * 1000) / 1000 : Math.round(v * 100) / 100); // typed in feet, stored in the gauge's unit
     setDraft("");
   }
 
@@ -49,7 +49,7 @@ export function MyStreetLevel({ station, name, unit, level }: { station: string;
           inputMode="decimal"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={tt("my.placeholder", { unit: unit ? ` (${unit})` : "" })}
+          placeholder={tt("my.placeholder", { unit: shownUnit(unit) ? ` (${shownUnit(unit)})` : "" })}
           aria-invalid={bad}
           className={`${input} ${ring}`}
         />

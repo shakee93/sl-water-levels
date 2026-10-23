@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowUp, Clock, Minus, TriangleAlert } from "lucide-react";
 import type { NationalStation, Tier } from "@/lib/arcgis";
 import { stationDisplayName } from "@/lib/displayName";
-import { formatLevel } from "@/lib/units";
+import { feetPerHour, formatLevel } from "@/lib/units";
 import { TimeAgo } from "./TimeAgo";
 import { STEADY_M_PER_H, tierLabel } from "./tierUi";
 import { getI18n } from "@/lib/i18n/server";
@@ -76,7 +76,6 @@ function ThresholdBar({ t, s, bar }: { t: TFn; s: NationalStation; bar: string }
 
 function Trend({ t, s }: { t: TFn; s: NationalStation }) {
   if (s.rate3hM == null) return null;
-  const cm = s.rate3hM * 100;
   if (Math.abs(s.rate3hM) < STEADY_M_PER_H) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
@@ -85,8 +84,8 @@ function Trend({ t, s }: { t: TFn; s: NationalStation }) {
       </span>
     );
   }
-  const rising = cm > 0;
-  const text = `${Math.abs(cm) < 10 ? Math.abs(cm).toFixed(1).replace(/\.0$/, "") : Math.round(Math.abs(cm))} ${t("unit.cmPerH")}`;
+  const rising = s.rate3hM > 0;
+  const text = `${feetPerHour(s.rate3hM)} ${t("unit.ftPerH")}`;
   return (
     <span
       className={`inline-flex items-center gap-1 text-xs font-medium tabular-nums ${
