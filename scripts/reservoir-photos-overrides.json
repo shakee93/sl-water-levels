@@ -1,0 +1,143 @@
+{
+ "badulu-oya": {
+  "exclude": [
+   "File:Badulu oya.jpg",
+   "File:Dunhinda Falls 2 By Sasangan.jpg",
+   "File:Dunhinda Falls By Sasangan.jpg",
+   "File:Queen Dunhinda Falls.jpg"
+  ]
+ },
+ "deduru-oya": {
+  "only": [
+   "File:Deduru oya.jpg",
+   "File:Deduru Oya.jpg",
+   "File:Deduru Oya Reservoir, Kurunegala, Sri Lanka.jpg"
+  ]
+ },
+ "demodara": {
+  "exclude": [
+   "File:Nine Arches Bridge, Demodara.jpg",
+   "File:Sri Lanka (22505).jpg"
+  ]
+ },
+ "ekgal-oya": {
+  "exclude": [
+   "File:Lake in the jungle.jpg",
+   "File:Sunset in the jungle.jpg"
+  ]
+ },
+ "handapanagala": {
+  "exclude": [
+   "File:Lipton’s Seat.jpg"
+  ]
+ },
+ "kala-wewa": {
+  "exclude": [
+   "File:Buddhist statue in Sri lanka on the bank of Kala Wewa.jpg"
+  ]
+ },
+ "kaluganga": {
+  "only": []
+ },
+ "kaudulla": {
+  "only": [
+   "File:Kawudulla Lake.jpg"
+  ]
+ },
+ "kotmale": {
+  "only": [
+   "File:Kotmale Reservoir 03.JPG",
+   "File:Kotmale Reservoir 04.JPG",
+   "File:Kotmale Reservoir 05.JPG"
+  ]
+ },
+ "lunugamvehera": {
+  "only": []
+ },
+ "maduru-oya": {
+  "only": [
+   "File:Maduru Oya a view near dam.jpg"
+  ]
+ },
+ "minneriya": {
+  "only": [
+   "File:Minneriya wewa.JPG",
+   "File:Minneriya water tank - Minneriya National Park, Sri Lanka.jpg",
+   "File:Minneriya tank-sri lanka.jpg"
+  ]
+ },
+ "namal-oya": {
+  "exclude": [
+   "File:Plain Prinia at Kahatagasyaya, Namal Oya, Ampara, Sri Lanka.jpg"
+  ]
+ },
+ "padaviya": {
+  "exclude": [
+   "File:On the way to padaviya tank.jpg",
+   "File:On the way to padaviya tank 2.jpg"
+  ]
+ },
+ "panama": {
+  "only": []
+ },
+ "polgolla": {
+  "exclude": [
+   "File:HydroelectricitySrilanka.png",
+   "File:Cinnamon Air Cessna 208 Caravan I on Polgolla Reservoir.jpg"
+  ]
+ },
+ "radella": {
+  "exclude": [
+   "File:\"Dancing\" Grey Langurs.jpg"
+  ]
+ },
+ "ridiyagama": {
+  "exclude": [
+   "File:Lioness drinking water at Ridiyagama Safari Park.jpg",
+   "File:Lioness drinking water.jpg",
+   "File:Sri lanka southern province aerial view.jpg"
+  ]
+ },
+ "senanayake-samudraya": {
+  "exclude": [
+   "File:Grass field Senanayake Samudra, Gal oya national park.jpg"
+  ]
+ },
+ "thissa-wewa": {
+  "exclude": [
+   "File:Thissa Lake තිසා වැව, Thissamaharama, Southern Province, Sri Lanka.jpg",
+   "File:Thissa Wewa.jpg",
+   "File:Beautiful Ceylon.jpg",
+   "File:Beautiful ceylon.jpg"
+  ]
+ },
+ "tissa-wewa": {
+  "include": [
+   "File:Thissa Lake තිසා වැව, Thissamaharama, Southern Province, Sri Lanka.jpg"
+  ],
+  "exclude": [
+   "File:Bats Tissa Wewa.JPG"
+  ]
+ },
+ "weheragala": {
+  "only": [
+   "File:Weheragala Reservoir 2017-10-26 (3).jpg",
+   "File:Weheragala Reservoir 2017-10-26 (2).jpg",
+   "File:Weheragala Reservoir 2017-10-26 (1).jpg"
+  ]
+ },
+ "samanalawewa": {
+  "include": [
+   "File:UG-LK Photowalk - 2018-03-25 - Samanala Dam (1).jpg",
+   "File:UG-LK Photowalk - 2018-03-25 - Samanala Dam (2).jpg",
+   "File:UG-LK Photowalk - 2018-03-25 - Samanala Dam (3).jpg",
+   "File:UG-LK Photowalk - 2018-03-25 - Samanala Dam (4).jpg"
+  ]
+ },
+ "rantambe": {
+  "include": [
+   "File:RantembeDam-December2013-1.JPG",
+   "File:A view of the Rantembe Dam from afar.jpg"
+  ]
+ }
+}
