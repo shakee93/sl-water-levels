@@ -32,7 +32,7 @@ export async function HowItWorks({ lang, className = "mt-10 sm:mt-12" }: { lang:
         <div className="px-4 pb-4">
           <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
             <ZoomableImage
-              src="/how-it-works/river-explainer-v2.jpg"
+              src="/how-it-works/river-explainer-v3.jpg"
               alt={t("how.diagramAlt")}
               width={1920}
               height={1080}
