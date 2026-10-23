@@ -78,6 +78,18 @@ export const RESERVOIRS: Reservoir[] = [
     aliases: ["rajangana", "rajanganaya", "rajangana wewa"],
     basin: "Kala Oya",
     dmcBasin: "Kala Oya",
+    // Kala Oya flows west: Kala Wewa (80.56E) -> Thambuththegama gauge (80.33E) ->
+    // Rajanganaya (80.24E) -> Wilpattu / Puttalam. Rajanganaya's releases go downstream of
+    // our only Kala Oya gauge (towns per the DMC warning: Wanathawilluwa, Karuwalagaswewa).
+    gauges: [],
+    note: "Releases flow west towards Wanathawilluwa and Karuwalagaswewa; there is no gauge of ours below it.",
+  },
+  {
+    id: "kalawewa",
+    name: "Kala Wewa",
+    aliases: ["kala wewa", "kalawewa", "kala wawa"],
+    basin: "Kala Oya",
+    dmcBasin: "Kala Oya",
     gauges: [
       {
         station: "Thambuththegama",
@@ -85,7 +97,7 @@ export const RESERVOIRS: Reservoir[] = [
         eta: null,
         confidence: "medium",
         town: "Thambuththegama",
-        note: "Same river (the DMC Kala Oya warning names Rajanganaya); no archived readings at Thambuththegama to measure the delay.",
+        note: "Kala Wewa is upstream of the Thambuththegama gauge on the Kala Oya (gauge 80.33E, tank 80.56E); no archived event to measure the delay.",
       },
     ],
   },
