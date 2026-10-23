@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, Clock, LifeBuoy } from "lucide-react";
 import { getNational, fetchStations, type NationalStation } from "@/lib/arcgis";
@@ -9,6 +10,7 @@ import { PlaceSearch } from "../PlaceSearch";
 import { getSearchStations } from "../PlaceSearchData";
 import { SriLankaMap } from "../SriLankaMap";
 import { NeedsAttention } from "../NeedsAttention";
+import { ReleaseLines } from "../ReleaseCard";
 import { Favourites } from "../Favourites";
 import { NearYou } from "../NearYou";
 import { LegacyRedirect } from "../LegacyRedirect";
@@ -152,6 +154,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <Favourites stations={home} serverNow={serverNow} />
 
             <NeedsAttention lang={lang} snapshot={national} serverNow={serverNow} />
+            <Suspense fallback={null}><ReleaseLines lang={lang} /></Suspense>
 
             <SriLankaMap lang={lang} stations={home} />
 

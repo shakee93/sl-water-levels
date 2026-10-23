@@ -1,6 +1,13 @@
-// PUCSL GenData — live 15-min hydropower generation per plant.
-// Open API, no auth, JSON. Each MW spike is a release proxy: water has
-// to be flowing through the turbines for the plant to be generating.
+// PUCSL GenData: 15-min hydropower generation per plant (MW).
+// Open API, no auth, JSON.
+//
+// STATE (checked 2026-10-22/23, research/dam-releases.md): powerInMw is populated now (it was null
+// for every record in September), but the feed lags about 2.5 days (data for 21-23 Oct was empty on
+// 23 Oct), has gaps, and MW is only a loose proxy for turbine flow: Upper Kotmale ran flat at 75 MW
+// while its spill gates were being opened. So it is ARCHIVE / post-event analysis material, never a
+// live signal or a warning. fetchHydroGeneration() therefore only returns points from the last
+// LIVE_MAX_AGE_H hours; with today's lag that is nothing, so the "MW now" badges in BasinDams stay
+// hidden instead of showing days-old numbers as live. Real release warnings come from lib/releases.ts.
 //
 // API: https://gendata.pucsl.gov.lk/api/day-ahead-dispatch
 //      ?dateAggregation=15min&from=<ISO>&to=<ISO>
@@ -13,6 +20,9 @@ export type HydroPoint = {
   ts: number;
   powerMW: number;
 };
+
+/** Older points are history, not "now": never shown as live. */
+const LIVE_MAX_AGE_H = 3;
 
 export async function fetchHydroGeneration(hours = 24): Promise<HydroPoint[]> {
   const to = new Date();
@@ -27,6 +37,7 @@ export async function fetchHydroGeneration(hours = 24): Promise<HydroPoint[]> {
     if (!Array.isArray(json.data)) return [];
     return json.data
       .filter((r) => r.powerInMw != null && Number.isFinite(r.powerInMw))
+      .filter((r) => to.getTime() - new Date(r.reportTimeStamp).getTime() <= LIVE_MAX_AGE_H * 3600000)
       .map((r) => ({
         plantId: r.powerPlantId,
         ts: new Date(r.reportTimeStamp).getTime(),

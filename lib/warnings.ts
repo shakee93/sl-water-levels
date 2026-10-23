@@ -41,6 +41,8 @@ export type OfficialWarning = {
   summary: string;
   /** 0..1, the model's certainty about basins and severity together. */
   confidence: number;
+  /** Reservoir release in cusecs when the bulletin states one (digits survive the garbled Sinhala/Tamil text). */
+  releaseCusecs?: number;
 };
 
 export type WarningsResult = { warnings: OfficialWarning[]; reason?: string };
@@ -287,6 +289,27 @@ function districtsIn(text: string): string[] {
   return ALL_DISTRICTS.filter((d) => new RegExp(`\\b${d}\\b(?!\\s*\\d)`, "i").test(text));
 }
 
+const CUSEC_MARKERS = /ඝණ\s*අඩි|கன\s*அடி|cusecs?|ft3\/s|ft³\/s/gi;
+const CUSEC_NUMBER = /\d{1,3}(?:,\d{3})+|\d{4,6}/g;
+
+/**
+ * The release figure (cusecs) in a bulletin: the largest 4-6 digit number within 40 characters of a
+ * "cubic feet" marker (Sinhala ඝණ අඩි, Tamil கன அடி, or "cusecs"). Digits and Latin survive the legacy-font
+ * extraction, the words do not. Null when no marker has a number next to it.
+ */
+export function extractReleaseCusecs(text: string): number | null {
+  let best: number | null = null;
+  for (const m of text.matchAll(CUSEC_MARKERS)) {
+    const from = Math.max(0, m.index - 40);
+    const near = text.slice(from, m.index + m[0].length + 40);
+    for (const n of near.match(CUSEC_NUMBER) ?? []) {
+      const v = Number(n.replace(/,/g, ""));
+      if (v >= 1000 && v <= 200_000 && (best == null || v > best)) best = v;
+    }
+  }
+  return best;
+}
+
 function templateSummary(title: string, basins: string[], severity: WarningSeverity): string {
   const where = basins.length ? ` for the ${basins.join(", ")} basin${basins.length > 1 ? "s" : ""}` : "";
   return `${title}${where}${severity !== "none" ? ` (${severity})` : ""}. Open the bulletin for details.`;
@@ -336,6 +359,7 @@ export async function getOfficialWarnings(now = Date.now()): Promise<WarningsRes
           const current = issuedMs != null ? now - issuedMs <= DAY_MS && issuedMs - now < 3_600_000 : a.recent === true;
           if (a.basins.length === 0 && a.severity === "none") return null;
           const districts = districtsIn(text);
+          const releaseCusecs = extractReleaseCusecs(text);
           return {
             source: sourceOf(row.title, text),
             url: row.url,
@@ -347,6 +371,7 @@ export async function getOfficialWarnings(now = Date.now()): Promise<WarningsRes
             severity: a.severity,
             summary: a.summary ?? templateSummary(row.title, a.basins, a.severity),
             confidence: a.confidence,
+            ...(releaseCusecs != null ? { releaseCusecs } : {}),
           };
         } catch (e) {
           notes.push(`${row.title}: ${e instanceof Error ? e.message : "failed"}`);

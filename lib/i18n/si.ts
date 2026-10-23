@@ -552,4 +552,21 @@ export const si: Dict = {
   "nf.popular": "ජනප්‍රිය ස්ථාන",
   "nf.allBasins": "සියලු ගංගා",
   "nf.back": "← සියලු ස්ථාන වෙත ආපසු",
+  // ---- reservoir releases ----
+  "release.confirmed": "{name} ජලාශයෙන් දැනට කියුසෙක් {cusecs}ක් පමණ මුදාහරිනවා ({source}, {when}).", // needs native review
+  "release.gatesOpen": "වාන් දොරටු {n}ක් විවෘතයි.", // needs native review
+  "release.etaRange": "ජලය සාමාන්‍යයෙන් {gauge} වෙත පැය {a}–{b}ක් පමණ ඇතුළත ළඟා වේ.", // needs native review
+  "release.mayRise": "{gauge} සහ ඊට පහළ මාන ඉදිරි පැය කිහිපය තුළ ඉහළ යා හැක.", // needs native review
+  "release.mayRiseRiver": "{river} හි පහළ මාන ඉදිරි පැය කිහිපය තුළ ඉහළ යා හැක.", // needs native review
+  "release.noGaugeBelow": "මෙම අඩවියේ කිසිදු මානයක් එයට සෘජුවම පහළින් නැත.", // needs native review
+  "release.reported": "{name} හි වාන් දොරටු විවෘත කළ බව වාර්තා වේ ({outlet}, {when}).", // needs native review
+  "release.reportedNote": "වාරිමාර්ග දෙපාර්තමේන්තුව තවම තහවුරු කර නැත.", // needs native review
+  "release.newsLater": "පසුව: {outlet} {name} හි වාන් දොරටු විවෘත කළ බව වාර්තා කළා ({when}).", // needs native review
+  "release.readReport": "වාර්තාව කියවන්න", // needs native review
+  "release.src.irrigation": "වාරිමාර්ග දෙපාර්තමේන්තුව", // needs native review
+  "release.src.mahaweli": "මහවැලි අධිකාරිය", // needs native review
+  "release.homeConfirmed": "{name} ජලාශයෙන් කියුසෙක් {cusecs}ක් පමණ මුදාහරිනවා.", // needs native review
+  "release.homeReported": "{name} හි වාන් දොරටු විවෘත කළ බව වාර්තා වේ.", // needs native review
+  "release.homeView": "{gauge} බලන්න", // needs native review
+  "release.homeViewRiver": "ගඟ බලන්න", // needs native review
 };

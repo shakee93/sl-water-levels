@@ -575,6 +575,23 @@ export const en = {
   "nf.popular": "Popular stations",
   "nf.allBasins": "All basins",
   "nf.back": "← Back to all stations",
+  // ---- reservoir releases ----
+  "release.confirmed": "{name} reservoir is releasing about {cusecs} cusecs ({source}, {when}).",
+  "release.gatesOpen": "{n} gates are open.",
+  "release.etaRange": "Water usually reaches {gauge} in about {a}–{b} hours.",
+  "release.mayRise": "{gauge} and gauges further downstream may rise in the next hours.",
+  "release.mayRiseRiver": "Gauges downstream on the {river} may rise in the next hours.",
+  "release.noGaugeBelow": "No gauge on this site is directly below it.",
+  "release.reported": "Spill gates reported opened at {name} ({outlet}, {when}).",
+  "release.reportedNote": "Not yet confirmed by the Irrigation Department.",
+  "release.newsLater": "Later: {outlet} reported spill gates opened at {name} ({when}).",
+  "release.readReport": "Read the report",
+  "release.src.irrigation": "Irrigation Department",
+  "release.src.mahaweli": "Mahaweli Authority",
+  "release.homeConfirmed": "{name} reservoir is releasing about {cusecs} cusecs.",
+  "release.homeReported": "Spill gates reported opened at {name}.",
+  "release.homeView": "View {gauge}",
+  "release.homeViewRiver": "View river",
 } as const;
 
 export type Key = keyof typeof en;

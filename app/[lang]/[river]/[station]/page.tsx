@@ -24,6 +24,7 @@ import { BasinDams } from "@/app/BasinDams";
 import { Forecast } from "@/app/Forecast";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { Anomaly } from "@/app/Anomaly";
+import { ReleaseCard } from "@/app/ReleaseCard";
 import { StationNearby } from "@/app/StationNearby";
 
 export const revalidate = 60;
@@ -220,6 +221,8 @@ export default async function StationPage({
           <ErrorBanner t={t} title={t("err.stationsTitle")} detail={stationsError} />
         ) : (
           <>
+            <Suspense key={`release-${station}`} fallback={null}><ReleaseCard lang={lang} station={station} basin={basin} /></Suspense>
+
             <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
               <Forecast lang={lang} basin={basin} selectedStation={station} />
             </Suspense>

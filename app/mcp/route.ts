@@ -9,6 +9,8 @@ import {
 import { orderStations } from "@/lib/basinOrder";
 import { ageMinutes } from "@/lib/readings";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
+import { getReleases } from "@/lib/releases";
+import { reservoirById } from "@/lib/reservoirs";
 
 const handler = createMcpHandler(
   (server) => {
@@ -143,6 +145,34 @@ const handler = createMcpHandler(
           content: [
             { type: "text", text: JSON.stringify({ warnings, count: warnings.length, reason: result.reason ?? null }, null, 2) },
           ],
+        };
+      },
+    );
+
+    server.tool(
+      "get_reservoir_releases",
+      "Get reservoirs that are releasing water right now and which of our river gauges are downstream. Each release has the reservoir, kind ('confirmed' = official numbers, 'reported' = only a news report of spill gates opened, never official), source (Irrigation Department, Mahaweli Authority or the news outlet), url, cusecs (about; null for a news-only report), gatesOpen, observedAt (the reading's date or the report time, Sri Lanka time), downstream gauge names and, per gauge, the measured travel time in hours where we have one (otherwise null). Official figures are daily readings, so observedAt may be hours old; news reports expire after 12 hours. Also returns per-source status. A release is not a flood by itself: compare with the gauge's alert level.",
+      {
+        basin: z.string().optional().describe("Optional basin filter, e.g. 'Deduru Oya'"),
+        station: z.string().optional().describe("Optional gauge name, e.g. 'Moragaswewa': only releases upstream of it"),
+      },
+      async ({ basin, station }) => {
+        const result = await getReleases();
+        const b = basin?.trim().toLowerCase();
+        const releases = result.releases
+          .filter((r) => (b ? r.basin.toLowerCase() === b : true))
+          .map((r) => {
+            const gauges = (reservoirById(r.reservoirId)?.gauges ?? []).map((g) => ({
+              station: g.station,
+              basin: g.basin,
+              travelHours: g.eta,
+              confidence: g.confidence,
+            }));
+            return { ...r, gauges };
+          })
+          .filter((r) => (station ? r.gauges.some((g) => g.station.toLowerCase() === station.trim().toLowerCase()) : true));
+        return {
+          content: [{ type: "text", text: JSON.stringify({ releases, count: releases.length, sources: result.sources }, null, 2) }],
         };
       },
     );

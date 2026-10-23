@@ -552,4 +552,21 @@ export const ta: Dict = {
   "nf.popular": "பிரபல நிலையங்கள்",
   "nf.allBasins": "எல்லா ஆறுகளும்",
   "nf.back": "← எல்லா நிலையங்களுக்கும் திரும்பு",
+  // ---- reservoir releases ----
+  "release.confirmed": "{name} நீர்த்தேக்கத்திலிருந்து தற்போது சுமார் {cusecs} கியூசெக் நீர் திறக்கப்படுகிறது ({source}, {when}).", // needs native review
+  "release.gatesOpen": "{n} வான் கதவுகள் திறந்துள்ளன.", // needs native review
+  "release.etaRange": "நீர் பொதுவாக {gauge} பகுதியை சுமார் {a}–{b} மணி நேரத்தில் சென்றடையும்.", // needs native review
+  "release.mayRise": "{gauge} மற்றும் அதற்குக் கீழுள்ள அளவீட்டு நிலையங்களில் வரும் மணி நேரங்களில் நீர்மட்டம் உயரக்கூடும்.", // needs native review
+  "release.mayRiseRiver": "{river} ஆற்றின் கீழ்ப்பகுதி நிலையங்களில் வரும் மணி நேரங்களில் நீர்மட்டம் உயரக்கூடும்.", // needs native review
+  "release.noGaugeBelow": "இந்தத் தளத்தின் எந்த அளவீட்டு நிலையமும் அதற்கு நேரடியாகக் கீழே இல்லை.", // needs native review
+  "release.reported": "{name} இல் வான் கதவுகள் திறக்கப்பட்டதாக செய்தி ({outlet}, {when}).", // needs native review
+  "release.reportedNote": "நீர்ப்பாசனத் திணைக்களம் இன்னும் உறுதிப்படுத்தவில்லை.", // needs native review
+  "release.newsLater": "பின்னர்: {name} இல் வான் கதவுகள் திறக்கப்பட்டதாக {outlet} தெரிவித்தது ({when}).", // needs native review
+  "release.readReport": "செய்தியை வாசிக்க", // needs native review
+  "release.src.irrigation": "நீர்ப்பாசனத் திணைக்களம்", // needs native review
+  "release.src.mahaweli": "மகாவலி அதிகாரசபை", // needs native review
+  "release.homeConfirmed": "{name} நீர்த்தேக்கத்திலிருந்து சுமார் {cusecs} கியூசெக் நீர் திறக்கப்படுகிறது.", // needs native review
+  "release.homeReported": "{name} இல் வான் கதவுகள் திறக்கப்பட்டதாக செய்தி.", // needs native review
+  "release.homeView": "{gauge} ஐப் பார்க்க", // needs native review
+  "release.homeViewRiver": "ஆற்றைப் பார்க்க", // needs native review
 };

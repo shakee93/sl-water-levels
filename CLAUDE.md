@@ -58,7 +58,9 @@ lib/
   basinOrder.ts        Canonical upstream->downstream order per basin
   forecast.ts          Next-hour prediction: local persistence + upstream momentum + rain
   anomaly.ts           Inferred-release detection from gauge data
-  ceb.ts               PUCSL day-ahead-dispatch fetcher (currently returns no MW data)
+  ceb.ts               PUCSL day-ahead-dispatch fetcher (MW now populated but ~2.5 days late: archive-only, never live)
+  releases.ts          Reservoir releases: Irrigation sheet + Mahaweli PDF + DMC figure + news; releaseAffecting(station)
+  reservoirs.ts        Reservoir -> downstream gauge map with measured travel times
   dams.ts              Hand-curated dam catalogue per basin
   units.ts             Heuristic ft / m / null detection from threshold values
 ```
@@ -73,20 +75,36 @@ lib/
 - **ArcGIS Reservoir_Data_2024**: static infrastructure — irrigation tanks
   only, NO CEB hydropower. Useful for context only.
 
-- **Mahaweli WMS daily PDF** (mahaweli.gov.lk/.../Menue-WMS - E.pdf):
-  real daily CEB hydropower storage + downstream discharge for
-  Maussakele/Castlereigh/Kotmale/Victoria/Randenigala. NOT YET
-  INTEGRATED — would need `pdf-parse`.
+- **Irrigation Dept "Reservoir Water Level" Google Sheet** (id starts
+  2PACX-1vTcSGhi9RESl7CMC...; tabs Major gid=1212294664, Medium 562386515):
+  daily spilling Y/N, spill + sluice cusecs, gate settings, water depth for
+  ~120 reservoirs. WIRED in `lib/releases.ts` (10-min cache, fail soft).
+  Overwritten daily with no timestamp: we show the reading's date and archive
+  every change. `GO=` numbers in REMARKS are gate-setting discharge, not flow:
+  show the Spilling (Cusec) column, and gates only as a count of open gates.
+- **Mahaweli WMS daily PDF** (mahaweli.gov.lk/WMS%20DATA/Menue-WMS%20-%20E.pdf):
+  storage + spill/downstream discharge (m3/s and ft3/s) for the CEB and
+  Mahaweli reservoirs. WIRED in `lib/releases.ts` (unpdf, column x-positions,
+  If-Modified-Since). Blank = unknown, never zero. Spellings normalised
+  (Moussakele -> Maussakele, Castlereigh -> Castlereagh) in `wmsName()`.
+- **DMC Irrigation flood-warning PDFs**: `lib/warnings.ts` also extracts the
+  release cusecs (`releaseCusecs`) from digits next to "ඝණ අඩි" / "கன அடி" / cusecs.
+- **News RSS** (Ada Derana rss.php, Daily Mirror breaking-news/108): keyword match of
+  "spill/sluice gates opened/closed" + a catalogue reservoir. Shown as "reported",
+  never official, expires after 12 h. Ada Derana items have no date: the story
+  page's datePublished is read.
+- **Reservoir -> gauge map and travel times**: `lib/reservoirs.ts`. Only Deduru Oya ->
+  Moragaswewa (4-5 h, one event, 21-22 Oct 2026) is measured; the rest say "may rise in
+  the next hours". Refit from the archive when more events exist.
+- **Release archive**: `scripts/releases-snapshot.mjs` + `.github/workflows/releases-snapshot.yml`
+  save each changed snapshot to the `data` branch as `releases/YYYY/YYYY-MM-DD.jsonl`
+  (it reads the site's own `/api/releases`, so it works once deployed).
 
-- **Irrigation Dept Google Sheet** (id starts 2PACX-1vTcSGhi9RESl7CMC...):
-  daily reservoir spill status for ~73 irrigation reservoirs with
-  explicit `Spilling (Y/N)` + sluice discharge cusec columns. NOT YET
-  INTEGRATED — CSV per tab, gid=217395621 is the cleanest spilling tab.
-
-- **PUCSL day-ahead-dispatch** (gendata.pucsl.gov.lk/api/...): schema
-  live, but every `powerInMw` value is null across all 41 plants. CEB
-  has not started populating. Code in `lib/ceb.ts` will auto-light up
-  when they flip the switch.
+- **PUCSL day-ahead-dispatch** (gendata.pucsl.gov.lk/api/...): `powerInMw` IS
+  populated now (checked 2026-10-23) but lags ~2.5 days and has gaps. Archive and
+  post-event analysis only: `lib/ceb.ts` drops points older than 3 h, so it is
+  never shown as live and never a warning. Flat MW is not turbine release (Upper
+  Kotmale stayed at 75 MW while its gates were opened).
 
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.
@@ -108,12 +126,10 @@ These cost real debugging time. Future-you should not relearn them.
   (>=1/s) return HTTP 200 with an `{error:{...}}` body ("Too many requests.").
   `arcgis()` validates inside `unstable_cache` (60s) so errors throw and are
   never cached. maxRecordCount is 1000: it pages on `exceededTransferLimit`.
-- **PUCSL day-ahead-dispatch returns rows with `powerInMw: null` for
-  every record.** Don't assume any integer values are real — confirm
-  by curling first.
-- **Mahaweli WMS PDF uses non-standard spellings**: "Moussakele" (not
-  Maussakele), "Castlereigh" (not Castlereagh). Need a normaliser in
-  any future parser.
+- **PUCSL day-ahead-dispatch lags ~2.5 days** (and was all-null before October).
+  Curl first; never present it as live.
+- **Mahaweli WMS PDF uses non-standard spellings**: "Moussakele", "Castlereigh",
+  "Rantambe", "Alikotaara". Normalised in `lib/releases.ts` / `lib/reservoirs.ts`.
 - **longitude-DESC is wrong for Mahaweli / Nilwala / Kirindi Oya.**
   Use the explicit `BASIN_ORDER` table in `lib/basinOrder.ts`.
   Mahaweli flows north-east; Nilwala and Kirindi flow south.
@@ -144,8 +160,8 @@ These cost real debugging time. Future-you should not relearn them.
   `lib/units.ts` and show suffix only when confident.
 - Don't trust the `longitude-desc` fallback for basin ordering.
   Add to `BASIN_ORDER` instead.
-- Don't fetch the PUCSL endpoint expecting live MW values — handle
-  the all-null state gracefully (see `app/BasinDams.tsx`).
+- Don't show PUCSL MW as live (it is days late) and don't treat flat MW as
+  turbine release. Release warnings come from `lib/releases.ts`.
 - Don't run `npm run build` locally without good reason — Vercel
   builds remotely and surfaces errors equivalently.
 - Don't reintroduce `turbopack.root` in `next.config.ts`. It only
@@ -155,10 +171,9 @@ These cost real debugging time. Future-you should not relearn them.
 
 So future sessions know what's pending vs. broken.
 
-- **Mahaweli WMS PDF parser** — would add live CEB-dam discharge data
-  for Kelani basin. ~1.5h with `pdf-parse`.
-- **Irrigation Dept Google Sheet integration** — daily spill status
-  for ~73 reservoirs. ~1h.
+- **Feeding releases into the forecast** — `releaseAffecting(station)` exists; the
+  verdict wiring and the travel-time fit wait for more archived events
+  (`releases/` on the `data` branch).
 - **Historical-event calibration** for forecast magnitudes — current
   prediction is persistence + momentum; magnitudes are uncalibrated.
 - **Rainfall forecast feed** (Open-Meteo) — Stage A of the prediction

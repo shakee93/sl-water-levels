@@ -1,0 +1,57 @@
+# Archives reservoir-release data (Irrigation Department sheet, Mahaweli PDF, news detections) to
+# the `data` branch under releases/YYYY/YYYY-MM-DD.jsonl, one line per changed snapshot.
+# Every 15 minutes from about 05:30 to 23:30 Asia/Colombo, hourly overnight (cron is UTC).
+# GitHub's scheduler can delay or skip runs; the sources are overwritten daily, so a missed run only
+# loses that quarter hour of change history.
+
+name: Release snapshot
+
+on:
+  schedule:
+    - cron: "*/15 0-17 * * *" # 05:30-23:15 Asia/Colombo
+    - cron: "0 18-23 * * *" # 23:30-04:30 Asia/Colombo, hourly
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Same group as the daily snapshot so the two never push to `data` at once.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  releases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth=1 origin data
+            git worktree add archive FETCH_HEAD
+            git -C archive checkout -B data
+          else
+            git worktree add --orphan -b data archive
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Archive releases
+        run: node scripts/releases-snapshot.mjs archive
+
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change."
+            exit 0
+          fi
+          git commit -m "Releases $(TZ=Asia/Colombo date '+%F %H:%M')"
+          git push origin data
