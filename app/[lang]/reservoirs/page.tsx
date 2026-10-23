@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { AlertTriangle, Map as MapIcon } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { getReservoirs, type RV } from "@/lib/reservoirData";
 import { fetchStations } from "@/lib/arcgis";
 import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
@@ -10,7 +10,8 @@ import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { riverName, shortDay } from "@/lib/i18n/format";
-import { RvCard } from "@/app/reservoirs/RvCard";
+import { compareRelease, searchText } from "@/lib/reservoirSearch";
+import { RvCard, localName } from "@/app/reservoirs/RvCard";
 import { ReservoirFilter, type FilterItem } from "@/app/reservoirs/ReservoirFilter";
 
 export const revalidate = 600;
@@ -34,10 +35,9 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   };
 }
 
-const ORDER = { spilling: 0, releasing: 1, holding: 2, nodata: 3 } as const;
-/** Releasing now first (biggest first; a routine barrage after the rest), then by name. */
-const sortRv = (a: RV, b: RV) =>
-  ORDER[a.status] - ORDER[b.status] || Number(a.barrage) - Number(b.barrage) || (b.flow?.cusecs ?? 0) - (a.flow?.cusecs ?? 0) || a.name.localeCompare(b.name);
+const sortFields = (r: RV) => ({ status: r.status, barrage: r.barrage, cusecs: r.flow?.cusecs ?? 0, pct: r.storage?.pct ?? null, name: r.name });
+/** Same order as the filter bar's default sort, so the server HTML and the first client render agree. */
+const sortRv = (a: RV, b: RV) => compareRelease(sortFields(a), sortFields(b));
 
 export default async function ReservoirsIndex({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: raw } = await params;
@@ -71,19 +71,25 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
 
   // Rivers that have a map: the river page for a river with several gauges, the gauge page for one with a single gauge.
   const gaugeStations = await fetchStations().catch(() => []);
-  const mapLinks = rivers.flatMap((r) => {
+  const mapLinks: Record<string, string> = {};
+  for (const r of rivers) {
     const on = gaugeStations.filter((g) => g.basin.trim().toLowerCase() === r.trim().toLowerCase());
     // A one-gauge river only has a map when a reservoir on it has known coordinates.
-    if (on.length === 0 || (on.length === 1 && !items.some((rv) => rv.river === r && RESERVOIR_COORDS[rv.slug]))) return [];
+    if (on.length === 0 || (on.length === 1 && !items.some((rv) => rv.river === r && RESERVOIR_COORDS[rv.slug]))) continue;
     const path = on.length === 1 ? stationPath(on[0].basin, on[0].station) : basinPath(on[0].basin);
-    return [{ river: r, href: `${p(path)}#map` }];
-  });
+    mapLinks[r] = `${p(path)}#map`;
+  }
 
   const filterItems: FilterItem[] = items.map((rv) => ({
     key: rv.slug,
+    name: localName(rv, lang),
     river: rv.river,
     district: rv.district,
-    releasing: rv.status === "spilling" || rv.status === "releasing",
+    status: rv.status,
+    barrage: rv.barrage,
+    cusecs: rv.flow?.cusecs ?? 0,
+    pct: rv.storage?.pct ?? null,
+    search: searchText([rv.name, rv.si, rv.ta, rv.slug.replace(/-/g, " "), rv.river, rv.district]),
     node: <RvCard rv={rv} lang={lang} />,
   }));
   // Visible chip text uses the localised river name; the filter compares the raw name, so map it back.
@@ -122,28 +128,20 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
           </p>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{rt("idx.asOf", { a: day(data.sheetDate), b: day(data.wmsDate) })}</p>
         </header>
-        {mapLinks.length > 0 && (
-          <nav className="mb-4" aria-label={rt("idx.maps")}>
-            <h2 className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-              <MapIcon className="size-4" aria-hidden /> {rt("idx.maps")}
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {mapLinks.map((m) => (
-                <li key={m.river}>
-                  <Link href={m.href} className="inline-flex items-center min-h-11 sm:min-h-9 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm hover:border-sky-300 dark:hover:border-sky-700 transition">
-                    {riverName(m.river, lang)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
         <ReservoirFilter
           items={filterItems}
           rivers={rivers}
           riverLabels={Object.fromEntries(riverLabels)}
           districts={districts}
-          labels={{ all: rt("f.all"), releasing: rt("f.releasing"), allDistricts: rt("f.allDistricts"), district: rt("f.district"), empty: rt("f.empty") }}
+          mapLinks={mapLinks}
+          lang={lang}
+          labels={{
+            search: rt("f.search"), status: rt("f.status"), all: rt("f.all"), spilling: rt("s.spilling"), releasing: rt("s.releasing"), holding: rt("s.holding"), nodata: rt("noData"),
+            river: rt("f.river"), allRivers: rt("f.allRivers"), district: rt("f.district"), allDistricts: rt("f.allDistricts"),
+            sort: rt("f.sort"), sortRelease: rt("sort.release"), sortFull: rt("sort.full"), sortName: rt("sort.name"),
+            filters: rt("f.filters"), clear: rt("f.clear"), clearAll: rt("f.clearAll"), showing: rt("f.showing"), showN: rt("f.showN"), remove: rt("f.remove"),
+            mapLink: rt("f.mapLink"), close: rt("f.close"), clearSearch: rt("f.clearSearch"), empty: rt("f.empty"), active: rt("f.active"),
+          }}
         />
         <p className="mt-6 text-xs text-slate-500 dark:text-slate-400">{rt("src.note")}</p>
       </div>
