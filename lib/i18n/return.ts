@@ -1,0 +1,320 @@
+// Strings for the "reasons to come back" features: My places, alerts and install, how our warnings did, and the
+// thank-you after a street-flood answer. Kept apart from en.ts so these features add no keys to the shared
+// dictionaries. Sinhala and Tamil are DRAFTS that need native-speaker review (every screen that shows them keeps the
+// site's usual "machine-translated" note). Placeholders look like {n}; keep every placeholder in every language.
+// No imports except a type: scripts/push-notify.mjs (node --experimental-strip-types) loads this file for push text.
+import type { Locale } from "./config";
+
+const en = {
+  // ---- My places (home page)
+  "mp.title": "Your places",
+  "mp.calm1": "{name} is calm right now.",
+  "mp.calmN": "All {n} of your places are calm right now.",
+  "mp.attention": "{name}: {verdict}.",
+  "mp.attentionOthers": "{n} other places are calm.",
+  "mp.attentionOthers1": "1 other place is calm.",
+  "mp.unknown": "We cannot check {n} of your places right now. That does not mean they are calm.",
+  "mp.loading": "Checking your places…",
+  "mp.loadError": "Could not refresh your places. Showing what we last knew.",
+  "mp.rain": "{mm} mm rain in 24 h",
+  "mp.noRain": "No rain in 24 h",
+  "mp.rising": "rising",
+  "mp.falling": "falling",
+  "mp.steady": "steady",
+  "mp.updated": "Updated {time}",
+  "mp.remove": "Remove {name} from your places",
+  "mp.pin": "Pin to your places",
+  "mp.pinned": "Pinned",
+  "mp.pinAria": "Pin {name} to your places",
+  "mp.unpinAria": "Remove {name} from your places",
+  "mp.pinHint": "Pinned places show up on the home page the moment you open it.",
+  "mp.full": "You can pin up to {n} places.",
+  "mp.share": "Send to family",
+  "mp.shareText": "{summary}",
+  "mp.today": "Today",
+  "mp.todayRain": "Rain expected over the next day: about {mm} mm near {name}.",
+  "mp.todayDry": "No heavy rain expected over the next day.",
+  "mp.todayLight": "Some rain expected over the next day, nothing heavy.",
+  "mp.open": "Open {name}",
+  // ---- Season context
+  "season.sw": "South-west monsoon season (May to September). Heavy rain mostly affects the west and south.",
+  "season.ne": "North-east monsoon season (December to February). Heavy rain mostly affects the north and east.",
+  "season.inter1": "Inter-monsoon period (March to April). Afternoon thunderstorms are common.",
+  "season.inter2": "Inter-monsoon period (October to November). Evening thunderstorms are common and can bring sudden heavy rain.",
+  // ---- Alerts
+  "al.title": "Alerts for your places",
+  "al.help": "One message when a place needs attention and one when it is clear. Nothing else. No account; you can turn it off here at any time.",
+  "al.on": "Alerts are on for your places",
+  "al.enable": "Tell me when it changes",
+  "al.disable": "Turn off alerts",
+  "al.busy": "One moment…",
+  "al.morning": "Also send a short summary each morning",
+  "al.denied": "Notifications are blocked for this site in your browser settings. Allow them there, then try again.",
+  "al.unsupported": "This browser cannot receive alerts. On an iPhone, add the site to your Home Screen first, then open it from there.",
+  "al.error": "We could not turn alerts on. Please try again in a moment.",
+  "al.synced": "Alerts follow your pinned places.",
+  // ---- Install
+  "ins.title": "Keep this on your phone",
+  "ins.body": "Add it to your Home Screen to open your places in one tap, even with a weak signal.",
+  "ins.add": "Add to Home Screen",
+  "ins.later": "Not now",
+  "ins.ios": "Tap the Share button, then Add to Home Screen.",
+  "ins.dismiss": "Close",
+  // ---- Offline
+  "off.title": "You are offline",
+  "off.body": "Showing what we knew at {time}. Levels may have changed since.",
+  // ---- How our warnings did (town page)
+  "cl.title": "How our warnings did",
+  "cl.today": "Today",
+  "cl.yesterday": "Yesterday",
+  "cl.said.possible": "{when} we said water on the streets was possible.",
+  "cl.said.likely": "{when} we said water on the streets was likely.",
+  "cl.wet": "Most of the {n} neighbours who answered said there was water. Thank you.",
+  "cl.dry": "Most of the {n} neighbours who answered said it stayed dry. Thank you: that helps us avoid false alarms.",
+  "cl.mixed": "{n} neighbours answered and it was mixed: some had water, some stayed dry. Thank you.",
+  "cl.score": "So far we warned on {w} days. Neighbours confirmed water on {c} of the {k} days we could check.",
+  "cl.river": "River forecasts: the real level stayed inside our stated range {pct}% of the time over the last 30 days ({n} checks).",
+  "cl.help": "Your answer below makes this more reliable.",
+  // ---- After a street-flood answer
+  "im.thanks": "Thank you. Your answer joins {n} from {town} this month.",
+  "im.first": "Thank you. Yours is one of the first answers from {town} this month, and each one helps.",
+  "im.tune": "Answers like yours are how we check the {mm} mm street-water warning.",
+  "im.again": "Come back tomorrow: we will show how today's warning did.",
+  // ---- Push messages (sent by scripts/push-notify.mjs)
+  "pn.l2": "Get ready",
+  "pn.l3": "Flooding likely",
+  "pn.l4": "Move to safety",
+  "pn.s2": "Water on the streets possible",
+  "pn.s3": "Water on the streets likely",
+  "pn.riseTitle": "{place}: {verdict}",
+  "pn.riseBody": "Open for the latest and what to do.",
+  "pn.riseBody4": "Open for the latest. Call 117 if you need help.",
+  "pn.clearTitle": "{place}: back to normal",
+  "pn.clearBody": "Levels and rain have eased. No action needed.",
+  "pn.morningTitle": "Your places this morning",
+  "pn.morningCalm": "All {n} places are calm.",
+  "pn.morningCalm1": "{name} is calm.",
+  "pn.morningAttn": "{name}: {verdict}.",
+  "pn.testTitle": "Alerts are on",
+  "pn.testBody": "You will get a message here when a place you pinned needs attention, and when it is clear.",
+} as const;
+
+export type RKey = keyof typeof en;
+type Dict = Record<RKey, string>;
+
+// ---- Sinhala (DRAFT, needs native review)
+const si: Dict = {
+  "mp.title": "ඔබේ ස්ථාන",
+  "mp.calm1": "{name} දැන් සන්සුන්ය.",
+  "mp.calmN": "ඔබේ ස්ථාන {n}ම දැන් සන්සුන්ය.",
+  "mp.attention": "{name}: {verdict}.",
+  "mp.attentionOthers": "අනෙක් ස්ථාන {n} සන්සුන්ය.",
+  "mp.attentionOthers1": "අනෙක් ස්ථානය සන්සුන්ය.",
+  "mp.unknown": "ඔබේ ස්ථාන {n}ක් දැන් පරීක්ෂා කළ නොහැක. එයින් සන්සුන් බව අදහස් නොවේ.",
+  "mp.loading": "ඔබේ ස්ථාන පරීක්ෂා කරමින්…",
+  "mp.loadError": "ඔබේ ස්ථාන නැවුම් කළ නොහැකි විය. අවසන් වරට දැන සිටි දේ පෙන්වමු.",
+  "mp.rain": "පැය 24 වැසි මි.මී. {mm}",
+  "mp.noRain": "පැය 24 තුළ වැසි නැත",
+  "mp.rising": "ඉහළ යයි",
+  "mp.falling": "පහළ යයි",
+  "mp.steady": "ස්ථාවරයි",
+  "mp.updated": "යාවත්කාලීන {time}",
+  "mp.remove": "{name} ඔබේ ස්ථාන වලින් ඉවත් කරන්න",
+  "mp.pin": "ඔබේ ස්ථානවලට එක් කරන්න",
+  "mp.pinned": "එක් කළා",
+  "mp.pinAria": "{name} ඔබේ ස්ථානවලට එක් කරන්න",
+  "mp.unpinAria": "{name} ඔබේ ස්ථාන වලින් ඉවත් කරන්න",
+  "mp.pinHint": "එක් කළ ස්ථාන මුල් පිටුව විවෘත කළ සැණින් පෙනේ.",
+  "mp.full": "ස්ථාන {n}ක් දක්වා එක් කළ හැක.",
+  "mp.share": "පවුලට යවන්න",
+  "mp.shareText": "{summary}",
+  "mp.today": "අද",
+  "mp.todayRain": "ඉදිරි දවසේ වැසි: {name} අසල මි.මී. {mm} පමණ.",
+  "mp.todayDry": "ඉදිරි දවසේ දැඩි වැසි බලාපොරොත්තු නොවේ.",
+  "mp.todayLight": "ඉදිරි දවසේ සුළු වැසි බලාපොරොත්තු වේ, දැඩි නොවේ.",
+  "mp.open": "{name} විවෘත කරන්න",
+  "season.sw": "නිරිතදිග මෝසම් කාලය (මැයි සිට සැප්තැම්බර්). දැඩි වැසි බොහෝවිට බටහිර සහ දකුණට බලපායි.",
+  "season.ne": "ඊසාන දිග මෝසම් කාලය (දෙසැම්බර් සිට පෙබරවාරි). දැඩි වැසි බොහෝවිට උතුර සහ නැගෙනහිරට බලපායි.",
+  "season.inter1": "අන්තර් මෝසම් කාලය (මාර්තු සිට අප්‍රේල්). සවස හෝ දහවල් ගිගුරුම් සහිත වැසි සාමාන්‍යයි.",
+  "season.inter2": "අන්තර් මෝසම් කාලය (ඔක්තෝබර් සිට නොවැම්බර්). සවස් කාලයේ ගිගුරුම් සහිත වැසි සාමාන්‍යයි; හදිසියේ දැඩි වැසි ඇති විය හැක.",
+  "al.title": "ඔබේ ස්ථාන සඳහා ඇඟවීම්",
+  "al.help": "ස්ථානයකට අවධානය අවශ්‍ය වූ විට එක් පණිවිඩයක්, සන්සුන් වූ විට එකක්. වෙන කිසිවක් නැත. ගිණුමක් අවශ්‍ය නැත; ඕනෑම වේලාවක මෙතැනින් නවත්වන්න පුළුවන්.",
+  "al.on": "ඔබේ ස්ථාන සඳහා ඇඟවීම් සක්‍රියයි",
+  "al.enable": "වෙනස් වූ විට මට කියන්න",
+  "al.disable": "ඇඟවීම් නවත්වන්න",
+  "al.busy": "මොහොතක්…",
+  "al.morning": "සෑම උදෑසනම කෙටි සාරාංශයක්ද එවන්න",
+  "al.denied": "ඔබේ බ්‍රවුසර සැකසුම් වල මෙම අඩවිය සඳහා දැනුම්දීම් අවහිර කර ඇත. එහිදී ඉඩ දී නැවත උත්සාහ කරන්න.",
+  "al.unsupported": "මෙම බ්‍රවුසරයට ඇඟවීම් ලැබිය නොහැක. iPhone හි නම් අඩවිය Home Screen එකට එක් කර එතැනින් විවෘත කරන්න.",
+  "al.error": "ඇඟවීම් සක්‍රිය කළ නොහැකි විය. මොහොතකින් නැවත උත්සාහ කරන්න.",
+  "al.synced": "ඇඟවීම් ඔබ එක් කළ ස්ථාන අනුගමනය කරයි.",
+  "ins.title": "මෙය ඔබේ දුරකථනයේ තබා ගන්න",
+  "ins.body": "Home Screen එකට එක් කළ විට, සංඥාව දුර්වල වුවද එක් ස්පර්ශයකින් ඔබේ ස්ථාන විවෘත කළ හැක.",
+  "ins.add": "Home Screen එකට එක් කරන්න",
+  "ins.later": "දැන් නොවේ",
+  "ins.ios": "Share බොත්තම ඔබා, ඉන්පසු Add to Home Screen තෝරන්න.",
+  "ins.dismiss": "වසන්න",
+  "off.title": "ඔබ සබැඳි නොවේ",
+  "off.body": "{time} වන විට අප දැන සිටි දේ පෙන්වයි. ඉන්පසු මට්ටම් වෙනස් වී තිබිය හැක.",
+  "cl.title": "අපගේ අනතුරු ඇඟවීම් කෙසේද",
+  "cl.today": "අද",
+  "cl.yesterday": "ඊයේ",
+  "cl.said.possible": "{when} අපි කීවේ වීදිවලට වතුර ඒමට ඉඩ ඇති බවයි.",
+  "cl.said.likely": "{when} අපි කීවේ වීදිවලට වතුර ඒමට බොහෝ දුරට ඉඩ ඇති බවයි.",
+  "cl.wet": "පිළිතුරු දුන් අසල්වැසියන් {n} දෙනාගෙන් බොහෝ දෙනෙක් වතුර තිබුණා යැයි කීවා. ස්තූතියි.",
+  "cl.dry": "පිළිතුරු දුන් අසල්වැසියන් {n} දෙනාගෙන් බොහෝ දෙනෙක් වියළිව තිබුණා යැයි කීවා. ස්තූතියි: එය වැරදි අනතුරු ඇඟවීම් අවම කිරීමට උදව් වේ.",
+  "cl.mixed": "අසල්වැසියන් {n} දෙනෙක් පිළිතුරු දුන්නා; මිශ්‍රයි: සමහරුන්ට වතුර ආවා, සමහරුන්ට වියළිව තිබුණා. ස්තූතියි.",
+  "cl.score": "මෙතෙක් අපි දින {w}ක අනතුරු ඇඟවීය. පරීක්ෂා කළ හැකි දින {k}න් {c}ක අසල්වැසියන් වතුර තිබූ බව තහවුරු කළා.",
+  "cl.river": "ගංගා අනාවැකි: පසුගිය දින 30 තුළ සැබෑ මට්ටම අපගේ සඳහන් පරාසය තුළ {pct}%ක් පැවතුණා (පරීක්ෂා {n}).",
+  "cl.help": "පහත ඔබේ පිළිතුර මෙය තවත් විශ්වසනීය කරයි.",
+  "im.thanks": "ස්තූතියි. ඔබේ පිළිතුර මෙම මාසයේ {town} සිට ලැබුණු {n}ට එකතු වේ.",
+  "im.first": "ස්තූතියි. මෙම මාසයේ {town} සිට ලැබුණු මුල්ම පිළිතුරු අතර ඔබේ එකක් වන අතර, සෑම එකක්ම උදව් වේ.",
+  "im.tune": "ඔබේ වැනි පිළිතුරු මගින් අපි මි.මී. {mm} වීදි-වතුර අනතුරු ඇඟවීම පරීක්ෂා කරමු.",
+  "im.again": "හෙට නැවත එන්න: අද අනතුරු ඇඟවීම කෙසේ වූයේදැයි පෙන්වන්නෙමු.",
+  "pn.l2": "සූදානම් වන්න",
+  "pn.l3": "ගංවතුර ඇතිවීමට ඉඩ ඇත",
+  "pn.l4": "ආරක්ෂිත ස්ථානයකට යන්න",
+  "pn.s2": "වීදිවලට වතුර ඒමට ඉඩ ඇත",
+  "pn.s3": "වීදිවලට වතුර ඒමට බොහෝ දුරට ඉඩ ඇත",
+  "pn.riseTitle": "{place}: {verdict}",
+  "pn.riseBody": "නවතම තොරතුරු සහ කළ යුතු දේ බැලීමට විවෘත කරන්න.",
+  "pn.riseBody4": "නවතම තොරතුරු බැලීමට විවෘත කරන්න. උදව් අවශ්‍ය නම් 117 අමතන්න.",
+  "pn.clearTitle": "{place}: සාමාන්‍යයට පැමිණියා",
+  "pn.clearBody": "මට්ටම් සහ වැසි අඩු වී ඇත. කිසිවක් කළ යුතු නැත.",
+  "pn.morningTitle": "අද උදෑසන ඔබේ ස්ථාන",
+  "pn.morningCalm": "ස්ථාන {n}ම සන්සුන්ය.",
+  "pn.morningCalm1": "{name} සන්සුන්ය.",
+  "pn.morningAttn": "{name}: {verdict}.",
+  "pn.testTitle": "ඇඟවීම් සක්‍රියයි",
+  "pn.testBody": "ඔබ එක් කළ ස්ථානයකට අවධානය අවශ්‍ය වූ විට සහ එය සන්සුන් වූ විට මෙහි පණිවිඩයක් ලැබේ.",
+};
+
+// ---- Tamil (DRAFT, needs native review)
+const ta: Dict = {
+  "mp.title": "உங்கள் இடங்கள்",
+  "mp.calm1": "{name} இப்போது அமைதியாக உள்ளது.",
+  "mp.calmN": "உங்கள் {n} இடங்களும் இப்போது அமைதியாக உள்ளன.",
+  "mp.attention": "{name}: {verdict}.",
+  "mp.attentionOthers": "மற்ற {n} இடங்கள் அமைதியாக உள்ளன.",
+  "mp.attentionOthers1": "மற்றொரு இடம் அமைதியாக உள்ளது.",
+  "mp.unknown": "உங்கள் {n} இடங்களை இப்போது சரிபார்க்க முடியவில்லை. அவை அமைதியாக உள்ளன என்று பொருளல்ல.",
+  "mp.loading": "உங்கள் இடங்களைச் சரிபார்க்கிறது…",
+  "mp.loadError": "உங்கள் இடங்களைப் புதுப்பிக்க முடியவில்லை. கடைசியாக அறிந்ததைக் காட்டுகிறோம்.",
+  "mp.rain": "24 மணி நேர மழை {mm} மி.மீ",
+  "mp.noRain": "24 மணி நேரத்தில் மழை இல்லை",
+  "mp.rising": "உயர்கிறது",
+  "mp.falling": "குறைகிறது",
+  "mp.steady": "மாற்றமில்லை",
+  "mp.updated": "புதுப்பிப்பு {time}",
+  "mp.remove": "{name} ஐ உங்கள் இடங்களிலிருந்து நீக்கு",
+  "mp.pin": "உங்கள் இடங்களில் சேர்",
+  "mp.pinned": "சேர்க்கப்பட்டது",
+  "mp.pinAria": "{name} ஐ உங்கள் இடங்களில் சேர்",
+  "mp.unpinAria": "{name} ஐ உங்கள் இடங்களிலிருந்து நீக்கு",
+  "mp.pinHint": "சேர்த்த இடங்கள் முகப்புப் பக்கத்தைத் திறந்தவுடன் தெரியும்.",
+  "mp.full": "{n} இடங்கள் வரை சேர்க்கலாம்.",
+  "mp.share": "குடும்பத்துக்கு அனுப்பு",
+  "mp.shareText": "{summary}",
+  "mp.today": "இன்று",
+  "mp.todayRain": "அடுத்த நாளில் மழை: {name} அருகே சுமார் {mm} மி.மீ.",
+  "mp.todayDry": "அடுத்த நாளில் கனமழை எதிர்பார்க்கப்படவில்லை.",
+  "mp.todayLight": "அடுத்த நாளில் சிறிய மழை எதிர்பார்க்கப்படுகிறது, கனமழை அல்ல.",
+  "mp.open": "{name} ஐத் திற",
+  "season.sw": "தென்மேற்குப் பருவமழைக் காலம் (மே முதல் செப்டம்பர்). கனமழை பெரும்பாலும் மேற்கு, தெற்கைப் பாதிக்கும்.",
+  "season.ne": "வடகிழக்குப் பருவமழைக் காலம் (டிசம்பர் முதல் பிப்ரவரி). கனமழை பெரும்பாலும் வடக்கு, கிழக்கைப் பாதிக்கும்.",
+  "season.inter1": "பருவமழை இடைக்காலம் (மார்ச் முதல் ஏப்ரல்). பிற்பகல் இடிமழை பொதுவானது.",
+  "season.inter2": "பருவமழை இடைக்காலம் (அக்டோபர் முதல் நவம்பர்). மாலை இடிமழை பொதுவானது; திடீர் கனமழை வரலாம்.",
+  "al.title": "உங்கள் இடங்களுக்கான அறிவிப்புகள்",
+  "al.help": "ஓர் இடத்துக்குக் கவனம் தேவைப்படும்போது ஒரு செய்தி, அது சீரானதும் ஒரு செய்தி. வேறு எதுவும் இல்லை. கணக்கு தேவையில்லை; எப்போது வேண்டுமானாலும் இங்கே நிறுத்தலாம்.",
+  "al.on": "உங்கள் இடங்களுக்கான அறிவிப்புகள் இயக்கத்தில் உள்ளன",
+  "al.enable": "மாறும்போது எனக்குச் சொல்லுங்கள்",
+  "al.disable": "அறிவிப்புகளை நிறுத்து",
+  "al.busy": "ஒரு கணம்…",
+  "al.morning": "ஒவ்வொரு காலையும் ஒரு சிறு சுருக்கத்தையும் அனுப்பு",
+  "al.denied": "உங்கள் உலாவி அமைப்புகளில் இந்தத் தளத்துக்கு அறிவிப்புகள் தடுக்கப்பட்டுள்ளன. அங்கே அனுமதித்து மீண்டும் முயலவும்.",
+  "al.unsupported": "இந்த உலாவியால் அறிவிப்புகளைப் பெற முடியாது. iPhone இல், தளத்தை முதலில் Home Screen இல் சேர்த்து அங்கிருந்து திறக்கவும்.",
+  "al.error": "அறிவிப்புகளை இயக்க முடியவில்லை. சிறிது நேரத்தில் மீண்டும் முயலவும்.",
+  "al.synced": "அறிவிப்புகள் நீங்கள் சேர்த்த இடங்களைப் பின்தொடரும்.",
+  "ins.title": "இதை உங்கள் தொலைபேசியில் வைத்திருங்கள்",
+  "ins.body": "Home Screen இல் சேர்த்தால், சிக்னல் வலுவற்றிருந்தாலும் ஒரே தொடுதலில் உங்கள் இடங்களைத் திறக்கலாம்.",
+  "ins.add": "Home Screen இல் சேர்",
+  "ins.later": "இப்போது வேண்டாம்",
+  "ins.ios": "Share பொத்தானை அழுத்தி, பிறகு Add to Home Screen ஐத் தேர்ந்தெடுக்கவும்.",
+  "ins.dismiss": "மூடு",
+  "off.title": "நீங்கள் இணையத்தில் இல்லை",
+  "off.body": "{time} நிலவரப்படி எங்களுக்குத் தெரிந்ததைக் காட்டுகிறோம். அதன் பிறகு மட்டங்கள் மாறியிருக்கலாம்.",
+  "cl.title": "எங்கள் எச்சரிக்கைகள் எப்படி இருந்தன",
+  "cl.today": "இன்று",
+  "cl.yesterday": "நேற்று",
+  "cl.said.possible": "{when} தெருக்களில் நீர் வர வாய்ப்புள்ளது என்று கூறினோம்.",
+  "cl.said.likely": "{when} தெருக்களில் நீர் வர வாய்ப்பு அதிகம் என்று கூறினோம்.",
+  "cl.wet": "பதிலளித்த {n} அண்டை வீட்டாரில் பெரும்பாலானோர் நீர் இருந்தது என்றனர். நன்றி.",
+  "cl.dry": "பதிலளித்த {n} அண்டை வீட்டாரில் பெரும்பாலானோர் வறண்டே இருந்தது என்றனர். நன்றி: இது தவறான எச்சரிக்கைகளைத் தவிர்க்க உதவும்.",
+  "cl.mixed": "{n} அண்டை வீட்டார் பதிலளித்தனர்; கலவையான பதில்: சிலருக்கு நீர் வந்தது, சிலருக்கு வறண்டிருந்தது. நன்றி.",
+  "cl.score": "இதுவரை {w} நாட்கள் எச்சரித்தோம். சரிபார்க்க முடிந்த {k} நாட்களில் {c} நாட்களில் அண்டை வீட்டார் நீர் இருந்ததை உறுதிப்படுத்தினர்.",
+  "cl.river": "ஆற்று முன்னறிவிப்புகள்: கடந்த 30 நாட்களில் உண்மையான மட்டம் நாங்கள் கூறிய வரம்புக்குள் {pct}% நேரம் இருந்தது ({n} சரிபார்ப்புகள்).",
+  "cl.help": "கீழே உங்கள் பதில் இதை மேலும் நம்பகமாக்கும்.",
+  "im.thanks": "நன்றி. உங்கள் பதில் இந்த மாதம் {town} இலிருந்து வந்த {n} பதில்களுடன் சேர்கிறது.",
+  "im.first": "நன்றி. இந்த மாதம் {town} இலிருந்து வந்த முதல் பதில்களில் உங்களுடையதும் ஒன்று; ஒவ்வொன்றும் உதவும்.",
+  "im.tune": "உங்களைப் போன்றோரின் பதில்களால் {mm} மி.மீ தெரு-நீர் எச்சரிக்கையைச் சரிபார்க்கிறோம்.",
+  "im.again": "நாளை மீண்டும் வாருங்கள்: இன்றைய எச்சரிக்கை எப்படி இருந்தது என்பதைக் காட்டுவோம்.",
+  "pn.l2": "தயாராகுங்கள்",
+  "pn.l3": "வெள்ளம் ஏற்பட வாய்ப்பு",
+  "pn.l4": "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள்",
+  "pn.s2": "தெருக்களில் நீர் வர வாய்ப்புள்ளது",
+  "pn.s3": "தெருக்களில் நீர் வர வாய்ப்பு அதிகம்",
+  "pn.riseTitle": "{place}: {verdict}",
+  "pn.riseBody": "புதிய தகவலையும் செய்ய வேண்டியதையும் காணத் திறக்கவும்.",
+  "pn.riseBody4": "புதிய தகவலைக் காணத் திறக்கவும். உதவி தேவைப்பட்டால் 117 ஐ அழைக்கவும்.",
+  "pn.clearTitle": "{place}: இயல்பு நிலைக்குத் திரும்பியது",
+  "pn.clearBody": "மட்டங்களும் மழையும் குறைந்துள்ளன. எதுவும் செய்ய வேண்டியதில்லை.",
+  "pn.morningTitle": "இன்று காலை உங்கள் இடங்கள்",
+  "pn.morningCalm": "{n} இடங்களும் அமைதியாக உள்ளன.",
+  "pn.morningCalm1": "{name} அமைதியாக உள்ளது.",
+  "pn.morningAttn": "{name}: {verdict}.",
+  "pn.testTitle": "அறிவிப்புகள் இயக்கத்தில் உள்ளன",
+  "pn.testBody": "நீங்கள் சேர்த்த இடத்துக்குக் கவனம் தேவைப்படும்போதும், அது சீரானபோதும் இங்கே செய்தி வரும்.",
+};
+
+const DICTS: Record<Locale, Dict> = { en: en as unknown as Dict, si, ta };
+
+export type RT = (key: RKey, vars?: Record<string, string | number>) => string;
+export function rtFor(lang: Locale): RT {
+  const d = DICTS[lang] ?? DICTS.en;
+  return (key, vars) => {
+    const s = d[key] ?? en[key] ?? key;
+    return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+  };
+}
+
+/** Which monsoon period a month (1-12) falls in. Sri Lanka's usual calendar; a gentle context line, not a forecast. */
+export function seasonKey(month: number): RKey {
+  if (month >= 5 && month <= 9) return "season.sw";
+  if (month === 10 || month === 11) return "season.inter2";
+  if (month === 12 || month <= 2) return "season.ne";
+  return "season.inter1";
+}
+
+export type PushPlace = { name: string; level: number; street: "possible" | "likely" | null };
+export type PushMessage = { title: string; body: string };
+
+/** The wording of a rise ping, an all-clear and the morning summary, in the subscriber's language. */
+export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test", places: PushPlace[]): PushMessage {
+  const rt = rtFor(lang);
+  if (kind === "test") return { title: rt("pn.testTitle"), body: rt("pn.testBody") };
+  if (kind === "rise") {
+    const p = places[0];
+    const verdict = p.street && p.level <= 3 ? rt(p.street === "likely" ? "pn.s3" : "pn.s2") : rt(`pn.l${Math.min(4, Math.max(2, p.level))}` as RKey);
+    return { title: rt("pn.riseTitle", { place: p.name, verdict }), body: p.level >= 4 ? rt("pn.riseBody4") : rt("pn.riseBody") };
+  }
+  if (kind === "clear") return { title: rt("pn.clearTitle", { place: places[0].name }), body: rt("pn.clearBody") };
+  // morning: the worst place first, otherwise "all calm"
+  const worst = [...places].sort((a, b) => b.level - a.level)[0];
+  const body =
+    worst && worst.level >= 2
+      ? rt("pn.morningAttn", { name: worst.name, verdict: worst.street && worst.level <= 3 ? rt(worst.street === "likely" ? "pn.s3" : "pn.s2") : rt(`pn.l${Math.min(4, worst.level)}` as RKey) })
+      : places.length === 1
+        ? rt("pn.morningCalm1", { name: places[0].name })
+        : rt("pn.morningCalm", { n: places.length });
+  return { title: rt("pn.morningTitle"), body };
+}

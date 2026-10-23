@@ -11,6 +11,7 @@
 import { createHmac } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { placeBySlug } from "@/lib/places";
+import { monthlyAnswers } from "@/lib/townOutcome";
 import { d1Configured, d1Query, D1NotConfigured } from "@/lib/d1";
 import {
   LIMIT_PER_IP_PER_10_MIN,
@@ -96,7 +97,10 @@ export async function POST(req: NextRequest) {
     return reply(e instanceof D1NotConfigured ? 503 : 502, { ok: false, error: "unavailable" });
   }
 
-  const res = reply(200, { ok: true });
+  // The thank-you shows what the answer joined: this month's answers for the town, only when at least 3 (k-anonymity).
+  // The street-rain rule's own threshold is named only for the towns it covers.
+  const n = await monthlyAnswers(r.town, now);
+  const res = reply(200, { ok: true, impact: { n, tuneMm: placeBySlug(r.town)?.rainZone ? 60 : null } });
   // readable by the page (not httpOnly) so it can show "thank you" on a later visit the same day
   res.cookies.set(cookie, day, { path: "/", maxAge: 86_400, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
   return res;

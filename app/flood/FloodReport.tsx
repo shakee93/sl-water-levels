@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { CircleCheck, Droplets } from "lucide-react";
 import { reportCookieName, colomboDay } from "@/lib/floodReport";
 import { ttFor, type TKey } from "@/lib/i18n/town";
+import { rtFor } from "@/lib/i18n/return";
 import { useI18n } from "../LocaleProvider";
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
@@ -41,6 +42,9 @@ export function FloodReport({ slug, town }: { slug: string; town: string }) {
   const [when, setWhen] = useState<"now" | "earlier" | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [hp, setHp] = useState(""); // honeypot: invisible to people
+  // what the answer joined (counts of 3 or more only, decided on the server)
+  const [impact, setImpact] = useState<{ n: number | null; tuneMm: number | null } | null>(null);
+  const rt = rtFor(lang);
 
   async function send(answer: string) {
     if (phase === "sending") return;
@@ -53,6 +57,8 @@ export function FloodReport({ slug, town }: { slug: string; town: string }) {
         body: JSON.stringify({ town: slug, answer, when, lang, hp, ms: sincePageOpen() }),
       });
       if (res.ok) {
+        const j = (await res.json().catch(() => null)) as { impact?: { n: number | null; tuneMm: number | null } } | null;
+        if (j?.impact) setImpact(j.impact);
         listeners.forEach((l) => l());
         setPhase("done");
       } else setPhase(res.status === 429 ? "limit" : "error");
@@ -75,10 +81,14 @@ export function FloodReport({ slug, town }: { slug: string; town: string }) {
         <Droplets className="size-4" aria-hidden /> {tt("fr.title")}
       </h2>
       {done ? (
-        <p className="mt-2 flex items-start gap-2 text-sm text-slate-800 dark:text-slate-200" role="status" lang={lang}>
-          <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-          {phase === "done" ? tt("fr.thanks") : tt("fr.already", { town })}
-        </p>
+        <div className="mt-2 text-sm text-slate-800 dark:text-slate-200" role="status" lang={lang}>
+          <p className="flex items-start gap-2">
+            <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            {phase === "done" ? (impact?.n != null ? rt("im.thanks", { n: impact.n, town }) : rt("im.first", { town })) : tt("fr.already", { town })}
+          </p>
+          {phase === "done" && impact?.tuneMm != null && <p className="mt-1.5 pl-6 text-slate-600 dark:text-slate-400">{rt("im.tune", { mm: impact.tuneMm })}</p>}
+          {phase === "done" && <p className="mt-1.5 pl-6 text-slate-600 dark:text-slate-400">{rt("im.again")}</p>}
+        </div>
       ) : (
         <>
           <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400" lang={lang}>{tt("fr.intro")}</p>

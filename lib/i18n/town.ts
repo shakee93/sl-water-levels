@@ -127,7 +127,7 @@ const en = {
   "details.streetHonest": "In past years the 60 mm level caught about 7 in 10 floods here and gave about 5 false alarms a year; the 100 mm level caught about 6 in 10 with about 2 false alarms a year.",
   // Street-flood reports ("Did your street flood?", app/flood/FloodReport.tsx)
   "fr.title": "Did the streets near you get water today?",
-  "fr.intro": "Your answer helps us check our warnings. It is anonymous: we save only the town and your answer, and show nothing to anyone else yet.",
+  "fr.intro": "Your answer helps us check our warnings. It is anonymous: we save only the town and your answer. Nobody sees single answers; we show only totals of 3 or more.",
   "fr.when": "When? (optional)",
   "fr.now": "Right now",
   "fr.earlier": "Earlier today",
@@ -269,7 +269,7 @@ const si: D = {
   "details.streetHonest": "පසුගිය වසරවල මි.මී. 60 මට්ටම මෙහි ගංවතුරවලින් 10කින් 7ක් පමණ හඳුනාගත් අතර වසරකට වැරදි අනතුරු ඇඟවීම් 5ක් පමණ දුන්නේය; මි.මී. 100 මට්ටම 10කින් 6ක් පමණ හඳුනාගත් අතර වසරකට වැරදි අනතුරු ඇඟවීම් 2ක් පමණ දුන්නේය.",
   // Street-flood reports (draft, needs native review)
   "fr.title": "අද ඔබ අවට වීදිවලට වතුර ආවාද?",
-  "fr.intro": "ඔබේ පිළිතුර අපගේ අනතුරු ඇඟවීම් පරීක්ෂා කිරීමට උපකාර වේ. එය නිර්නාමික ය: අපි සුරකින්නේ නගරය සහ ඔබේ පිළිතුර පමණි; තවම වෙන කිසිවෙකුට කිසිවක් පෙන්වන්නේ නැත.",
+  "fr.intro": "ඔබේ පිළිතුර අපගේ අනතුරු ඇඟවීම් පරීක්ෂා කිරීමට උපකාර වේ. එය නිර්නාමික ය: අපි සුරකින්නේ නගරය සහ ඔබේ පිළිතුර පමණි. තනි පිළිතුරු කිසිවෙකුට නොපෙන්වයි; පෙන්වන්නේ 3ක් හෝ ඊට වැඩි එකතුවක් පමණි.",
   "fr.when": "කවදාද? (අත්‍යවශ්‍ය නොවේ)",
   "fr.now": "දැන්",
   "fr.earlier": "අද කලින්",
@@ -408,7 +408,7 @@ const ta: D = {
   "details.streetHonest": "கடந்த ஆண்டுகளில் 60 மி.மீ நிலை இங்கு ஏற்பட்ட வெள்ளங்களில் 10-ல் 7-ஐ கண்டறிந்தது; ஆண்டுக்கு சுமார் 5 தவறான எச்சரிக்கைகள் தந்தது. 100 மி.மீ நிலை 10-ல் 6-ஐ கண்டறிந்தது; ஆண்டுக்கு சுமார் 2 தவறான எச்சரிக்கைகள்.",
   // Street-flood reports (draft, needs native review)
   "fr.title": "இன்று உங்கள் அருகிலுள்ள தெருக்களில் நீர் வந்ததா?",
-  "fr.intro": "உங்கள் பதில் எங்கள் எச்சரிக்கைகளைச் சரிபார்க்க உதவும். இது பெயரில்லாதது: நகரத்தையும் உங்கள் பதிலையும் மட்டுமே சேமிக்கிறோம்; இப்போதைக்கு வேறு யாருக்கும் எதையும் காட்டுவதில்லை.",
+  "fr.intro": "உங்கள் பதில் எங்கள் எச்சரிக்கைகளைச் சரிபார்க்க உதவும். இது பெயரில்லாதது: நகரத்தையும் உங்கள் பதிலையும் மட்டுமே சேமிக்கிறோம். தனிப்பட்ட பதில்கள் யாருக்கும் காட்டப்படுவதில்லை; 3 அல்லது அதற்கு மேற்பட்ட மொத்தங்களை மட்டுமே காட்டுகிறோம்.",
   "fr.when": "எப்போது? (விருப்பம்)",
   "fr.now": "இப்போது",
   "fr.earlier": "இன்று முன்னதாக",
