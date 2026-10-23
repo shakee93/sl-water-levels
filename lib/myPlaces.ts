@@ -220,16 +220,18 @@ export function outcomes(rain: DayRain[], answers: DayAnswers[]): Outcome[] {
 }
 
 export type Scorecard = { warnedDays: number; confirmedDays: number; checkedDays: number };
+/** A running score is only shown once this many warned days could be judged ("1 of 1" says nothing). */
+export const MIN_SCORE_DAYS = 3;
 
 /**
  * Public accuracy of the street-rain rule so far: of the days it warned, how many had enough answers to judge
- * and, of those, how many residents confirmed water. Null while nothing can be judged yet.
+ * and, of those, how many residents confirmed water. Null until MIN_SCORE_DAYS days could be judged.
  */
 export function scorecard(rain: DayRain[], answers: DayAnswers[]): Scorecard | null {
   const warned = rain.filter((r) => SAID_RANK[r.state] > 0);
   if (warned.length === 0) return null;
   const o = outcomes(rain, answers);
-  if (o.length === 0) return null;
+  if (o.length < MIN_SCORE_DAYS) return null;
   return { warnedDays: warned.length, checkedDays: o.length, confirmedDays: o.filter((x) => x.result === "wet").length };
 }
 

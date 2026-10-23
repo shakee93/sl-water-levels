@@ -8,7 +8,8 @@ import { K_MIN, outcomes, scorecard, worstPerDay, type DayAnswers, type Outcome,
 
 export type TownOutcome = {
   today: string;
-  outcomes: Outcome[];
+  /** Per day: what we said and how neighbours answered. Totals only: single counts below the minimum are never exposed. */
+  outcomes: Omit<Outcome, "wet" | "dry">[];
   score: Scorecard | null;
   /** Share (0-100) of 24 h river forecasts whose real level stayed inside the stated range, last 30 days; null until there are enough checks. */
   river: { pct: number; n: number } | null;
@@ -48,7 +49,7 @@ export async function loadTownOutcome(slug: string, now = Date.now()): Promise<T
         byDay.set(day, a);
       }
       const answers = [...byDay.values()];
-      out.outcomes = outcomes(rain, answers).slice(0, 2);
+      out.outcomes = outcomes(rain, answers).slice(0, 2).map(({ wet: _w, dry: _d, ...rest }) => rest);
       out.score = scorecard(rain, answers);
     } catch {
       /* tables missing or D1 down: no closure section, nothing else breaks */

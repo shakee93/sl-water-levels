@@ -422,3 +422,61 @@ Tables are in `d1/0003_street_flood.sql`.
   How to read it: days with `deep` answers and no `possible` / `likely` state are misses; `possible` / `likely` days
   with only `dry` answers are false alarms. Answers are self-selected (people who flooded answer more), so count
   towns and days, not people.
+
+---
+
+## Reasons to come back (return-visit features)
+
+Design rule: every loop must be useful, honest and optional. No streaks, no counters that shame, no fake urgency, nothing that
+makes a calm day look alarming or a dangerous day look fun. No account anywhere; what is remembered lives in the visitor's
+browser, except an opted-in push subscription. Strings: `lib/i18n/return.ts` (Sinhala and Tamil are drafts needing native review).
+
+1. **Your places (personal glance).** The star on a gauge or town page already saved a place in `localStorage` (`sl_favourites`);
+   the home page now opens on "Your places": one plain line answering "are my places OK?" ("All 3 of your places are calm" or
+   "Wellampitiya: Get ready. 2 other places are calm"), then a row per place with verdict, trend and rain. The instant, personal
+   answer is the reward, and it is the thing worth returning for. Missing data is never shown as calm. The visitor's own street level
+   (`sl_my_levels`) is applied, so it matches their town page. Code: `app/MyPlaces.tsx`, `lib/placeGlance.ts` (same
+   `loadTown`/`assessTown` as the pages), `GET /api/places-state`, `lib/myPlaces.ts`.
+2. **Alerts at the right time (Web Push) + installable app.** "Tell me when it changes" sends ONE push when a pinned place rises to
+   "Get ready / water on the streets possible" or worse, and ONE all-clear after two calm checks in a row (closure matters). Never for
+   a plain "keep an eye", never twice for a wobble (3 h flap guard, `pushStep` in `lib/myPlaces.ts`). Optional short morning summary,
+   skipped when a person's places cannot be read. Subscriptions: D1 `push_subscriptions` (endpoint + two public keys + place keys +
+   language; nothing else; "Turn off alerts" deletes the row; dead endpoints are deleted). PWA: `app/manifest.ts`, `public/sw.js`
+   (network first, last-known page offline, push handler), a quiet dismissible install card after a second-day visit or a pinned place
+   (`app/ReturnShell.tsx`). Sender: `scripts/push-notify.mjs`, run at the end of `gsmap-snapshot.yml` (every 30 min) and by
+   `push-notify.yml` (morning, manual test). Telegram channel option for later: a bot posting the same rise/all-clear text from
+   `pushText` to a public channel needs only a bot token and a call in the sender.
+3. **Closure and trust: "How our warnings did".** On towns with the street-rain rule: what we said recently ("Yesterday we said water
+   on the streets was possible") and what neighbours reported, a running score once 3 warned days could be judged, and one line of
+   river-forecast accuracy from the prediction log (`forecast_verification`, 24 h, share of real levels inside the stated range, last
+   30 days, needs 100 checks). Code: `app/flood/TownOutcome.tsx`, `lib/townOutcome.ts`, `GET /api/town-outcome`.
+4. **Contribution reward.** After "Did the streets near you get water today?" the thank-you says what the answer joined ("joins 14 from
+   Wellampitiya this month") and, for rule towns, that answers tune the 60 mm warning, and invites a return tomorrow to see how the
+   warning did. Counts below 3 are never shown (k-anonymity: `K_MIN`, `shownCount`); the API returns totals only.
+5. **Daily anticipation without alarm.** One "Today" line (rain expected over the next day: dry / some / about N mm) and a calm season
+   line (monsoon context from the month) on the Your places card; optional morning push (above). The season line is hidden when
+   something needs attention.
+6. **Send to family.** "Send to family" shares the first pinned place's page (its OG card already shows the town verdict) through the
+   phone's share sheet or WhatsApp.
+
+### What the owner must set (nothing breaks until then: the buttons simply stay hidden)
+
+```
+# 1. Generate a VAPID pair once (keep the private key out of git)
+cd sl-water-levels && node -e 'const k=require("web-push").generateVAPIDKeys();console.log(k)'
+# 2. Public key: Vercel (production), then redeploy
+vercel env add VAPID_PUBLIC_KEY production
+# 3. Both keys: GitHub Actions secrets
+gh secret set VAPID_PUBLIC_KEY
+gh secret set VAPID_PRIVATE_KEY
+# 4. Check delivery: subscribe on the site, then
+gh workflow run push-notify.yml -f mode=test
+```
+
+### What to measure
+
+Umami events (already on the site): `alerts_on`, `alerts_off`, `share_places`, `pwa_prompt`, `pwa_installed`. Push opt-in rate =
+`alerts_on` / visitors with a pinned place. Push volume and failures: `SELECT kind, SUM(sent), SUM(gone), SUM(failed) FROM push_log GROUP BY kind`
+(counts only). Active subscriptions: `SELECT COUNT(*) FROM push_subscriptions`. Return visits: Umami returning-visitor share on `/`
+before and after. Answers per month per town: `street_flood_reports`. Watch for: all-clear pushes outnumbering rises (hysteresis too loose),
+`gone` rising (people muting).

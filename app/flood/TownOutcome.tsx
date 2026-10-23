@@ -47,7 +47,7 @@ export function TownOutcome({ slug }: { slug: string }) {
             <span className="text-slate-600 dark:text-slate-400">{rt(o.result === "wet" ? "cl.wet" : o.result === "dry" ? "cl.dry" : "cl.mixed", { n: o.total })}</span>
           </p>
         ))}
-        {data?.score && <p className="text-slate-600 dark:text-slate-400">{rt("cl.score", { w: data.score.warnedDays, c: data.score.confirmedDays, k: data.score.checkedDays })}</p>}
+        {data?.score && <p className="text-slate-600 dark:text-slate-400">{rt("cl.score", { c: data.score.confirmedDays, k: data.score.checkedDays })}</p>}
         {data?.river && <p className="text-slate-600 dark:text-slate-400">{rt("cl.river", { pct: data.river.pct, n: data.river.n })}</p>}
         {empty && <p className="text-slate-600 dark:text-slate-400">{rt("cl.empty")}</p>}
         {data != null && <p className="text-slate-500 dark:text-slate-400">{rt("cl.help")}</p>}

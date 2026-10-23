@@ -278,7 +278,7 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
                   <span className={`size-2.5 shrink-0 rounded-full ${TIER_DOT[tone]}`} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">{g.name}</span>
-                    <span className={`block truncate text-xs ${TIER_TEXT_CLASS[tone]}`}>{detail}</span>
+                    <span className={`block text-xs leading-snug ${TIER_TEXT_CLASS[tone]}`}>{detail}</span>
                   </span>
                   {g.levelText && <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">{g.levelText}</span>}
                   <ChevronRight className="size-4 shrink-0 text-slate-400 group-hover:text-sky-500 transition" aria-hidden />
