@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, CloudRain, Gauge, Info, LifeBuoy, Phone, TrendingUp, TriangleAlert, Waves, ChevronDown } from "lucide-react";
+import { ArrowRight, CloudRain, Gauge, Info, LifeBuoy, Phone, TrendingUp, TriangleAlert, Waves } from "lucide-react";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 import type { Key } from "@/lib/i18n/en";
-import { OpenOnHash } from "./OpenOnHash";
 
 // Home page "How this site works": one river picture as the centrepiece, six short items, each
 // with a one-line caption and the detail folded behind it. Collapsed by default; the
@@ -58,15 +57,11 @@ export async function HowItWorks({ lang }: { lang: Locale }) {
   const steps: Key[] = ["how.step1", "how.step2", "how.step3", "how.step4"];
   return (
     <section aria-labelledby="how-title" className="mt-10 sm:mt-12">
-      <details open id="how-it-works" className="group scroll-mt-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <OpenOnHash id="how-it-works" />
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 min-h-11 [&::-webkit-details-marker]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg">
-          <span className="min-w-0">
-            <h2 id="how-title" className="text-base sm:text-lg font-semibold tracking-tight">{t("how.title")}</h2>
-            <span className="block text-sm text-slate-500 dark:text-slate-400">{t("how.sub")}</span>
-          </span>
-          <ChevronDown className="size-4 shrink-0 text-slate-400 transition group-open:rotate-180" aria-hidden />
-        </summary>
+      <div id="how-it-works" className="scroll-mt-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="px-4 pt-4 pb-2">
+          <h2 id="how-title" className="text-base sm:text-lg font-semibold tracking-tight">{t("how.title")}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t("how.sub")}</p>
+        </div>
 
         <div className="px-4 pb-4">
           <RiverDiagram alt={t("how.diagramAlt")} />
@@ -84,17 +79,14 @@ export async function HowItWorks({ lang }: { lang: Locale }) {
           <ul className="mt-4 grid gap-2 sm:grid-cols-2">
             {ITEMS.map(({ id, Icon, t: title, s, d }) => (
               <li key={id}>
-                <details className="group/item h-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
-                  <summary className="flex cursor-pointer list-none items-start gap-2.5 px-3 py-2.5 min-h-11 [&::-webkit-details-marker]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg">
-                    <Icon className="size-4 mt-0.5 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{t(title)}</span>
-                      <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t(s)}</span>
-                    </span>
-                    <ChevronDown className="size-3.5 mt-1 shrink-0 text-slate-400 transition group-open/item:rotate-180" aria-hidden />
-                  </summary>
-                  <p className="px-3 pb-3 pl-9 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(d)}</p>
-                </details>
+                <div className="flex h-full items-start gap-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40 px-3 py-2.5">
+                  <Icon className="size-4 mt-0.5 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-medium">{t(title)}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t(s)}</p>
+                    <p className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(d)}</p>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
@@ -111,7 +103,7 @@ export async function HowItWorks({ lang }: { lang: Locale }) {
             </Link>
           </p>
         </div>
-      </details>
+      </div>
     </section>
   );
 }
