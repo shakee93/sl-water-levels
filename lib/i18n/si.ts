@@ -619,7 +619,8 @@ export const si: Dict = {
   "how.step2": "ජලාශය", // needs native review
   "how.step3": "ගඟේ මාන", // needs native review
   "how.step4": "ඔබේ නගරය", // needs native review
-  "how.diagramAlt": "වැසි වදින කඳුවලින් ජලාශයක් සහ ගං මාන පසු කර නගරයකට ගලා යන ගඟක්.", // needs native review
+  "how.step5": "ඔබේ වීදියට වැසි", // needs native review
+  "how.diagramAlt": "වැසි වදින කඳුවලින් ජලාශයක් සහ ගං මාන පසු කර නගරයකට ගලා යන ගඟක්; නගරයේ ම වැසි වැස්සොත් ගඟ සාමාන්‍ය මට්ටමේ තිබුණත් කාණු පිරී වීදි යට විය හැක.", // needs native review
   "img.open": "පින්තූරය සම්පූර්ණ තිරයෙන් විවෘත කරන්න", // needs native review
   "img.full": "සම්පූර්ණ තිරය", // needs native review
   "img.zoom": "විශාල කරන්න", // needs native review

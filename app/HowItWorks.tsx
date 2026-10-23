@@ -6,7 +6,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Key } from "@/lib/i18n/en";
 
 // Home page "How this site works": the illustrated river explainer as the centrepiece (its
-// labels are English and too small to read on phones, so the four steps are also listed below
+// labels are English and too small to read on phones, so the five steps are also listed below
 // it in the page language), then six short topic cards. Always open; #how-it-works links here.
 
 const ITEMS: { id: string; Icon: typeof Gauge; t: Key; s: Key; d: Key }[] = [
@@ -20,7 +20,7 @@ const ITEMS: { id: string; Icon: typeof Gauge; t: Key; s: Key; d: Key }[] = [
 
 export async function HowItWorks({ lang, className = "mt-10 sm:mt-12" }: { lang: Locale; className?: string }) {
   const { t, p } = getI18n(lang);
-  const steps: Key[] = ["how.step1", "how.step2", "how.step3", "how.step4"];
+  const steps: Key[] = ["how.step1", "how.step2", "how.step3", "how.step4", "how.step5"];
   return (
     <section aria-labelledby="how-title" className={className}>
       <div id="how-it-works" className="scroll-mt-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
@@ -32,14 +32,14 @@ export async function HowItWorks({ lang, className = "mt-10 sm:mt-12" }: { lang:
         <div className="px-4 pb-4">
           <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
             <ZoomableImage
-              src="/how-it-works/river-explainer.jpg"
+              src="/how-it-works/river-explainer-v2.jpg"
               alt={t("how.diagramAlt")}
               width={1920}
               height={1080}
               sizes="(min-width: 1024px) 960px, 100vw"
             />
           </div>
-          <ol className={`${lang === "en" ? "sm:hidden " : ""}mt-2 grid grid-cols-4 gap-1 text-center text-[11px] sm:text-xs leading-tight text-slate-600 dark:text-slate-300`}>
+          <ol className={`${lang === "en" ? "sm:hidden " : ""}mt-2 grid grid-cols-5 gap-1 text-center text-[11px] sm:text-xs leading-tight text-slate-600 dark:text-slate-300`}>
             {steps.map((k, i) => (
               <li key={k} className="min-w-0 break-words">
                 <span className="mb-1 mx-auto flex size-5 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-200 font-semibold" aria-hidden>

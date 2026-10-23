@@ -619,7 +619,8 @@ export const ta: Dict = {
   "how.step2": "நீர்த்தேக்கம்", // needs native review
   "how.step3": "ஆற்றில் நிலையங்கள்", // needs native review
   "how.step4": "உங்கள் நகரம்", // needs native review
-  "how.diagramAlt": "மழை பெய்யும் மலைகளிலிருந்து நீர்த்தேக்கம், ஆற்று நிலையங்களைக் கடந்து நகரை அடையும் ஆறு.", // needs native review
+  "how.step5": "உங்கள் தெருவில் மழை", // needs native review
+  "how.diagramAlt": "மழை பெய்யும் மலைகளிலிருந்து நீர்த்தேக்கம், ஆற்று நிலையங்களைக் கடந்து நகரை அடையும் ஆறு; நகரிலேயே பெய்யும் மழையால் ஆறு சாதாரண மட்டத்தில் இருந்தாலும் கால்வாய்கள் நிரம்பித் தெருக்கள் மூழ்கலாம்.", // needs native review
   "img.open": "படத்தை முழுத் திரையில் திறக்கவும்", // needs native review
   "img.full": "முழுத் திரை", // needs native review
   "img.zoom": "பெரிதாக்கு", // needs native review
