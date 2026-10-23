@@ -587,6 +587,11 @@ export const ta: Dict = {
   "how.step3": "ஆற்றில் நிலையங்கள்", // needs native review
   "how.step4": "உங்கள் நகரம்", // needs native review
   "how.diagramAlt": "மழை பெய்யும் மலைகளிலிருந்து நீர்த்தேக்கம், ஆற்று நிலையங்களைக் கடந்து நகரை அடையும் ஆறு.", // needs native review
+  "img.open": "படத்தை முழுத் திரையில் திறக்கவும்", // needs native review
+  "img.full": "முழுத் திரை", // needs native review
+  "img.zoom": "பெரிதாக்கு", // needs native review
+  "img.fit": "திரைக்குப் பொருத்து", // needs native review
+  "img.close": "மூடு", // needs native review
   "how.readings.t": "அளவீடுகள் எங்கிருந்து", // needs native review
   "how.readings.s": "நீர்ப்பாசனத் திணைக்களத்தின் ஆற்று நிலையங்கள், சுமார் மணிக்கு ஒருமுறை.", // needs native review
   "how.readings.d": "ஒவ்வொரு நிலையத்தின் சமீபத்திய அளவீட்டைக் காட்டுகிறோம். ஒரு நிலையம் தகவல் தராவிட்டால், அதன் கடைசி அளவீடு எவ்வளவு பழையது என்பதைச் சொல்கிறோம்.", // needs native review

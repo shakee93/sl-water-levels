@@ -587,6 +587,11 @@ export const si: Dict = {
   "how.step3": "ගඟේ මාන", // needs native review
   "how.step4": "ඔබේ නගරය", // needs native review
   "how.diagramAlt": "වැසි වදින කඳුවලින් ජලාශයක් සහ ගං මාන පසු කර නගරයකට ගලා යන ගඟක්.", // needs native review
+  "img.open": "පින්තූරය සම්පූර්ණ තිරයෙන් විවෘත කරන්න", // needs native review
+  "img.full": "සම්පූර්ණ තිරය", // needs native review
+  "img.zoom": "විශාල කරන්න", // needs native review
+  "img.fit": "තිරයට ගළපන්න", // needs native review
+  "img.close": "වසන්න", // needs native review
   "how.readings.t": "කියවීම් එන්නේ කොහෙන්ද", // needs native review
   "how.readings.s": "වාරිමාර්ග දෙපාර්තමේන්තුවේ ගං මාන, පැයකට වරක් පමණ.", // needs native review
   "how.readings.d": "අපි එක් එක් මානයේ අලුත්ම කියවීම පෙන්වනවා. මානයක් නිහඬ වුවහොත්, එහි අවසාන කියවීම කොපමණ පරණදැයි කියනවා.", // needs native review

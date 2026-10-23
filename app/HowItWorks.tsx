@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ZoomableImage } from "./ZoomableImage";
 import Link from "next/link";
 import { ArrowRight, CloudRain, Gauge, Info, LifeBuoy, Phone, TrendingUp, TriangleAlert, Waves } from "lucide-react";
 import { getI18n } from "@/lib/i18n/server";
@@ -31,13 +31,12 @@ export async function HowItWorks({ lang }: { lang: Locale }) {
 
         <div className="px-4 pb-4">
           <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-            <Image
+            <ZoomableImage
               src="/how-it-works/river-explainer.jpg"
               alt={t("how.diagramAlt")}
               width={1920}
               height={1080}
               sizes="(min-width: 1024px) 960px, 100vw"
-              className="h-auto w-full"
             />
           </div>
           <ol className={`${lang === "en" ? "sm:hidden " : ""}mt-2 grid grid-cols-4 gap-1 text-center text-[11px] sm:text-xs leading-tight text-slate-600 dark:text-slate-300`}>
