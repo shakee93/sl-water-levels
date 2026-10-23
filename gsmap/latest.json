@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-23T21:38:23.672Z",
- "latestStart": "2026-10-23T20:30:00.000Z",
- "latestEnd": "2026-10-23T21:30:00.000Z",
+ "generatedAt": "2026-10-23T22:07:05.540Z",
+ "latestStart": "2026-10-23T21:00:00.000Z",
+ "latestEnd": "2026-10-23T22:00:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -14,7 +14,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.3
+   "mm24h": 0.2
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
@@ -43,7 +43,7 @@
    "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0,
-   "mm6h": 0.1,
+   "mm6h": 0,
    "mm24h": 0.8
   },
   "Kelani Ganga/Holombuwa": {
@@ -80,17 +80,17 @@
    "basin": "Kalu Ganga",
    "station": "Putupaula",
    "cells": 11,
-   "rateMmPerHour": 0.08,
+   "rateMmPerHour": 0.11,
    "mm1h": 0.1,
    "mm3h": 0.2,
-   "mm6h": 0.4,
-   "mm24h": 0.4
+   "mm6h": 0.5,
+   "mm24h": 0.5
   },
   "Kalu Ganga/Ellagawa": {
    "basin": "Kalu Ganga",
    "station": "Ellagawa",
    "cells": 9,
-   "rateMmPerHour": 0.08,
+   "rateMmPerHour": 0.1,
    "mm1h": 0.1,
    "mm3h": 0.2,
    "mm6h": 0.4,
@@ -110,21 +110,21 @@
    "basin": "Kalu Ganga",
    "station": "Kalawellawa (Millakanda)",
    "cells": 11,
-   "rateMmPerHour": 0.08,
+   "rateMmPerHour": 0.11,
    "mm1h": 0.1,
    "mm3h": 0.2,
-   "mm6h": 0.4,
-   "mm24h": 0.4
+   "mm6h": 0.5,
+   "mm24h": 0.5
   },
   "Kalu Ganga/Magura": {
    "basin": "Kalu Ganga",
    "station": "Magura",
    "cells": 10,
-   "rateMmPerHour": 0.07,
+   "rateMmPerHour": 0.09,
    "mm1h": 0.1,
    "mm3h": 0.2,
-   "mm6h": 0.3,
-   "mm24h": 0.3
+   "mm6h": 0.4,
+   "mm24h": 0.4
   },
   "Gin Ganga/Baddegama": {
    "basin": "Gin Ganga",
@@ -334,7 +334,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0
+   "mm24h": 0.1
   },
   "Mahaweli Ganga/Thaldena": {
    "basin": "Mahaweli Ganga",
@@ -405,7 +405,9 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0
+   "mm24h": 0,
+   "mm24hClipped": 0,
+   "hourlyCapMm": 15
   }
  }
 }
