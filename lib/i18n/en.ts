@@ -25,8 +25,7 @@ export const en = {
   "lang.suggest.dismiss": "Dismiss",
   "crumb.allBasins": "All basins",
   "crumb.home": "Home",
-  "footer.blurb":
-    "Live river-gauge readings and next-hour flood forecasts for every basin in Sri Lanka, updated every minute.",
+  "footer.blurb": "Live river and reservoir levels across Sri Lanka, with flood forecasts.",
   "footer.basins": "Basins",
   "footer.loading": "Loading…",
   "footer.site": "Site",
@@ -114,7 +113,7 @@ export const en = {
   "home.metaTitle": "Sri Lanka Water Levels Today – Live River Gauges & Flood Levels",
   "home.metaDesc":
     "Latest water-level readings for every river gauge in Sri Lanka, grouped by basin. Tap a station for flood thresholds, next-hour forecast, upstream stations, and connected dams.",
-  "home.ogDesc": "Live river-gauge readings + next-hour flood forecast for every basin in Sri Lanka, updated every minute.",
+  "home.ogDesc": "Live river and reservoir levels across Sri Lanka, with flood forecasts.",
   "home.twDesc": "Live river-gauge readings + next-hour flood forecast for every basin in Sri Lanka.",
   "home.ldDesc": "Latest Sri Lanka river-gauge readings + next-hour flood forecast.",
   "home.layoutDesc":

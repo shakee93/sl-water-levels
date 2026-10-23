@@ -1,8 +1,9 @@
 // Small visual pieces shared by the reservoir pages. Server components, no JavaScript.
-import type { Status } from "@/lib/reservoirData";
+import type { RV, Status } from "@/lib/reservoirData";
 import type { RT } from "@/lib/i18n/reservoirs";
-import { SIZE_STEP, releaseSize } from "@/lib/releaseUi";
+import { SIZE_STEP, releaseSize, type ReleaseSize } from "@/lib/releaseUi";
 import type { TFn } from "@/lib/i18n/translate";
+import { useId } from "react";
 
 export const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -56,26 +57,96 @@ export function MiniBar({ pct, stale }: { pct: number | null; stale?: boolean })
   );
 }
 
-/** Tank graphic: water filled to the storage %, dashed line at full supply. */
-export function Tank({ pct, stale, rt }: { pct: number | null; stale: boolean; rt: RT }) {
-  const top = 14;
-  const inner = 134;
-  const p = pct == null ? 0 : Math.max(0, Math.min(100, pct));
-  const wy = top + inner * (1 - p / 100);
-  const water = stale ? "fill-slate-300 dark:fill-slate-700" : pct != null && pct > 100 ? "fill-amber-400" : "fill-sky-400 dark:fill-sky-500";
+/**
+ * Reservoir cross-section: the bank on the left, the dam wall on the right, water filled to the
+ * level, a dashed line at full supply and, when spilling, a sheet of water over the crest and down
+ * the dam face. `level` is the water level as a fraction of full supply (depth where we have it,
+ * else storage). A schematic, not a survey. The overflow dashes stop under prefers-reduced-motion.
+ */
+export function Basin({ level, stale, spilling, rt, mini = false, label }: { level: number | null; stale: boolean; spilling: boolean; rt: RT; mini?: boolean; label?: string }) {
+  const id = useId();
+  const FY = 40; // full-supply line = dam crest
+  const BOT = 120;
+  const f = level == null ? 0 : Math.max(0, Math.min(1, level));
+  const wy = BOT - (BOT - FY) * f;
+  const water = stale ? "fill-slate-300 dark:fill-slate-600" : "fill-sky-300 dark:fill-sky-600";
+  const surf = stale ? "stroke-slate-400 dark:stroke-slate-500" : "stroke-sky-400 dark:stroke-sky-400";
+  const flow = stale ? "stroke-slate-300 dark:stroke-slate-600" : "stroke-sky-300 dark:stroke-sky-600";
+  const bank = "M0 52 L30 58 L80 96 L130 116 L214 120 L234 40 L234 0 L0 0 Z";
   return (
-    <svg viewBox="0 0 150 156" className="w-28 sm:w-32 shrink-0" role="img" aria-label={pct == null ? rt("tank.none") : rt("tank.aria", { n: Math.round(pct) })}>
+    <svg
+      viewBox="0 0 320 132"
+      className={mini ? "w-24 shrink-0 h-auto" : "w-full h-auto"}
+      role="img"
+      aria-label={label ?? (level == null ? rt("tank.none") : rt("tank.aria", { n: Math.round(f * 100) }))}
+    >
       <defs>
-        <clipPath id="tank-clip"><rect x="10" y={top} width="130" height={inner} rx="10" /></clipPath>
+        <clipPath id={`${id}-pool`}><path d={bank} /></clipPath>
       </defs>
-      <rect x="10" y={top} width="130" height={inner} rx="10" className="fill-slate-50 dark:fill-slate-900 stroke-slate-300 dark:stroke-slate-600" strokeWidth="2" strokeDasharray={pct == null ? "5 4" : undefined} />
-      {pct != null && (
-        <g clipPath="url(#tank-clip)">
-          <rect x="10" y={wy} width="130" height={160 - wy} className={water} opacity="0.9" />
+      {level != null && (
+        <g clipPath={`url(#${id}-pool)`}>
+          <rect x="0" y={wy} width="240" height={140 - wy} className={water} />
+          <line x1="0" x2="240" y1={wy} y2={wy} strokeWidth="2" className={surf} />
         </g>
       )}
-      <line x1="2" x2="148" y1={top} y2={top} strokeDasharray="4 3" strokeWidth="1.5" className="stroke-slate-500 dark:stroke-slate-400" />
-      <text x="146" y={top - 3} textAnchor="end" className="fill-slate-500 dark:fill-slate-400" fontSize="9">{rt("fullSupply")}</text>
+      {/* bank and dam */}
+      <path d="M0 52 L30 58 L80 96 L130 116 L214 120 L214 132 L0 132 Z" className="fill-slate-200 dark:fill-slate-700" />
+      <path d={`M214 120 L234 ${FY} L256 ${FY} L296 120 Z`} className="fill-slate-400 dark:fill-slate-500" />
+      <path d="M296 120 L320 118 L320 132 L296 132 L214 132 L214 120 Z" className="fill-slate-200 dark:fill-slate-700" />
+      {level == null && <path d={`M0 ${FY + 40} H234`} fill="none" strokeWidth="2" strokeDasharray="5 5" className="stroke-slate-300 dark:stroke-slate-600" />}
+      {/* full supply */}
+      <line x1="0" x2="234" y1={FY} y2={FY} strokeWidth="1.5" strokeDasharray="5 4" className="stroke-slate-500 dark:stroke-slate-400" />
+      {!mini && (
+        <text x="6" y={FY - 7} fontSize="13" fontWeight="500" className="fill-slate-600 dark:fill-slate-300">{rt("fullSupply")}</text>
+      )}
+      {spilling && (
+        <g>
+          <title>{rt("tank.spill")}</title>
+          <path d={`M232 ${FY - 2} Q246 ${FY - 7} 258 ${FY - 1} L298 118`} fill="none" strokeWidth={mini ? 7 : 6} strokeLinecap="round" strokeLinejoin="round" className={flow} />
+          <path d={`M246 ${FY - 4} L298 118`} fill="none" strokeWidth="2" strokeLinecap="round" strokeDasharray="2 9" className="rm-flow stroke-white dark:stroke-slate-100" opacity="0.9" />
+          <path d="M296 118 q6 -6 12 0 t12 0" fill="none" strokeWidth="2" strokeLinecap="round" className={flow} />
+        </g>
+      )}
     </svg>
   );
+}
+
+/** Three-segment release size meter: segments up to the current size are filled. */
+export function SizeMeter({ size, t, compact = false }: { size: ReleaseSize; t: TFn; compact?: boolean }) {
+  const step = SIZE_STEP[size];
+  const seg = (i: number) => (i <= step ? "bg-amber-500 dark:bg-amber-400" : "bg-slate-200 dark:bg-slate-700");
+  if (compact) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-900 dark:text-amber-200 whitespace-nowrap" role="img" aria-label={t(`release.size.${size}`)}>
+        <span className="inline-flex gap-0.5" aria-hidden>
+          {[1, 2, 3].map((i) => <span key={i} className={`h-1.5 w-3.5 rounded-full ${seg(i)}`} />)}
+        </span>
+        {t(`release.size.${size}`)}
+      </span>
+    );
+  }
+  return (
+    <div role="img" aria-label={t(`release.size.${size}`)} className="w-full">
+      <div className="flex gap-1" aria-hidden>
+        {[1, 2, 3].map((i) => <span key={i} className={`h-2.5 flex-1 rounded-full ${seg(i)}`} />)}
+      </div>
+      <div className="mt-1 flex gap-1 text-[11px] leading-tight" aria-hidden>
+        {(["small", "large", "veryLarge"] as const).map((s) => (
+          <span key={s} className={`flex-1 ${s === "small" ? "text-left" : s === "large" ? "text-center" : "text-right"} ${s === size ? "font-semibold text-amber-900 dark:text-amber-200" : "text-slate-400 dark:text-slate-500"}`}>
+            {t(`release.size.${s}`)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Water level as a fraction of full supply for the cross-section: depth against full-supply depth where the sheet has both, else storage %. */
+export function levelOf(rv: RV): number | null {
+  const sh = rv.sheet;
+  let lv: number | null = null;
+  if (sh && sh.depthFt != null && sh.fsdFt != null && sh.fsdFt > 0) lv = sh.depthFt / sh.fsdFt;
+  else if (rv.storage) lv = rv.storage.pct / 100;
+  if (lv != null && rv.status === "spilling" && rv.storage?.fresh !== false) lv = Math.max(lv, 0.97);
+  return lv;
 }
