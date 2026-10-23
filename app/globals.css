@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Theme: <html class="dark"> is set before paint by the inline script in app/[lang]/layout.tsx
+   (stored choice in localStorage "sl_theme", else the OS setting). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -12,11 +19,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {
@@ -27,49 +32,47 @@ body {
 }
 
 /* Leaflet overrides: match the map to the surrounding UI. */
-.leaflet-container {
-  background: rgb(241 245 249); /* slate-100 */
+html .leaflet-container {
+  background: #d6e8f5; /* sea (beats leaflet.css, which loads later) */
   font-family: inherit;
 }
 .leaflet-popup-content {
   margin: 10px 14px;
   line-height: 1.4;
 }
-@media (prefers-color-scheme: dark) {
-  .leaflet-container {
-    background: rgb(15 23 42); /* slate-900 */
-  }
-  .leaflet-popup-content-wrapper,
-  .leaflet-popup-tip {
-    background: rgb(30 41 59); /* slate-800 */
-    color: rgb(226 232 240); /* slate-200 */
-  }
-  .leaflet-popup-content-wrapper a {
-    color: rgb(125 211 252) !important; /* sky-300 */
-  }
-  .leaflet-tooltip {
-    background: rgb(30 41 59);
-    color: rgb(226 232 240);
-    border-color: rgb(51 65 85);
-  }
-  .leaflet-tooltip-top:before {
-    border-top-color: rgb(30 41 59);
-  }
-  .leaflet-bar a {
-    background: rgb(30 41 59);
-    color: rgb(226 232 240);
-    border-color: rgb(51 65 85);
-  }
-  .leaflet-bar a:hover {
-    background: rgb(51 65 85);
-  }
-  .leaflet-control-attribution {
-    background: rgb(15 23 42 / 0.8) !important;
-    color: rgb(148 163 184) !important;
-  }
-  .leaflet-control-attribution a {
-    color: rgb(125 211 252) !important;
-  }
+.dark .leaflet-container {
+  background: #10263d; /* sea */
+}
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip {
+  background: rgb(30 41 59); /* slate-800 */
+  color: rgb(226 232 240); /* slate-200 */
+}
+.dark .leaflet-popup-content-wrapper a {
+  color: rgb(125 211 252) !important; /* sky-300 */
+}
+.dark .leaflet-tooltip {
+  background: rgb(30 41 59);
+  color: rgb(226 232 240);
+  border-color: rgb(51 65 85);
+}
+.dark .leaflet-tooltip-top:before {
+  border-top-color: rgb(30 41 59);
+}
+.dark .leaflet-bar a {
+  background: rgb(30 41 59);
+  color: rgb(226 232 240);
+  border-color: rgb(51 65 85);
+}
+.dark .leaflet-bar a:hover {
+  background: rgb(51 65 85);
+}
+.dark .leaflet-control-attribution {
+  background: rgb(15 23 42 / 0.8) !important;
+  color: rgb(148 163 184) !important;
+}
+.dark .leaflet-control-attribution a {
+  color: rgb(125 211 252) !important;
 }
 
 /* Clip Leaflet's high-z panes into the map's own stacking context so they

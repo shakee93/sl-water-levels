@@ -15,6 +15,10 @@ export const si: Dict = {
   "nav.menu": "මෙනුව", // needs native review
   "nav.menuClose": "මෙනුව වසන්න", // needs native review
   "lang.label": "භාෂාව",
+  "theme.label": "තේමාව", // needs native review
+  "theme.light": "ලා", // needs native review
+  "theme.dark": "අඳුරු", // needs native review
+  "theme.system": "පද්ධතිය", // needs native review
   "lang.suggest.si": "සිංහලෙන් බලන්න",
   "lang.suggest.ta": "தமிழில் பார்க்க",
   "lang.suggest.dismiss": "වසන්න",

@@ -15,6 +15,10 @@ export const ta: Dict = {
   "nav.menu": "பட்டி", // needs native review
   "nav.menuClose": "பட்டியை மூடு", // needs native review
   "lang.label": "மொழி",
+  "theme.label": "தோற்றம்", // needs native review
+  "theme.light": "ஒளி", // needs native review
+  "theme.dark": "இருள்", // needs native review
+  "theme.system": "சாதனம்", // needs native review
   "lang.suggest.si": "සිංහලෙන් බලන්න",
   "lang.suggest.ta": "தமிழில் பார்க்க",
   "lang.suggest.dismiss": "மூடு",

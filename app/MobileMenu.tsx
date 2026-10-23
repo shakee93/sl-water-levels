@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LifeBuoy, Info, History, Menu, Waves, X } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
+import { ThemeSegmented } from "./ThemeSwitch";
 
 const ring =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
@@ -122,7 +123,9 @@ export function MobileMenu({ rivers, reservoirsLabel }: { rivers: MenuRiver[]; r
                   ))}
                 </ul>
 
-                <h2 className="mt-3 mb-1 px-2 text-sm font-semibold text-slate-600 dark:text-slate-300">{t("nav.basins")}</h2>
+                <ThemeSegmented />
+
+                <h2 className="mt-5 mb-1 px-2 text-sm font-semibold text-slate-600 dark:text-slate-300">{t("nav.basins")}</h2>
                 <ul className="grid grid-cols-2 gap-x-2">
                   {rivers.map((r) => (
                     <li key={r.href}>

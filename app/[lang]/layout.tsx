@@ -9,6 +9,8 @@ import { Footer } from "../Footer";
 import { LocationPrompt } from "../LocationPrompt";
 import { LocaleProvider } from "../LocaleProvider";
 import { LangSideEffects } from "../LanguageBar";
+import { ThemeSync } from "../ThemeSync";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { HTML_LANG, LOCALES, OG_LOCALE, isLocale } from "@/lib/i18n/config";
 import { DICTS, getI18n } from "@/lib/i18n/server";
 
@@ -46,6 +48,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  colorScheme: "light dark",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#020617" },
@@ -114,7 +117,12 @@ export default async function RootLayout({
     <html
       lang={HTML_LANG[lang]}
       className={`${geistSans.variable} ${geistMono.variable} ${notoSinhala.variable} ${notoTamil.variable} h-full antialiased`}
+      // the inline script below sets class="dark" and style.colorScheme before React hydrates
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body
         className="min-h-full flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
       >
@@ -123,6 +131,7 @@ export default async function RootLayout({
             <Header lang={lang} />
           </Suspense>
           <LangSideEffects />
+          <ThemeSync />
           <LocationPrompt variant="banner" />
           <div className="flex-1">{children}</div>
           <Suspense fallback={null}>

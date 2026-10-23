@@ -27,6 +27,7 @@ import { KeyOverlay } from "./MapKey";
 import { MapLabels } from "./MapLabels";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import type { HomeLake } from "./MapClient";
+import { useScheme } from "./useTheme";
 
 type Props = {
   stations: HomeStation[];
@@ -53,24 +54,6 @@ const SL_BOUNDS: [[number, number], [number, number]] = [
 
 const isHot = (s: HomeStation) =>
   s.tier === "watch" || s.tier === "alert" || s.tier === "minor" || s.tier === "major";
-
-function useColorScheme(): "light" | "dark" {
-  // Lazy initializer reads matchMedia synchronously on first render. MapLeaflet
-  // only renders in the browser (dynamic-imported with ssr:false), so this is
-  // safe — and it avoids the first-paint flash of light tiles in dark mode.
-  const [scheme, setScheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return "light";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => setScheme(e.matches ? "dark" : "light");
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
-  return scheme;
-}
 
 const inSriLanka = (lat: number, lon: number) =>
   lat >= SL_BOUNDS[0][0] && lat <= SL_BOUNDS[1][0] && lon >= SL_BOUNDS[0][1] && lon <= SL_BOUNDS[1][1];
@@ -144,7 +127,7 @@ const lakeIcon = (status: HomeLake["status"], stroke: string) =>
   });
 
 export function MapLeaflet({ stations, lakes, hover }: Props) {
-  const scheme = useColorScheme();
+  const scheme = useScheme();
   const { lang, t, p } = useI18n();
   const rt = rtFor(lang);
   // On phones the whole island only fits one zoom level further out.
@@ -175,7 +158,7 @@ export function MapLeaflet({ stations, lakes, hover }: Props) {
       scrollWheelZoom={false}
       zoomControl={false}
       attributionControl={true}
-      style={{ height: "100%", width: "100%", background: scheme === "dark" ? "#10263d" : "#d6e8f5" }}
+      style={{ height: "100%", width: "100%" }}
     >
       <ZoomControl position="bottomright" />
       <FitIsland />
