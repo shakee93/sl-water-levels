@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { AlertTriangle } from "lucide-react";
 import { getReservoirs, type RV } from "@/lib/reservoirData";
+import { getKnownStatuses, type KnownStatus } from "@/lib/reservoirStatus";
 import { fetchStations } from "@/lib/arcgis";
 import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
 import { basinPath, stationPath } from "@/lib/slug";
@@ -80,6 +81,7 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
     mapLinks[r] = `${p(path)}#map`;
   }
 
+  const known = await getKnownStatuses(items).catch(() => new Map<string, KnownStatus>());
   const filterItems: FilterItem[] = items.map((rv) => ({
     key: rv.slug,
     name: localName(rv, lang),
@@ -90,7 +92,7 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
     cusecs: rv.flow?.cusecs ?? 0,
     pct: rv.storage?.pct ?? null,
     search: searchText([rv.name, rv.si, rv.ta, rv.slug.replace(/-/g, " "), rv.river, rv.district]),
-    node: <RvCard rv={rv} lang={lang} />,
+    node: <RvCard rv={rv} lang={lang} known={known.get(rv.slug)} />,
   }));
   // Visible chip text uses the localised river name; the filter compares the raw name, so map it back.
   const riverLabels = new Map(rivers.map((r) => [r, riverName(r, lang)]));

@@ -39,7 +39,7 @@ const en = {
   "s.spilling": "Spilling",
   "s.releasing": "Releasing",
   "s.holding": "Holding",
-  "s.nodata": "No release data",
+  "s.nodata": "No live data",
   "full": "{n}% full",
   "fullWord": "full",
   "tank.aria": "Reservoir {n}% full",
@@ -136,6 +136,28 @@ const en = {
   "down.arrives": "Water arrives",
   "down.listLabel": "Path of the water, from the reservoir towards the sea",
   "stat.noRain": "No data",
+  "known.below": "{n} m below full",
+  "known.atFull": "At full level",
+  "known.filling": "Filling",
+  "known.emptying": "Emptying",
+  "known.steady": "Steady",
+  "known.near": "Near spill level",
+  "known.nearTip": "Storage is high and still rising. This is not a report that gates are open.",
+  "known.tip": "CEB doesn't publish live gate releases. We show storage and the Mahaweli weekly plan.",
+  "known.stor": "Storage: {source}, {date}.",
+  "known.moved": "Level {n} m since {date}.",
+  "known.headline": "Live release not published",
+  "known.fsl": "Full supply level {m} m: Mahaweli operating rules",
+  "plan.title": "Planned release",
+  "plan.mcm": "{n} million m³ a day",
+  "plan.avg": "≈ {c} cusecs on average",
+  "plan.for": "Planned average for {range}",
+  "plan.src": "Mahaweli Authority weekly meeting, {date}",
+  "plan.note": "A plan for the week, not a measured flow and not a spill.",
+  "plan.over": "Plan week ended {date}",
+  "plan.last": "{n} million m³ released in the week before the meeting",
+  "plan.none": "No weekly plan listed for this reservoir.",
+  "d.known": "{name} reservoir is {n}% full{t}. Live gate releases are not published for it. {src}.",
 };
 export type RKey = keyof typeof en;
 type RDict = Record<RKey, string>;
@@ -176,7 +198,7 @@ const si: RDict = {
   "s.spilling": "වාන් දමයි",
   "s.releasing": "මුදාහරියි",
   "s.holding": "රඳවාගෙන",
-  "s.nodata": "මුදාහැරීමේ දත්ත නැත",
+  "s.nodata": "සජීවී දත්ත නැත",
   "full": "{n}% පිරී ඇත",
   "fullWord": "පිරී ඇත",
   "tank.aria": "ජලාශය {n}% පිරී ඇත",
@@ -273,6 +295,28 @@ const si: RDict = {
   "down.arrives": "ජලය ළඟා වේ",
   "down.listLabel": "ජලය ගමන් කරන මාර්ගය, ජලාශයේ සිට මුහුද දෙසට",
   "stat.noRain": "දත්ත නැත",
+  "known.below": "පූර්ණ මට්ටමට මීටර් {n}ක් පහළින්", // needs native review
+  "known.atFull": "පූර්ණ මට්ටමේ", // needs native review
+  "known.filling": "පිරෙමින්", // needs native review
+  "known.emptying": "හිස් වෙමින්", // needs native review
+  "known.steady": "ස්ථාවර", // needs native review
+  "known.near": "පිටාර මට්ටමට ආසන්නයි", // needs native review
+  "known.nearTip": "ගබඩාව ඉහළ අතර තවමත් ඉහළ යයි. වාන් දොරටු විවෘත බවක් වාර්තා වී නැත.", // needs native review
+  "known.tip": "වාන් දොරටු මුදාහැරීම් සජීවීව ලංකා විදුලිබල මණ්ඩලය ප්‍රකාශ නොකරයි. අපි ගබඩාව සහ මහවැලි සතිපතා සැලසුම පෙන්වමු.", // needs native review
+  "known.stor": "ගබඩාව: {source}, {date}.", // needs native review
+  "known.moved": "{date} සිට මට්ටම මීටර් {n}.", // needs native review
+  "known.headline": "සජීවී මුදාහැරීම ප්‍රකාශිත නැත", // needs native review
+  "known.fsl": "පූර්ණ සැපයුම් මට්ටම මීටර් {m}: මහවැලි මෙහෙයුම් නීති", // needs native review
+  "plan.title": "සැලසුම් කළ මුදාහැරීම", // needs native review
+  "plan.mcm": "දිනකට මිලියන {n} m³", // needs native review
+  "plan.avg": "සාමාන්‍යයෙන් ≈ කියුසෙක් {c}", // needs native review
+  "plan.for": "{range} සඳහා සැලසුම් කළ සාමාන්‍යය", // needs native review
+  "plan.src": "මහවැලි අධිකාරියේ සතිපතා රැස්වීම, {date}", // needs native review
+  "plan.note": "සතියේ සැලසුමක් පමණි; මනින ලද ගලනයක් හෝ වාන් දැමීමක් නොවේ.", // needs native review
+  "plan.over": "සැලසුම් සතිය {date} අවසන් විය", // needs native review
+  "plan.last": "රැස්වීමට පෙර සතියේ මුදාහැරි ජලය මිලියන {n} m³", // needs native review
+  "plan.none": "මෙම ජලාශය සඳහා සතිපතා සැලසුමක් ලැයිස්තුගත වී නැත.", // needs native review
+  "d.known": "{name} ජලාශය {n}% පිරී ඇත{t}. එහි සජීවී වාන් දොරටු මුදාහැරීම් ප්‍රකාශිත නැත. {src}.", // needs native review
 };
 
 const ta: RDict = {
@@ -311,7 +355,7 @@ const ta: RDict = {
   "s.spilling": "வழிந்தோடுகிறது",
   "s.releasing": "திறக்கிறது",
   "s.holding": "தேக்குகிறது",
-  "s.nodata": "வெளியேற்றத் தரவு இல்லை",
+  "s.nodata": "நேரடித் தரவு இல்லை",
   "full": "{n}% நிரம்பியுள்ளது",
   "fullWord": "நிரம்பியுள்ளது",
   "tank.aria": "நீர்த்தேக்கம் {n}% நிரம்பியுள்ளது",
@@ -408,6 +452,28 @@ const ta: RDict = {
   "down.arrives": "நீர் வந்தடையும்",
   "down.listLabel": "நீர் செல்லும் பாதை, நீர்த்தேக்கத்திலிருந்து கடல் நோக்கி",
   "stat.noRain": "தரவு இல்லை",
+  "known.below": "முழு மட்டத்தை விட {n} மீ கீழே", // needs native review
+  "known.atFull": "முழு மட்டத்தில்", // needs native review
+  "known.filling": "நிரம்பி வருகிறது", // needs native review
+  "known.emptying": "குறைந்து வருகிறது", // needs native review
+  "known.steady": "நிலையானது", // needs native review
+  "known.near": "வழிந்தோடும் மட்டத்தை நெருங்கியுள்ளது", // needs native review
+  "known.nearTip": "சேமிப்பு அதிகம், இன்னும் உயர்கிறது. கதவுகள் திறந்துள்ளதாக அறிவிப்பு இல்லை.", // needs native review
+  "known.tip": "கதவு வெளியேற்றங்களை இலங்கை மின்சார சபை நேரடியாக வெளியிடுவதில்லை. சேமிப்பையும் மகாவலி வாராந்திர திட்டத்தையும் காட்டுகிறோம்.", // needs native review
+  "known.stor": "சேமிப்பு: {source}, {date}.", // needs native review
+  "known.moved": "{date} முதல் மட்டம் {n} மீ.", // needs native review
+  "known.headline": "நேரடி வெளியேற்றம் வெளியிடப்படவில்லை", // needs native review
+  "known.fsl": "முழு விநியோக மட்டம் {m} மீ: மகாவலி இயக்க விதிகள்", // needs native review
+  "plan.title": "திட்டமிட்ட வெளியேற்றம்", // needs native review
+  "plan.mcm": "நாளுக்கு {n} மில்லியன் மீ³", // needs native review
+  "plan.avg": "சராசரியாக ≈ {c} கியூசெக்", // needs native review
+  "plan.for": "{range} க்கான திட்டமிட்ட சராசரி", // needs native review
+  "plan.src": "மகாவலி அதிகாரசபை வாராந்திரக் கூட்டம், {date}", // needs native review
+  "plan.note": "வாரத்துக்கான திட்டம் மட்டுமே; அளவிடப்பட்ட ஓட்டமோ வழிந்தோடலோ அல்ல.", // needs native review
+  "plan.over": "திட்ட வாரம் {date} அன்று முடிந்தது", // needs native review
+  "plan.last": "கூட்டத்துக்கு முந்தைய வாரத்தில் {n} மில்லியன் மீ³ வெளியேற்றப்பட்டது", // needs native review
+  "plan.none": "இந்த நீர்த்தேக்கத்துக்கு வாராந்திரத் திட்டம் இல்லை.", // needs native review
+  "d.known": "{name} நீர்த்தேக்கம் {n}% நிரம்பியுள்ளது{t}. அதன் நேரடி கதவு வெளியேற்றங்கள் வெளியிடப்படவில்லை. {src}.", // needs native review
 };
 
 const DICTS: Record<Locale, RDict> = { en, si, ta };

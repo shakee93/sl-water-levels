@@ -8,7 +8,9 @@ import { rtFor } from "@/lib/i18n/reservoirs";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 import { SpillWatchChip } from "@/app/SpillWatchChip";
+import { getKnownStatuses } from "@/lib/reservoirStatus";
 import { SizeChip, StatusChip } from "./bits";
+import { KnownChip, NearSpillChip } from "./KnownChip";
 import { localName } from "./RvCard";
 
 /** "Reservoirs on this river" (basin) or "Reservoirs above this gauge" (station): a small strip of links. Fails soft, empty = nothing. */
@@ -30,6 +32,8 @@ export async function RiverReservoirs({ lang, basin, station }: { lang: Locale; 
   list = [...list].sort((a, b) => steps(a) - steps(b) || order[a.status] - order[b.status] || a.name.localeCompare(b.name)).slice(0, 12);
   const { t, p } = getI18n(lang);
   const rt = rtFor(lang);
+  // Dams whose gate releases nobody publishes live: show what we do know instead of "no data".
+  const known = await getKnownStatuses(list).catch(() => new Map());
   return (
     <section className="mt-8" aria-label={rt(station ? "strip.station" : "strip.river")}>
       <h2 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
@@ -45,7 +49,8 @@ export async function RiverReservoirs({ lang, basin, station }: { lang: Locale; 
               className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 min-h-11 sm:min-h-9 rounded-2xl py-1 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-2 text-sm hover:border-sky-300 dark:hover:border-sky-700 transition"
             >
               {localName(r, lang)}
-              <StatusChip status={r.status} rt={rt} />
+              {r.status === "nodata" && known.get(r.slug) ? <KnownChip st={known.get(r.slug)!} rt={rt} t={t} /> : <StatusChip status={r.status} rt={rt} />}
+              {known.get(r.slug)?.nearSpill && <NearSpillChip rt={rt} />}
               {r.flow && r.flow.kind !== "outlets" && !r.barrage && <SizeChip cusecs={r.flow.cusecs} t={t} />}
               <Suspense fallback={null}><SpillWatchChip lang={lang} slug={r.slug} catalogueId={r.catalogueId} /></Suspense>
               {v?.via && (

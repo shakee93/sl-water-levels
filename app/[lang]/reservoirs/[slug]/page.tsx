@@ -26,6 +26,10 @@ import { displayName, localName } from "@/app/reservoirs/RvCard";
 import { Suspense } from "react";
 import { RiverMap } from "@/app/RiverMap";
 import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
+import { FSL_SOURCE_URL, getKnownStatus, type KnownStatus } from "@/lib/reservoirStatus";
+import { WEEKLY_PDF } from "@/lib/wmsWeekly";
+import { windowLabel } from "@/lib/i18n/spillWatch";
+import { KnownChip, NearSpillChip } from "@/app/reservoirs/KnownChip";
 
 export const revalidate = 600;
 
@@ -45,7 +49,7 @@ const srcName = (t: TFn, s: Src) => t(s === "Irrigation Department" ? "release.s
 const dayLabel = (t: TFn, d: string) => shortDay(d, t);
 
 /** Text for the title/description: status, release and storage in one line, with the source and date. */
-function describe(rv: RV, lang: Locale) {
+function describe(rv: RV, lang: Locale, known: KnownStatus | null = null) {
   const { t } = getI18n(lang);
   const rt = rtFor(lang);
   const name = localName(rv, lang);
@@ -54,6 +58,13 @@ function describe(rv: RV, lang: Locale) {
   const when = used?.day ?? rv.storage?.day ?? rv.latestDay;
   const src = !when ? "" : rt("d.src", { source: srcName(t, used?.source ?? rv.storage?.source ?? "Irrigation Department"), date: dayLabel(t, when) });
   const key = `d.${rv.status}` as "d.spilling";
+  if (rv.status === "nodata" && known?.storage && known.ceb) {
+    const trend = known.trend && known.trend.kind !== "steady" ? `, ${rt(`known.${known.trend.kind}` as "known.filling").toLowerCase()}` : "";
+    return {
+      title: rt("title", { name }),
+      description: rt("d.known", { name, n: Math.round(known.storage.pct), t: trend, src: rt("d.src", { source: srcName(t, known.storage.source), date: dayLabel(t, known.storage.day) }) }),
+    };
+  }
   return {
     title: rt("title", { name }),
     description: rt(key, { name, c: used ? fmt(used.cusecs) : "", p: pct, src }).replace(/\s+\./g, ".").replace(/\.\s*\./g, "."),
@@ -65,7 +76,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   if (!isLocale(lang)) return {};
   const hit = await getReservoir(slug).catch(() => null);
   if (!hit) return {};
-  const { title, description } = describe(hit.rv, lang);
+  const { title, description } = describe(hit.rv, lang, await getKnownStatus(hit.rv).catch(() => null));
   const alternates = pageAlternates(lang, `/reservoirs/${slug}`);
   return {
     title: { absolute: title },
@@ -92,17 +103,18 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const { rv, data } = hit;
   const now = nowMs();
 
-  const [national, stations, history, reported] = await Promise.all([
+  const [national, stations, history, reported, known] = await Promise.all([
     getNational().catch(() => [] as NationalStation[]),
     fetchStations().catch(() => []),
     getReservoirHistory(historyKey(rv), now),
     getReportedRelease(rv).catch(() => null),
+    getKnownStatus(rv).catch(() => null),
   ]);
   const ourBasin = rv.river ? stations.find((s) => s.basin.trim().toLowerCase() === rv.river!.trim().toLowerCase())?.basin.trim() ?? null : null;
   const siblings = data.items.filter((r) => r.slug !== rv.slug && rv.river && riverMatches(r, rv.river));
   const sameRiverGauges = ourBasin ? stations.filter((s) => s.basin.trim() === ourBasin) : [];
 
-  const { description } = describe(rv, lang);
+  const { description } = describe(rv, lang, known);
   const canonical = p(`/reservoirs/${slug}`);
   const name = displayName(rv, lang, rt);
   const other = lang === "en" ? [rv.si, rv.ta].filter(Boolean).join(" · ") : rv.name.trim().toLowerCase() === rv.river?.trim().toLowerCase() ? "" : rv.name;
@@ -239,13 +251,19 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
           </p>
           <p className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xl sm:text-2xl font-semibold leading-tight ${statusText[rv.status]}`}>
             <span className={`size-3 shrink-0 rounded-full ${rv.status === "spilling" ? "bg-amber-500" : rv.status === "releasing" ? "bg-sky-500" : rv.status === "holding" ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`} aria-hidden />
-            <span>{rt(`s.${rv.status}` as "s.spilling")}</span>
+            <span>{rv.status === "nodata" && known?.ceb ? rt("known.headline") : rt(`s.${rv.status}` as "s.spilling")}</span>
             {sizeWord && releasing && <span className="font-medium"><span aria-hidden>· </span>{rt("sizeRelease", { size: sizeWord })}</span>}
           </p>
           <p className={`mt-1 text-xs ${muted} tabular-nums`}>
             {lastDay ? rt("asOfDay", { date: dayLabel(t, lastDay) }) : "—"} · {rt("checked", { ago: "" }).trim()}{" "}
             <TimeAgo ts={data.checkedAt} serverNow={now} />
           </p>
+          {known && (known.nearSpill || (rv.status === "nodata" && (known.trend || known.fsl))) && (
+            <p className="mt-2 flex flex-wrap items-center gap-2">
+              {rv.status === "nodata" && (known.trend || known.fsl) && <KnownChip st={known} rt={rt} t={t} showPct={false} />}
+              {known.nearSpill && <NearSpillChip rt={rt} />}
+            </p>
+          )}
           <Suspense fallback={null}><SpillWatchChip lang={lang} slug={rv.slug} catalogueId={rv.catalogueId} detail className="mt-2" /></Suspense>
         </header>
 
@@ -281,6 +299,22 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
                 </span>
               )}
             </div>
+            {known && !depthSrc && (known.fsl || known.trend) && (
+              <p className={`mt-2 text-sm tabular-nums ${storStale ? gone : "text-slate-700 dark:text-slate-300"}`}>
+                {[
+                  known.fsl ? (known.fsl.below < 0.05 ? rt("atFull") : rt("known.below", { n: known.fsl.below.toFixed(1) })) : null,
+                  known.trend ? rt(`known.${known.trend.kind}` as "known.filling") : null,
+                ].filter(Boolean).join(" · ")}
+              </p>
+            )}
+            {known?.trend && known.trend.dLevelM != null && !storStale && (
+              <p className={`mt-1 text-xs ${muted} tabular-nums`}>{rt("known.moved", { n: `${known.trend.dLevelM > 0 ? "+" : ""}${known.trend.dLevelM.toFixed(2)}`, date: dayLabel(t, known.trend.since) })}</p>
+            )}
+            {known?.fsl && !storStale && (
+              <p className={`mt-1 text-xs ${muted}`}>
+                <a href={FSL_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{rt("known.fsl", { m: known.fsl.m })}</a>
+              </p>
+            )}
             {storStale && stor && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{rt("notUpdated", { date: dayLabel(t, stor.day) })}</p>}
             {otherStor && <p className={`mt-2 text-xs ${muted}`}>{rt("alsoStorage", { source: srcName(t, otherStor.source), n: Math.round(otherStor.n), date: dayLabel(t, otherStor.day) })}</p>}
             {stor && (
@@ -337,6 +371,12 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
               <>
                 <p className="mt-2 text-lg">{rt("noFigure")}</p>
                 {gates && <span className={`${chip} mt-3`}><DoorOpen className="size-4" aria-hidden />{t("release.gatesOpen", { n: gates })}</span>}
+              </>
+            ) : known?.ceb ? (
+              <>
+                <p className={`mt-2 text-lg ${muted}`}>{rt("known.headline")}</p>
+                <p className={`mt-1 text-xs ${muted}`}>{rt("known.tip")}</p>
+                {known.plan ? <PlanBlock plan={known.plan} rt={rt} t={t} /> : <p className={`mt-3 text-sm ${muted}`}>{rt("plan.none")}</p>}
               </>
             ) : (
               <>
@@ -461,6 +501,24 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         <p className={`mt-6 text-xs ${muted}`}>{rt("src.note")}</p>
       </div>
     </main>
+  );
+}
+
+function PlanBlock({ plan, rt, t }: { plan: NonNullable<KnownStatus["plan"]>; rt: ReturnType<typeof rtFor>; t: TFn }) {
+  const range = plan.from && plan.to ? windowLabel({ from: plan.from, to: plan.to }, t) : null;
+  const dim = plan.stale ? gone : "";
+  return (
+    <div className={`mt-4 border-t border-slate-100 dark:border-slate-800 pt-3 ${dim}`}>
+      <h3 className={`text-xs font-medium ${plan.stale ? gone : muted}`}>{rt("plan.title")}</h3>
+      <p className="mt-1 text-2xl font-semibold tabular-nums leading-tight">{rt("plan.mcm", { n: plan.mcmPerDay })}</p>
+      <p className={`mt-0.5 text-sm tabular-nums ${plan.stale ? gone : "text-slate-700 dark:text-slate-300"}`}>{rt("plan.avg", { c: fmt(plan.avgCusecs) })}</p>
+      {range && <p className={`mt-1 text-xs ${plan.stale ? gone : muted}`}>{plan.stale && plan.to ? rt("plan.over", { date: dayLabel(t, plan.to) }) : rt("plan.for", { range })}</p>}
+      {plan.lastWeekMcm != null && <p className={`mt-0.5 text-xs tabular-nums ${plan.stale ? gone : muted}`}>{rt("plan.last", { n: plan.lastWeekMcm })}</p>}
+      <p className={`mt-1 text-xs ${plan.stale ? gone : muted}`}>{rt("plan.note")}</p>
+      <p className={`mt-1 text-xs ${plan.stale ? gone : muted}`}>
+        <a href={WEEKLY_PDF} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{plan.meetingDate ? rt("plan.src", { date: dayLabel(t, plan.meetingDate) }) : rt("plan.title")}</a>
+      </p>
+    </div>
   );
 }
 

@@ -7,6 +7,8 @@ import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import { litresPerSecond } from "@/lib/releaseUi";
 import { Basin, SizeMeter, StatusChip, fmt, levelOf } from "./bits";
+import { KnownChip, NearSpillChip } from "./KnownChip";
+import type { KnownStatus } from "@/lib/reservoirStatusCalc";
 import { releaseSize } from "@/lib/releaseUi";
 
 /** Name in the page language when a local name is known. */
@@ -25,7 +27,7 @@ export function displayName(rv: RV, lang: Locale, rt: RT): string {
 }
 
 /** One reservoir as a compact visual row: name, river, storage bar, status and release size. */
-export function RvCard({ rv, lang }: { rv: RV; lang: Locale }) {
+export function RvCard({ rv, lang, known }: { rv: RV; lang: Locale; known?: KnownStatus }) {
   const { t, p } = getI18n(lang);
   const rt = rtFor(lang);
   const st = rv.storage;
@@ -42,7 +44,7 @@ export function RvCard({ rv, lang }: { rv: RV; lang: Locale }) {
             {[rv.river ? riverName(rv.river, lang) : null, rv.district].filter(Boolean).join(" · ") || rt(`kind.${rv.kind}` as "kind.major")}
           </span>
         </span>
-        <StatusChip status={rv.status} rt={rt} />
+        {known && rv.status === "nodata" && (known.trend || known.fsl) ? null : <StatusChip status={rv.status} rt={rt} />}
       </span>
       <span className="mt-3 flex items-center gap-3">
         <Basin level={levelOf(rv)} stale={st ? !st.fresh : false} spilling={rv.status === "spilling"} rt={rt} mini label={st ? rt("tank.aria", { n: Math.round(st.pct) }) : rt("tank.none")} />
@@ -55,6 +57,10 @@ export function RvCard({ rv, lang }: { rv: RV; lang: Locale }) {
           ) : null}
         </span>
       </span>
+      {known && rv.status === "nodata" && (known.trend || known.fsl) && (
+        <span className="mt-2 flex flex-wrap items-center gap-1.5"><KnownChip st={known} rt={rt} t={t} showPct={false} /></span>
+      )}
+      {known?.nearSpill && <span className="mt-2 flex"><NearSpillChip rt={rt} /></span>}
       {flow && (
         <span className="mt-2 block text-xs text-slate-600 dark:text-slate-300 tabular-nums">
           {t("release.cusecs", { n: fmt(flow.cusecs) })} · {rt("lps", { n: fmt(litresPerSecond(flow.cusecs)) })}
