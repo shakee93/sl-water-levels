@@ -19,6 +19,7 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: write # to start the GSMaP job below
 
 concurrency:
   group: health-check
@@ -34,6 +35,15 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
+      # GitHub's own cron never started gsmap-snapshot.yml, and the Cloudflare scheduler that would
+      # has not been redeployed yet. This job is reliably started every 30 min (:07/:37), and JAXA
+      # posts at :01/:31, so start the satellite-rain snapshot from here. Harmless double starts:
+      # both share the `snapshot` concurrency group.
+      - name: Start the GSMaP satellite-rain snapshot
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        continue-on-error: true
+        run: gh workflow run gsmap-snapshot.yml --repo "${{ github.repository }}"
 
       - name: Slack connection test (manual runs only)
         if: github.event_name == 'workflow_dispatch' && inputs.slack_test
