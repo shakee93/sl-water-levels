@@ -110,7 +110,7 @@ async function ocr(img, box, args) {
   tmpDir ??= await mkdtemp(path.join(os.tmpdir(), "curw-"));
   const f = path.join(tmpDir, `o${Math.random().toString(36).slice(2)}.png`);
   await writeFile(f, encodeGray(W, H, g));
-  const { stdout } = await execFileP("tesseract", [f, "stdout", "-l", "eng", ...args], { timeout: 30_000 });
+  const { stdout } = await execFileP("tesseract", [f, "stdout", "-l", "eng", ...args], { timeout: 30_000, env: { ...process.env, OMP_THREAD_LIMIT: "1" } });   // 1 thread: on a 2-core runner tesseract's own threads thrash
   return stdout;
 }
 
@@ -356,7 +356,8 @@ async function main() {
   const results = []; const errors = [];
   for (const page of PAGES) {
     if (!buffers[page]) { errors.push(`${page}: not fetched`); continue; }
-    try { results.push(...(await readPage(page, buffers[page]))); } catch (e) { errors.push(`${page}: ${e.message ?? e}`); }
+    const t0 = Date.now();
+    try { results.push(...(await readPage(page, buffers[page]))); console.log(`${page}: read in ${Math.round((Date.now() - t0) / 1000)} s`); } catch (e) { errors.push(`${page}: ${e.message ?? e}`); }
   }
 
   // De-duplicate stations shown on several pages (first page wins).
