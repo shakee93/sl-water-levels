@@ -233,7 +233,8 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
   const headline =
     pred == null
       ? "No forecast: not enough recent readings to see a trend."
-      : `${word}: about ${pred.toFixed(2)}${me.unit ? ` ${me.unit}` : ""} in an hour (trend only; ${reason}).`;
+      : `${word}: about ${pred.toFixed(2)}${me.unit ? ` ${me.unit}` : ""} in an hour.`;
+  // The headline is user-facing (and feeds the AI line); the method reason is in notes below.
   const notes = t.notes.filter((n) => !(w && n.startsWith("No rain data reported nearby")));
   if (w && rain) {
     notes.unshift(`Catchment rain (area average over ${rain.cells} grid cells above this gauge, Open-Meteo): ${rainBits(rain)}. It is shown for context; this gauge's forecast does not use it.`);
@@ -447,10 +448,9 @@ function fromModel(
   else if (lowestName) {
     // A crossing that is "unlikely" by the persistence rule can still carry real probability (>= 20% at one horizon): hedge the wording.
     const lowP = crossings.find((c) => c.threshold === lowestName)?.probability ?? 0;
-    headline = `${degraded || lowP >= POSSIBLE ? "Probably staying" : "Expected to stay"} below ${nameOf[lowestName]} for the next 24 hours${lowP >= POSSIBLE ? ` (about ${Math.round(lowP * 100)}% chance of reaching it later)` : ""}.`;
+    headline = `${degraded || lowP >= POSSIBLE ? "Probably staying" : "Expected to stay"} below ${nameOf[lowestName]} for the next 24 hours.`;
   }
-  else headline = `Expected to be about ${fmtL(hLast.level)} in 24 hours (range ${fmtL(hLast.low)} to ${fmtL(hLast.high)}); no flood levels are published for this gauge.`;
-  if (degraded && !upcoming) headline = headline.replace(/\.$/, " (reduced accuracy, see notes).");
+  else headline = `Expected to be about ${fmtL(hLast.level)} in 24 hours.`;
 
   // ---- basis
   const basis: string[] = [];

@@ -106,6 +106,8 @@ export function validate(out: ModelOut, facts: string, tier: Tier): { en: string
     if (!atLeastAlert(tier) && numbersIn(text).has("117")) return false;
     if (lang !== "en" && scriptShare(text, SCRIPT[lang]) < 0.5) return false;
     if (/https?:\/\/|<[a-z]/i.test(text)) return false;
+    // A bare "This is expected to continue…" reads as nonsense on the card.
+    if (lang === "en" && /^(this|it)\b/i.test(text.trim())) return false;
     return true;
   };
   return { en: ok(out.en, "en") ? out.en.trim() : null, si: ok(out.si, "si") ? out.si.trim() : null, ta: ok(out.ta, "ta") ? out.ta.trim() : null };
@@ -119,6 +121,7 @@ The page already shows the station, river, district, current level, verdict, an 
 STRICT RULES:
 - Use ONLY the facts in the fact sheet. Do not add, change, round or invent any number, probability, time, level, place or tier. Copy numbers exactly as written (digits, not words). Do not write any other number.
 - Keep the same level of certainty: "could" stays "could", "likely" stays "likely".
+- The sentence must make sense on its own: start with "The river" or "The level" (or the same in Sinhala/Tamil), never with "This" or "It".
 - When the sheet gives a time, keep both the clock time and the "in about N hours" part exactly.
 - Do not mention percentage chances; say "unlikely", "possible" or "likely" instead, matching the sheet.
 - No medical or legal advice, no instructions beyond the sheet.
@@ -154,7 +157,7 @@ const generateCached = unstable_cache(
     if (!v.en) throw new Error("model output failed validation");
     return v;
   },
-  ["advisory-v4"],
+  ["advisory-v5"],
   { revalidate: 1800 }, // 30 min
 );
 
