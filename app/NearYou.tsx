@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronRight, MapPin, Phone } from "lucide-react";
 import { contactsForDistrict } from "@/lib/help";
+import { townPath } from "@/lib/places";
+import { ttFor } from "@/lib/i18n/town";
 import { formatKm, matchLocation } from "@/lib/nearby";
 import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
@@ -72,6 +74,16 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
           </span>
           <ChevronRight className="size-4 shrink-0 text-slate-400 group-hover:text-sky-500 transition" aria-hidden />
         </Link>
+
+        {near.placeName && (
+          <Link
+            href={p(townPath(near.placeName))}
+            className={`group flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800 px-4 min-h-11 text-sm font-medium text-sky-700 dark:text-sky-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}
+          >
+            {ttFor(lang)("near.link", { town: near.placeName })}
+            <ChevronRight className="size-4 shrink-0 text-slate-400 group-hover:text-sky-500 transition" aria-hidden />
+          </Link>
+        )}
 
         {lang !== "en" && <p className="px-4 pb-2 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
 

@@ -1,0 +1,155 @@
+import Link from "next/link";
+import { Suspense } from "react";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { LifeBuoy } from "lucide-react";
+import { placeBySlug } from "@/lib/places";
+import { loadTown } from "@/lib/townData";
+import { ttFor } from "@/lib/i18n/town";
+import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
+import { getI18n } from "@/lib/i18n/server";
+import { riverName } from "@/lib/i18n/format";
+import { formatKm } from "@/lib/nearby";
+import { basinPath } from "@/lib/slug";
+import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
+import { TownRain } from "@/app/flood/TownRain";
+import { TownVerdict } from "@/app/flood/TownVerdict";
+import { RiverMap } from "@/app/RiverMap";
+import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
+
+// Town pages are rendered on first request and then ISR-cached, never at build time: a build that had
+// to fetch rain, gauges and warnings for 135 towns would depend on every upstream being up.
+export const revalidate = 600;
+const SITE = "https://sl-water-levels.vercel.app";
+
+export async function generateStaticParams() {
+  return [];
+}
+
+type Params = { params: Promise<{ lang: string; town: string }> };
+
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { lang, town } = await params;
+  const place = placeBySlug(town);
+  if (!isLocale(lang) || !place) return {};
+  const tt = ttFor(lang);
+  const alternates = pageAlternates(lang, `/flood/${place.slug}`);
+  const gauge = place.stations[0];
+  const title = tt("title", { town: place.name });
+  const description = gauge ? tt("desc", { town: place.name, gauge }) : tt("descNoGauge", { town: place.name });
+  return {
+    title: { absolute: title },
+    description,
+    alternates,
+    openGraph: { title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
+
+export default async function TownPage({ params }: Params) {
+  const { lang: rawLang, town } = await params;
+  if (!isLocale(rawLang)) notFound();
+  const lang: Locale = rawLang;
+  const place = placeBySlug(town);
+  if (!place) notFound();
+
+  const { t, p } = getI18n(lang);
+  const tt = ttFor(lang);
+  const data = await loadTown(place);
+  const g = data.gauge;
+  const canonical = p(`/flood/${place.slug}`);
+  const serverNow = data.input.now;
+
+  const ld = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: t("crumb.allBasins"), item: SITE + p("/") },
+        { "@type": "ListItem", position: 2, name: tt("crumb"), item: SITE + p("/flood") },
+        { "@type": "ListItem", position: 3, name: place.name, item: SITE + canonical },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Place",
+      name: place.name,
+      url: SITE + canonical,
+      geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lon },
+      containedInPlace: { "@type": "AdministrativeArea", name: `${place.district} District, Sri Lanka` },
+    },
+  ];
+
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        {ld.map((x, i) => (
+          <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(x) }} />
+        ))}
+
+        <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.allBasins")}</Link>{" "}
+          <span aria-hidden>›</span>{" "}
+          <Link href={p("/flood")} className="hover:underline inline-block py-3 -my-3">{tt("crumb")}</Link>{" "}
+          <span aria-hidden>›</span>{" "}
+          <span className="text-slate-700 dark:text-slate-300">{place.name}</span>
+        </nav>
+
+        <header className="mb-4 sm:mb-5">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{tt("h1", { town: place.name })}</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{tt("h1sub", { town: place.name, district: place.district })}</p>
+        </header>
+
+        <TownVerdict
+          townName={place.name}
+          input={data.input}
+          gauge={g && { station: g.station, name: g.name, basin: g.basin, km: g.km, unit: g.unit, thresholds: g.thresholds, level: g.level, ts: g.ts, next24: g.next24 }}
+          office={data.office}
+          serverNow={serverNow}
+          href={canonical}
+        />
+
+        {g && (
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+            {tt("sec.based")}:{" "}
+            <Link href={p(g.href)} className="text-sky-700 dark:text-sky-300 underline underline-offset-2 hover:no-underline">
+              {tt("sec.basedLine", { gauge: g.name, river: riverName(g.basin, lang), km: formatKm(g.km, t) })}
+            </Link>
+          </p>
+        )}
+
+        {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
+
+        <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} />
+
+        {g && (
+          <div className="mt-4">
+            <Suspense fallback={null}>
+              <RiverMap lang={lang} basin={g.basin} focusStation={g.station} focusTown={place.name} />
+            </Suspense>
+          </div>
+        )}
+
+        {g && (
+          <Suspense fallback={null}>
+            <RiverReservoirs lang={lang} basin={g.basin} station={g.station} />
+          </Suspense>
+        )}
+
+        <p className="mt-8 text-center">
+          <Link
+            href={p(g ? `/help?station=${encodeURIComponent(g.station)}` : "/help")}
+            className="inline-flex items-center gap-1.5 min-h-11 px-2 text-sm text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          >
+            <LifeBuoy className="size-4" aria-hidden /> {tt("sec.helpLink")}
+          </Link>
+        </p>
+        {g && (
+          <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+            <Link href={p(basinPath(g.basin))} className="hover:underline">{riverName(g.basin, lang)}</Link> · {tt("foot.sources")}
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}

@@ -72,7 +72,7 @@ export function hasCatchment(basin: string, station: string): boolean {
   return !!BASINS[normaliseBasin(basin)]?.stations[station];
 }
 
-async function getJson(url: string, revalidate: number): Promise<Fetched<unknown>> {
+export async function getJson(url: string, revalidate: number): Promise<Fetched<unknown>> {
   try {
     const res = await fetch(url, { next: { revalidate }, signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!res.ok) {

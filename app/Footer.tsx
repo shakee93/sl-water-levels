@@ -7,6 +7,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { FooterLangLinks } from "./FooterLangLinks";
 import { statusT } from "@/lib/i18n/status";
+import { ttFor } from "@/lib/i18n/town";
 
 export async function Footer({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
@@ -62,6 +63,7 @@ export async function Footer({ lang }: { lang: Locale }) {
             {[
               ["/", t("footer.home")],
               ["/reservoirs", rtFor(lang)("nav")],
+              ["/flood", ttFor(lang)("crumb")],
               ["/history", t("footer.floodHistory")],
               ["/help", t("footer.floodHelp")],
               ["/about", t("footer.aboutMethod")],

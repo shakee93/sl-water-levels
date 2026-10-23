@@ -1,0 +1,366 @@
+// Town flood estimate: "is <town> flooding / will it flood?" for places with NO river gauge of their
+// own (Wellampitiya sits on a canal that backs up from the Kelani Ganga; the nearest gauge is Nagalagam
+// Street). Pure and deterministic: no fetching, no clock, no strings. The page (lib/townData.ts)
+// gathers the inputs, this file decides, app/flood/TownVerdict.tsx words it (lib/i18n/town.ts).
+//
+// The verdict uses the same scale as a gauge page:
+//   normal -> watch ("Keep an eye on it") -> alert ("Get ready") -> minor ("Flooding likely") -> major ("Move to safety")
+// plus "stale" = we cannot estimate (no usable gauge). It is an ESTIMATE: it never claims "Flooding now",
+// because only a measurement can show that, so the gauge's minor-flood level reads "Flooding likely" here.
+//
+// HOW IT DECIDES (read top to bottom; each step only ever raises the tone):
+//  1. River tone ("gauge tone"). Start from the freshness-aware tier of the town's primary gauge (the
+//     secondary one if the primary has no fresh reading). Then, exactly as on the gauge page:
+//       - a forecast crossing of alert or above within 24 h that is "likely" (>= 50%), or "possible"
+//         while the river is rising, lifts normal/watch to alert;
+//       - a confirmed reservoir release upstream while the river is rising and already "watch" or
+//         higher lifts it to alert (not for upland towns, whose streets are not fed by the river).
+//     Canal-backwater towns get one extra rule, CANAL_EARLY: a river that is "near alert" AND rising
+//     lifts them to alert, because canals stop draining into a high river well before the gauge's
+//     alert mark is reached.
+//  2. Personal level. If the visitor saved the gauge reading at which THEIR street floods (localStorage
+//     sl_my_levels, in the gauge's own unit), the river is compared with it and wins over the official
+//     tiers: at/above it -> minor ("Flooding likely"); the 24 h forecast reaches it while rising, or the
+//     river is within 15% of it and rising -> alert; within 15% -> watch (same 0.85 ratio as the gauge
+//     "watch" tier, lib/status.ts WATCH_RATIO). Not applied to upland towns' rain step below.
+//  3. Local rain, evaluated at the town's own coordinates (Open-Meteo): HEAVY when 50 mm fall (or are
+//     forecast) in 6 h, or 100 mm in 24 h. This is an assumption, not a calibration: ~50 mm/6 h is about
+//     8 mm/h, above the 7.6 mm/h that meteorologists (AMS/WMO usage) call "heavy" rain, and 100 mm/24 h
+//     is the level at which the Sri Lanka Met Department issues heavy-rain advisories (their "about 100 mm"
+//     wording). Heavy rain raises the tone by exactly ONE step from the river/personal tone, never two:
+//       normal -> watch (any town); watch/alert -> next tone for canal-backwater and riverbank towns
+//       (their streets back up when the river is already high); upland towns stop at watch.
+//     Rain alone never reaches "major" (Move to safety): the rain step is capped at minor.
+//     The ensemble's 90th percentile is shown as "up to N mm possible" but never changes the tone.
+//  4. Official warnings. A current DMC/Irrigation warning naming the gauge's river basin or the town's
+//     district sets a FLOOR: advisory -> watch, alert -> alert, minor flood -> alert, major flood /
+//     evacuation -> minor. (A basin-wide warning does not say this street is under water, so even a
+//     "major flood" warning only floors the town at "Flooding likely"; the Move-to-safety tone comes
+//     from a measured major level at the gauge.)
+//  5. No usable gauge (none fresh, or no flood levels published): tone "stale" ("no estimate") unless
+//     heavy rain or an official warning gives a reason, in which case the same rules start from normal.
+//
+// Constants below are the only tuning knobs.
+import type { Tier } from "./status";
+import type { Unit } from "./units";
+
+export type Tone = "normal" | "watch" | "alert" | "minor" | "major" | "stale";
+export const TONES: Tone[] = ["normal", "watch", "alert", "minor", "major"];
+const rank = (t: Tone) => TONES.indexOf(t);
+const at = (i: number): Tone => TONES[Math.max(0, Math.min(TONES.length - 1, i))];
+const maxTone = (...ts: (Tone | null)[]): Tone | null => {
+  let best: Tone | null = null;
+  for (const t of ts) if (t && t !== "stale" && (best == null || rank(t) > rank(best))) best = t;
+  return best;
+};
+
+export type Drainage = "canal-backwater" | "riverbank" | "upland";
+
+/** Heavy rain: this many mm within 6 hours ... */
+export const HEAVY_MM_6H = 50;
+/** ... or within 24 hours. */
+export const HEAVY_MM_24H = 100;
+/** A river rising by more than this (metres per hour) counts as rising; same as the gauge page. */
+export const RISING_M_PER_H = 0.006;
+/** Personal level: within this fraction below the street's level counts as "close" (0.85, the same ratio as lib/status.ts WATCH_RATIO; kept literal so this file stays dependency-free). */
+export const PERSONAL_NEAR = 0.85;
+/** Rain below these totals is not worth a line in the reasons. */
+export const NOTABLE_MM_6H = 10;
+export const NOTABLE_MM_24H = 25;
+
+export type GaugeIn = {
+  station: string;
+  /** Display name, e.g. "Nagalagam Street". */
+  name: string;
+  basin: string;
+  /** Freshness-aware tier from lib/arcgis (stale/none = unusable). */
+  tier: Tier;
+  level: number | null;
+  unit: Unit;
+  /** Timestamp of that reading. */
+  ts: number | null;
+  /** Change in metres per hour (3 h window); null = unknown. */
+  rate3hM: number | null;
+  km: number;
+};
+
+export type ForecastIn = {
+  status: "ok" | "degraded" | "unavailable";
+  /** Forecast level 1 h and 24 h ahead, in the gauge's unit; null = none. */
+  h1Level: number | null;
+  h24Level: number | null;
+  /** Highest forecast level over all horizons (the upper 80% band where there is one), gauge unit. */
+  maxLevel: number | null;
+  currentLevel: number | null;
+  /** Metres per gauge unit, to turn the 1 h change into metres. */
+  metresPerUnit: number;
+  crossings: { threshold: "alert" | "minor" | "major"; wording: "likely" | "possible" | "unlikely" | "already"; etaTs: number | null }[];
+};
+
+export type RainIn = {
+  past6hMm: number;
+  past24hMm: number;
+  next6hMm: number;
+  next24hMm: number;
+  next24hP90Mm: number | null;
+  next6hP90Mm: number | null;
+};
+
+export type ReleaseIn = { confirmed: boolean; reservoir: string; cusecs: number | null; etaHours: number | null };
+export type WarningIn = { severity: "none" | "advisory" | "alert" | "minor flood" | "major flood" | "evacuation"; source: string; area: string };
+
+export type TownRiskInput = {
+  drainage: Drainage;
+  primary: GaugeIn | null;
+  secondary: GaugeIn | null;
+  forecast: ForecastIn | null;
+  rain: RainIn | null;
+  release: ReleaseIn | null;
+  warning: WarningIn | null;
+  now: number;
+};
+
+export type ReasonKind = "official" | "personal" | "river" | "forecast" | "rain" | "canal" | "release" | "calm" | "nogauge";
+export type Reason = {
+  kind: ReasonKind;
+  /** Key in lib/i18n/town.ts, with its variables (already formatted). */
+  key: string;
+  vars: Record<string, string | number>;
+  /** True for the lines that pushed the tone up: drawn with an amber icon. */
+  warn: boolean;
+};
+
+export type TownRisk = {
+  tone: Tone;
+  /** Tone from the river alone (steps 1-2), before rain and warnings. */
+  riverTone: Tone | null;
+  /** The gauge actually used (primary, else secondary), or null. */
+  gauge: GaugeIn | null;
+  heavyRain: boolean;
+  /** True when heavy rain lifted the tone. */
+  rainRaised: boolean;
+  trend: "up" | "down" | "steady" | "unknown";
+  reasons: Reason[];
+  /** Next-hour line: key into the dictionary. */
+  hourKey: "dir.rising" | "dir.slow" | "dir.falling" | "dir.steady" | "dir.unknown";
+  /** Next-24-hours line. */
+  day: { key: string; vars: Record<string, string | number> };
+  /** Action sentence key, or null. */
+  actionKey: "a.alert" | "a.minor" | "a.major" | null;
+};
+
+const tierTone = (t: Tier): Tone | null => (t === "stale" || t === "none" ? null : t);
+const usable = (g: GaugeIn | null): g is GaugeIn => !!g && tierTone(g.tier) != null && g.level != null;
+
+export function isHeavyRain(r: RainIn | null): boolean {
+  if (!r) return false;
+  return Math.max(r.past6hMm, r.next6hMm) >= HEAVY_MM_6H || Math.max(r.past24hMm, r.next24hMm) >= HEAVY_MM_24H;
+}
+
+const WARN_FLOOR: Record<WarningIn["severity"], Tone | null> = {
+  none: null,
+  advisory: "watch",
+  alert: "alert",
+  "minor flood": "alert",
+  "major flood": "minor",
+  evacuation: "minor",
+};
+
+const fmtLevel = (v: number, unit: Unit) => `${Number.isInteger(v) ? v : v.toFixed(2).replace(/0$/, "")}${unit ? ` ${unit}` : ""}`;
+const r1 = (v: number) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10);
+
+export function assessTown(input: TownRiskInput, myLevel: number | null = null): TownRisk {
+  const { drainage, forecast, rain, release, warning } = input;
+  const gauge = usable(input.primary) ? input.primary : usable(input.secondary) ? input.secondary : null;
+  const reasons: Reason[] = [];
+
+  // ---- 1. river tone
+  const rate = gauge?.rate3hM ?? null;
+  const rising = rate != null && rate > RISING_M_PER_H;
+  const trend: TownRisk["trend"] = rate == null ? "unknown" : Math.abs(rate) < RISING_M_PER_H ? "steady" : rate < 0 ? "down" : "up";
+
+  let river: Tone | null = null;
+  let forecastReason: Reason | null = null;
+  let personalReason: Reason | null = null;
+  if (gauge) {
+    river = tierTone(gauge.tier)!;
+    // forecast crossing of alert or above within 24 h
+    const cross = forecast && forecast.status !== "unavailable"
+      ? forecast.crossings
+          .filter((c) => c.wording === "likely" || c.wording === "possible")
+          .sort((a, b) => (a.etaTs ?? Infinity) - (b.etaTs ?? Infinity))[0]
+      : undefined;
+    if (cross) {
+      const flood = cross.threshold !== "alert";
+      const h = cross.etaTs != null ? Math.max(1, Math.round((cross.etaTs - input.now) / 3_600_000)) : null;
+      const key = `r.forecast${flood ? "Flood" : "Alert"}${h == null ? "Day" : ""}`;
+      forecastReason = { kind: "forecast", key, vars: h == null ? { gauge: gauge.name } : { gauge: gauge.name, h }, warn: false };
+      if ((river === "normal" || river === "watch") && (cross.wording === "likely" || rising)) {
+        river = "alert";
+        forecastReason.warn = true;
+      }
+    }
+    // confirmed release upstream, river rising and already near/at alert
+    if (release?.confirmed && drainage !== "upland" && rising && rank(river) >= rank("watch") && rank(river) < rank("alert")) river = "alert";
+    // canals back up before the gauge reaches alert
+    if (drainage === "canal-backwater" && river === "watch" && rising) river = "alert";
+
+    // ---- 2. personal level
+    if (myLevel != null && gauge.level != null) {
+      const lvl = gauge.level;
+      let p: Tone | null = null;
+      const fMax = forecast?.maxLevel ?? null;
+      if (lvl >= myLevel) p = "minor";
+      else if (fMax != null && fMax >= myLevel && rising) p = "alert";
+      else if (lvl >= myLevel * PERSONAL_NEAR) p = rising ? "alert" : "watch";
+      if (p) {
+        // the street's own level is stronger evidence than the gauge's official marks
+        const before = river;
+        river = maxTone(river, p);
+        personalReason = {
+          kind: "personal",
+          key: lvl >= myLevel ? "r.personalAt" : "r.personalNear",
+          vars: { gauge: gauge.name, level: fmtLevel(lvl, gauge.unit), mine: fmtLevel(myLevel, gauge.unit) },
+          warn: before == null || rank(river!) > rank(before),
+        };
+      }
+    }
+  }
+
+  // ---- 3. rain
+  const heavy = isHeavyRain(rain);
+  let tone: Tone | null = river;
+  let rainRaised = false;
+  if (heavy) {
+    if (tone == null) {
+      // no usable gauge: heavy rain alone is a reason to keep an eye on it
+      if (gauge == null) { tone = "watch"; rainRaised = true; }
+    } else if (tone === "normal") {
+      tone = "watch";
+      rainRaised = true;
+    } else if (drainage !== "upland" && rank(tone) < rank("minor")) {
+      tone = at(rank(tone) + 1);
+      rainRaised = true;
+    }
+  }
+
+  // ---- 4. official warning floor
+  const floor = warning ? WARN_FLOOR[warning.severity] : null;
+  const warnRaised = floor != null && (tone == null || rank(floor) > rank(tone));
+  if (floor) tone = maxTone(tone, floor);
+
+  // ---- reasons (most important first)
+  if (warning && floor) {
+    reasons.push({ kind: "official", key: "r.official", vars: { source: warning.source, area: warning.area }, warn: warnRaised });
+  }
+  if (personalReason) reasons.push(personalReason);
+  if (gauge) {
+    reasons.push({
+      kind: "river",
+      key: "r.river",
+      vars: {
+        river: gauge.basin.trim(),
+        gauge: gauge.name,
+        level: fmtLevel(gauge.level!, gauge.unit),
+        dir: `w.${trend === "up" ? (rate! >= 0.05 ? "rising" : "slow") : trend === "down" ? "falling" : "steady"}`,
+        tier: `t.${tierTone(gauge.tier)}`,
+      },
+      warn: rank(tierTone(gauge.tier)!) >= rank("watch"),
+    });
+  } else {
+    const ref = input.primary ?? input.secondary;
+    if (ref) reasons.push({ kind: "nogauge", key: "r.noGauge", vars: { gauge: ref.name }, warn: false });
+  }
+  if (forecastReason) reasons.push(forecastReason);
+  if (rain) {
+    const r6p = rain.past6hMm, r6n = rain.next6hMm, r24p = rain.past24hMm, r24n = rain.next24hMm;
+    // the single most telling rain line: a heavy one if there is one, else the biggest notable one
+    const cands: { key: string; mm: number; h: number; heavy: boolean }[] = [
+      { key: "Past", mm: r6p, h: 6, heavy: r6p >= HEAVY_MM_6H },
+      { key: "Next", mm: r6n, h: 6, heavy: r6n >= HEAVY_MM_6H },
+      { key: "Past", mm: r24p, h: 24, heavy: r24p >= HEAVY_MM_24H },
+      { key: "Next", mm: r24n, h: 24, heavy: r24n >= HEAVY_MM_24H },
+    ];
+    const heavies = cands.filter((c) => c.heavy).sort((a, b) => b.mm - a.mm);
+    const notable = cands.filter((c) => c.mm >= (c.h === 6 ? NOTABLE_MM_6H : NOTABLE_MM_24H)).sort((a, b) => b.mm - a.mm);
+    const pick = heavies[0] ?? notable[0];
+    if (pick) {
+      reasons.push({
+        kind: "rain",
+        key: `r.rain${pick.key}${pick.heavy ? "Heavy" : ""}`,
+        vars: { mm: r1(pick.mm), h: pick.h },
+        warn: pick.heavy,
+      });
+    }
+    // when the headline is a 24 h total, also say what the other half of the day looks like (fell AND more coming)
+    if (pick && pick.h === 24) {
+      const other = cands.find((c) => c.h === 24 && c.key !== pick.key && c.mm >= NOTABLE_MM_24H);
+      if (other) reasons.push({ kind: "rain", key: `r.rain${other.key}${other.heavy ? "Heavy" : ""}`, vars: { mm: r1(other.mm), h: 24 }, warn: other.heavy });
+    }
+    const p90 = rain.next24hP90Mm;
+    if (!heavy && p90 != null && p90 >= HEAVY_MM_24H) {
+      reasons.push({ kind: "rain", key: "r.rainP90", vars: { mm: r1(p90) }, warn: false });
+    }
+    if (rainRaised) reasons.push({ kind: "rain", key: "r.rainRaised", vars: {}, warn: true });
+  }
+  if (drainage === "canal-backwater" && tone != null && rank(tone) >= rank("watch")) {
+    reasons.push({ kind: "canal", key: "r.canal", vars: {}, warn: false });
+  }
+  if (release && drainage !== "upland") {
+    if (release.confirmed && release.cusecs != null) {
+      const withEta = release.etaHours != null && gauge;
+      reasons.push({
+        kind: "release",
+        key: withEta ? "r.releaseEta" : "r.release",
+        vars: { res: release.reservoir, cusecs: Math.round(release.cusecs).toLocaleString("en-US"), ...(withEta ? { gauge: gauge!.name, h: Math.max(1, Math.round(release.etaHours!)) } : {}) },
+        warn: rising,
+      });
+    } else if (!release.confirmed) {
+      reasons.push({ kind: "release", key: "r.releaseNews", vars: { res: release.reservoir }, warn: false });
+    }
+  }
+  if (reasons.length === 0 || (tone === "normal" && !reasons.some((r) => r.warn))) {
+    if (gauge && tone === "normal") {
+      // replace the lone river line with the calmer sentence only when nothing else is notable
+      if (reasons.every((r) => r.kind === "river")) {
+        reasons.splice(0, reasons.length, { kind: "calm", key: "r.calm", vars: { river: gauge.basin.trim() }, warn: false });
+      }
+    }
+  }
+
+  // ---- next hour / next 24 hours
+  let hourM: number | null = null;
+  if (gauge && forecast && forecast.h1Level != null && forecast.currentLevel != null) hourM = (forecast.h1Level - forecast.currentLevel) * forecast.metresPerUnit;
+  else if (rate != null) hourM = rate;
+  const hourKey: TownRisk["hourKey"] =
+    hourM == null ? "dir.unknown" : Math.abs(hourM) < RISING_M_PER_H ? "dir.steady" : hourM < 0 ? "dir.falling" : hourM < 0.05 ? "dir.slow" : "dir.rising";
+
+  let day: TownRisk["day"] = { key: "n24.unknown", vars: {} };
+  if (gauge || tone != null) {
+    if (forecastReason && forecastReason.key.startsWith("r.forecast")) {
+      day = { key: forecastReason.key.replace("r.forecast", "n24.reach"), vars: "h" in forecastReason.vars ? { h: forecastReason.vars.h } : {} };
+    } else if (heavy && rain && Math.max(rain.next6hMm >= HEAVY_MM_6H ? rain.next24hMm : 0, rain.next24hMm >= HEAVY_MM_24H ? rain.next24hMm : 0) > 0) {
+      day = { key: "n24.rain", vars: { mm: r1(rain.next24hMm) } };
+    } else if (rain && rain.next24hP90Mm != null && rain.next24hP90Mm >= HEAVY_MM_24H) {
+      day = { key: "n24.rainPossible", vars: { mm: r1(rain.next24hP90Mm) } };
+    } else if (tone && rank(tone) >= rank("alert")) {
+      day = { key: "n24.stay", vars: {} };
+    } else if (tone === "normal" || tone === "watch") {
+      day = !rain && !forecast ? { key: "n24.unknown", vars: {} } : { key: "n24.none", vars: {} };
+    }
+  }
+
+  const final: Tone = tone ?? "stale";
+  return {
+    tone: final,
+    riverTone: river,
+    gauge,
+    heavyRain: heavy,
+    rainRaised,
+    trend,
+    reasons,
+    hourKey: gauge ? hourKey : "dir.unknown",
+    day,
+    actionKey: final === "alert" ? "a.alert" : final === "minor" ? "a.minor" : final === "major" ? "a.major" : null,
+  };
+}

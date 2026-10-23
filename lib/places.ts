@@ -2,8 +2,20 @@
 // `stations` holds EXACT `hydrostations.station` strings, most relevant gauge first
 // (the gauge on the river that floods the place, not merely the nearest one).
 // Coordinates are town centres, good to ~2 km. Sinhala/Tamil aliases only where confident.
+/**
+ * How the town drains, which decides how local rain and the river combine (lib/townRisk.ts).
+ *  - "canal-backwater": low-lying, drained by canals/marsh that empty into the river near its mouth.
+ *    When the river is high the canal cannot empty, so heavy local rain floods streets before the
+ *    gauge reaches any official level (Wellampitiya, Kolonnawa, Kelaniya ...).
+ *  - "riverbank": sits on the banks of a gauged river; the gauge is a direct measure.
+ *  - "upland": hills or ridge towns where the river is not what floods the streets.
+ */
+export type Drainage = "canal-backwater" | "riverbank" | "upland";
 export type Place = {
   name: string;
+  /** URL slug of the town page (/flood/<slug>). */
+  slug: string;
+  drainage: Drainage;
   aliases: string[];
   lat: number;
   lon: number;
@@ -169,9 +181,30 @@ const ROWS: Row[] = [
   ["Dehiattakandiya", "Ampara", 7.6870, 81.0450, ["Padiyathalawa"], ["Dehiattakandiya", "Dehiaththakandiya", "දෙහිඅත්තකණ්ඩිය"]],
 ];
 
+const CANAL_BACKWATER = new Set([
+  "Colombo", "Kolonnawa", "Wellampitiya", "Orugodawatta", "Dematagoda", "Grandpass", "Kotahena", "Mattakkuliya", "Modara",
+  "Peliyagoda", "Kelaniya", "Kiribathgoda", "Wattala", "Hendala", "Ragama", "Kandana", "Kotikawatta", "Angoda", "Mulleriyawa",
+  "Thalangama", "Rajagiriya", "Battaramulla", "Kotte", "Ja-Ela", "Ekala", "Seeduwa", "Katunayake", "Negombo",
+]);
+const UPLAND = new Set([
+  "Malabe", "Hokandara", "Athurugiriya", "Homagama", "Kadawatha", "Maskeliya", "Nuwara Eliya", "Talawakele", "Hatton", "Kegalle",
+  "Warakapola", "Gampaha", "Yakkala", "Nittambuwa", "Pugoda", "Veyangoda", "Divulapitiya", "Mirigama", "Kurunegala", "Wariyapola",
+  "Kuliyapitiya", "Narammala", "Polgahawela", "Nikaweratiya", "Anamaduwa", "Maho", "Marawila", "Kandy", "Digana", "Kadugannawa",
+  "Teldeniya", "Akurana", "Pelmadulla", "Balangoda", "Morawaka", "Deniyaya", "Pitabeddara", "Ingiriya", "Horana", "Bandaragama",
+  "Monaragala", "Buttala", "Thanamalwila", "Padiyatalawa", "Dehiattakandiya", "Siyambalanduwa", "Kataragama", "Ranala",
+  "Thambuttegama", "Kekirawa", "Anuradhapura", "Medawachchiya", "Ganemulla", "Attanagalla", "Elpitiya",
+]);
+const slugOf = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 export const PLACES: Place[] = ROWS.map(([name, district, lat, lon, stations, aliases = []]) => ({
   name, district, lat, lon, stations, aliases: aliases.filter((a) => a !== name),
+  slug: slugOf(name),
+  drainage: CANAL_BACKWATER.has(name) ? "canal-backwater" : UPLAND.has(name) ? "upland" : "riverbank",
 }));
+
+export const placeBySlug = (slug: string): Place | undefined => PLACES.find((p) => p.slug === slug);
+/** Town page path for a place name as the gazetteer spells it. */
+export const townPath = (name: string): string => `/flood/${slugOf(name)}`;
 
 // Basin keys are the TRIMMED `hydrostations.basin` values.
 export const RIVERS: RiverAlias[] = [

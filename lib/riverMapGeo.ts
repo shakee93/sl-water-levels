@@ -234,6 +234,8 @@ export type GeoInput = {
   seaLabel: string;
   /** The station this page is about, if any. */
   focusStation?: string;
+  /** The town (TownIn id) this page is about: always drawn, marked as the focus, even if it is not near the river. */
+  focusTown?: string;
   /** The reservoir (slug) this page is about: the map frames it, its gauges below and the river to the sea. */
   focusReservoir?: string;
   /** Drawing width in map units (default 360, the phone map; the wide map uses more). */
@@ -294,8 +296,8 @@ export function buildGeoMap(input: GeoInput): MapModel | null {
   const anchors = [...gAt.values()].map((g) => g.ll);
   const cand = input.towns
     .map((t) => ({ t, rd: snap(ways, [t.lon, t.lat], kx)?.d ?? 99, gd: Math.min(...anchors.map((a) => Math.hypot((a[0] - t.lon) * kx, a[1] - t.lat) * KM)) }))
-    .filter((c) => c.rd <= 10)
-    .sort((a, b) => a.gd - b.gd);
+    .filter((c) => c.rd <= 10 || c.t.id === input.focusTown)
+    .sort((a, b) => (a.t.id === input.focusTown ? -1 : 0) - (b.t.id === input.focusTown ? -1 : 0) || a.gd - b.gd);
   for (const c of cand) {
     if (towns.length >= 6) break;
     if (towns.some((o) => Math.hypot((o.lon - c.t.lon) * kx, o.lat - c.t.lat) * KM < 5)) continue;
@@ -470,8 +472,9 @@ export function buildGeoMap(input: GeoInput): MapModel | null {
   for (const t of towns) {
     const p = proj([t.lon, t.lat]);
     if (p.x < 10 || p.x > W - 10 || p.y < 10 || p.y > h - 10) continue;
-    if (nodes.some((n) => n.kind !== "town" && Math.hypot(n.x - p.x, n.y - p.y) < 14)) continue;
-    nodes.push({ id: `t:${t.id}`, kind: "town", ...p, label: { text: t.label, sub: null, x: 0, y: 0, anchor: "start" }, name: t.label, detail: "" });
+    const isFocus = t.id === input.focusTown;
+    if (!isFocus && nodes.some((n) => n.kind !== "town" && Math.hypot(n.x - p.x, n.y - p.y) < 14)) continue;
+    nodes.push({ id: `t:${t.id}`, kind: "town", ...p, label: { text: t.label, sub: null, x: 0, y: 0, anchor: "start" }, name: t.label, detail: "", focus: isFocus });
   }
 
   // ---- scale bar and compass keep clear of labels

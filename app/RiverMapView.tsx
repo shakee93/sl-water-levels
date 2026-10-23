@@ -216,7 +216,7 @@ function Node({
   onClick: (e: React.MouseEvent) => void;
 }) {
   const label = n.label && (
-    <text x={n.label.x} y={n.label.y} textAnchor={n.label.anchor} aria-hidden strokeWidth={geo ? 3.5 : 3} strokeLinejoin="round" className={n.kind === "sea" ? `fill-sky-700 dark:fill-sky-300 italic ${geo ? haloSea : halo}` : n.kind === "town" ? `fill-slate-500 dark:fill-slate-400 ${geo ? haloLand : halo}` : geo ? `fill-slate-700 dark:fill-slate-200 ${haloLand}` : labelCls} fontWeight={n.kind === "gauge" || n.highlight || n.focus ? 600 : 400}>
+    <text x={n.label.x} y={n.label.y} textAnchor={n.label.anchor} aria-hidden strokeWidth={geo ? 3.5 : 3} strokeLinejoin="round" className={n.kind === "sea" ? `fill-sky-700 dark:fill-sky-300 italic ${geo ? haloSea : halo}` : n.kind === "town" ? `${n.focus ? "fill-sky-800 dark:fill-sky-200" : "fill-slate-500 dark:fill-slate-400"} ${geo ? haloLand : halo}` : geo ? `fill-slate-700 dark:fill-slate-200 ${haloLand}` : labelCls} fontWeight={n.kind === "gauge" || n.highlight || n.focus ? 600 : 400}>
       {n.label.text}
       {n.label.sub && (
         <tspan x={n.label.x} dy={12} className="fill-slate-500 dark:fill-slate-400" fontWeight={400}>{n.label.sub}</tspan>
@@ -235,7 +235,14 @@ function Node({
   if (n.kind === "town") {
     return (
       <g aria-hidden>
-        <circle cx={n.x} cy={n.y} r={2.4} fill="none" strokeWidth="1.2" className="stroke-slate-400 dark:stroke-slate-500" />
+        {n.focus ? (
+          <>
+            <circle cx={n.x} cy={n.y} r={9} fill="none" strokeWidth="1.6" className="stroke-sky-600 dark:stroke-sky-300" />
+            <circle cx={n.x} cy={n.y} r={4.5} strokeWidth="1.6" className="fill-sky-600 dark:fill-sky-300 stroke-white dark:stroke-slate-900" />
+          </>
+        ) : (
+          <circle cx={n.x} cy={n.y} r={2.4} fill="none" strokeWidth="1.2" className="stroke-slate-400 dark:stroke-slate-500" />
+        )}
         {label}
       </g>
     );

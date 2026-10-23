@@ -28,6 +28,7 @@ import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { RiverMap } from "@/app/RiverMap";
 import { StationNearby } from "@/app/StationNearby";
+import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
 export const revalidate = 60;
 
@@ -270,6 +271,8 @@ export default async function StationPage({
             <Suspense key={`dams-${station}`} fallback={null}>
               <BasinDams basin={basin} lang={lang} />
             </Suspense>
+
+            <TownsOnGauge lang={lang} station={station} />
 
             <Suspense key={`helplink-${station}`} fallback={null}>
               <StationHelpCard lang={lang} basin={basin} station={station} variant="link" />

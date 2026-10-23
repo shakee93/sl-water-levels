@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getNational } from "@/lib/arcgis";
 import { getHistory, historyPath } from "@/lib/history";
 import { getReservoirs } from "@/lib/reservoirData";
+import { PLACES } from "@/lib/places";
 import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
 const SITE = "https://sl-water-levels.vercel.app";
@@ -60,6 +61,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...entry("/", newest),
     ...(rsv ? entry("/reservoirs", dayMs(rsvDay)) : []),
     ...(rsv?.items ?? []).flatMap((r) => entry(`/reservoirs/${r.slug}`, dayMs(r.latestDay))),
+    ...entry("/flood"),
+    ...PLACES.flatMap((x) => entry(`/flood/${x.slug}`)),
     ...entry("/help"),
     ...entry("/about"),
     ...entry("/history"),

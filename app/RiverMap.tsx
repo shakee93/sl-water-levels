@@ -28,7 +28,7 @@ const SITE = "https://sl-water-levels.vercel.app";
  *
  * `highlight` marks one reservoir (its own page); `jsonLd` adds the places as a schema.org ItemList.
  */
-export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation, focusReservoir, embedded }: { lang: Locale; basin: string; highlight?: string; jsonLd?: boolean; focusStation?: string; focusReservoir?: string; embedded?: boolean }) {
+export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation, focusReservoir, focusTown, embedded }: { lang: Locale; basin: string; highlight?: string; jsonLd?: boolean; focusStation?: string; focusReservoir?: string; focusTown?: string; embedded?: boolean }) {
   const { t, p } = getI18n(lang);
   const rt = rtFor(lang);
   const b = basin.trim();
@@ -90,7 +90,7 @@ export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation, f
 
   // Real river geometry (OpenStreetMap) where it exists for this basin; otherwise the old schematic.
   const townCands: TownIn[] = PLACES.filter((x) => x.stations.some((st) => stationsHere.has(st))).map((x) => ({ id: x.name, lat: x.lat, lon: x.lon, label: x.name }));
-  const geoIn = { basin: b, gauges, reservoirs, towns: townCands, seaLabel: rt("map.sea"), focusStation, focusReservoir };
+  const geoIn = { basin: b, gauges, reservoirs, towns: townCands, seaLabel: rt("map.sea"), focusStation, focusReservoir, focusTown };
   const geoNarrow = buildGeoMap(geoIn);
   // A reservoir page embeds the map only where there is real river geometry; otherwise its diagram stands alone.
   if (focusReservoir && !geoNarrow) return null;

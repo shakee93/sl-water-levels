@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Clock, Loader2, MapPin, Search, Waves, X } from "lucide-react";
 import { buildIndex, search, type Hit } from "@/lib/fuzzy";
-import { PLACES, RIVERS } from "@/lib/places";
+import { PLACES, RIVERS, townPath } from "@/lib/places";
 import { basinPath } from "@/lib/slug";
 import { formatLevel } from "@/lib/units";
 import { trackEvent } from "@/lib/umami";
@@ -124,23 +124,40 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
         ...(loc ? [] : [{ key: "locate", type: "locate" } as Item]),
       ];
     }
-    return hits.map((h): Item => {
+    return hits.flatMap((h, idx): Item[] => {
       const g = h.gauges[0];
       const gauge = g ? byName.get(g.station) : undefined;
       if (h.kind === "river") {
-        return { key: `r|${h.label}`, type: "result", label: riverName(h.label, lang), sub: t("search.gauges", { n: h.gauges.length }), href: p(basinPath(h.label)), river: true, away: awayKm(h) };
+        return [{ key: `r|${h.label}`, type: "result", label: riverName(h.label, lang), sub: t("search.gauges", { n: h.gauges.length }), href: p(basinPath(h.label)), river: true, away: awayKm(h) }];
       }
-      return {
+      if (h.kind === "place") {
+        // A town opens its own flood estimate; the best match also offers the river gauge it is based on.
+        const town: Item = {
+          key: `place|${h.label}`,
+          type: "result",
+          label: h.label,
+          sub: h.sub,
+          href: p(townPath(h.label)),
+          river: false,
+          gauge,
+          km: (g as { km: number }).km,
+          away: awayKm(h),
+        };
+        const gaugeRow: Item[] = idx === 0 && gauge
+          ? [{ key: `gauge|${gauge.station}`, type: "result", label: gauge.station, sub: riverName(gauge.basin, lang), href: p(gauge.href), river: false, gauge, away: awayKm({ kind: "station", label: gauge.station, sub: gauge.basin, score: h.score, gauges: [{ station: gauge.station, basin: gauge.basin, km: null }] }) }]
+          : [];
+        return [town, ...gaugeRow];
+      }
+      return [{
         key: `${h.kind}|${h.label}`,
         type: "result",
         label: h.label,
-        sub: h.kind === "place" ? h.sub : h.sub,
+        sub: h.sub,
         href: p(gauge?.href ?? "/"),
         river: false,
         gauge,
-        km: h.kind === "place" ? (g as { km: number }).km : undefined,
         away: awayKm(h),
-      };
+      }];
     });
   }, [hits, byName, recents, trimmed, near, loc, awayKm, t, p, lang]);
 
