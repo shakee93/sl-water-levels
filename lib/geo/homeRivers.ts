@@ -3,6 +3,7 @@
 // (c) OpenStreetMap contributors, ODbL.
 
 import json from "./home-rivers.json";
+import coastJson from "./coast.json";
 
 export type HomeRiver = { basin: string; main: boolean; pts: [lat: number, lon: number][] };
 
@@ -34,3 +35,6 @@ export const RIVER_NAME_LINES: { basin: string; pts: [number, number][] }[] = [.
     return best ? [{ basin, pts: best.pts }] : [];
   })
   .sort((a, b) => b.pts.length - a.pts.length);
+
+/** Land polygons (Sri Lanka and its bigger islands) for the home map's own base layer. */
+export const HOME_COAST: [number, number][][] = (coastJson as { rings: number[][] }).rings.map(decode);

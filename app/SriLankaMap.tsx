@@ -28,9 +28,7 @@ export async function SriLankaMap({ lang, stations }: { lang: Locale; stations: 
             {t("map.heading")}
           </h2>
         </div>
-        <div className="relative h-[520px] sm:h-[700px]">
-          <MapClient stations={valid} lakes={lakes} />
-        </div>
+        <MapClient stations={valid} lakes={lakes} />
       </div>
     </section>
   );

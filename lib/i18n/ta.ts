@@ -30,7 +30,7 @@ export const ta: Dict = {
   "footer.notOfficial": "இது அதிகாரப்பூர்வ எச்சரிக்கை சேவை அல்ல. அவசரத்தில் 117 ஐ அழைக்கவும்.",
   "footer.home": "முகப்பு", // needs native review
   "footer.floodHistory": "வெள்ள வரலாறு", // needs native review
-  "footer.credits": "அளவீடுகள்: நீர்ப்பாசனத் திணைக்களம் மற்றும் மகாவலி அதிகாரசபை. எச்சரிக்கைகள்: அனர்த்த முகாமைத்துவ நிலையம். மழை முன்னறிவிப்பு: Open-Meteo. வரைபடம் © Esri மற்றும் OpenStreetMap பங்களிப்பாளர்கள்.", // needs native review
+  "footer.credits": "அளவீடுகள்: நீர்ப்பாசனத் திணைக்களம் மற்றும் மகாவலி அதிகாரசபை. எச்சரிக்கைகள்: அனர்த்த முகாமைத்துவ நிலையம். மழை முன்னறிவிப்பு: Open-Meteo. வரைபடம் © OpenStreetMap பங்களிப்பாளர்கள்.", // needs native review
   "footer.copyright": "© {year} இலங்கை நீர் மட்டங்கள். இலங்கையில் உருவாக்கப்பட்டது.",
 
   // ---- date and time ----
@@ -155,6 +155,7 @@ export const ta: Dict = {
   "map.heading": "எல்லா நிலையங்களின் வரைபடம்",
   "map.loading": "வரைபடம் ஏற்றுகிறது…",
   "map.openStation": "நிலையத்தைத் திற →",
+  "map.releasingNow": "இப்போது நீர் திறக்கும்",
   "map.key": "குறிப்பு",
   "map.river": "ஆறு",
   "map.releasing": "நீர் திறக்கும் நீர்த்தேக்கம்",

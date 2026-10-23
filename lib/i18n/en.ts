@@ -35,7 +35,7 @@ export const en = {
   "footer.notOfficial": "Not an official warning service. In an emergency, call 117.",
   "footer.home": "Home",
   "footer.floodHistory": "Flood history",
-  "footer.credits": "Readings from the Department of Irrigation and the Mahaweli Authority. Warnings from the Disaster Management Centre. Rain forecasts from Open-Meteo. Map © Esri and OpenStreetMap contributors.",
+  "footer.credits": "Readings from the Department of Irrigation and the Mahaweli Authority. Warnings from the Disaster Management Centre. Rain forecasts from Open-Meteo. Map © OpenStreetMap contributors.",
   "footer.copyright": "© {year} Sri Lanka Water Levels. Built in Sri Lanka.",
 
   // ---- dates and times -----------------------------------------------------------------------
@@ -162,6 +162,7 @@ export const en = {
   "map.heading": "Map of all gauges",
   "map.loading": "Loading map…",
   "map.openStation": "Open station →",
+  "map.releasingNow": "Releasing now",
   "map.key": "Key",
   "map.river": "River",
   "map.releasing": "Reservoir releasing water",

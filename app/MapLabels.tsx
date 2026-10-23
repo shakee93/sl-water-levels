@@ -68,7 +68,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
     // the key and the zoom buttons
     const cr = map.getContainer().getBoundingClientRect();
     const kr = map.getContainer().parentElement?.querySelector("[data-map-key]")?.getBoundingClientRect();
-    if (kr) placed.push({ x0: kr.left - cr.left - 4, y0: kr.top - cr.top - 4, x1: kr.right - cr.left + 4, y1: kr.bottom - cr.top + 4 });
+    if (kr && kr.width > 0) placed.push({ x0: kr.left - cr.left - 4, y0: kr.top - cr.top - 4, x1: kr.right - cr.left + 4, y1: kr.bottom - cr.top + 4 });
     placed.push({ x0: W - 44, y0: H - 90, x1: W, y1: H });
 
     const out: Item[] = [];
@@ -108,11 +108,16 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
     const gaugeLabel = (s: HomeStation) => {
       const p = P(s.latitude, s.longitude);
       const lvl = s.level != null && s.tier !== "stale" && s.tier !== "none" ? formatLevel(s.level, s.unit) : null;
-      beside(`g:${s.basin}|${s.station}`, p.x, p.y, stationDisplayName(s.station), "font-semibold text-slate-800 dark:text-slate-100", {
+      const key = `g:${s.basin}|${s.station}`;
+      if (!hot(s)) {
+        beside(key, p.x, p.y, stationDisplayName(s.station), "text-[10px] text-slate-600 dark:text-slate-400", { gap: 10 });
+        return;
+      }
+      beside(key, p.x, p.y, stationDisplayName(s.station), "font-semibold text-slate-800 dark:text-slate-100", {
         bold: true,
         level: lvl ? { text: lvl, color: TIER_HEX[s.tier], dark: s.tier === "watch" || s.tier === "alert" } : undefined,
-        gap: hot(s) ? 13 : 11,
-        force: hot(s),
+        gap: 13,
+        force: true,
       });
     };
 
@@ -123,57 +128,67 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
       const p = P(l.lat, l.lon);
       beside(`l:${l.slug}`, p.x, p.y, l.name, "font-medium text-sky-800 dark:text-sky-200", { gap: 12, force: true });
     }
-    // 3. rivers: the name beside the line, turned with it
+    // 3. rivers: the name beside the line, turned with it, on the straightest stretch that is free
+    const phone = typeof window !== "undefined" && window.innerWidth < 640;
     const riverItem = (basin: string, pts: [number, number][]) => {
       const px = pts.map((q) => P(q[0], q[1]));
       const cum = [0];
       for (let i = 1; i < px.length; i++) cum.push(cum[i - 1] + Math.hypot(px[i].x - px[i - 1].x, px[i].y - px[i - 1].y));
       const total = cum[cum.length - 1];
-      const text = riverName(basin, lang);
-      const w = textW(text) + 2;
-      if (total < w + 24) return;
+      const nm = riverName(basin, lang);
+      const full = nm.includes(" · ") ? nm.split(" · ")[1] : nm;
+      const short = full.replace(/\s*(Ganga|Oya|Aru|Nadi|ගඟ|ඔය|ஆறு)$/i, "");
       const at = (d: number) => {
-        let i = 1;
-        while (i < cum.length - 1 && cum[i] < d) i++;
-        const t = (d - cum[i - 1]) / Math.max(cum[i] - cum[i - 1], 0.001);
-        return { x: px[i - 1].x + (px[i].x - px[i - 1].x) * t, y: px[i - 1].y + (px[i].y - px[i - 1].y) * t };
+        let lo = 1, hi = cum.length - 1;
+        while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < d) lo = m + 1; else hi = m; }
+        const t = (d - cum[lo - 1]) / Math.max(cum[lo] - cum[lo - 1], 0.001);
+        return { x: px[lo - 1].x + (px[lo].x - px[lo - 1].x) * t, y: px[lo - 1].y + (px[lo].y - px[lo - 1].y) * t };
       };
-      type Cand = { cx: number; cy: number; ang: number; bx: Box };
-      const cands: Cand[] = [];
-      for (const f of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82]) {
-        const d = total * f;
-        if (d - w / 2 < 0 || d + w / 2 > total) continue;
-        const a = at(d - w / 2), b = at(d + w / 2), c = at(d);
-        let ang = Math.atan2(b.y - a.y, b.x - a.x);
-        if (ang > Math.PI / 2) ang -= Math.PI;
-        if (ang < -Math.PI / 2) ang += Math.PI;
-        for (const side of [-1, 1]) {
-          const off = 8 * side;
-          const cx = c.x - Math.sin(ang) * off, cy = c.y + Math.cos(ang) * off;
-          if (!inView(cx, cy, 8)) continue;
-          const hw = (Math.abs(Math.cos(ang)) * w + Math.abs(Math.sin(ang)) * 12) / 2;
-          const hh = (Math.abs(Math.sin(ang)) * w + Math.abs(Math.cos(ang)) * 12) / 2;
-          cands.push({ cx, cy, ang, bx: { x0: cx - hw, y0: cy - hh, x1: cx + hw, y1: cy + hh } });
-        }
-      }
-      // a river runs through its gauges, so a name may brush one plain dot; never a label
+      // a river runs through its gauges, so a name may brush one plain dot; never another label
       const dots = (b: Box) => placed.filter((q) => !labelBoxes.includes(q) && hit(q, b)).length;
       const inB = (b: Box) => b.x0 >= 2 && b.y0 >= 2 && b.x1 <= W - 2 && b.y1 <= H - 2 && !labelBoxes.some((q) => hit(q, b));
-      const pick = cands.find((c) => inB(c.bx) && dots(c.bx) === 0) ?? cands.find((c) => inB(c.bx) && dots(c.bx) <= 1);
-      if (!pick) return;
-      put(pick.bx);
-      out.push({ kind: "text", key: `r:${basin}`, x: pick.cx - w / 2, y: pick.cy - 6, w, h: 12, text, cls: "italic font-medium text-sky-700 dark:text-sky-300", rot: (pick.ang * 180) / Math.PI });
+      for (const text of short !== full ? [full, short] : [full]) {
+        const w = textW(text) * 0.92 + 2;
+        if (total < w + 16) continue;
+        type Cand = { cx: number; cy: number; ang: number; bx: Box; straight: number };
+        const cands: Cand[] = [];
+        for (let d = w / 2 + 4; d <= total - w / 2 - 4; d += Math.max(6, w / 5)) {
+          const a = at(d - w / 2), b = at(d + w / 2), c = at(d);
+          const chord = Math.hypot(b.x - a.x, b.y - a.y);
+          const straight = chord / w;
+          if (straight < 0.65) continue;
+          let ang = Math.atan2(b.y - a.y, b.x - a.x);
+          if (ang > Math.PI / 2) ang -= Math.PI;
+          if (ang < -Math.PI / 2) ang += Math.PI;
+          for (const side of [-1, 1]) {
+            const off = 7 * side;
+            const cx = c.x - Math.sin(ang) * off, cy = c.y + Math.cos(ang) * off;
+            if (!inView(cx, cy, 8)) continue;
+            const hw = (Math.abs(Math.cos(ang)) * w + Math.abs(Math.sin(ang)) * 11) / 2;
+            const hh = (Math.abs(Math.sin(ang)) * w + Math.abs(Math.cos(ang)) * 11) / 2;
+            cands.push({ cx, cy, ang, straight, bx: { x0: cx - hw, y0: cy - hh, x1: cx + hw, y1: cy + hh } });
+          }
+        }
+        cands.sort((p, q) => q.straight - p.straight);
+        const pick = cands.find((c) => inB(c.bx) && dots(c.bx) === 0) ?? cands.find((c) => inB(c.bx) && dots(c.bx) <= 2);
+        if (!pick) continue;
+        put(pick.bx);
+        out.push({ kind: "text", key: `r:${basin}`, x: pick.cx - w / 2, y: pick.cy - 6, w, h: 12, text, cls: "italic text-[10px] font-medium text-sky-700 dark:text-sky-300", rot: (pick.ang * 180) / Math.PI });
+        return;
+      }
     };
     const rivers = RIVER_NAME_LINES;
-    for (const r of rivers.slice(0, 8)) riverItem(r.basin, r.pts);
+    const nMajor = phone ? 5 : 10;
+    for (const r of rivers.slice(0, nMajor)) riverItem(r.basin, r.pts);
     // 4. towns
     if (z >= 6.5) for (const [name, lat, lon] of TOWNS) {
       const p = P(lat, lon);
       beside(`t:${name}`, p.x, p.y, name, "text-slate-500 dark:text-slate-400", { gap: 6, dot: true });
     }
     // 5. every other gauge once zoomed in; the other rivers
-    if (z >= 9) for (const s of stations.filter((x) => !hot(x))) gaugeLabel(s);
-    for (const r of rivers.slice(8)) riverItem(r.basin, r.pts);
+    if (!phone || z >= 9) for (const s of stations.filter((x) => !hot(x))) gaugeLabel(s);
+    if (!phone) for (const r of rivers.slice(nMajor)) riverItem(r.basin, r.pts);
+    else if (z >= 8) for (const r of rivers.slice(nMajor)) riverItem(r.basin, r.pts);
     setItems(out);
   }, [map, stations, lakes, user, lang]);
 

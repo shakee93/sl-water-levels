@@ -30,7 +30,7 @@ export const si: Dict = {
   "footer.notOfficial": "මෙය නිල අනතුරු ඇඟවීමේ සේවාවක් නොවේ. හදිසි අවස්ථාවක 117 අමතන්න.",
   "footer.home": "මුල් පිටුව", // needs native review
   "footer.floodHistory": "ගංවතුර ඉතිහාසය", // needs native review
-  "footer.credits": "මට්ටම් කියවීම්: වාරිමාර්ග දෙපාර්තමේන්තුව සහ මහවැලි අධිකාරිය. අනතුරු ඇඟවීම්: ආපදා කළමනාකරණ මධ්‍යස්ථානය. වැසි පුරෝකථන: Open-Meteo. සිතියම © Esri සහ OpenStreetMap දායකයින්.", // needs native review
+  "footer.credits": "මට්ටම් කියවීම්: වාරිමාර්ග දෙපාර්තමේන්තුව සහ මහවැලි අධිකාරිය. අනතුරු ඇඟවීම්: ආපදා කළමනාකරණ මධ්‍යස්ථානය. වැසි පුරෝකථන: Open-Meteo. සිතියම © OpenStreetMap දායකයින්.", // needs native review
   "footer.copyright": "© {year} ශ්‍රී ලංකා ජල මට්ටම්. ශ්‍රී ලංකාවේ නිර්මාණය කරන ලදී.",
 
   // ---- date and time ----
@@ -155,6 +155,7 @@ export const si: Dict = {
   "map.heading": "සියලු මානවල සිතියම",
   "map.loading": "සිතියම පූරණය වෙමින්…",
   "map.openStation": "ස්ථානය විවෘත කරන්න →",
+  "map.releasingNow": "දැන් ජලය මුදා හරින",
   "map.key": "සංකේත",
   "map.river": "ගඟ",
   "map.releasing": "ජලය මුදා හරින ජලාශ",
