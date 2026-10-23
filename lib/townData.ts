@@ -3,6 +3,7 @@
 import { fetchBasinSnapshot, getNational, type NationalStation } from "./arcgis";
 import { stationDisplayName } from "./displayName";
 import { loadForecast, type Forecast } from "./forecast";
+import { getGsmapZone } from "./gsmap";
 import { getTownRain, type TownRain } from "./townWeather";
 import { releaseAffecting } from "./releases";
 import { getOfficialWarnings } from "./warnings";
@@ -75,7 +76,7 @@ export async function loadTown(place: Place, now = Date.now()): Promise<TownData
   const eff = usableGauge(primary) ? primary : usableGauge(secondary) ? secondary : null;
   const effStation = eff ? byName.get(eff.station)! : null;
 
-  const [rainR, warnings, forecast, release] = await Promise.all([
+  const [rainR, warnings, forecast, release, zone] = await Promise.all([
     getTownRain(place.lat, place.lon, now),
     getOfficialWarnings(now).catch(() => ({ warnings: [] })),
     eff && effStation
@@ -84,6 +85,7 @@ export async function loadTown(place: Place, now = Date.now()): Promise<TownData
           .catch(() => null)
       : Promise.resolve(null),
     eff ? releaseAffecting(eff.station).catch(() => null) : Promise.resolve(null),
+    place.rainZone ? getGsmapZone(place.rainZone, now).catch(() => null) : Promise.resolve(null),
   ]);
 
   // Official warning: the current one that names this river basin or the town's district; strongest wins.
@@ -120,6 +122,10 @@ export async function loadTown(place: Place, now = Date.now()): Promise<TownData
       ? { confirmed: release.confirmed, reservoir: release.reservoir, cusecs: release.cusecs, etaHours: release.etaHours }
       : null,
     warning,
+    // undefined = the street-rain rule does not apply to this town; null = it does but the satellite file is missing or stale
+    streetRain: place.rainZone
+      ? zone && zone.mm24h != null ? { mm24h: zone.mm24h, mm6h: zone.mm6h, mm1h: zone.mm1h, endsAt: zone.endsAt } : null
+      : undefined,
     now,
   };
 

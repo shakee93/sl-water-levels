@@ -21,6 +21,11 @@ export type Place = {
   lon: number;
   district: string;
   stations: string[];
+  /**
+   * Set only for towns the satellite street-rain rule was backtested for (lib/townRisk.ts, STREET_RAIN_ZONES in
+   * scripts/gsmap-snapshot.mjs): the id of the rain zone whose 24 h total drives "water on the streets".
+   */
+  rainZone?: string;
 };
 export type RiverAlias = { basin: string; aliases: string[] };
 
@@ -57,6 +62,8 @@ const ROWS: Row[] = [
   ["Kotikawatta", "Colombo", 6.9333, 79.9040, [NG], ["Kotikawatte", "කොටිකාවත්ත"]],
   ["Angoda", "Colombo", 6.9340, 79.9230, [NG], ["අංගොඩ"]],
   ["Mulleriyawa", "Colombo", 6.9300, 79.9330, [NG], ["Mulleriyava", "මුල්ලේරියාව"]],
+  ["Meethotamulla", "Colombo", 6.9420, 79.8950, [NG], ["Meetotamulla", "Meetotamulle", "Methotamulla", "මීතොටමුල්ල"]],
+  ["Gothatuwa", "Colombo", 6.9340, 79.9110, [NG], ["Gothatuwa New Town", "Gothatuva", "ගොතටුව"]],
   ["Malabe", "Colombo", 6.9061, 79.9570, [NG, HW], ["Malambe", "මාලඹේ"]],
   ["Thalangama", "Colombo", 6.9000, 79.9390, [NG], ["Talangama", "තලංගම"]],
   ["Battaramulla", "Colombo", 6.9010, 79.9190, [NG], ["Battaramulle", "බත්තරමුල්ල"]],
@@ -183,7 +190,7 @@ const ROWS: Row[] = [
 
 const CANAL_BACKWATER = new Set([
   "Colombo", "Kolonnawa", "Wellampitiya", "Orugodawatta", "Dematagoda", "Grandpass", "Kotahena", "Mattakkuliya", "Modara",
-  "Peliyagoda", "Kelaniya", "Kiribathgoda", "Wattala", "Hendala", "Ragama", "Kandana", "Kotikawatta", "Angoda", "Mulleriyawa",
+  "Meethotamulla", "Gothatuwa", "Peliyagoda", "Kelaniya", "Kiribathgoda", "Wattala", "Hendala", "Ragama", "Kandana", "Kotikawatta", "Angoda", "Mulleriyawa",
   "Thalangama", "Rajagiriya", "Battaramulla", "Kotte", "Ja-Ela", "Ekala", "Seeduwa", "Katunayake", "Negombo",
 ]);
 // A town with a river gauge inside it (under 1.5 km) is ON that river, whatever the terrain: never "upland".
@@ -196,12 +203,23 @@ const UPLAND = new Set([
   "Monaragala", "Buttala", "Thanamalwila", "Dehiattakandiya", "Ranala",
   "Thambuttegama", "Kekirawa", "Anuradhapura", "Medawachchiya", "Ganemulla", "Elpitiya",
 ]);
+// Towns the street-rain rule (60 / 100 mm of satellite rain in 24 h) was backtested for. The evidence is the
+// DMC "Kolonnawa" Divisional Secretariat flood record plus news (research/wellampitiya-flood-rule-backtest.md),
+// calibrated on one 4-pixel GSMaP box (6.85/6.95 N x 79.85/79.95 E, i.e. 6.8-7.0 N, 79.8-80.0 E). It applies only to
+// canal-backwater towns inside that box and inside or beside Kolonnawa DS: the six the owner named, plus Angoda
+// (named in the 9 Sep 2020 flood), Meethotamulla and Gothatuwa. Other canal-backwater towns (Colombo city,
+// Kelaniya, Wattala, Ja-Ela, Negombo ...) have no record behind the thresholds, so they keep the river-only
+// estimate until someone backtests them.
+const STREET_RAIN_TOWNS = new Set([
+  "Wellampitiya", "Kolonnawa", "Kotikawatta", "Mulleriyawa", "Orugodawatta", "Dematagoda", "Angoda", "Meethotamulla", "Gothatuwa",
+]);
 const slugOf = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 export const PLACES: Place[] = ROWS.map(([name, district, lat, lon, stations, aliases = []]) => ({
   name, district, lat, lon, stations, aliases: aliases.filter((a) => a !== name),
   slug: slugOf(name),
   drainage: CANAL_BACKWATER.has(name) ? "canal-backwater" : UPLAND.has(name) ? "upland" : "riverbank",
+  ...(STREET_RAIN_TOWNS.has(name) ? { rainZone: "colombo-east" } : {}),
 }));
 
 export const placeBySlug = (slug: string): Place | undefined => PLACES.find((p) => p.slug === slug);

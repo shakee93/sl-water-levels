@@ -263,6 +263,67 @@ assert.equal(PLACES.find((p) => p.name === "Nuwara Eliya").drainage, "upland");
   }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Street-rain rule: satellite 24 h rain 60 mm = "possible" (watch), 100 mm = "likely" (minor); separate from the river, higher wins
+{
+  const sr = (mm24h: number) => ({ mm24h, mm6h: 10, mm1h: 1, endsAt: 0 });
+  const t = (o = {}) => assessTown(base({ streetRain: sr(0), ...o }));
+  // thresholds, edge by edge
+  for (const [mm, tone, level] of [[0, "normal", null], [59, "normal", null], [59.9, "normal", null], [60, "watch", "possible"], [99, "watch", "possible"], [99.9, "watch", "possible"], [100, "minor", "likely"], [250, "minor", "likely"]] as const) {
+    const r = t({ streetRain: sr(mm) });
+    assert.equal(r.tone, tone, `${mm} mm`);
+    assert.equal(r.street?.level ?? null, level, `${mm} mm level`);
+  }
+  // wording: rain-driven line, never "flooding now"
+  assert.deepEqual(keys(t({ streetRain: sr(112) })).filter((k) => k.startsWith("r.street")), ["r.streetLikely"]);
+  assert.equal(t({ streetRain: sr(112) }).reasons.find((x) => x.key === "r.streetLikely").vars.mm, 112);
+  assert.deepEqual(keys(t({ streetRain: sr(65) })).filter((k) => k.startsWith("r.street")), ["r.streetPossible"]);
+  assert.equal(t({ streetRain: sr(65) }).day.key, "n24.street");
+  assert.equal(t({ streetRain: sr(65) }).street?.drives, true);
+  // clears by itself when the total falls
+  assert.equal(t({ streetRain: sr(120) }).tone, "minor");
+  assert.equal(t({ streetRain: sr(55) }).tone, "normal");
+  assert.equal(t({ streetRain: sr(55) }).street, null);
+  // missing / stale data (null) or a town without the rule (undefined): rule silent, no calm claim made by it, no street reason
+  for (const streetRain of [null, undefined]) {
+    const r = t({ streetRain });
+    assert.equal(r.tone, "normal");
+    assert.equal(r.street, null);
+    assert.ok(!keys(r).some((k) => k.startsWith("r.street")));
+  }
+  assert.equal(t({ streetRain: null, primary: g({ tier: "stale" }) }).tone, "stale"); // no data and no gauge: still "no estimate"
+  // no usable river gauge: the rain rule alone still gives a verdict
+  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "stale" }) }).tone, "watch");
+  assert.equal(t({ streetRain: sr(110), primary: null }).tone, "minor");
+  // river higher than rain: the river verdict stands and the street headline does not take over
+  const rv = t({ streetRain: sr(70), primary: g({ tier: "alert" }) });
+  assert.equal(rv.tone, "alert");
+  assert.equal(rv.street?.drives, false);
+  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "major" }) }).tone, "major");
+  assert.equal(t({ streetRain: sr(110), primary: g({ tier: "major" }) }).tone, "major");
+  // rain higher than river: rain wins, and it is not stacked on top of the river step
+  assert.equal(t({ streetRain: sr(110), primary: g({ tier: "watch" }) }).tone, "minor");
+  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "watch" }) }).tone, "watch");
+  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "watch" }) }).street?.drives, false); // equal tone: ordinary wording
+  assert.equal(t({ streetRain: sr(110), primary: g({ tier: "alert" }) }).street?.drives, true);
+  // the Open-Meteo model is not part of this rule: model rain alone never fires it, and a satellite total below 60 ignores it
+  const om = t({ streetRain: sr(10), rain: rain({ past24hMm: 300 }) });
+  assert.equal(om.street, null);
+  assert.equal(om.tone, "watch"); // the existing model-rain step, unchanged
+  assert.equal(t({ streetRain: sr(110), rain: rain({ past24hMm: 300 }) }).tone, "minor"); // higher of the two, no extra step
+  // official warning and the rule: higher wins
+  assert.equal(t({ streetRain: sr(70), warning: { severity: "alert", source: "DMC", area: "Kelani Ganga" } }).tone, "alert");
+  // which towns carry the rule: only the validated ones, all canal-backwater
+  const zoned = PLACES.filter((p) => p.rainZone).map((p) => p.name).sort();
+  assert.deepEqual(zoned, ["Angoda", "Dematagoda", "Gothatuwa", "Kolonnawa", "Kotikawatta", "Meethotamulla", "Mulleriyawa", "Orugodawatta", "Wellampitiya"]);
+  for (const p of PLACES.filter((p) => p.rainZone)) {
+    assert.equal(p.drainage, "canal-backwater", p.name);
+    // inside the 4-pixel box the thresholds were fitted on (6.8-7.0 N, 79.8-80.0 E)
+    assert.ok(p.lat > 6.8 && p.lat < 7.0 && p.lon > 79.8 && p.lon < 80.0, `${p.name} inside the rain box`);
+  }
+  // translations carry the new strings with the same placeholders (checked in full below too)
+}
+
 // Live station list: gauge-in-town and distance checks (skipped offline)
 try {
   const res = await fetch("https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/hydrostations/FeatureServer/0/query?where=1%3D1&outFields=basin,station,latitude,longitude&returnGeometry=false&f=json", { signal: AbortSignal.timeout(15000) });

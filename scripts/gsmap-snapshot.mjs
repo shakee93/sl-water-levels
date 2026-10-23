@@ -17,8 +17,13 @@
 // built by scripts/build-catchments.mjs): the plain mean over the gauge's upstream cells, each cell
 // read from the nearest 0.1 degree GSMaP pixel.
 //
+// Zones: besides the catchments, a few named boxes of 0.1 degree pixels (STREET_RAIN_ZONES below) get the same
+// numbers under "zones". The first is "colombo-east" (6.85/6.95 N x 79.85/79.95 E, the 4-pixel box the
+// street-flood rule was backtested on, research/wellampitiya-flood-rule-backtest.md). Zone hours are the mean of
+// the :00 and :30 files, as in that backtest.
+//
 // Output in <outDir>/gsmap/:
-//   latest.json          per gauge: rate now (mm/h) and rain over the past 1/3/6/24 h (mm)
+//   latest.json          per gauge: rate now (mm/h) and rain over the past 1/3/6/24 h (mm); plus "zones"
 //   series.json          rolling 49 h of 30-minute rates per gauge (the state each run builds on)
 //   archive/YYYY/YYYY-MM-DD.jsonl   one line per new 30-minute step {t, r: {gauge: mm/h}} (UTC day of t)
 //
@@ -77,6 +82,20 @@ for (const [basin, b] of Object.entries(cat.basins)) {
 }
 console.log(`${gauges.length} gauges with catchment cells`);
 
+// Zones: pixel CENTRES (lat, lon) of the 0.1 degree cells that are averaged. Keys are prefixed "zone:" in the series.
+const STREET_RAIN_ZONES = {
+  "colombo-east": {
+    name: "Greater Colombo east (Wellampitiya, Kolonnawa, Kotikawatta, Mulleriyawa ...)",
+    centres: [[6.85, 79.85], [6.85, 79.95], [6.95, 79.85], [6.95, 79.95]],
+  },
+};
+const zones = [];
+for (const [id, z] of Object.entries(STREET_RAIN_ZONES)) {
+  const pixels = z.centres.map(([lat, lon]) => Math.round((LAT0 - lat) / STEP) * NX + Math.round((lon - LON0) / STEP));
+  zones.push({ key: `zone:${id}`, id, name: z.name, cells: pixels.length, pixels });
+}
+const allKeys = [...gauges, ...zones].map((x) => x.key);
+
 // ---- state ------------------------------------------------------------------------------------
 const root = path.join(outDir, "gsmap");
 const seriesFile = path.join(root, "series.json");
@@ -109,8 +128,9 @@ if (!files.length) {
 }
 files.sort((a, b) => a.t - b.t);
 const newest = files[files.length - 1].t;
-const todo = files.filter((f) => !rec.has(f.t) && f.t >= newest - NEED_MS);
-console.log(`newest step ${new Date(newest).toISOString()}, ${todo.length} new file(s)`);
+// New steps, plus recent steps an older series.json recorded without a zone (re-read once, not archived again).
+const todo = files.filter((f) => f.t >= newest - NEED_MS && (!rec.has(f.t) || zones.some((z) => !(z.key in rec.get(f.t)))));
+console.log(`newest step ${new Date(newest).toISOString()}, ${todo.length} file(s) to read`);
 
 const newSteps = [];
 const tmp = mkdtempSync(path.join(tmpdir(), "gsmap-"));
@@ -126,8 +146,10 @@ try {
       console.warn(`skip ${f.name}: ${e.message}`);
       continue;
     }
-    const o = {};
-    for (const g of gauges) {
+    const isNew = !rec.has(f.t);
+    const o = rec.get(f.t) ?? {};
+    for (const g of [...gauges, ...zones]) {
+      if (!isNew && g.key in o) continue;
       let sum = 0, n = 0;
       for (const p of g.pixels) {
         const v = grid[p];
@@ -136,7 +158,7 @@ try {
       o[g.key] = n ? Math.round((sum / n) * 100) / 100 : null;
     }
     rec.set(f.t, o);
-    newSteps.push([f.t, o]);
+    if (isNew) newSteps.push([f.t, o]);
   }
 } finally {
   rmSync(tmp, { recursive: true, force: true });
@@ -150,7 +172,7 @@ if (!times.length) {
 }
 const anchor = times[times.length - 1];
 const series = { updated: new Date().toISOString(), stepMinutes: 30, unit: "mm/h", times: times.map((t) => new Date(t).toISOString()), stations: {} };
-for (const g of gauges) series.stations[g.key] = times.map((t) => rec.get(t)?.[g.key] ?? null);
+for (const k of allKeys) series.stations[k] = times.map((t) => rec.get(t)?.[k] ?? null);
 writeFileSync(seriesFile, JSON.stringify(series));
 
 // ---- archive new steps ------------------------------------------------------------------------
@@ -173,6 +195,18 @@ function window(key, n) {
   if (have === 0 || have < Math.ceil(n * 0.75)) return null;
   return Math.round(((sum * n) / have) * 10) / 10;
 }
+// Zone rain over the past n hours: each hour is the mean of its two half-hour rates (the :00 and :30 files), so
+// sum the newest 2n half-hour steps and halve. Needs 75% of the steps.
+const HALF = HOUR / 2;
+function zoneWindow(key, n) {
+  let sum = 0, have = 0;
+  for (let k = 0; k < 2 * n; k++) {
+    const v = rec.get(anchor - k * HALF)?.[key];
+    if (typeof v === "number") { sum += v; have++; }
+  }
+  if (have === 0 || have < Math.ceil(2 * n * 0.75)) return null;
+  return Math.round(((sum * 2 * n) / have / 2) * 10) / 10;
+}
 const out = {
   source: "GSMaP_NOW (JAXA)",
   credit: "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
@@ -182,7 +216,20 @@ const out = {
   latestEnd: new Date(anchor + HOUR).toISOString(),
   unit: "mm",
   stations: {},
+  zones: {},
 };
+for (const z of zones) {
+  const rate = rec.get(anchor)?.[z.key];
+  out.zones[z.id] = {
+    name: z.name,
+    cells: z.cells,
+    rateMmPerHour: typeof rate === "number" ? rate : null,
+    mm1h: zoneWindow(z.key, 1),
+    mm3h: zoneWindow(z.key, 3),
+    mm6h: zoneWindow(z.key, 6),
+    mm24h: zoneWindow(z.key, 24),
+  };
+}
 for (const g of gauges) {
   const rate = rec.get(anchor)?.[g.key];
   out.stations[g.key] = {

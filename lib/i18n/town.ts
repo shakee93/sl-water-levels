@@ -115,6 +115,16 @@ const en = {
   "details.2": "Heavy rain here (50 mm in 6 hours or 100 mm in 24 hours) raises it by one step, never more.",
   "details.3": "Your own street level, if you set one, and official warnings can raise it further.",
   "details.4": "It never says flooding is happening: only a measurement can show that.",
+  // Street-rain rule (satellite rain, lib/townRisk.ts step 6)
+  "tone.streetPossible": "Water on the streets possible",
+  "tone.streetLikely": "Water on the streets likely",
+  "r.streetPossible": "Heavy rain over the area: {mm} mm in the last 24 hours (satellite)",
+  "r.streetLikely": "Very heavy rain over the area: {mm} mm in the last 24 hours (satellite)",
+  "n24.street": "Water can stay on low streets for hours after heavy rain. Check the canal near you.",
+  "details.street": "Street rain rule: satellite rain (JAXA GSMaP) over this area reaching 60 mm in 24 hours means water on the streets is possible, and 100 mm means likely. It is separate from the river; the higher of the two is shown.",
+  "details.streetNow": "Satellite rain (JAXA GSMaP) now: {mm24} mm in the last 24 hours, {mm6} mm in the last 6 hours, up to {time}.",
+  "details.streetNone": "Satellite rain is not available right now, so the street rain rule is off. That does not mean it is dry.",
+  "details.streetHonest": "In past years the 60 mm level caught about 7 in 10 floods here and gave about 5 false alarms a year; the 100 mm level caught about 6 in 10 with about 2 false alarms a year.",
   "ld.name": "{town} flood estimate",
 } as const;
 
@@ -233,6 +243,16 @@ const si: D = {
   "details.2": "මෙහි දැඩි වැසි (පැය 6 තුළ මි.මී. 50 හෝ පැය 24 තුළ මි.මී. 100) එක් පියවරක් ඉහළ නංවයි, ඊට වැඩි නොවේ.",
   "details.3": "ඔබ සැකසූ ඔබේ වීදියේ මට්ටම සහ නිල අනතුරු ඇඟවීම් එය තවත් ඉහළ නැංවිය හැක.",
   "details.4": "ගංවතුර සිදුවෙමින් පවතින බව එය කිසිවිටෙක නොකියයි: එය පෙන්විය හැක්කේ මිනුමකට පමණි.",
+  // Street-rain rule (draft, needs native review)
+  "tone.streetPossible": "වීදිවලට වතුර ඒමට ඉඩ ඇත",
+  "tone.streetLikely": "වීදිවලට වතුර ඒමට බොහෝ දුරට ඉඩ ඇත",
+  "r.streetPossible": "ප්‍රදේශයේ දැඩි වැසි: පසුගිය පැය 24 තුළ මි.මී. {mm} (චන්ද්‍රිකා දත්ත)",
+  "r.streetLikely": "ප්‍රදේශයේ ඉතා දැඩි වැසි: පසුගිය පැය 24 තුළ මි.මී. {mm} (චන්ද්‍රිකා දත්ත)",
+  "n24.street": "දැඩි වැසි වලින් පසු පහත් වීදිවල වතුර පැය ගණනක් රැඳී තිබිය හැක. ඔබ අසල ඇළ පරීක්ෂා කරන්න.",
+  "details.street": "වීදි වැසි නීතිය: මෙම ප්‍රදේශයේ චන්ද්‍රිකා වැසි (JAXA GSMaP) පැය 24 තුළ මි.මී. 60 කට ළඟා වුවහොත් වීදිවලට වතුර පැමිණිය හැක; මි.මී. 100 කදී බොහෝ දුරට පැමිණේ. එය ගඟෙන් වෙන්ව ගණනය වන අතර ඉහළ අගය පෙන්වයි.",
+  "details.streetNow": "චන්ද්‍රිකා වැසි (JAXA GSMaP) දැන්: පසුගිය පැය 24 තුළ මි.මී. {mm24}, පැය 6 තුළ මි.මී. {mm6}, {time} දක්වා.",
+  "details.streetNone": "චන්ද්‍රිකා වැසි දත්ත දැනට නොමැති බැවින් වීදි වැසි නීතිය ක්‍රියාත්මක නොවේ. එයින් වියළි බව අදහස් නොවේ.",
+  "details.streetHonest": "පසුගිය වසරවල මි.මී. 60 මට්ටම මෙහි ගංවතුරවලින් 10කින් 7ක් පමණ හඳුනාගත් අතර වසරකට වැරදි අනතුරු ඇඟවීම් 5ක් පමණ දුන්නේය; මි.මී. 100 මට්ටම 10කින් 6ක් පමණ හඳුනාගත් අතර වසරකට වැරදි අනතුරු ඇඟවීම් 2ක් පමණ දුන්නේය.",
   "ld.name": "{town} ගංවතුර ඇස්තමේන්තුව",
 };
 
@@ -348,6 +368,16 @@ const ta: D = {
   "details.2": "இங்கு பெய்யும் கனமழை (6 மணி நேரத்தில் 50 மி.மீ அல்லது 24 மணி நேரத்தில் 100 மி.மீ) ஒரு படி மட்டுமே உயர்த்தும்.",
   "details.3": "நீங்கள் அமைத்த உங்கள் தெருவின் மட்டம் மற்றும் அதிகாரப்பூர்வ எச்சரிக்கைகள் அதை மேலும் உயர்த்தலாம்.",
   "details.4": "வெள்ளம் நடந்துகொண்டிருக்கிறது என்று இது ஒருபோதும் கூறாது: அதை அளவீடு மட்டுமே காட்ட முடியும்.",
+  // Street-rain rule (draft, needs native review)
+  "tone.streetPossible": "தெருக்களில் நீர் வர வாய்ப்புள்ளது",
+  "tone.streetLikely": "தெருக்களில் நீர் வர வாய்ப்பு அதிகம்",
+  "r.streetPossible": "பகுதியில் கனமழை: கடந்த 24 மணி நேரத்தில் {mm} மி.மீ (செயற்கைக்கோள்)",
+  "r.streetLikely": "பகுதியில் மிகக் கனமழை: கடந்த 24 மணி நேரத்தில் {mm} மி.மீ (செயற்கைக்கோள்)",
+  "n24.street": "கனமழைக்குப் பிறகு தாழ்வான தெருக்களில் நீர் பல மணி நேரம் தங்கலாம். உங்கள் அருகிலுள்ள கால்வாயைச் சரிபார்க்கவும்.",
+  "details.street": "தெரு மழை விதி: இப்பகுதியில் செயற்கைக்கோள் மழை (JAXA GSMaP) 24 மணி நேரத்தில் 60 மி.மீ ஐ எட்டினால் தெருக்களில் நீர் வரக்கூடும்; 100 மி.மீ ஆனால் வர வாய்ப்பு அதிகம். இது ஆற்றிலிருந்து தனியாகக் கணிக்கப்படும்; இரண்டில் அதிகமானது காட்டப்படும்.",
+  "details.streetNow": "செயற்கைக்கோள் மழை (JAXA GSMaP) இப்போது: கடந்த 24 மணி நேரத்தில் {mm24} மி.மீ, 6 மணி நேரத்தில் {mm6} மி.மீ, {time} வரை.",
+  "details.streetNone": "செயற்கைக்கோள் மழைத் தரவு தற்போது இல்லை, எனவே தெரு மழை விதி செயல்படவில்லை. அதற்காக மழை இல்லை என்று அர்த்தமல்ல.",
+  "details.streetHonest": "கடந்த ஆண்டுகளில் 60 மி.மீ நிலை இங்கு ஏற்பட்ட வெள்ளங்களில் 10-ல் 7-ஐ கண்டறிந்தது; ஆண்டுக்கு சுமார் 5 தவறான எச்சரிக்கைகள் தந்தது. 100 மி.மீ நிலை 10-ல் 6-ஐ கண்டறிந்தது; ஆண்டுக்கு சுமார் 2 தவறான எச்சரிக்கைகள்.",
   "ld.name": "{town} வெள்ள மதிப்பீடு",
 };
 

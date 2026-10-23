@@ -16,7 +16,8 @@
 
 import { unstable_cache } from "next/cache";
 
-export const GSMAP_URL = "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/gsmap/latest.json";
+// GSMAP_URL env override: local testing against a hand-made file.
+export const GSMAP_URL = process.env.GSMAP_URL ?? "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/gsmap/latest.json";
 export const GSMAP_CREDIT = "GSMaP data by Japan Aerospace Exploration Agency (JAXA)";
 export const GSMAP_MAX_AGE_MS = 3 * 3_600_000;
 
@@ -33,6 +34,9 @@ export type GsmapGauge = {
   mm24h: number | null;
 };
 
+/** Rain over a named box of pixels (scripts/gsmap-snapshot.mjs STREET_RAIN_ZONES), same fields as a gauge catchment. */
+export type GsmapZone = Omit<GsmapGauge, "basin" | "station"> & { name: string };
+
 export type GsmapFile = {
   source: string;
   credit: string;
@@ -41,6 +45,8 @@ export type GsmapFile = {
   latestStart: string;
   latestEnd: string;
   stations: Record<string, GsmapGauge>;
+  /** Absent in files written before zones existed. */
+  zones?: Record<string, GsmapZone>;
 };
 
 const load = unstable_cache(
@@ -51,7 +57,7 @@ const load = unstable_cache(
     if (!j || typeof j.latestEnd !== "string" || !j.stations) throw new Error("unexpected shape");
     return j;
   },
-  ["gsmap-latest-v1"],
+  ["gsmap-latest-v2"],
   { revalidate: 600 },
 );
 
@@ -73,4 +79,11 @@ export async function getGsmapForStation(basin: string, station: string, now = D
   const f = await getGsmap(now);
   const g = f?.stations[`${basin.trim()}/${station}`];
   return f && g ? { ...g, endsAt: Date.parse(f.latestEnd) } : null;
+}
+
+/** Satellite rain over a named zone (the street-rain rule's area), with the time the newest hour ends (ms). Null = unavailable (no file, stale, zone missing). */
+export async function getGsmapZone(id: string, now = Date.now()): Promise<(GsmapZone & { endsAt: number }) | null> {
+  const f = await getGsmap(now);
+  const z = f?.zones?.[id];
+  return f && z ? { ...z, endsAt: Date.parse(f.latestEnd) } : null;
 }
