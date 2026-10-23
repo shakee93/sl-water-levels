@@ -57,6 +57,7 @@ export function StationPicker({
     const qs = next.toString();
     const url = `${p(stationPath(hit.basin, hit.station))}${qs ? `?${qs}` : ""}`;
     startTransition(() => {
+      window.dispatchEvent(new Event("sl:nav-start"));
       router.push(url);
     });
   }

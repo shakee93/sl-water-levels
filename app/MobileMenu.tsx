@@ -1,25 +1,28 @@
 "use client";
 
-// Phone-only navigation sheet: History / About / Help and every river, in large tap targets.
+// Phone-only "More" sheet, opened from the bottom tab bar (BottomTabs): Help, About, install, theme and every river, in
+// large tap targets. Home, Towns, Reservoirs and History are tabs, so they are not repeated here.
 // Rendered in a portal because the sticky header's backdrop blur would otherwise contain `fixed`.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LifeBuoy, Info, History, Menu, Waves, X } from "lucide-react";
+import { LifeBuoy, Info, X } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
 import { ThemeSegmented } from "./ThemeSwitch";
+import { InstallButton } from "./InstallButton";
+import { OPEN_MENU_EVENT } from "./BottomTabs";
 
 const ring =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 
 export type MenuRiver = { href: string; label: string; slug: string };
 
-export function MobileMenu({ rivers, reservoirsLabel }: { rivers: MenuRiver[]; reservoirsLabel?: string }) {
+export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
   const { t, p } = useI18n();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
+  const trigger = useRef<HTMLElement | null>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
@@ -30,6 +33,15 @@ export function MobileMenu({ rivers, reservoirsLabel }: { rivers: MenuRiver[]; r
     setSeen(pathname);
     if (open) setOpen(false);
   }
+
+  useEffect(() => {
+    const onOpen = () => {
+      trigger.current = document.activeElement as HTMLElement | null;
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_MENU_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_MENU_EVENT, onOpen);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -63,29 +75,15 @@ export function MobileMenu({ rivers, reservoirsLabel }: { rivers: MenuRiver[]; r
   };
 
   const main = [
-    ...(reservoirsLabel ? [{ href: p("/reservoirs"), label: reservoirsLabel, icon: Waves, event: "reservoirs_nav_click" }] : []),
     { href: p("/help"), label: t("nav.help"), icon: LifeBuoy, event: "help_nav_click" },
-    { href: p("/history"), label: t("nav.history"), icon: History, event: "history_nav_click" },
     { href: p("/about"), label: t("nav.about"), icon: Info, event: "about_nav_click" },
   ];
 
   return (
     <>
-      <button
-        ref={trigger}
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={t("nav.menu")}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        className={`sm:hidden inline-flex items-center justify-center h-11 w-10 rounded-md text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition ${ring}`}
-      >
-        <Menu className="size-5" aria-hidden />
-      </button>
-
       {open &&
         createPortal(
-          <div className="sm:hidden fixed inset-0 z-50 bg-white dark:bg-slate-950" onKeyDown={onKey}>
+          <div className="sm:hidden fixed inset-0 z-[60] bg-white dark:bg-slate-950" onKeyDown={onKey}>
             <div
               ref={panel}
               role="dialog"
@@ -121,6 +119,9 @@ export function MobileMenu({ rivers, reservoirsLabel }: { rivers: MenuRiver[]; r
                       </Link>
                     </li>
                   ))}
+                  <li>
+                    <InstallButton variant="row" source="menu" onDone={close} />
+                  </li>
                 </ul>
 
                 <ThemeSegmented />

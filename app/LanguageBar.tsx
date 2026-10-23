@@ -64,6 +64,7 @@ export function LangSwitch() {
     e?.preventDefault();
     saveLang(target);
     if (target === lang) return;
+    window.dispatchEvent(new Event("sl:nav-start"));
     router.push(localePath(target, path) + window.location.search + window.location.hash);
   }
 

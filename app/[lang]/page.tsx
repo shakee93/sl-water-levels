@@ -13,6 +13,7 @@ import { ReleaseLines } from "../ReleaseCard";
 import { SpillWatchLine } from "../SpillWatchLine";
 import { HowItWorks } from "../HowItWorks";
 import { MyPlaces } from "../MyPlaces";
+import { HomeInstallCard } from "../HomeInstallCard";
 import { NearYou } from "../NearYou";
 import { RiverList } from "../RiverList";
 import { LegacyRedirect } from "../LegacyRedirect";
@@ -126,6 +127,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
             {/* the answer for the places this visitor saved comes first; nothing when none are saved */}
             <MyPlaces stations={home} />
+            <HomeInstallCard />
 
             <NearYou stations={home} />
 

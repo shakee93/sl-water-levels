@@ -94,6 +94,7 @@ export function FloodCalendar({ data, scope }: { data: HistoryData; scope: Scope
           onChange={(e) => {
             const v = e.target.value;
             const s = v.startsWith("s:") ? stations.find((x) => x.station === v.slice(2)) : undefined;
+            window.dispatchEvent(new Event("sl:nav-start"));
             router.push(
               p(v === "all" ? historyPath() : v.startsWith("b:") ? historyPath(v.slice(2)) : historyPath(s?.basin, s?.station)),
               { scroll: false },

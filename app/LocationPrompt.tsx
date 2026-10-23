@@ -28,7 +28,7 @@ export function LocationPrompt({ variant }: { variant: "card" | "banner" }) {
       <div
         role="region"
         aria-label={t("loc.aria")}
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_-2px_8px_rgba(15,23,42,0.08)] pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] sm:bottom-0 z-30 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_-2px_8px_rgba(15,23,42,0.08)] sm:pb-[env(safe-area-inset-bottom)]"
       >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-2.5 sm:py-2 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-sm">
           <p className="flex min-w-0 flex-1 items-center gap-2 font-medium text-slate-800 dark:text-slate-200 leading-snug">

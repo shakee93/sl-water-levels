@@ -132,3 +132,20 @@ html {
   .rm-flow, .rm-ring { animation: none; }
   .rm-ring { opacity: 0.6; }
 }
+
+/* Touch feel: no grey flash or 300 ms wait on tap, and a pressed state so every tap answers at once. */
+a, button, summary, label, select, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+@media (pointer: coarse) {
+  a[href]:active, button:not(:disabled):active, summary:active, [role="button"]:active {
+    opacity: 0.65;
+  }
+}
+/* Installed app: no rubber-band flash of another colour behind the page, no text-size jump on rotate. */
+html { background-color: #ffffff; }
+html.dark { background-color: #020617; }
+@media (display-mode: standalone) {
+  body { overscroll-behavior-y: none; -webkit-touch-callout: none; }
+}

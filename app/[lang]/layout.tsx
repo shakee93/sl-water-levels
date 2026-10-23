@@ -11,6 +11,10 @@ import { LocaleProvider } from "../LocaleProvider";
 import { LangSideEffects } from "../LanguageBar";
 import { ThemeSync } from "../ThemeSync";
 import { ReturnShell } from "../ReturnShell";
+import { InstallProvider } from "../InstallProvider";
+import { NavProgress } from "../NavProgress";
+import { BottomTabs } from "../BottomTabs";
+import { splashShots } from "@/lib/splash";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { HTML_LANG, LOCALES, OG_LOCALE, isLocale } from "@/lib/i18n/config";
 import { DICTS, getI18n } from "@/lib/i18n/server";
@@ -76,6 +80,16 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     },
     description: t("home.layoutDesc"),
     applicationName: t("site.name"),
+    // Home Screen app: short name under the icon, launch images (public/splash, scripts/splash.mjs), and a status bar
+    // that follows the phone's light / dark setting with the page starting below it (no content under the clock).
+    appleWebApp: {
+      capable: true,
+      title: "SL Water Levels",
+      statusBarStyle: "default",
+      startupImage: splashShots().map((x) => ({ url: `/splash/${x.file}`, media: x.media })),
+    },
+    other: { "apple-mobile-web-app-capable": "yes" },
+    formatDetection: { telephone: false },
     authors: [{ name: "Shakeeb" }],
     openGraph: {
       type: "website",
@@ -125,9 +139,13 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body
-        className="min-h-full flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
+        className="min-h-full flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-[calc(3.5rem+env(safe-area-inset-bottom))] sm:pb-0"
       >
         <LocaleProvider lang={lang} dict={DICTS[lang]}>
+          <InstallProvider>
+          <Suspense fallback={null}>
+            <NavProgress />
+          </Suspense>
           <Suspense fallback={<HeaderFallback />}>
             <Header lang={lang} />
           </Suspense>
@@ -139,6 +157,8 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             <Footer lang={lang} />
           </Suspense>
+          <BottomTabs />
+          </InstallProvider>
         </LocaleProvider>
         <Script
           defer

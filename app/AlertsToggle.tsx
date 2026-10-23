@@ -5,10 +5,11 @@
 // keys are saved (app/api/push/route.ts); "Turn off alerts" deletes them. Renders nothing until the server says it can
 // both send and save (GET /api/push), so nobody meets a button that cannot work.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, BellOff, CircleCheck } from "lucide-react";
+import { Bell, BellOff, CircleCheck, Download } from "lucide-react";
 import { rtFor } from "@/lib/i18n/return";
 import { trackEvent } from "@/lib/umami";
 import { useI18n } from "./LocaleProvider";
+import { useInstall } from "./InstallProvider";
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const btn = `inline-flex items-center justify-center gap-2 min-h-11 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-sm font-medium text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60 transition-colors ${ring}`;
@@ -41,6 +42,7 @@ const getMorning = () => {
 export function AlertsToggle({ keys }: { keys: string[] }) {
   const { lang } = useI18n();
   const rt = rtFor(lang);
+  const { iosNeedsInstall, install } = useInstall();
   const [status, setStatus] = useState<Status>("loading");
   const [morning, setMorning] = useState(false);
   const vapid = useRef<string | null>(null);
@@ -170,6 +172,14 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
             <input type="checkbox" checked={morning} onChange={(e) => toggleMorning(e.target.checked)} className={`size-5 rounded border-slate-300 dark:border-slate-600 accent-sky-600 ${ring}`} />
             {rt("al.morning")}
           </label>
+        </div>
+      ) : iosNeedsInstall && (status === "unsupported" || status === "off") ? (
+        // iPhone and iPad only deliver alerts to a site that sits on the Home Screen
+        <div>
+          <p className="text-sm text-slate-700 dark:text-slate-300" role="status">{rt("ins.alerts")}</p>
+          <button type="button" onClick={() => install("alerts")} className={`${btn} mt-1.5`}>
+            <Download className="size-4" aria-hidden /> {rt("ins.btn")}
+          </button>
         </div>
       ) : status === "unsupported" || status === "denied" ? (
         <p className="text-sm text-slate-600 dark:text-slate-400" role="status">{rt(status === "denied" ? "al.denied" : "al.unsupported")}</p>

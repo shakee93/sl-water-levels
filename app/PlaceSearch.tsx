@@ -188,6 +188,7 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
         if (!near) return;
         trackEvent("find_nearest_success", { nearest: near.s.station, nearest_km: Number(near.km.toFixed(1)) });
         onDone?.();
+        window.dispatchEvent(new Event("sl:nav-start"));
         router.push(p(near.s.href));
       },
       (err) => {
@@ -217,6 +218,7 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
       }
       onDone?.();
       reset();
+      window.dispatchEvent(new Event("sl:nav-start"));
       router.push(item.href);
     },
     [locate, router, onDone, trimmed, reset],
