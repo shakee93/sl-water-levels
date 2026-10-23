@@ -358,7 +358,8 @@ export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "tes
   if (kind === "test") return { title: rt("pn.testTitle"), body: rt("pn.testBody") };
   if (kind === "rise") {
     const p = places[0];
-    const verdict = p.street && p.level <= 3 ? rt(p.street === "likely" ? "pn.s3" : "pn.s2") : rt(`pn.l${Math.min(4, Math.max(2, p.level))}` as RKey);
+    // street "possible" is a quiet heads-up that never pings; if such a place is at level 2 anyway, the river is why ("Get ready")
+    const verdict = p.street === "likely" && p.level <= 3 ? rt("pn.s3") : rt(`pn.l${Math.min(4, Math.max(2, p.level))}` as RKey);
     return { title: rt("pn.riseTitle", { place: p.name, verdict }), body: p.level >= 4 ? rt("pn.riseBody4") : rt("pn.riseBody") };
   }
   if (kind === "clear") return { title: rt("pn.clearTitle", { place: places[0].name }), body: rt("pn.clearBody") };
@@ -366,7 +367,7 @@ export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "tes
   const worst = [...places].sort((a, b) => b.level - a.level)[0];
   const body =
     worst && worst.level >= 2
-      ? rt("pn.morningAttn", { name: worst.name, verdict: worst.street && worst.level <= 3 ? rt(worst.street === "likely" ? "pn.s3" : "pn.s2") : rt(`pn.l${Math.min(4, worst.level)}` as RKey) })
+      ? rt("pn.morningAttn", { name: worst.name, verdict: worst.street === "likely" && worst.level <= 3 ? rt("pn.s3") : rt(`pn.l${Math.min(4, worst.level)}` as RKey) })
       : places.length === 1
         ? rt("pn.morningCalm1", { name: places[0].name })
         : rt("pn.morningCalm", { n: places.length });

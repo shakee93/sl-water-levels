@@ -264,9 +264,10 @@ assert.equal(PLACES.find((p) => p.name === "Nuwara Eliya").drainage, "upland");
 }
 
 // ---------------------------------------------------------------------------------------------
-// Street-rain rule: satellite 24 h rain 60 mm = "possible" (watch), 100 mm = "likely" (minor); separate from the river, higher wins
+// Street-rain rule: satellite 24 h rain 60 mm = "possible" (watch), 100 mm = "likely" (minor); separate from the river, higher wins.
+// mm24h in StreetRainIn is the CLIPPED sum (each hour capped at 15 mm, scripts/gsmap-snapshot.mjs); mm24hRaw is display only.
 {
-  const sr = (mm24h: number) => ({ mm24h, mm6h: 10, mm1h: 1, endsAt: 0 });
+  const sr = (mm24h: number, mm24hRaw: number | null = mm24h) => ({ mm24h, mm24hRaw, mm6h: 10, mm1h: 1, endsAt: 0 });
   const t = (o = {}) => assessTown(base({ streetRain: sr(0), ...o }));
   // thresholds, edge by edge
   for (const [mm, tone, level] of [[0, "normal", null], [59, "normal", null], [59.9, "normal", null], [60, "watch", "possible"], [99, "watch", "possible"], [99.9, "watch", "possible"], [100, "minor", "likely"], [250, "minor", "likely"]] as const) {
@@ -313,6 +314,43 @@ assert.equal(PLACES.find((p) => p.name === "Nuwara Eliya").drainage, "upland");
   assert.equal(t({ streetRain: sr(110), rain: rain({ past24hMm: 300 }) }).tone, "minor"); // higher of the two, no extra step
   // official warning and the rule: higher wins
   assert.equal(t({ streetRain: sr(70), warning: { severity: "alert", source: "DMC", area: "Kelani Ganga" } }).tone, "alert");
+  // the rule reads the clipped sum, not the raw one: raw 140 mm with a 59 mm clipped sum is NOT a warning, raw 80 / clipped 100 is
+  assert.equal(t({ streetRain: sr(59, 140) }).street, null);
+  assert.equal(t({ streetRain: sr(59, 140) }).tone, "normal");
+  assert.equal(t({ streetRain: sr(100, 80) }).street?.level, "likely");
+  assert.equal(t({ streetRain: sr(100, 80) }).street?.source, "rain");
+  // "possible" is a quiet heads-up: tone watch ("Keep an eye on it"), never "Get ready", no action sentence, no amber warning line
+  {
+    const p = t({ streetRain: sr(75) });
+    assert.equal(p.tone, "watch");
+    assert.equal(p.actionKey, null);
+    assert.equal(p.reasons.find((x) => x.key === "r.streetPossible").warn, false);
+    assert.equal(t({ streetRain: sr(120) }).reasons.find((x) => x.key === "r.streetLikely").warn, true);
+  }
+  // river trigger: the Kelani at its minor flood level makes "likely" with NO rain at all, or with satellite data missing
+  const riv = { triggered: true, gauge: "Hanwella", level: "25.1 ft" };
+  {
+    const r = t({ streetRain: sr(0), streetRiver: riv });
+    assert.equal(r.street?.level, "likely");
+    assert.equal(r.street?.source, "river");
+    assert.equal(r.tone, "minor");
+    assert.deepEqual(r.reasons.find((x) => x.key === "r.streetRiver")?.vars, { gauge: "Hanwella", level: "25.1 ft" });
+    assert.equal(r.actionKey, "a.minor");
+    const noSat = t({ streetRain: null, streetRiver: riv });
+    assert.equal(noSat.street?.level, "likely"); // the river half does not need the satellite
+    assert.equal(noSat.tone, "minor");
+    assert.equal(noSat.street?.mm, 0);
+    // river + heavy rain: both
+    assert.equal(t({ streetRain: sr(130), streetRiver: riv }).street?.source, "both");
+    // river + 70 mm: the river makes it "likely" (the rain alone would be "possible")
+    assert.equal(t({ streetRain: sr(70), streetRiver: riv }).street?.level, "likely");
+    // not triggered, or town without the rule: nothing
+    assert.equal(t({ streetRain: sr(0), streetRiver: { triggered: false, gauge: "", level: "" } }).street, null);
+    assert.equal(t({ streetRain: sr(0), streetRiver: null }).street, null);
+    assert.equal(t({ streetRain: sr(0), streetRiver: undefined }).street, null);
+    // a major river still wins on tone
+    assert.equal(t({ streetRain: sr(0), streetRiver: riv, primary: g({ tier: "major" }) }).tone, "major");
+  }
   // which towns carry the rule: only the validated ones, all canal-backwater
   const zoned = PLACES.filter((p) => p.rainZone).map((p) => p.name).sort();
   assert.deepEqual(zoned, ["Angoda", "Dematagoda", "Gothatuwa", "Kolonnawa", "Kotikawatta", "Meethotamulla", "Mulleriyawa", "Orugodawatta", "Wellampitiya"]);

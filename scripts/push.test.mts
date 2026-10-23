@@ -84,7 +84,14 @@ world = { "t:wellampitiya": glance("t:wellampitiya", "Wellampitiya"), "s:Hanwell
 await run({}, t);
 assert.equal(sent.length, 0, "first sight sends nothing");
 
+// the quiet "possible" heads-up never pings
 world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya", { tone: "watch", street: "possible", streetDrives: true });
+await run({}, (t += H / 2));
+assert.equal(sent.length, 0, "street 'possible' sends nothing");
+await run({}, (t += H / 2));
+assert.equal(sent.length, 0, "still nothing while it stays 'possible'");
+
+world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya", { tone: "minor", street: "likely", streetDrives: true });
 await run({}, (t += H / 2));
 assert.deepEqual(sent.map((m) => m.to).sort(), ["a", "b"], "only people who pinned Wellampitiya");
 const mb = sent.find((m) => m.to === "b");

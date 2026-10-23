@@ -118,6 +118,9 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
                       time: clock(input.streetRain.endsAt, t),
                     })
                   : tt("details.streetNone")}
+                {input.streetRain && input.streetRain.mm24hRaw != null && input.streetRain.mm24hRaw - input.streetRain.mm24h >= 1
+                  ? ` ${tt("details.streetRaw", { raw: r1(input.streetRain.mm24hRaw) })}`
+                  : ""}
               </p>
               <p className="mt-1.5">{tt("details.streetHonest")}</p>
               <StreetResearchLink />

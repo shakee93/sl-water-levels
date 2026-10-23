@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
   // The thank-you shows what the answer joined: this month's answers for the town, only when at least 3 (k-anonymity).
   // The street-rain rule's own threshold is named only for the towns it covers.
   const n = await monthlyAnswers(r.town, now);
-  const res = reply(200, { ok: true, impact: { n, tuneMm: placeBySlug(r.town)?.rainZone ? 60 : null } });
+  const res = reply(200, { ok: true, impact: { n, tuneMm: placeBySlug(r.town)?.rainZone ? 100 : null } });
   // readable by the page (not httpOnly) so it can show "thank you" on a later visit the same day
   res.cookies.set(cookie, day, { path: "/", maxAge: 86_400, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
   return res;

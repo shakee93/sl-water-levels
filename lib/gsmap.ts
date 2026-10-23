@@ -35,7 +35,15 @@ export type GsmapGauge = {
 };
 
 /** Rain over a named box of pixels (scripts/gsmap-snapshot.mjs STREET_RAIN_ZONES), same fields as a gauge catchment. */
-export type GsmapZone = Omit<GsmapGauge, "basin" | "station"> & { name: string };
+export type GsmapZone = Omit<GsmapGauge, "basin" | "station"> & {
+  name: string;
+  /**
+   * 24 h sum of the hourly means with EACH HOUR CLIPPED at hourlyCapMm (15): the number the street-flood rule uses
+   * (mm24h is the unclipped total, for display). Absent in files written before the clip; the rule is then off.
+   */
+  mm24hClipped?: number | null;
+  hourlyCapMm?: number;
+};
 
 export type GsmapFile = {
   source: string;

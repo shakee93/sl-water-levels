@@ -6,7 +6,7 @@
 // check    (every ~30 min, after the satellite-rain snapshot): reads the subscriptions from Cloudflare D1, asks the
 //          site what it says about every pinned place (GET /api/places-state: the same answer the pages show), runs each
 //          place through the state machine (lib/myPlaces.ts pushStep) and sends ONE message per real change:
-//          a rise to "get ready / water on the streets possible" or worse, and one all-clear. Nothing else is sent.
+//          a rise to "get ready" or worse (street water "likely" counts; "possible" is a quiet heads-up and never pings), and one all-clear. Nothing else is sent.
 // morning  (once a day, 06:00 Colombo): a short summary to the people who ticked "send a summary each morning".
 //          Skipped for a person whose places we cannot read (we never say "all calm" without data).
 // Needs: CLOUDFLARE_API_TOKEN, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (GitHub Actions secrets). Without the VAPID pair it

@@ -82,13 +82,14 @@ export type Glance = {
 const TONE_RANK: Record<GlanceTone, number> = { normal: 0, none: 0, stale: 0, watch: 1, alert: 2, minor: 3, major: 4 };
 
 /**
- * One number for "how worried should this place make us": 0 calm, 1 keep an eye, 2 get ready (or street water
- * possible), 3 flooding likely (or street water likely), 4 move to safety. null = we cannot say (no fresh data, or no flood levels published).
+ * One number for "how worried should this place make us": 0 calm, 1 keep an eye (street water "possible" is only
+ * this: a quiet heads-up that is often wrong, never a push), 2 get ready, 3 flooding likely (or street water likely),
+ * 4 move to safety. null = we cannot say (no fresh data, or no flood levels published).
  */
 export function levelOf(g: Pick<Glance, "tone" | "street">): number | null {
   if ((g.tone === "stale" || g.tone === "none") && !g.street) return null;
   let l = TONE_RANK[g.tone];
-  if (g.street === "possible") l = Math.max(l, 2);
+  if (g.street === "possible") l = Math.max(l, 1);
   if (g.street === "likely") l = Math.max(l, 3);
   return l;
 }
@@ -131,7 +132,7 @@ export function overall(gs: Glance[]): Overall {
 export const PUSH_FLAP_MS = 3 * 3_600_000;
 /** An all-clear needs the place to read calm (level <= 1) on this many checks in a row (checks are ~30 min apart). */
 export const CLEAR_RUNS = 2;
-/** Levels at or above this are worth a ping (get ready / water possible and up). A plain "keep an eye" never is. */
+/** Levels at or above this are worth a ping (get ready and up; street water "likely" is level 3). A plain "keep an eye", which includes street water "possible", never is. */
 export const PUSH_MIN_LEVEL = 2;
 
 export type PushState = {
@@ -224,13 +225,14 @@ export type Scorecard = { warnedDays: number; confirmedDays: number; checkedDays
 export const MIN_SCORE_DAYS = 3;
 
 /**
- * Public accuracy of the street-rain rule so far: of the days it warned, how many had enough answers to judge
+ * Public accuracy of the street-rain rule so far: of the days it said "likely", how many had enough answers to judge
  * and, of those, how many residents confirmed water. Null until MIN_SCORE_DAYS days could be judged.
  */
 export function scorecard(rain: DayRain[], answers: DayAnswers[]): Scorecard | null {
-  const warned = rain.filter((r) => SAID_RANK[r.state] > 0);
+  // only "likely" is a warning; "possible" is a quiet heads-up that is often wrong, so it is not scored
+  const warned = rain.filter((r) => r.state === "likely");
   if (warned.length === 0) return null;
-  const o = outcomes(rain, answers);
+  const o = outcomes(warned, answers);
   if (o.length < MIN_SCORE_DAYS) return null;
   return { warnedDays: warned.length, checkedDays: o.length, confirmedDays: o.filter((x) => x.result === "wet").length };
 }

@@ -17,6 +17,7 @@ import { contactsForDistrict } from "./help";
 import { stationPath } from "./slug";
 import type { Place } from "./places";
 import { assessTown, usableGauge, type ForecastIn, type GaugeIn, type Tone, type TownRiskInput, type WarningIn } from "./townRisk";
+import { riverTrigger, type RiverReading } from "./streetRainLog";
 import type { Thresholds } from "./readings";
 import type { Unit } from "./units";
 
@@ -70,6 +71,25 @@ function forecastIn(f: Forecast, mpu: number): ForecastIn {
     metresPerUnit: mpu,
     crossings: f.crossings.map((c) => ({ threshold: c.threshold, wording: c.wording, etaTs: c.etaTs })),
   };
+}
+
+const FT_PER_M = 1 / 0.3048;
+/** Level and minor mark of a gauge in feet (unknown unit = unusable), for the river trigger. */
+function riverReading(s: NationalStation | undefined, name: string, now: number): RiverReading {
+  const f = s && s.unit ? (s.unit === "m" ? FT_PER_M : 1) : null;
+  const lvl = s?.latest?.water_level;
+  const minor = s?.thresholds.minor;
+  return {
+    station: name,
+    levelFt: f != null && typeof lvl === "number" ? lvl * f : null,
+    minorFt: f != null && typeof minor === "number" && minor > 0 ? minor * f : null,
+    ageMin: s?.latest ? Math.max(0, (now - s.latest.ts) / 60_000) : null,
+  };
+}
+
+function streetRiverIn(byName: Map<string, NationalStation>, now: number): TownRiskInput["streetRiver"] {
+  const t = riverTrigger([riverReading(byName.get("Nagalagam Street"), "Nagalagam Street", now), riverReading(byName.get("Hanwella"), "Hanwella", now)]);
+  return { triggered: t.triggered, gauge: t.station ?? "", level: t.levelFt != null ? `${t.levelFt.toFixed(1)} ft` : "" };
 }
 
 export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?: number } = {}): Promise<TownData> {
@@ -131,9 +151,12 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
       : null,
     warning,
     // undefined = the street-rain rule does not apply to this town; null = it does but the satellite file is missing or stale
+    // (rule rain = 24 h sum with each hour clipped at 15 mm; the unclipped total rides along for display)
     streetRain: place.rainZone
-      ? zone && zone.mm24h != null ? { mm24h: zone.mm24h, mm6h: zone.mm6h, mm1h: zone.mm1h, endsAt: zone.endsAt } : null
+      ? zone && zone.mm24hClipped != null ? { mm24h: zone.mm24hClipped, mm24hRaw: zone.mm24h, mm6h: zone.mm6h, mm1h: zone.mm1h, endsAt: zone.endsAt } : null
       : undefined,
+    // river half: the Kelani at its minor flood level (Nagalagam Street 5 ft, Hanwella at its own published minor mark)
+    streetRiver: place.rainZone ? streetRiverIn(byName, now) : undefined,
     now,
   };
 

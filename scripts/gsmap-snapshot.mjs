@@ -36,6 +36,7 @@ import { gunzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { zoneWindow as zoneWindowOf, STREET_HOURLY_CAP_MM } from "../lib/streetRainWindow.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2];
@@ -195,18 +196,9 @@ function window(key, n) {
   if (have === 0 || have < Math.ceil(n * 0.75)) return null;
   return Math.round(((sum * n) / have) * 10) / 10;
 }
-// Zone rain over the past n hours: each hour is the mean of its two half-hour rates (the :00 and :30 files), so
-// sum the newest 2n half-hour steps and halve. Needs 75% of the steps.
-const HALF = HOUR / 2;
-function zoneWindow(key, n) {
-  let sum = 0, have = 0;
-  for (let k = 0; k < 2 * n; k++) {
-    const v = rec.get(anchor - k * HALF)?.[key];
-    if (typeof v === "number") { sum += v; have++; }
-  }
-  if (have === 0 || have < Math.ceil(2 * n * 0.75)) return null;
-  return Math.round(((sum * 2 * n) / have / 2) * 10) / 10;
-}
+// Zone rain over the past n clock hours (hour = mean of its :00 and :30 files, each hour capped at 15 mm for the
+// "clipped" sum): see lib/streetRainWindow.mjs, shared with the tests.
+const zoneWindow = (key, n) => zoneWindowOf((t) => rec.get(t)?.[key], anchor, n);
 const out = {
   source: "GSMaP_NOW (JAXA)",
   credit: "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
@@ -224,10 +216,14 @@ for (const z of zones) {
     name: z.name,
     cells: z.cells,
     rateMmPerHour: typeof rate === "number" ? rate : null,
-    mm1h: zoneWindow(z.key, 1),
-    mm3h: zoneWindow(z.key, 3),
-    mm6h: zoneWindow(z.key, 6),
-    mm24h: zoneWindow(z.key, 24),
+    // raw sums of the hourly means (display); the street rule uses mm24hClipped
+    mm1h: zoneWindow(z.key, 1)?.raw ?? null,
+    mm3h: zoneWindow(z.key, 3)?.raw ?? null,
+    mm6h: zoneWindow(z.key, 6)?.raw ?? null,
+    mm24h: zoneWindow(z.key, 24)?.raw ?? null,
+    // 24 h sum with each hour capped at hourlyCapMm: the number the street rule compares with 60 / 100 mm
+    mm24hClipped: zoneWindow(z.key, 24)?.clipped ?? null,
+    hourlyCapMm: STREET_HOURLY_CAP_MM,
   };
 }
 for (const g of gauges) {

@@ -384,20 +384,48 @@ the site watches itself and tells the owner.
 
 ## Street-flood validation (is the satellite-rain rule right?)
 
-The rule in `lib/townRisk.ts` step 6 (24 h satellite rain over the Greater Colombo east box: 60 mm =
-"possible", 100 mm = "likely") was backtested on 14 documented floods (`research/wellampitiya-flood-rule-backtest.md`).
+The rule in `lib/townRisk.ts` step 6 was backtested on 14 documented floods (16 with the merged ledger) and then
+validated on every day of the GSMaP_NOW archive, 2017-2026 (`research/wellampitiya-flood-rule-backtest.md`, section
+"Validation (complete)"; public write-up at `/research/wellampitiya-street-flooding`). The validated rule:
+
+- **Rain number** = the 24 h sum of hourly GSMaP_NOW means over the 4-pixel box (6.85/6.95 N x 79.85/79.95 E) with
+  **each hour clipped at 15 mm before summing** (cuts impossible NOW spikes such as 118 mm in one hour).
+  `scripts/gsmap-snapshot.mjs` (via `lib/streetRainWindow.mjs`) writes it as `zones.colombo-east.mm24hClipped`
+  in `gsmap/latest.json`; hour = mean of the :00 and :30 files, window = the last 24 clock hours. The raw total stays in
+  `mm24h` (display and logging only; the rule never reads it). Files from before the clip have no `mm24hClipped`: the
+  rain half of the rule is then off until the next snapshot.
+- **Likely** ("Water on the streets likely", tone minor): clipped 24 h rain >= 100 mm, **or the Kelani at its minor
+  flood level**: Nagalagam Street >= 5 ft, or Hanwella at/above the minor mark the gauge itself publishes (24.6 ft = 7.5 m
+  in 2026; never hardcoded). Only readings under 3 h old count. `riverTrigger()` in `lib/streetRainLog.ts`; the site reads
+  the gauges in `lib/townData.ts`, the logging job reads `/api/levels`.
+- **Possible** ("Water on the streets possible", tone watch = "Keep an eye on it"): clipped 24 h rain >= 60 mm. A quiet
+  heads-up, often wrong (about 8 alarm episodes a year with no flood on record): it never reaches "Get ready", **never sends
+  a push alert** (`levelOf` in `lib/myPlaces.ts` gives it level 1, pushes start at level 2) and is not scored in "How our
+  warnings did". Only "likely" (and its all-clear) pushes.
+- No burst (1 / 6 / 12 h) term and no season thresholds: neither beat the plain 24 h sum.
+- Expected scores (16 floods, 8.65 years): likely = 11 of 16 floods caught (69%, 95% CI 44-86%), about 1.3 alarm episodes a
+  year with no documented flood; possible = 12 of 16, about 8.4 a year. "No documented flood" is not "no flood": the
+  unmatched counts are an upper bound. Details-section note (`details.streetHonest`, en/si/ta; si/ta are drafts for native
+  review) states these in plain words. Re-test after the next wet season: the 15 mm cap was chosen from 4 caps on the same
+  floods.
+
 This is how it is checked live. Everything lands in the Cloudflare D1 database `sl-water-levels` (the prediction
 log's database) and is **private**: nothing public reads it and nothing about other people's answers is shown.
 Tables are in `d1/0003_street_flood.sql`.
 
 - **Rain log** (`street_rain_log`): `scripts/street-rain-log.mjs`, a step in `gsmap-snapshot.yml` after the data push,
-  stores per run (about every 30 min) the zone's 1 / 3 / 6 / 24 h rain and the rule state (`none` / `possible` /
-  `likely`). **State changes** go to `street_rain_changes`. The script applies the migration itself every run.
-  State logic: `lib/streetRainLog.ts`.
+  stores per run (about every 30 min) the zone's 1 / 3 / 6 / 24 h rain, **`mm24h_clipped`** (the rule's number),
+  **`river_trigger`** (1 = Kelani at minor level, 0 = no, NULL = gauges unreadable) and the rule state (`none` /
+  `possible` / `likely`). **State changes** go to `street_rain_changes` (same two columns). The script applies the
+  migration itself every run: the CREATE TABLEs, then `ALTER TABLE ... ADD COLUMN` for `mm24h_clipped` and `river_trigger`
+  only when `PRAGMA table_info` does not list them (idempotent). Rows before 24 Oct 2026 have NULL there and were judged
+  on the old unclipped 60 / 100 mm rule. If the gauges cannot be read in a run, a `likely` is not cleared by that
+  (state stays unknown). State logic: `lib/streetRainLog.ts`.
 - **Owner ping**: on a rise (none to possible or likely, possible to likely) and when it clears, one Slack message
-  via `SLACK_WEBHOOK_URL` with the rain numbers, the Wellampitiya page link and "Did your street flood?". A rise within
+  via `SLACK_WEBHOOK_URL`, labelled "possible (heads-up)" or "likely", with the counted and uncapped rain numbers, why
+  (rain and/or river), the Wellampitiya page link and "Did your street flood?". Residents are pinged only for "likely". A rise within
   3 h of the previous rise message is held back; likely to possible is silent. A message that failed is retried for 6 h.
-  Dry run: `node --experimental-strip-types scripts/street-rain-log.mjs <dir containing gsmap/latest.json> --dry-run --prev none`.
+  Dry run: `node --experimental-strip-types scripts/street-rain-log.mjs <dir containing gsmap/latest.json> --dry-run --prev none [--river 0|1]`.
 - **Resident answers** (`street_flood_reports`): the "Did the streets near you get water today?" control
   (`app/flood/FloodReport.tsx`) on every town page posts to `POST /api/flood-report`. Stored: town slug, answer
   (`deep` ankle or more / `little` / `dry`), optional `now` / `earlier`, page language, time, and a per-day salted
@@ -406,9 +434,9 @@ Tables are in `d1/0003_street_flood.sql`.
   (bots get a quiet "thanks", nothing stored). The Vercel site has no D1 binding, so the route uses the D1 HTTP API
   (`lib/d1.ts`) and needs **`CLOUDFLARE_API_TOKEN`** (token with D1 Edit) in the Vercel environment variables;
   optional `FLOOD_REPORT_SALT`. Without the token the route answers 503 and the page says "try again later".
-- **Monthly review**: `scripts/export-street-flood.sh YYYY-MM <outDir>` (wrangler logged in) writes `rain_log.json`,
-  `changes.json`, `reports.json` and `reports_by_day.json` (answers per town and day next to that day's highest 24 h rain
-  and rule state). Keep the output private. Handy ad-hoc SQL (`npx wrangler d1 execute sl-water-levels --remote --command "..."`):
+- **Monthly review**: `scripts/export-street-flood.sh YYYY-MM <outDir>` (wrangler logged in) writes `rain_log.json`
+  (incl. `mm24h_clipped`, `river_trigger`), `changes.json`, `reports.json` and `reports_by_day.json` (answers per town and
+  day next to that day's highest clipped 24 h rain `max_mm24h_clipped` and rule state). Keep the output private. Handy ad-hoc SQL (`npx wrangler d1 execute sl-water-levels --remote --command "..."`):
 
   ```sql
   -- state changes, newest first
@@ -416,7 +444,8 @@ Tables are in `d1/0003_street_flood.sql`.
     FROM street_rain_changes ORDER BY changed_ms DESC LIMIT 20;
   -- answers vs the rule, per day (hits = "deep"/"little" answers on days the rule said possible/likely)
   SELECT r.day, r.town, SUM(r.answer='deep') deep, SUM(r.answer='little') little, SUM(r.answer='dry') dry,
-         (SELECT MAX(mm24h) FROM street_rain_log WHERE date((data_end_ms+19800000)/1000,'unixepoch') = r.day) max_mm24h
+         (SELECT MAX(mm24h_clipped) FROM street_rain_log WHERE date((data_end_ms+19800000)/1000,'unixepoch') = r.day) max_clipped_mm24h,
+         (SELECT MAX(river_trigger) FROM street_rain_log WHERE date((data_end_ms+19800000)/1000,'unixepoch') = r.day) river_at_minor
     FROM street_flood_reports r GROUP BY r.day, r.town ORDER BY r.day DESC;
   ```
   How to read it: days with `deep` answers and no `possible` / `likely` state are misses; `possible` / `likely` days
@@ -438,7 +467,7 @@ browser, except an opted-in push subscription. Strings: `lib/i18n/return.ts` (Si
    (`sl_my_levels`) is applied, so it matches their town page. Code: `app/MyPlaces.tsx`, `lib/placeGlance.ts` (same
    `loadTown`/`assessTown` as the pages), `GET /api/places-state`, `lib/myPlaces.ts`.
 2. **Alerts at the right time (Web Push) + installable app.** "Tell me when it changes" sends ONE push when a pinned place rises to
-   "Get ready / water on the streets possible" or worse, and ONE all-clear after two calm checks in a row (closure matters). Never for
+   "Get ready" or worse (street water "likely" counts; "possible" never pings), and ONE all-clear after two calm checks in a row (closure matters). Never for
    a plain "keep an eye", never twice for a wobble (3 h flap guard, `pushStep` in `lib/myPlaces.ts`). Optional short morning summary,
    skipped when a person's places cannot be read. Subscriptions: D1 `push_subscriptions` (endpoint + two public keys + place keys +
    language; nothing else; "Turn off alerts" deletes the row; dead endpoints are deleted). PWA: `app/manifest.ts`, `public/sw.js`
@@ -447,11 +476,11 @@ browser, except an opted-in push subscription. Strings: `lib/i18n/return.ts` (Si
    `push-notify.yml` (morning, manual test). Telegram channel option for later: a bot posting the same rise/all-clear text from
    `pushText` to a public channel needs only a bot token and a call in the sender.
 3. **Closure and trust: "How our warnings did".** On towns with the street-rain rule: what we said recently ("Yesterday we said water
-   on the streets was possible") and what neighbours reported, a running score once 3 warned days could be judged, and one line of
+   on the streets was possible") and what neighbours reported, a running score once 3 "likely" days could be judged, and one line of
    river-forecast accuracy from the prediction log (`forecast_verification`, 24 h, share of real levels inside the stated range, last
    30 days, needs 100 checks). Code: `app/flood/TownOutcome.tsx`, `lib/townOutcome.ts`, `GET /api/town-outcome`.
 4. **Contribution reward.** After "Did the streets near you get water today?" the thank-you says what the answer joined ("joins 14 from
-   Wellampitiya this month") and, for rule towns, that answers tune the 60 mm warning, and invites a return tomorrow to see how the
+   Wellampitiya this month") and, for rule towns, that answers tune the 100 mm warning, and invites a return tomorrow to see how the
    warning did. Counts below 3 are never shown (k-anonymity: `K_MIN`, `shownCount`); the API returns totals only.
 5. **Daily anticipation without alarm.** One "Today" line (rain expected over the next day: dry / some / about N mm) and a calm season
    line (monsoon context from the month) on the Your places card; optional morning push (above). The season line is hidden when
