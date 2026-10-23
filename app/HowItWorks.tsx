@@ -58,7 +58,7 @@ export async function HowItWorks({ lang }: { lang: Locale }) {
   const steps: Key[] = ["how.step1", "how.step2", "how.step3", "how.step4"];
   return (
     <section aria-labelledby="how-title" className="mt-10 sm:mt-12">
-      <details id="how-it-works" className="group scroll-mt-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <details open id="how-it-works" className="group scroll-mt-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <OpenOnHash id="how-it-works" />
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 min-h-11 [&::-webkit-details-marker]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg">
           <span className="min-w-0">
