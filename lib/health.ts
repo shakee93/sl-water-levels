@@ -451,8 +451,29 @@ async function checkGaugeArchive(): Promise<HealthCheck> {
   });
 }
 
+// Vercel reports each production deploy as a GitHub commit status on main. A failed build
+// leaves the previous deploy live, so users see stale pages and fixes silently don't ship
+// (twice on 23 Oct 2026, ETIMEDOUT while prerendering). Flag failures and long-stuck builds.
+async function checkDeploy(): Promise<HealthCheck> {
+  return run("deploy", "Latest website deploy", "The newest changes are not live; visitors still see the previous version.", async () => {
+    const r = await ghGet("commits/main/status");
+    if (!r.ok) return unchecked(r.why);
+    const st = r.json as { state?: string; sha?: string; statuses?: { state: string; updated_at: string; target_url?: string; description?: string }[] };
+    const v = (st.statuses ?? [])[0];
+    const sha = (st.sha ?? "").slice(0, 7);
+    if (!v) return { ok: true, detail: `no deploy status for ${sha}` };
+    const age = Date.now() - Date.parse(v.updated_at);
+    if (v.state === "failure" || v.state === "error")
+      return { ok: false, detail: `deploy of ${sha} failed: ${v.description ?? ""} ${v.target_url ?? ""}`.trim() };
+    if (v.state === "pending" && age > 30 * 60_000)
+      return { ok: false, detail: `deploy of ${sha} has been building for ${words(mins(age))}` };
+    return { ok: true, detail: `${sha}: ${v.state}`, ...fresh(Date.parse(v.updated_at)) };
+  });
+}
+
 async function checkPipelines(): Promise<HealthCheck[]> {
   return Promise.all([
+    checkDeploy(),
     checkGaugeArchive(),
     checkWorkflow("pipe-releases", "Release snapshots (data branch)", "releases-snapshot.yml", "Nothing visible right away; release history and arrival-time learning stop.", (now) => {
       const h = colomboHour(now);
