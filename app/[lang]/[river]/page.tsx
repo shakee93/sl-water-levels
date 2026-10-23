@@ -8,7 +8,7 @@ import { fetchBasinSnapshot, fetchStations, type Station, type Tier } from "@/li
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { stationDisplayName } from "@/lib/displayName";
 import { orderStations } from "@/lib/basinOrder";
-import { basinSlug, resolveBasin, stationPath } from "@/lib/slug";
+import { resolveBasin, stationPath } from "@/lib/slug";
 import { RiverGauges } from "@/app/RiverGauges";
 import { TimeAgo } from "@/app/TimeAgo";
 import { colomboTime } from "@/app/tierUi";
@@ -50,19 +50,11 @@ function joinNames(names: string[], and: string): string {
   return `${names.slice(0, -1).join(", ")} ${and} ${names[names.length - 1]}`;
 }
 
+// Rendered on first request and then ISR-cached, not at build time: prerendering every
+// page made each deploy depend on ArcGIS, Google Sheets and the Mahaweli/DMC servers, and one
+// ETIMEDOUT during a build (seen twice on 23 Oct) failed the whole deploy.
 export async function generateStaticParams() {
-  let stations: Station[] = [];
-  try {
-    stations = await fetchStations();
-  } catch {
-    return [];
-  }
-  const slugs = new Set<string>();
-  for (const s of stations) {
-    const slug = basinSlug(s.basin);
-    if (slug) slugs.add(slug);
-  }
-  return [...slugs].map((river) => ({ river }));
+  return [];
 }
 
 export async function generateMetadata({

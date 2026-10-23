@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { CalendarDays, Container, CloudRain, DoorOpen, Droplets, Gauge, History, Map as MapIcon, MapPin, Ruler, Waves } from "lucide-react";
 import { getNational, fetchStations, type NationalStation } from "@/lib/arcgis";
-import { SOURCE_URL, getReportedRelease, getReservoir, getReservoirHistory, getReservoirs, historyKey, riverMatches, type RV } from "@/lib/reservoirData";
+import { SOURCE_URL, getReportedRelease, getReservoir, getReservoirHistory, historyKey, riverMatches, type RV } from "@/lib/reservoirData";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { rtFor } from "@/lib/i18n/reservoirs";
@@ -30,9 +30,11 @@ const nowMs = () => Date.now();
 
 const SITE = "https://sl-water-levels.vercel.app";
 
+// Rendered on first request and then ISR-cached, not at build time: prerendering every
+// page made each deploy depend on ArcGIS, Google Sheets and the Mahaweli/DMC servers, and one
+// ETIMEDOUT during a build (seen twice on 23 Oct) failed the whole deploy.
 export async function generateStaticParams() {
-  const data = await getReservoirs().catch(() => null);
-  return (data?.items ?? []).map((r) => ({ slug: r.slug }));
+  return [];
 }
 
 type Src = "Irrigation Department" | "Mahaweli Authority";

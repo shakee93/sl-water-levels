@@ -13,7 +13,7 @@ import {
   statusFor,
   type Station,
 } from "@/lib/arcgis";
-import { basinPath, basinSlug, resolveStation, stationPath, stationSlug } from "@/lib/slug";
+import { basinPath, resolveStation, stationPath } from "@/lib/slug";
 import { StationPicker } from "@/app/StationPicker";
 import { StationFinder } from "@/app/StationFinder";
 import { StationCard } from "@/app/StationCard";
@@ -33,17 +33,11 @@ export const revalidate = 60;
 
 const SITE = "https://sl-water-levels.vercel.app";
 
+// Rendered on first request and then ISR-cached, not at build time: prerendering every
+// page made each deploy depend on ArcGIS, Google Sheets and the Mahaweli/DMC servers, and one
+// ETIMEDOUT during a build (seen twice on 23 Oct) failed the whole deploy.
 export async function generateStaticParams() {
-  let stations: Station[] = [];
-  try {
-    stations = await fetchStations();
-  } catch {
-    return [];
-  }
-  return stations.map((s) => ({
-    river: basinSlug(s.basin),
-    station: stationSlug(s.station),
-  }));
+  return [];
 }
 
 /** "Hanwella Kelani Ganga water level": the river is in the heading because people search town + river. */
