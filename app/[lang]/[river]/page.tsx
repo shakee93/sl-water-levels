@@ -17,6 +17,9 @@ import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
+import { AnswerLine, FaqList, JsonLd } from "@/app/Answer";
+import { riverAnswer, riverFaq } from "@/lib/answers";
+import { breadcrumbLd, faqLd, webPageLd } from "@/lib/seo";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
@@ -203,9 +206,34 @@ export default async function BasinPage({
         ? "text-amber-800 dark:text-amber-300 font-medium"
         : "text-yellow-800 dark:text-yellow-300 font-medium";
 
+  const answer = snap.length ? riverAnswer(lang, t, basin, snap) : null;
+  const faq = answer ? riverFaq(lang, basin, answer, names) : [];
+  const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <JsonLd
+          graph={[
+            webPageLd({
+              lang,
+              path: `/${river}`,
+              name: t("river.metaTitle", { river: riverName(basin, lang) }),
+              description: answer ?? riverName(basin, lang),
+              modified: newest,
+              speakable: [".answer-line"],
+              type: "CollectionPage",
+            }),
+            breadcrumbLd(
+              [
+                { name: t("crumb.allBasins"), path: "/" },
+                { name: riverName(basin, lang), path: `/${river}` },
+              ],
+              lang,
+            ),
+            ...(faq.length ? [faqLd(faq)] : []),
+          ]}
+        />
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
             {t("crumb.allBasins")}
@@ -219,6 +247,7 @@ export default async function BasinPage({
           <p className="sr-only">
             {t("river.srGauges", { n: onBasin.length, names: joinNames(names, t("list.and")) })}
           </p>
+          {answer && <AnswerLine text={answer} note={mt} />}
         </header>
 
         <Suspense key={`warn-${basin}`} fallback={null}>
@@ -254,6 +283,8 @@ export default async function BasinPage({
           {t("common.floodHelpLink")}
           <ChevronRight className="size-3.5" aria-hidden />
         </Link>
+
+        <FaqList lang={lang} items={faq} note={mt} />
       </div>
     </main>
   );

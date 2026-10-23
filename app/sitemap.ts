@@ -3,6 +3,7 @@ import { getNational } from "@/lib/arcgis";
 import { getHistory, historyPath } from "@/lib/history";
 import { getReservoirs } from "@/lib/reservoirData";
 import { PLACES } from "@/lib/places";
+import { CONTENT_UPDATED } from "@/lib/seo";
 import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
 const SITE = "https://sl-water-levels.vercel.app";
@@ -57,14 +58,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const dayMs = (d: string | null) => (d ? Date.parse(`${d}T09:00:00+05:30`) : null);
   const rsvDay = [rsv?.sheetDate, rsv?.wmsDate].filter((d): d is string => !!d).sort().pop() ?? null;
 
+  const contentDay = Date.parse(`${CONTENT_UPDATED}T00:00:00+05:30`);
+
   return [
     ...entry("/", newest),
     ...(rsv ? entry("/reservoirs", dayMs(rsvDay)) : []),
     ...(rsv?.items ?? []).flatMap((r) => entry(`/reservoirs/${r.slug}`, dayMs(r.latestDay))),
-    ...entry("/flood"),
-    ...PLACES.flatMap((x) => entry(`/flood/${x.slug}`)),
-    ...entry("/help"),
-    ...entry("/about"),
+    ...entry("/flood", newest),
+    // A town page changes when its gauge reports.
+    ...PLACES.flatMap((x) => entry(`/flood/${x.slug}`, stations.find((s) => s.station === x.stations[0])?.latest?.ts)),
+    ...entry("/help", contentDay),
+    ...entry("/about", contentDay),
+    // English only: the page is for developers and is not translated.
+    { url: `${SITE}/data`, lastModified: new Date(contentDay) },
     ...entry("/history"),
     ...[...new Set(history?.stations.map((s) => s.basin) ?? [])].flatMap((b) => entry(historyPath(b))),
     ...(history?.stations ?? []).flatMap((s) => entry(historyPath(s.basin, s.station))),

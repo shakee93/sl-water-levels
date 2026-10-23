@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { Activity, AlertTriangle, Database } from "lucide-react";
 import { notFound } from "next/navigation";
 import { isLocale, pageAlternates } from "@/lib/i18n/config";
+import { AboutTrust } from "@/app/AboutTrust";
+import { JsonLd } from "@/app/Answer";
+import { breadcrumbLd, publisherLd, webPageLd, CONTENT_UPDATED } from "@/lib/seo";
 import { getI18n } from "@/lib/i18n/server";
 
 export const revalidate = 86400;
@@ -38,6 +41,13 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
   const { t, p } = getI18n(lang);
   return (
     <main className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+      <JsonLd
+        graph={[
+          webPageLd({ lang, path: "/about", name: t("about.metaTitle"), description: t("about.metaDesc"), modified: Date.parse(CONTENT_UPDATED), type: "AboutPage" }),
+          breadcrumbLd([{ name: t("crumb.allBasins"), path: "/" }, { name: t("nav.about"), path: "/about" }], lang),
+          publisherLd(),
+        ]}
+      />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
@@ -79,6 +89,8 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
             <p>{t("about.fc.p1")}</p>
             <p>{t("about.fc.p2")}</p>
           </Card>
+
+          <AboutTrust lang={lang} />
 
           <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-4 sm:p-5 text-sm">
             <div className="font-semibold text-amber-900 dark:text-amber-200 mb-1">{t("about.notOfficial")}</div>

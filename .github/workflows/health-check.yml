@@ -69,3 +69,9 @@ jobs:
 
       - name: Alert
         run: node scripts/health-alert.mjs health.json
+
+      # Crawler-facing files and structured data (robots, llms.txt, sitemap, JSON-LD, FAQ, feeds).
+      # Runs even when the data alert above failed; a failure here fails the run, so GitHub emails the owner.
+      - name: SEO and AI-crawler check
+        if: always()
+        run: node scripts/seo-check.mjs

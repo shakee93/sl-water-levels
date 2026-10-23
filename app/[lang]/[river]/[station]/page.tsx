@@ -7,13 +7,19 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { AnswerLine, FaqList, JsonLd } from "@/app/Answer";
+import { stationAnswer, stationFaq } from "@/lib/answers";
+import { breadcrumbLd, faqLd, placeLd, webPageLd, PUBLISHER_ID, DATA_BRANCH } from "@/lib/seo";
 import {
   fetchStations,
   fetchStationData,
+  getNational,
   statusFor,
   type Station,
+  type NationalStation,
 } from "@/lib/arcgis";
-import { basinPath, resolveStation, stationPath } from "@/lib/slug";
+import { basinPath, resolveStation, stationPath, stationSlug } from "@/lib/slug";
+import { detectUnit, formatLevel } from "@/lib/units";
 import { StationPicker } from "@/app/StationPicker";
 import { StationFinder } from "@/app/StationFinder";
 import { StationCard } from "@/app/StationCard";
@@ -75,6 +81,8 @@ export async function generateMetadata({
     const level = data.latest?.water_level;
     const status = statusFor(level ?? null, data.thresholds, data.latest?.ts);
     const basin = riverName(data.basin || resolved.basin || "Sri Lanka", lang);
+    const unit = detectUnit(data.thresholds, resolved.station);
+    const markText = (v: number | null) => (v == null ? "—" : formatLevel(v, unit));
 
     const name = stationDisplayName(resolved.station);
     const head = heading(t, resolved.station, data.basin || resolved.basin, lang);
@@ -86,11 +94,12 @@ export async function generateMetadata({
         ? t("station.metaDescLevel", {
             name,
             basin,
-            level: level.toFixed(2),
+            // Feet like the page itself (metre gauges converted); a gauge of unknown unit stays unitless.
+            level: formatLevel(level, unit),
             status: t(tierKey),
-            alert: data.thresholds.alert ?? "—",
-            minor: data.thresholds.minor ?? "—",
-            major: data.thresholds.major ?? "—",
+            alert: markText(data.thresholds.alert),
+            minor: markText(data.thresholds.minor),
+            major: markText(data.thresholds.major),
           })
         : t("station.metaDescNone", { name, basin });
 
@@ -148,48 +157,58 @@ export default async function StationPage({
 
   const canonical = p(`/${river}/${stationParam}`);
 
+  // The one-sentence answer and FAQ come from the same snapshot the chart and verdict use.
+  const nat = resolved ? ((await getNational().catch(() => [] as NationalStation[])).find((x) => x.station === resolved.station) ?? null) : null;
+  const answer = nat ? stationAnswer(lang, t, nat) : null;
+  const faq = nat && answer ? stationFaq(lang, nat, answer) : [];
+  const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {resolved && (
-          <>
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "BreadcrumbList",
-                  itemListElement: [
-                    { "@type": "ListItem", position: 1, name: t("crumb.allBasins"), item: SITE + p("/") },
-                    { "@type": "ListItem", position: 2, name: riverName(basin, lang), item: `${SITE}${p(basinPath(basin))}` },
-                    { "@type": "ListItem", position: 3, name: station, item: `${SITE}${canonical}` },
-                  ],
-                }),
-              }}
-            />
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify({
-                  "@context": "https://schema.org",
-                  "@type": "Place",
-                  name: `${station} river gauge`,
-                  containedInPlace: {
-                    "@type": "Place",
-                    name: basin || "Sri Lanka",
-                  },
-                  url: `${SITE}${canonical}`,
-                }),
-              }}
-            />
-          </>
+          <JsonLd
+            graph={[
+              webPageLd({
+                lang,
+                path: `/${river}/${stationParam}`,
+                name: heading(t, station, basin, lang),
+                description: answer ?? heading(t, station, basin, lang),
+                modified: nat?.latest?.ts,
+                speakable: [".answer-line"],
+              }),
+              breadcrumbLd(
+                [
+                  { name: t("crumb.allBasins"), path: "/" },
+                  { name: riverName(basin, lang), path: basinPath(basin) },
+                  { name: stationDisplayName(station), path: `/${river}/${stationParam}` },
+                ],
+                lang,
+              ),
+              ...(nat && Number.isFinite(nat.latitude) && Number.isFinite(nat.longitude)
+                ? [
+                    {
+                      ...placeLd({
+                        name: `${stationDisplayName(station)} river gauge, ${riverName(basin, lang)}`,
+                        lat: nat.latitude,
+                        lon: nat.longitude,
+                        url: `${SITE}${canonical}`,
+                        containedIn: `${riverName(basin, lang)}, Sri Lanka`,
+                      }),
+                      "@id": `${SITE}${canonical}#gauge`,
+                    },
+                  ]
+                : []),
+              ...(faq.length ? [faqLd(faq)] : []),
+            ]}
+          />
         )}
 
         {resolved && (
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
-              __html: JSON.stringify(datasetLd(resolved.station, basin, stations, canonical, lang)),
+              __html: JSON.stringify(datasetLd(resolved.station, basin, stations, canonical, lang, nat?.latest?.ts)),
             }}
           />
         )}
@@ -212,6 +231,7 @@ export default async function StationPage({
           <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
             {station ? heading(t, station, basin, lang) : t("station.fallbackHeading")}
           </h1>
+          {answer && <AnswerLine text={answer} note={mt} />}
         </header>
 
         {stationsError ? (
@@ -277,6 +297,8 @@ export default async function StationPage({
             <Suspense key={`helplink-${station}`} fallback={null}>
               <StationHelpCard lang={lang} basin={basin} station={station} variant="link" />
             </Suspense>
+
+            <FaqList lang={lang} items={faq} note={mt} />
           </>
         )}
       </div>
@@ -287,7 +309,7 @@ export default async function StationPage({
 const ARCGIS_GAUGES =
   "https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0/query";
 
-function datasetLd(station: string, basin: string, stations: Station[], canonical: string, lang: Locale) {
+function datasetLd(station: string, basin: string, stations: Station[], canonical: string, lang: Locale, modified?: number | null) {
   const s = stations.find((x) => x.station === station);
   const end = new Date();
   const start = new Date(end.getTime() - 7 * 86_400_000);
@@ -297,19 +319,22 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
     "@context": "https://schema.org",
     "@type": "Dataset",
     name: `${name} river gauge water level (${basin.trim()})`,
-    description: `Hourly water-level readings at the ${name} gauge on the ${basin.trim()}, Sri Lanka, with alert, minor flood and major flood levels. Last 7 days.`,
+    description: `Hourly water-level readings at the ${name} gauge on the ${basin.trim()}, Sri Lanka, with alert, minor flood and major flood levels. Last 7 days. Shown in feet.`,
     url: `${SITE}${canonical}`,
     inLanguage: lang,
     isAccessibleForFree: true,
     // Google's Dataset rich result only accepts Organization/Person for creator.
     // license: the agencies publish no licence text; this page states the sources and terms.
     license: "https://sl-water-levels.vercel.app/about#data-sources",
-    creator: {
-      "@type": "Organization",
-      name: "Department of Irrigation, Sri Lanka",
-      url: "https://www.irrigation.gov.lk",
-    },
+    creator: { "@type": "Organization", name: "Department of Irrigation, Sri Lanka", url: "https://www.irrigation.gov.lk" },
+    publisher: { "@id": PUBLISHER_ID },
+    isBasedOn: "https://www.irrigation.gov.lk/",
+    ...(modified ? { dateModified: new Date(modified).toISOString() } : {}),
     temporalCoverage: `${day(start)}/${day(end)}`,
+    variableMeasured: [
+      { "@type": "PropertyValue", name: "River water level", unitText: "feet" },
+      { "@type": "PropertyValue", name: "Alert, minor flood and major flood levels", unitText: "feet" },
+    ],
     ...(s && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
       ? {
           spatialCoverage: {
@@ -319,11 +344,21 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
           },
         }
       : {}),
-    distribution: {
-      "@type": "DataDownload",
-      encodingFormat: "application/json",
-      contentUrl: `${ARCGIS_GAUGES}?where=${encodeURIComponent(`gauge='${station}'`)}&outFields=*&orderByFields=CreationDate+DESC&f=json`,
-    },
+    distribution: [
+      {
+        "@type": "DataDownload",
+        name: "Current level and flood marks (JSON)",
+        encodingFormat: "application/json",
+        contentUrl: `${SITE}/api/levels?station=${encodeURIComponent(stationSlug(station))}`,
+      },
+      {
+        "@type": "DataDownload",
+        name: "Hourly readings, source service (JSON)",
+        encodingFormat: "application/json",
+        contentUrl: `${ARCGIS_GAUGES}?where=${encodeURIComponent(`gauge='${station}'`)}&outFields=*&orderByFields=CreationDate+DESC&f=json`,
+      },
+      { "@type": "DataDownload", name: "Archive of past readings", encodingFormat: "application/x-ndjson", contentUrl: DATA_BRANCH },
+    ],
   };
 }
 

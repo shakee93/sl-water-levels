@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, Clock, LifeBuoy } from "lucide-react";
 import { getNational, fetchStations, type NationalStation } from "@/lib/arcgis";
+import { JsonLd } from "../Answer";
+import { publisherLd, siteDatasetLd, webPageLd, websiteLd } from "@/lib/seo";
 import { PlaceSearch } from "../PlaceSearch";
 import { getSearchStations } from "../PlaceSearchData";
 import { SriLankaMap } from "../SriLankaMap";
@@ -39,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return {
     title: { absolute: t("home.metaTitle") },
     description: t("home.metaDesc"),
-    alternates,
+    alternates: { ...alternates, types: { "application/atom+xml": `${SITE}/feed.xml` } },
     openGraph: { title: t("home.metaTitle"), description: t("home.ogDesc"), url: `${SITE}${alternates.canonical}`, type: "website", siteName: t("site.name") },
   };
 }
@@ -85,18 +87,13 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              name: t("site.name"),
-              url: `${SITE}${p("/")}`,
-              inLanguage: lang,
-              description: t("home.ldDesc"),
-            }),
-          }}
+        <JsonLd
+          graph={[
+            websiteLd(lang, t("home.ldDesc")),
+            publisherLd(),
+            webPageLd({ lang, path: "/", name: t("home.metaTitle"), description: t("home.metaDesc"), modified: national?.reduce<number | null>((m, x) => (x.latest && (m == null || x.latest.ts > m) ? x.latest.ts : m), null) }),
+            siteDatasetLd(),
+          ]}
         />
         <LegacyRedirect hrefByStation={hrefByStation} />
 

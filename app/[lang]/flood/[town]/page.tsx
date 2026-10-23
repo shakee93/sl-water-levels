@@ -17,6 +17,10 @@ import { d1Configured } from "@/lib/d1";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
 import { TownVerdict } from "@/app/flood/TownVerdict";
+import { AnswerLine, FaqList, JsonLd } from "@/app/Answer";
+import { townAnswer, townFaq } from "@/lib/answers";
+import { assessTown } from "@/lib/townRisk";
+import { breadcrumbLd, faqLd, placeLd, webPageLd } from "@/lib/seo";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 
@@ -63,32 +67,49 @@ export default async function TownPage({ params }: Params) {
   const canonical = p(`/flood/${place.slug}`);
   const serverNow = data.input.now;
 
+  // One-sentence answer, from the same estimate the verdict card shows (the visitor's own street level is not part of it).
+  const risk = assessTown(data.input, null);
+  const toneKey = (risk.street?.drives ? (risk.street.level === "likely" ? "tone.streetLikely" : "tone.streetPossible") : `tone.${risk.tone}`) as Parameters<typeof tt>[0];
+  const km = g ? formatKm(g.km, t) : "";
+  const answer = townAnswer(lang, t, {
+    town: place.name,
+    tone: tt(toneKey),
+    gauge: g ? { name: g.name, basin: g.basin, km, level: g.level, unit: g.unit, ts: g.ts } : null,
+  });
+  const faq = townFaq(lang, place.name, answer, g ? { name: g.name, km } : null);
+  const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
+
   const ld = [
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: t("crumb.home"), item: SITE + p("/") },
-        { "@type": "ListItem", position: 2, name: tt("crumb"), item: SITE + p("/flood") },
-        { "@type": "ListItem", position: 3, name: place.name, item: SITE + canonical },
+    webPageLd({
+      lang,
+      path: `/flood/${place.slug}`,
+      name: tt("title", { town: place.name }),
+      description: answer,
+      modified: g?.ts ?? serverNow,
+      speakable: [".answer-line"],
+    }),
+    breadcrumbLd(
+      [
+        { name: t("crumb.home"), path: "/" },
+        { name: tt("crumb"), path: "/flood" },
+        { name: place.name, path: `/flood/${place.slug}` },
       ],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Place",
+      lang,
+    ),
+    placeLd({
       name: place.name,
       url: SITE + canonical,
-      geo: { "@type": "GeoCoordinates", latitude: place.lat, longitude: place.lon },
-      containedInPlace: { "@type": "AdministrativeArea", name: `${place.district} District, Sri Lanka` },
-    },
+      lat: place.lat,
+      lon: place.lon,
+      containedIn: `${place.district} District, Sri Lanka`,
+    }),
+    faqLd(faq),
   ];
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-        {ld.map((x, i) => (
-          <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(x) }} />
-        ))}
+        <JsonLd graph={ld} />
 
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.home")}</Link>{" "}
@@ -101,6 +122,7 @@ export default async function TownPage({ params }: Params) {
         <header className="mb-4 sm:mb-5">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{tt("h1", { town: place.name })}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{place.name === place.district ? place.district : tt("h1sub", { town: place.name, district: place.district })}</p>
+          <AnswerLine text={answer} note={mt} />
         </header>
 
         <TownVerdict
@@ -150,6 +172,7 @@ export default async function TownPage({ params }: Params) {
             <LifeBuoy className="size-4" aria-hidden /> {tt("sec.helpLink")}
           </Link>
         </p>
+        <FaqList lang={lang} items={faq} note={mt} />
         {g && (
           <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
             <Link href={p(basinPath(g.basin))} className="hover:underline">{riverName(g.basin, lang)}</Link> · {tt("foot.sources")}

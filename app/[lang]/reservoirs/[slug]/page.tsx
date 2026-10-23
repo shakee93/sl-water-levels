@@ -29,6 +29,9 @@ import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
 import { FSL_SOURCE_URL, getKnownStatus, type KnownStatus } from "@/lib/reservoirStatus";
 import { WEEKLY_PDF } from "@/lib/wmsWeekly";
 import { windowLabel } from "@/lib/i18n/spillWatch";
+import { AnswerLine, FaqList } from "@/app/Answer";
+import { reservoirFaq } from "@/lib/answers";
+import { faqLd, webPageLd, PUBLISHER_ID } from "@/lib/seo";
 import { KnownChip, NearSpillChip } from "@/app/reservoirs/KnownChip";
 
 export const revalidate = 600;
@@ -127,6 +130,10 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const lastDay = rv.latestDay;
 
   // ---- structured data
+  // The metadata sentence ends with a page-teaser ("Live storage and the river gauges below it."); the answer stops before it.
+  const answer = description.replace(/\s*Live storage and the river gauges below it\.$/, "");
+  const faq = reservoirFaq(lang, localName(rv, lang), answer, null);
+  const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
   const covStart = history.firstDay ?? lastDay ?? new Date(now).toISOString().slice(0, 10);
   const covEnd = lastDay && lastDay > covStart ? lastDay : covStart;
   const jsonLd = {
@@ -144,6 +151,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         "@type": "Place",
         name: `${rv.name} reservoir`,
         url: SITE + canonical,
+        ...(RESERVOIR_COORDS[rv.slug] ? { geo: { "@type": "GeoCoordinates", latitude: RESERVOIR_COORDS[rv.slug].lat, longitude: RESERVOIR_COORDS[rv.slug].lon } } : {}),
         containedInPlace: { "@type": "Place", name: [rv.district, "Sri Lanka"].filter(Boolean).join(", ") },
         ...(rv.river ? { additionalProperty: { "@type": "PropertyValue", name: "River basin", value: rv.river } } : {}),
       },
@@ -158,8 +166,18 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         creator: { "@type": "Organization", name: sh ? "Irrigation Department, Sri Lanka" : "Mahaweli Authority of Sri Lanka" },
         temporalCoverage: `${covStart}/${covEnd}`,
         variableMeasured: ["Storage (% full)", "Spill (cusecs)", "Outlet discharge (cusecs)"],
+        publisher: { "@id": PUBLISHER_ID },
         ...(lastDay ? { dateModified: lastDay } : {}),
       },
+      webPageLd({
+        lang,
+        path: `/reservoirs/${slug}`,
+        name: describe(rv, lang, known).title,
+        description,
+        modified: lastDay ? Date.parse(`${lastDay}T09:00:00+05:30`) : null,
+        speakable: [".answer-line"],
+      }),
+      faqLd(faq),
     ],
   };
 
@@ -249,6 +267,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             {rv.district && <span className="inline-flex items-center gap-1"><MapPin className="size-4" aria-hidden />{rv.district}</span>}
             {!other && !rv.river && !rv.district && <span>{rt(`kind.${rv.kind}` as "kind.major")}</span>}
           </p>
+          <AnswerLine text={answer} note={mt} className="mt-2" />
           <p className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xl sm:text-2xl font-semibold leading-tight ${statusText[rv.status]}`}>
             <span className={`size-3 shrink-0 rounded-full ${rv.status === "spilling" ? "bg-amber-500" : rv.status === "releasing" ? "bg-sky-500" : rv.status === "holding" ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`} aria-hidden />
             <span>{rv.status === "nodata" && known?.ceb ? rt("known.headline") : rt(`s.${rv.status}` as "s.spilling")}</span>
@@ -499,6 +518,8 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         )}
 
         <p className={`mt-6 text-xs ${muted}`}>{rt("src.note")}</p>
+
+        <FaqList lang={lang} items={faq} note={mt} />
       </div>
     </main>
   );
