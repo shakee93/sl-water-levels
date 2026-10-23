@@ -6,6 +6,7 @@ import { fetchBasinSnapshot } from "@/lib/arcgis";
 import { loadForecast, type Forecast as ForecastT } from "@/lib/forecast";
 import { getAdvisory } from "@/lib/advisory";
 import { DISTRICT_BY_STATION } from "@/lib/districts";
+import { getGsmapForStation, GSMAP_CREDIT } from "@/lib/gsmap";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { contactsForDistrict } from "@/lib/help";
 import { statusFor } from "@/lib/status";
@@ -111,10 +112,11 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const latest = me?.latest ?? null;
   const status = statusFor(latest?.water_level ?? null, me?.thresholds ?? { alert: null, minor: null, major: null }, latest?.ts);
   const realTier = status.tier;
-  const [advisory, warnings, release] = await Promise.all([
+  const [advisory, warnings, release, sat] = await Promise.all([
     getAdvisory({ station: selectedStation, river: basin.trim(), district, tier: realTier, forecast: f }),
     warningsP.then((w) => warningsForBasin(w, basin)),
     releaseAffecting(selectedStation).catch(() => ({ active: false, confirmed: false }) as const),
+    getGsmapForStation(basin, selectedStation),
   ]);
 
   const stale = realTier === "stale";
@@ -311,6 +313,12 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
               <Cell label={f.rain ? t("fc.rainUpArea") : t("fc.rainUp")}>{fmtRain(f.signals.rainUpstream6h, t)}</Cell>
               {f.rain && <Cell label={t("fc.rainNext")}>{fmtRain(f.rain.next24hMm.det, t)}</Cell>}
             </div>
+            {sat && sat.mm6h != null && sat.mm24h != null && (
+              <p data-satellite-rain className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                {t("fc.satRain", { h6: sat.mm6h.toFixed(1), h24: sat.mm24h.toFixed(1), time: clock(sat.endsAt, t) })}{" "}
+                <span className="text-slate-500 dark:text-slate-500">{GSMAP_CREDIT}</span>
+              </p>
+            )}
             {hasRain && f.signals.rainContributors.length > 0 && (
               <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                 <CloudRain className="size-3.5 shrink-0 text-sky-500" aria-hidden />

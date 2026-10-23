@@ -5,7 +5,7 @@
 const BY_CRON = {
   "*/15 * * * *": ["releases-snapshot.yml"],
   "25 * * * *": ["store-forecasts.yml"],
-  "7,37 * * * *": ["health-check.yml"],
+  "7,37 * * * *": ["health-check.yml", "gsmap-snapshot.yml"], // JAXA publishes at :01/:31
   "30 7,19 * * *": ["snapshot.yml"],
   "0 1 1 * *": ["export-predictions.yml"],
 };

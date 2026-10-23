@@ -305,6 +305,7 @@ export const en = {
   "fc.rainUpArea": "Rain upstream (6h, area avg)",
   "fc.rainUp": "Rain upstream (6h)",
   "fc.rainNext": "Rain upstream (next 24h)",
+  "fc.satRain": "Satellite rain over the catchment: {h6} mm in the last 6 hours, {h24} mm in the last 24 hours (to {time}).",
   "fc.how": "How this is worked out",
   "anomaly.likely": "Likely upstream release",
   "anomaly.unusual": "Unusual rise",

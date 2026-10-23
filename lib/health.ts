@@ -451,6 +451,24 @@ async function checkGaugeArchive(): Promise<HealthCheck> {
   });
 }
 
+// Satellite rain (JAXA GSMaP) is published by gsmap-snapshot.yml as gsmap/latest.json on the data
+// branch. Until that file exists (the JAXA secrets are not added yet) the check passes with a note,
+// so there is no false alarm; afterwards a file whose newest rain ended over 3 h ago is a failure.
+async function checkGsmap(deep: boolean): Promise<HealthCheck> {
+  return run("pipe-gsmap", "Satellite rain (JAXA GSMaP)", "The 'Satellite rain' figures are hidden; forecasts are unchanged (they use the weather model's rain).", async () => {
+    const res = await fetch(`https://raw.githubusercontent.com/${REPO}/data/gsmap/latest.json`, fetchOpts(deep, 300));
+    if (res.status === 404) return { ok: true, detail: "not set up yet (no gsmap/latest.json on the data branch)" };
+    if (!res.ok) return unchecked(`raw.githubusercontent.com HTTP ${res.status}`);
+    const j = (await res.json()) as { latestEnd?: string };
+    const end = j.latestEnd ? Date.parse(j.latestEnd) : NaN;
+    if (!Number.isFinite(end)) return { ok: false, detail: "gsmap/latest.json has no latestEnd" };
+    const age = Date.now() - end;
+    return age > 3 * HOUR
+      ? { ok: false, detail: `newest satellite rain ended ${words(mins(age))} ago (limit 3 h); check the GSMaP snapshot workflow and the JAXA login`, ...fresh(end) }
+      : { ok: true, detail: `newest satellite rain ended ${words(mins(age))} ago`, ...fresh(end) };
+  });
+}
+
 // Vercel reports each production deploy as a GitHub commit status on main. A failed build
 // leaves the previous deploy live, so users see stale pages and fixes silently don't ship
 // (twice on 23 Oct 2026, ETIMEDOUT while prerendering). Flag failures and long-stuck builds.
@@ -471,10 +489,11 @@ async function checkDeploy(): Promise<HealthCheck> {
   });
 }
 
-async function checkPipelines(): Promise<HealthCheck[]> {
+async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
   return Promise.all([
     checkDeploy(),
     checkGaugeArchive(),
+    checkGsmap(deep),
     checkWorkflow("pipe-releases", "Release snapshots (data branch)", "releases-snapshot.yml", "Nothing visible right away; release history and arrival-time learning stop.", (now) => {
       const h = colomboHour(now);
       return (h >= 6 && h < 23 ? 2 : 3) * HOUR; // runs every 15 min by day, hourly overnight
@@ -496,7 +515,7 @@ export async function runHealthChecks(deep = false): Promise<HealthReport> {
     checkOpenAi(),
     checkWeather(deep),
     checkFeeds(deep),
-    checkPipelines(),
+    checkPipelines(deep),
   ]);
   const checks = [gauges, sheet, wms, wmsWeekly, dmc, openai, ...weather, ...feeds, ...pipes];
   return { ok: checks.every((c) => c.ok), checkedAt: new Date().toISOString(), deep, checks };
