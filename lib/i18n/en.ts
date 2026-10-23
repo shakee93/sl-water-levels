@@ -608,7 +608,7 @@ export const en = {
   "how.step2": "Reservoir",
   "how.step3": "Gauges on the river",
   "how.step4": "Your town",
-  "how.diagramAlt": "A river runs from rainy hills, past a reservoir and river gauges, to a town.",
+  "how.diagramAlt": "Illustration: rain falls on green hills; a reservoir's spill gates release water into the river; two river gauges with Alert, Minor flood and Major flood marks, one rising now; the river reaches a town by the sea hours later.",
   "how.readings.t": "Where readings come from",
   "how.readings.s": "River gauges of the Irrigation Department, about every hour.",
   "how.readings.d": "We show each gauge’s latest reading. If a gauge goes quiet, we say how old its last reading is.",
