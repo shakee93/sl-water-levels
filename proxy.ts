@@ -13,24 +13,6 @@ import { LANG_KEY, isLocale, localePath, type Locale } from "@/lib/i18n/config";
 
 const IMAGE = /\/(opengraph|twitter)-image(-[\w]+)?$/;
 
-// Station, river, reservoir and town pages render per request (they stream: heading and answer first)
-// and are cached by the CDN from this header. Next does not add its own no-store header when one is
-// already set. 60 s fresh matches the gauge data; the 5 min stale window serves the last copy
-// instantly while a new one renders. Single-segment pages other than these are static or ISR.
-const TOP_LEVEL = new Set(["about", "help", "status", "data", "history", "flood", "reservoirs"]);
-const STREAMED_CACHE = "public, s-maxage=60, stale-while-revalidate=300";
-// On Vercel the platform replaces Cache-Control on a dynamic render with private/no-store (seen live, 24 Oct),
-// so the CDN would never store these pages. Vercel-CDN-Cache-Control is read only by Vercel's CDN, wins over
-// Cache-Control there, and is not sent on to browsers.
-const STREAMED_HEADERS = { "Cache-Control": STREAMED_CACHE, "Vercel-CDN-Cache-Control": STREAMED_CACHE };
-function isStreamedPage(path: string): boolean {
-  if (IMAGE.test(path)) return false; // /<river>/opengraph-image keeps its own ISR header
-  const segs = path.split("/").filter(Boolean);
-  if (segs.length === 1) return !TOP_LEVEL.has(segs[0]); // /<river>
-  if (segs.length === 2) return !TOP_LEVEL.has(segs[0]) || segs[0] === "flood" || segs[0] === "reservoirs"; // /<river>/<station>, /flood/<town>, /reservoirs/<slug>
-  return false;
-}
-
 export function proxy(req: NextRequest) {
   const url = req.nextUrl;
   const m = /^\/(en|si|ta)(\/.*)?$/.exec(url.pathname);
@@ -63,11 +45,10 @@ export function proxy(req: NextRequest) {
     return NextResponse.rewrite(to);
   }
 
-  const headers = isStreamedPage(path) ? STREAMED_HEADERS : undefined;
-  if (m) return NextResponse.next({ headers });
+  if (m) return NextResponse.next();
   const to = url.clone();
   to.pathname = `/en${path === "/" ? "" : path}`;
-  return NextResponse.rewrite(to, { headers });
+  return NextResponse.rewrite(to);
 }
 
 export const config = {
