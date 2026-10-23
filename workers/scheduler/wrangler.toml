@@ -1,0 +1,22 @@
+# Cloudflare Worker that starts the repo's GitHub Actions workflows on time.
+# GitHub's own cron is best-effort and was delaying/skipping our hourly and
+# 15-minute jobs (23 Oct 2026: the hourly forecast store ran ~every 3-6 h and
+# the release archive never ran on schedule). Cloudflare cron triggers fire
+# reliably; the workflows keep their own schedules as a backup and use
+# concurrency groups, so a double start is harmless.
+name = "sl-water-levels-scheduler"
+main = "index.mjs"
+compatibility_date = "2026-10-01"
+
+[triggers]
+# All times UTC. Colombo = UTC+05:30.
+crons = [
+  "*/15 * * * *",  # release snapshots (every 15 min by day, hourly at night: filtered in code)
+  "25 * * * *",    # forecast store, hourly
+  "7,37 * * * *",  # health check, every 30 min
+  "30 7,19 * * *", # gauge snapshot, 13:00 and 01:00 Colombo
+  "0 1 1 * *",     # monthly prediction export, 06:30 Colombo on the 1st
+]
+
+[vars]
+REPO = "shakee93/sl-water-levels"
