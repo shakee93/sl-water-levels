@@ -9,6 +9,9 @@ import { FooterLangLinks } from "./FooterLangLinks";
 import { statusT } from "@/lib/i18n/status";
 import { ttFor } from "@/lib/i18n/town";
 
+// si/ta drafts: need native review.
+const MADE_BY: Record<Locale, string> = { en: "Made by", si: "නිර්මාණය කළේ", ta: "உருவாக்கியவர்" };
+
 export async function Footer({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
   let stations: Station[] = [];
@@ -92,7 +95,14 @@ export async function Footer({ lang }: { lang: Locale }) {
 
       <div className="border-t border-slate-200 dark:border-slate-800">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <p>{t("footer.copyright", { year })}</p>
+          <p>
+            {t("footer.copyright", { year })}
+            <span aria-hidden> · </span>
+            {MADE_BY[lang]}{" "}
+            <a href="https://x.com/shakeeb_x" target="_blank" rel="noreferrer" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-300 transition">
+              @shakeeb_x
+            </a>
+          </p>
           <FooterLangLinks lang={lang} label={t("lang.label")} />
         </div>
       </div>
