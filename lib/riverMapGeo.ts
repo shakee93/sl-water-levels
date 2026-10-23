@@ -8,8 +8,8 @@ import { MAP_W, placeLabels, type Box, type GaugeIn, type MapModel, type MapNode
 
 const PAD_X = 30;
 const PAD_Y = 30;
-const MIN_H = 230;
-const MAX_H = 470;
+const MIN_H0 = 300;
+const MAX_H0 = 470;
 const SNAP_GAUGE_KM = 5;
 const SNAP_DAM_KM = 2.5;
 const KM = 111.2; // km per degree of latitude
@@ -234,9 +234,16 @@ export type GeoInput = {
   seaLabel: string;
   /** The station this page is about, if any. */
   focusStation?: string;
+  /** The reservoir (slug) this page is about: the map frames it, its gauges below and the river to the sea. */
+  focusReservoir?: string;
+  /** Drawing width in map units (default 360, the phone map; the wide map uses more). */
+  width?: number;
 };
 
 export function buildGeoMap(input: GeoInput): MapModel | null {
+  const W = input.width ?? MAP_W;
+  const MIN_H = W > MAP_W ? 200 : MIN_H0;
+  const MAX_H = W > MAP_W ? 330 : MAX_H0;
   const { gauges, reservoirs } = input;
   const ways = RIVER_WAYS.filter((w) => w.basin === input.basin.trim());
   if (ways.length === 0) return null;
@@ -296,20 +303,36 @@ export function buildGeoMap(input: GeoInput): MapModel | null {
   }
 
   // ---- fit: gauges, dams, the mouth and the nearest town (so a one-gauge river is still a place)
-  const fit: LL[] = [...gAt.values()].map((g) => g.ll);
-  for (const r of reservoirs) fit.push(rAt.get(r.slug)!.ll);
-  if (mouth) fit.push(mouth);
+  // On a reservoir page: that reservoir, the gauges below it and the river down to the sea.
+  const fr = input.focusReservoir ? reservoirs.find((r) => r.slug === input.focusReservoir) : undefined;
+  if (input.focusReservoir && (!fr || !rAt.get(fr.slug)!.attach)) return null;
+  const fit: LL[] = [];
+  if (fr) {
+    fit.push(rAt.get(fr.slug)!.ll);
+    for (const st of fr.linked) if (gAt.get(st)?.snapped) fit.push(gAt.get(st)!.ll);
+  }
+  if (!fr || fit.length < 2) {
+    fit.push(...[...gAt.values()].map((g) => g.ll));
+    for (const r of reservoirs) fit.push(rAt.get(r.slug)!.ll);
+  }
+  if (mouth) {
+    fit.push(mouth);
+    // leave room for open water beyond the mouth (for the sea label): continue away from the river
+    const cx = fit.reduce((t, q) => t + q[0], 0) / fit.length, cy = fit.reduce((t, q) => t + q[1], 0) / fit.length;
+    const dx = (mouth[0] - cx) * kx, dy = mouth[1] - cy, dl = Math.hypot(dx, dy);
+    if (dl > 0.01) fit.push([mouth[0] + (dx / dl / kx) * 0.13, mouth[1] + (dy / dl) * 0.13]);
+  }
   if (towns[0] && !fit.some((p) => Math.hypot((p[0] - towns[0].lon) * kx, p[1] - towns[0].lat) * KM < 1)) fit.push([towns[0].lon, towns[0].lat]);
   const lons = fit.map((p) => p[0]), lats = fit.map((p) => p[1]);
   const cLon = (Math.min(...lons) + Math.max(...lons)) / 2, cLat = (Math.min(...lats) + Math.max(...lats)) / 2;
   const kxm = Math.cos((cLat * Math.PI) / 180);
   const bw = Math.max((Math.max(...lons) - Math.min(...lons)) * kxm, 0.06);
   const bh = Math.max(Math.max(...lats) - Math.min(...lats), 0.06);
-  const availW = MAP_W - 2 * PAD_X;
+  const availW = W - 2 * PAD_X;
   const h = Math.round(Math.max(MIN_H, Math.min(MAX_H, availW * (bh / bw) + 2 * PAD_Y)));
   const s = Math.min(availW / bw, (h - 2 * PAD_Y) / bh);
-  const proj = (p: LL): P => ({ x: MAP_W / 2 + (p[0] - cLon) * kxm * s, y: h / 2 - (p[1] - cLat) * s });
-  const view: Rect = { x0: -24, y0: -24, x1: MAP_W + 24, y1: h + 24 };
+  const proj = (p: LL): P => ({ x: W / 2 + (p[0] - cLon) * kxm * s, y: h / 2 - (p[1] - cLat) * s });
+  const view: Rect = { x0: -24, y0: -24, x1: W + 24, y1: h + 24 };
   const kmPx = s / KM;
 
   // ---- land, other rivers, this basin's rivers
@@ -318,16 +341,21 @@ export function buildGeoMap(input: GeoInput): MapModel | null {
     const c = clipPoly(ring.map(proj), view);
     if (c.length >= 3) land.push(dp(c, 0.4));
   }
-  const strokes = (list: RiverWay[], tol: number) =>
-    list.flatMap((w) => runsInside(w.pts.map(proj), view).map((run) => pathOf(dp(run, tol))));
+  const strokeRuns = (list: RiverWay[], tol: number) =>
+    list.flatMap((w) => runsInside(w.pts.map(proj), view).map((run) => dp(run, tol)));
+  const strokes = (list: RiverWay[], tol: number) => strokeRuns(list, tol).map((r) => pathOf(r));
   const context = strokes(RIVER_WAYS.filter((w) => w.basin !== input.basin.trim()), 0.6);
-  const mainPaths = strokes(ways.filter((w) => w.main), 0.35);
-  const tribPaths = strokes(ways.filter((w) => !w.main), 0.35);
+  const mainRuns = strokeRuns(ways.filter((w) => w.main), 0.35);
+  const tribRuns = strokeRuns(ways.filter((w) => !w.main), 0.35);
+  const mainPaths = mainRuns.map((r) => pathOf(r));
+  const tribPaths = tribRuns.map((r) => pathOf(r));
+  // every drawn river line (and the context rivers) is an obstacle for labels
+  const linePx: P[][] = [...mainRuns, ...tribRuns];
   // OSM often stops the river a few km short of the sea (the estuary is mapped as a water polygon):
   // close the last stretch with a straight line so the river visibly reaches the sea.
   if (mouth && mouthCoast) {
     const a = proj(mouth), b = proj(mouthCoast);
-    if (Math.hypot(a.x - b.x, a.y - b.y) > 2) mainPaths.push(pathOf([a, b]));
+    if (Math.hypot(a.x - b.x, a.y - b.y) > 2) { mainPaths.push(pathOf([a, b])); linePx.push([a, b]); }
   }
 
   // ---- nodes
@@ -402,17 +430,36 @@ export function buildGeoMap(input: GeoInput): MapModel | null {
     lakes.push({ id: r.slug, d: pathOf(dp(c, 0.3), true), status: r.status, active: r.active });
   }
 
-  // ---- sea label: open water just off the mouth
+  // ---- sea label: open water off the mouth. The icon and the whole label box must lie in the sea.
+  const boxInWater = (b: { x0: number; y0: number; x1: number; y1: number }) => {
+    for (let x = b.x0; x <= b.x1 + 0.1; x += 3) {
+      for (let y = b.y0; y <= b.y1 + 0.1; y += 3) {
+        if (land.some((r) => inRing({ x, y }, r))) return false;
+      }
+    }
+    return true;
+  };
+  const seaW = input.seaLabel.length * 5.7 + 4;
   if (mouth) {
     const m = proj(mouth);
-    const shapes = land;
-    spot: for (const dist of [26, 40, 56]) {
-      for (let k = 0; k < 16; k++) {
-        const a = (k * Math.PI) / 8;
+    // the outward normal: the mean direction of the water around the mouth
+    let nx = 0, ny = 0;
+    for (let k = 0; k < 24; k++) {
+      const a = (k * Math.PI) / 12;
+      const q = { x: m.x + Math.cos(a) * 14, y: m.y + Math.sin(a) * 14 };
+      if (!land.some((r) => inRing(q, r))) { nx += Math.cos(a); ny += Math.sin(a); }
+    }
+    const base = Math.atan2(ny, nx);
+    const angles = Array.from({ length: 24 }, (_, k) => base + (Math.ceil(k / 2) * (k % 2 ? 1 : -1) * Math.PI) / 12);
+    spot: for (const dist of [24, 36, 50, 66]) {
+      for (const a of angles) {
         const p = { x: m.x + Math.cos(a) * dist, y: m.y + Math.sin(a) * dist };
-        if (p.x < 22 || p.x > MAP_W - 22 || p.y < 14 || p.y > h - 14) continue;
-        if (shapes.some((r) => inRing(p, r))) continue;
+        if (p.x < 22 || p.x > W - 22 || p.y < 14 || p.y > h - 14) continue;
         if (nodes.some((n) => Math.hypot(n.x - p.x, n.y - p.y) < 22)) continue;
+        const icon = { x0: p.x - 9, y0: p.y - 8, x1: p.x + 9, y1: p.y + 8 };
+        const right = { x0: p.x - 9, y0: p.y - 8, x1: p.x + 12 + seaW, y1: p.y + 8 };
+        const left = { x0: p.x - 12 - seaW, y0: p.y - 8, x1: p.x + 9, y1: p.y + 8 };
+        if (!boxInWater(icon) || !(boxInWater(right) && p.x + 12 + seaW < W - 2 || boxInWater(left) && p.x - 12 - seaW > 2)) continue;
         nodes.push({ id: "sea", kind: "sea", ...p, label: { text: input.seaLabel, sub: null, x: 0, y: 0, anchor: "start" }, name: input.seaLabel, detail: "" });
         break spot;
       }
@@ -422,7 +469,7 @@ export function buildGeoMap(input: GeoInput): MapModel | null {
   // ---- towns: small labels, only where they say something new
   for (const t of towns) {
     const p = proj([t.lon, t.lat]);
-    if (p.x < 10 || p.x > MAP_W - 10 || p.y < 10 || p.y > h - 10) continue;
+    if (p.x < 10 || p.x > W - 10 || p.y < 10 || p.y > h - 10) continue;
     if (nodes.some((n) => n.kind !== "town" && Math.hypot(n.x - p.x, n.y - p.y) < 14)) continue;
     nodes.push({ id: `t:${t.id}`, kind: "town", ...p, label: { text: t.label, sub: null, x: 0, y: 0, anchor: "start" }, name: t.label, detail: "" });
   }
@@ -432,18 +479,25 @@ export function buildGeoMap(input: GeoInput): MapModel | null {
   const scale = { x: 10, y: h - 12, px: nice * kmPx, label: `${nice} km` };
   const obstacles: Box[] = [
     { x0: 4, y0: h - 30, x1: 10 + scale.px + 34, y1: h - 2 },
-    { x0: MAP_W - 36, y0: 2, x1: MAP_W - 2, y1: 40 },
-    { x0: MAP_W - 150, y0: h - 16, x1: MAP_W - 2, y1: h - 2 },
+    { x0: W - 36, y0: 2, x1: W - 2, y1: 40 },
+    { x0: W - 150, y0: h - 16, x1: W - 2, y1: h - 2 },
   ];
-  placeLabels(nodes, h, obstacles);
+  // a focused map frames only part of the basin: drop what falls outside the frame
+  if (fr) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i];
+      if (n.x < 6 || n.x > W - 6 || n.y < 6 || n.y > h - 6) nodes.splice(i, 1);
+    }
+  }
+  placeLabels(nodes, h, obstacles, linePx, boxInWater, W);
 
   return {
-    w: MAP_W,
+    w: W,
     h,
     lines: [...mainPaths.map((d, i) => ({ id: `m${i}`, d, trib: false })), ...tribPaths.map((d, i) => ({ id: `t${i}`, d, trib: true }))],
     links,
     flows,
     nodes,
-    geo: { land: land.map((r) => pathOf(r, true)), context, lakes, scale, northX: MAP_W - 18 },
+    geo: { land: land.map((r) => pathOf(r, true)), context, lakes, scale, northX: W - 18 },
   };
 }

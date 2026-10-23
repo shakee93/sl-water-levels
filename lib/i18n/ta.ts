@@ -155,6 +155,9 @@ export const ta: Dict = {
   "map.heading": "எல்லா நிலையங்களின் வரைபடம்",
   "map.loading": "வரைபடம் ஏற்றுகிறது…",
   "map.openStation": "நிலையத்தைத் திற →",
+  "map.key": "குறிப்பு",
+  "map.river": "ஆறு",
+  "map.releasing": "நீர் திறக்கும் நீர்த்தேக்கம்",
   "map.you": "நீங்கள் இங்கே இருக்கிறீர்கள்",
   "map.about1km": "சுமார் 1 கி.மீ",
 

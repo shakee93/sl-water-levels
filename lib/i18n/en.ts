@@ -162,6 +162,9 @@ export const en = {
   "map.heading": "Map of all gauges",
   "map.loading": "Loading map…",
   "map.openStation": "Open station →",
+  "map.key": "Key",
+  "map.river": "River",
+  "map.releasing": "Reservoir releasing water",
   "map.you": "You are here",
   "map.about1km": "about 1 km",
 

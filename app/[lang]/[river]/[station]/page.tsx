@@ -223,11 +223,6 @@ export default async function StationPage({
               <Forecast lang={lang} basin={basin} selectedStation={station} />
             </Suspense>
 
-            {/* A river with one gauge has no river page to hold its map: it lives here. */}
-            {stations.filter((s) => s.basin === basin).length === 1 && (
-              <Suspense key={`map-${station}`} fallback={null}><RiverMap lang={lang} basin={basin} focusStation={station} /></Suspense>
-            )}
-
             <StationNearby
               current={station}
               gauges={stations.map((s) => ({
@@ -246,6 +241,11 @@ export default async function StationPage({
             <Suspense key={`chart-${station}`} fallback={<StationCardSkeleton />}>
               <StationCard lang={lang} stationName={station} />
             </Suspense>
+
+            {/* A river with one gauge has no river page to hold its map: it lives here, under the water-level chart. */}
+            {stations.filter((s) => s.basin === basin).length === 1 && (
+              <Suspense key={`map-${station}`} fallback={null}><RiverMap lang={lang} basin={basin} focusStation={station} /></Suspense>
+            )}
 
             <Suspense key={`history-${station}`} fallback={null}>
               <FloodHistoryCard lang={lang} basin={basin} station={station} />

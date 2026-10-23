@@ -323,7 +323,37 @@ function routeTo(attach: { line: Line; seg: number; x: number; y: number }, targ
   return null;
 }
 
-export function placeLabels(nodes: MapNode[], h: number, obstacles: Box[] = []) {
+type Pt = { x: number; y: number };
+
+/** True when the segment a-b passes through the box (Liang-Barsky). */
+function segHitsBox(a: Pt, b: Pt, r: Box): boolean {
+  let t0 = 0, t1 = 1;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  for (const [p, q] of [[-dx, a.x - r.x0], [dx, r.x1 - a.x], [-dy, a.y - r.y0], [dy, r.y1 - a.y]] as const) {
+    if (p === 0) { if (q < 0) return false; continue; }
+    const t = q / p;
+    if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; }
+  }
+  return true;
+}
+
+/**
+ * Put each label beside its point. `lines` are drawn polylines (rivers): a spot that does not touch
+ * one (box plus 2 px) is preferred; if every spot does, the label still goes in the best free one and
+ * its halo keeps it legible. `water` (sea label only) says whether a box lies fully in open water.
+ */
+export function placeLabels(nodes: MapNode[], h: number, obstacles: Box[] = [], lines: Pt[][] = [], water?: (b: Box) => boolean, width = MAP_W) {
+  const crosses = (b: Box) => {
+    const pb = { x0: b.x0 - 2, y0: b.y0 - 2, x1: b.x1 + 2, y1: b.y1 + 2 };
+    return lines.some((l) => {
+      for (let i = 0; i + 1 < l.length; i++) {
+        const a = l[i], c = l[i + 1];
+        if (Math.max(a.x, c.x) < pb.x0 || Math.min(a.x, c.x) > pb.x1 || Math.max(a.y, c.y) < pb.y0 || Math.min(a.y, c.y) > pb.y1) continue;
+        if (segHitsBox(a, c, pb)) return true;
+      }
+      return false;
+    });
+  };
   const R: Record<MapNode["kind"], number> = { gauge: 6, reservoir: 8, town: 3, sea: 6 };
   const placed: Box[] = [...obstacles, ...nodes.map((n) => ({ x0: n.x - R[n.kind] - 1, y0: n.y - R[n.kind] - 1, x1: n.x + R[n.kind] + 1, y1: n.y + R[n.kind] + 1 }))];
   // Priority: gauges, then highlighted/active reservoirs, other labelled reservoirs, sea, towns.
@@ -351,15 +381,17 @@ export function placeLabels(nodes: MapNode[], h: number, obstacles: Box[] = []) 
         { anchor: "end", x: n.x - r, y: base(bot), box: { x0: n.x - r - w, y0: bot, x1: n.x - r, y1: bot + ht } },
       );
     }
-    const inside = (b: Box) => b.x0 >= 2 && b.x1 <= MAP_W - 2 && b.y0 >= 2 && b.y1 <= h - 2;
-    let pick = cands.find((c) => inside(c.box) && !placed.some((p) => hit(p, c.box)));
+    const inside = (b: Box) => b.x0 >= 2 && b.x1 <= width - 2 && b.y0 >= 2 && b.y1 <= h - 2;
+    const wet = (c: { box: Box }) => n.kind !== "sea" || !water || water(c.box);
+    const free = (c: { box: Box }) => inside(c.box) && wet(c) && !placed.some((p) => hit(p, c.box));
+    let pick = cands.find((c) => free(c) && !crosses(c.box)) ?? cands.find((c) => free(c) && n.kind !== "town");
     if (!pick && n.kind === "gauge") {
       // a gauge name must show: take the in-bounds spot with the least overlap, or clamp
       const ok = cands.filter((c) => inside(c.box));
       pick = ok.sort((a, b) => placed.filter((p) => hit(p, a.box)).length - placed.filter((p) => hit(p, b.box)).length)[0];
       if (!pick) {
         const c = cands[0];
-        const shift = Math.max(0, c.box.x1 - (MAP_W - 2));
+        const shift = Math.max(0, c.box.x1 - (width - 2));
         pick = { ...c, x: c.x - shift, box: { ...c.box, x0: c.box.x0 - shift, x1: c.box.x1 - shift } };
       }
     }

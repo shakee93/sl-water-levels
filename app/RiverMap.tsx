@@ -14,6 +14,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
+import { Map as MapIcon } from "lucide-react";
 import { SpillWatchChip } from "./SpillWatchChip";
 import { tierLabel } from "./tierUi";
 import { RiverMapView } from "./RiverMapView";
@@ -27,7 +28,7 @@ const SITE = "https://sl-water-levels.vercel.app";
  *
  * `highlight` marks one reservoir (its own page); `jsonLd` adds the places as a schema.org ItemList.
  */
-export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation }: { lang: Locale; basin: string; highlight?: string; jsonLd?: boolean; focusStation?: string }) {
+export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation, focusReservoir, embedded }: { lang: Locale; basin: string; highlight?: string; jsonLd?: boolean; focusStation?: string; focusReservoir?: string; embedded?: boolean }) {
   const { t, p } = getI18n(lang);
   const rt = rtFor(lang);
   const b = basin.trim();
@@ -89,9 +90,12 @@ export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation }:
 
   // Real river geometry (OpenStreetMap) where it exists for this basin; otherwise the old schematic.
   const townCands: TownIn[] = PLACES.filter((x) => x.stations.some((st) => stationsHere.has(st))).map((x) => ({ id: x.name, lat: x.lat, lon: x.lon, label: x.name }));
-  const model =
-    buildGeoMap({ basin: b, gauges, reservoirs, towns: townCands, seaLabel: rt("map.sea"), focusStation }) ??
-    buildMap({ gauges, reservoirs, towns, shape, seaLabel: rt("map.sea") });
+  const geoIn = { basin: b, gauges, reservoirs, towns: townCands, seaLabel: rt("map.sea"), focusStation, focusReservoir };
+  const geoNarrow = buildGeoMap(geoIn);
+  // A reservoir page embeds the map only where there is real river geometry; otherwise its diagram stands alone.
+  if (focusReservoir && !geoNarrow) return null;
+  const model = geoNarrow ?? buildMap({ gauges, reservoirs, towns, shape, seaLabel: rt("map.sea") });
+  const wide = geoNarrow ? buildGeoMap({ ...geoIn, width: 720 }) : null;
   const rn = riverName(b, lang);
 
   const ld = jsonLd
@@ -107,13 +111,10 @@ export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation }:
       }
     : null;
 
-  return (
-    <section id="map" className="mb-5 scroll-mt-4" aria-label={rt("map.title")}>
-      {ld && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />}
-      <h2 className="sr-only">{rt("map.title")}</h2>
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4">
+  const view = (
         <RiverMapView
           model={model}
+          wide={wide}
           extras={Object.fromEntries(
             metas.filter((m) => m.lat != null).map((m) => [`r:${m.slug}`, <SpillWatchChip key={m.slug} lang={lang} slug={m.slug} catalogueId={m.catalogueId} />]),
           )}
@@ -129,6 +130,14 @@ export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation }:
             openReservoir: rt("map.openReservoir"),
           }}
         />
+  );
+  if (embedded) return <div id="map" className="mb-4 scroll-mt-4" aria-label={rt("map.title")}>{view}</div>;
+  return (
+    <section id="map" className="mb-5 scroll-mt-4" aria-label={rt("map.title")}>
+      {ld && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4">
+        <h2 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300"><MapIcon className="size-4" aria-hidden />{rt("map.title")}</h2>
+        {view}
       </div>
     </section>
   );

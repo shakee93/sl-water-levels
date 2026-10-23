@@ -8,10 +8,14 @@ import {
   Popup,
   ZoomControl,
   Polyline,
+  Marker,
   useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
+import type { Tier } from "@/lib/arcgis";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
@@ -20,10 +24,14 @@ import { TIER_HEX, tierLabel, type HomeStation } from "./tierUi";
 import { useI18n } from "./LocaleProvider";
 import { riverName } from "@/lib/i18n/format";
 import { useLocation } from "./useLocation";
+import { HOME_RIVERS, MAJOR_BASINS } from "@/lib/geo/homeRivers";
+import { MapLabels } from "./MapLabels";
+import { rtFor } from "@/lib/i18n/reservoirs";
+import type { HomeLake } from "./MapClient";
 
 type Props = {
   stations: HomeStation[];
-  basinChains: Record<string, Array<[number, number]>>;
+  lakes: HomeLake[];
 };
 
 // Tight bounds around Sri Lanka so the user can't pan or zoom out to India.
@@ -32,9 +40,14 @@ type Props = {
 // bbox (which would pad horizontally and show Tamil Nadu).
 const SL_CENTER: [number, number] = [7.6, 80.77];
 const SL_ZOOM = 8;
+// The whole island, framed on load; also the farthest the visitor can zoom out.
+const SL_FIT: [[number, number], [number, number]] = [
+  [5.6, 79.6],
+  [9.85, 82.0],
+];
 const SL_BOUNDS: [[number, number], [number, number]] = [
-  [5.7, 79.5],
-  [10.1, 82.0],
+  [5.4, 79.2],
+  [10.4, 82.4],
 ];
 
 // Esri Light/Dark Gray Canvas. Free with attribution and no API key.
@@ -91,6 +104,71 @@ function FitToUser({ points }: { points: Array<[number, number]> | null }) {
   return null;
 }
 
+/** Frame the whole island on load and on resize; that framing is also the minimum zoom. */
+function FitIsland() {
+  const map = useMap();
+  useEffect(() => {
+    const fit = () => {
+      map.invalidateSize();
+      map.setMinZoom(0);
+      map.fitBounds(SL_FIT, { animate: false, padding: [2, 2] });
+      map.setMinZoom(map.getZoom());
+    };
+    const refit = () => {
+      if (map.getZoom() <= map.getMinZoom() + 0.01) fit();
+    };
+    fit();
+    const later = window.setTimeout(refit, 400);
+    map.on("resize", refit);
+    return () => {
+      window.clearTimeout(later);
+      map.off("resize", refit);
+    };
+  }, [map]);
+  return null;
+}
+
+/** The key, in a corner of the map: collapsed to a button on phones. */
+function Key({ hasLakes, hasUser }: { hasLakes: boolean; hasUser: boolean }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 640);
+  const tiers: Tier[] = ["normal", "watch", "alert", "minor", "major", "stale"];
+  return (
+    <div data-map-key className="absolute left-2 top-2 sm:bottom-2 sm:top-auto z-[1000] max-w-[calc(100%-4rem)] rounded-lg border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 text-[11px] leading-4 text-slate-700 dark:text-slate-200 shadow-sm backdrop-blur-sm">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-1.5 px-2.5 py-1.5 font-medium">
+        {t("map.key")}
+        <ChevronDown className={`size-3 transition-transform ${open ? "" : "-rotate-90"}`} aria-hidden />
+      </button>
+      {open && (
+        <ul className="grid grid-cols-2 gap-x-3 gap-y-1 px-2.5 pb-2 sm:grid-cols-3">
+          {tiers.map((k) => (
+            <li key={k} className="flex items-center gap-1.5">
+              <span className="size-2.5 shrink-0 rounded-full border border-white/70 dark:border-slate-900" style={{ background: TIER_HEX[k] }} aria-hidden />
+              {k === "stale" ? t("tier.noData") : tierLabel(t, k)}
+            </li>
+          ))}
+          <li className="flex items-center gap-1.5">
+            <span className="h-0.5 w-3 shrink-0 rounded" style={{ background: "#38bdf8" }} aria-hidden />
+            {t("map.river")}
+          </li>
+          {hasLakes && (
+            <li className="col-span-2 flex items-center gap-1.5 sm:col-span-1">
+              <span className="size-2.5 shrink-0 rounded-[40%] bg-amber-500" aria-hidden />
+              {t("map.releasing")}
+            </li>
+          )}
+          {hasUser && (
+            <li className="flex items-center gap-1.5">
+              <span className="size-2.5 shrink-0 rounded-full bg-blue-600" aria-hidden />
+              {t("map.you")}
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /**
  * One-finger drags scroll the page while the whole island is in view (nothing to pan to);
  * once the visitor zooms in, dragging pans the map. Stops the map trapping a phone's scroll.
@@ -110,9 +188,19 @@ function TouchScrollGuard() {
   return null;
 }
 
-export function MapLeaflet({ stations, basinChains }: Props) {
+const LAKE_FILL = { spilling: "#f59e0b", releasing: "#0ea5e9" } as const;
+const lakeIcon = (status: HomeLake["status"], stroke: string) =>
+  L.divIcon({
+    className: "",
+    iconSize: [18, 14],
+    iconAnchor: [9, 7],
+    html: `<svg width="18" height="14" viewBox="-9 -7 18 14" aria-hidden="true"><path d="M-7 0.5C-7.5-4-2-6.5 2.5-5.5 7-5 8.5-1 6.5 3 4.5 6.5-3 6.8-5.8 4-6.8 2.6-7 1.4-7 0.5Z" fill="${LAKE_FILL[status]}" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  });
+
+export function MapLeaflet({ stations, lakes }: Props) {
   const scheme = useColorScheme();
   const { lang, t, p } = useI18n();
+  const rt = rtFor(lang);
   // On phones the whole island only fits one zoom level further out.
   const [zoom] = useState(() =>
     typeof window !== "undefined" && window.innerWidth < 640 ? SL_ZOOM - 1 : SL_ZOOM,
@@ -129,12 +217,15 @@ export function MapLeaflet({ stations, basinChains }: Props) {
   }, [user, stations]);
 
   return (
+    <div className="relative h-full w-full">
     <MapContainer
       center={SL_CENTER}
       zoom={zoom}
+      zoomSnap={0.25}
+      zoomDelta={0.5}
       maxBounds={SL_BOUNDS}
       maxBoundsViscosity={1.0}
-      minZoom={zoom}
+      minZoom={6}
       maxZoom={12}
       scrollWheelZoom={false}
       zoomControl={false}
@@ -142,6 +233,7 @@ export function MapLeaflet({ stations, basinChains }: Props) {
       style={{ height: "100%", width: "100%", background: "transparent" }}
     >
       <ZoomControl position="bottomright" />
+      <FitIsland />
       <FitToUser points={fit} />
       <TouchScrollGuard />
       <TileLayer
@@ -150,16 +242,17 @@ export function MapLeaflet({ stations, basinChains }: Props) {
         url={tile.url}
         maxZoom={16}
       />
-      <TileLayer key={`${scheme}-labels`} url={tile.labels} maxZoom={16} />
-      {Object.entries(basinChains).map(([basin, chain]) => {
+      {/* the real rivers (OpenStreetMap), under the gauge dots */}
+      {HOME_RIVERS.map((r, i) => {
+        const major = MAJOR_BASINS.includes(r.basin);
         return (
           <Polyline
-            key={`chain-${basin}`}
-            positions={chain}
+            key={i}
+            positions={r.pts}
             pathOptions={{
-              color: scheme === "dark" ? "#94a3b8" : "#64748b",
-              weight: 1.5,
-              opacity: 0.35,
+              color: scheme === "dark" ? "#38bdf8" : "#7dd3fc",
+              weight: major && r.main ? 2.4 : major ? 1.4 : 1.1,
+              opacity: scheme === "dark" ? 0.7 : 0.95,
               lineCap: "round",
               lineJoin: "round",
             }}
@@ -167,6 +260,20 @@ export function MapLeaflet({ stations, basinChains }: Props) {
           />
         );
       })}
+      <MapLabels stations={stations} lakes={lakes} scheme={scheme} user={user} />
+      {/* reservoirs releasing water right now */}
+      {lakes.map((l) => (
+        <Marker key={l.slug} position={[l.lat, l.lon]} icon={lakeIcon(l.status, scheme === "dark" ? "#0f172a" : "#ffffff")} keyboard={false}>
+          <Tooltip direction="top" offset={[0, -6]} opacity={1}>
+            <span className="font-medium">{l.name}</span>
+            <span className="text-slate-500"> · {rt(`s.${l.status}` as "s.spilling")}</span>
+          </Tooltip>
+          <Popup>
+            <Link href={p(l.href)} className="font-semibold text-sky-700 hover:underline block">{l.name}</Link>
+            <div className="text-xs text-slate-500">{rt(`s.${l.status}` as "s.spilling")}</div>
+          </Popup>
+        </Marker>
+      ))}
       {[...stations]
         // Draw the stations that matter last so they sit on top of grey dots.
         .sort((a, b) => Number(isHot(a)) - Number(isHot(b)))
@@ -230,5 +337,7 @@ export function MapLeaflet({ stations, basinChains }: Props) {
         </>
       )}
     </MapContainer>
+    <Key hasLakes={lakes.length > 0} hasUser={!!user} />
+    </div>
   );
 }

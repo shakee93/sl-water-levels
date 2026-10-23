@@ -17,18 +17,20 @@ const MapLeaflet = dynamic(
   },
 );
 
+export type HomeLake = { slug: string; name: string; lat: number; lon: number; status: "spilling" | "releasing"; href: string };
+
 export function MapClient({
   stations,
-  basinChains,
+  lakes,
 }: {
   stations: HomeStation[];
-  basinChains: Record<string, Array<[number, number]>>;
+  lakes: HomeLake[];
 }) {
   // The map sits well below the verdict list: fetch Leaflet and the tiles only when it is near the screen.
   const [ref, seen] = useInView<HTMLDivElement>("500px");
   return (
     <div ref={ref} className="relative w-full h-full">
-      {seen ? <MapLeaflet stations={stations} basinChains={basinChains} /> : <MapSkeleton />}
+      {seen ? <MapLeaflet stations={stations} lakes={lakes} /> : <MapSkeleton />}
     </div>
   );
 }

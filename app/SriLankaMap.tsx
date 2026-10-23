@@ -1,28 +1,21 @@
-import { BASIN_ORDER } from "@/lib/basinOrder";
-import { MapClient } from "./MapClient";
-import { TIER_DOT, tierLabel, type HomeStation } from "./tierUi";
+import { getReservoirs } from "@/lib/reservoirData";
+import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
+import { MapClient, type HomeLake } from "./MapClient";
+import type { HomeStation } from "./tierUi";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
-import type { Tier } from "@/lib/arcgis";
 
-const LEGEND: Tier[] = ["normal", "watch", "alert", "minor", "major", "stale"];
-
-export function SriLankaMap({ lang, stations }: { lang: Locale; stations: HomeStation[] }) {
+export async function SriLankaMap({ lang, stations }: { lang: Locale; stations: HomeStation[] }) {
   const { t } = getI18n(lang);
   const valid = stations.filter(
     (s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude),
   );
 
-  // Thin neutral upstream→downstream lines for basins with a curated order.
-  const basinChains: Record<string, Array<[number, number]>> = {};
-  for (const [basin, order] of Object.entries(BASIN_ORDER)) {
-    const lookup = new Map(valid.filter((s) => s.basin === basin).map((s) => [s.station, s] as const));
-    const chain = order
-      .map((name) => lookup.get(name))
-      .filter((s): s is HomeStation => Boolean(s))
-      .map((s): [number, number] => [s.latitude, s.longitude]);
-    if (chain.length >= 2) basinChains[basin] = chain;
-  }
+  // Reservoirs that are spilling or releasing into a river right now, linked to their pages.
+  const data = await getReservoirs().catch(() => null);
+  const lakes: HomeLake[] = (data?.items ?? [])
+    .filter((r) => !r.barrage && (r.status === "spilling" || (r.status === "releasing" && r.flow != null && r.flow.kind !== "outlets")) && RESERVOIR_COORDS[r.slug])
+    .map((r) => ({ slug: r.slug, name: r.name, lat: RESERVOIR_COORDS[r.slug].lat, lon: RESERVOIR_COORDS[r.slug].lon, status: r.status as "spilling" | "releasing", href: `/reservoirs/${r.slug}` }));
 
   return (
     <section className="mb-8" aria-labelledby="map-heading">
@@ -34,17 +27,9 @@ export function SriLankaMap({ lang, stations }: { lang: Locale; stations: HomeSt
           >
             {t("map.heading")}
           </h2>
-          <ul className="mt-2 flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-slate-600 dark:text-slate-300">
-            {LEGEND.map((k) => (
-              <li key={k} className="inline-flex items-center gap-1.5">
-                <span className={`size-2.5 rounded-full ${TIER_DOT[k]}`} aria-hidden />
-                {k === "stale" ? t("tier.noData") : tierLabel(t, k)}
-              </li>
-            ))}
-          </ul>
         </div>
-        <div className="relative h-[380px] sm:h-[820px] lg:h-[960px]">
-          <MapClient stations={valid} basinChains={basinChains} />
+        <div className="relative h-[520px] sm:h-[700px]">
+          <MapClient stations={valid} lakes={lakes} />
         </div>
       </div>
     </section>

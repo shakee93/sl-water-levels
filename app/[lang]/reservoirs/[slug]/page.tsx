@@ -24,6 +24,7 @@ import { HistoryChart } from "@/app/reservoirs/HistoryChart";
 import { BasinWarning } from "@/app/reservoirs/BasinWarning";
 import { displayName, localName } from "@/app/reservoirs/RvCard";
 import { Suspense } from "react";
+import { RiverMap } from "@/app/RiverMap";
 
 export const revalidate = 600;
 
@@ -401,6 +402,9 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         {/* ---- downstream: a flow diagram of this reservoir */}
         <section className={`mt-3 ${card}`} aria-label={rt("down.title")}>
           <h2 className="mb-3 flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300"><Droplets className="size-4" aria-hidden />{rt("down.title")}</h2>
+          {ourBasin && (
+            <Suspense key={`map-${rv.slug}`} fallback={null}><RiverMap lang={lang} basin={ourBasin} highlight={rv.slug} focusReservoir={rv.slug} embedded /></Suspense>
+          )}
           {rv.gauges.length === 0 ? (
             <p className={`text-sm ${muted}`}>{rt("down.none")}</p>
           ) : (

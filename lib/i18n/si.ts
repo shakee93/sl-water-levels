@@ -155,6 +155,9 @@ export const si: Dict = {
   "map.heading": "සියලු මානවල සිතියම",
   "map.loading": "සිතියම පූරණය වෙමින්…",
   "map.openStation": "ස්ථානය විවෘත කරන්න →",
+  "map.key": "සංකේත",
+  "map.river": "ගඟ",
+  "map.releasing": "ජලය මුදා හරින ජලාශ",
   "map.you": "ඔබ සිටින්නේ මෙහි",
   "map.about1km": "කි.මී. 1ක් පමණ",
 
