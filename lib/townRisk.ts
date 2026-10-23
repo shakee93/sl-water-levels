@@ -192,7 +192,12 @@ const WARN_FLOOR: Record<WarningIn["severity"], Tone | null> = {
   evacuation: "minor",
 };
 
-const fmtLevel = (v: number, unit: Unit) => `${Number.isInteger(v) ? v : v.toFixed(2).replace(/0$/, "")}${unit ? ` ${unit}` : ""}`;
+// Same display as formatLevel in lib/units.ts (kept inline: this module is type-import only so the
+// node test runner can load it): feet to 1 decimal, metre gauges converted, unknown unit bare.
+const fmtLevel = (v: number, unit: Unit) =>
+  unit == null
+    ? `${Number.isInteger(v) ? v : v.toFixed(2).replace(/0$/, "")}`
+    : `${(unit === "m" ? v / 0.3048 : v).toFixed(1)} ft`;
 const r1 = (v: number) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10);
 
 export function assessTown(input: TownRiskInput, rawMyLevel: number | null = null): TownRisk {

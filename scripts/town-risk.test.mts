@@ -88,11 +88,11 @@ for (const [unit, scale] of [["ft", 1], ["m", 0.3048]] as const) {
   assert.equal(assessTown(base({ primary: g({ unit, level: lv(3.0) }) }), lv(4.5)).tone, "normal", unit);
 }
 {
-  // reasons carry the unit
+  // reasons are shown in feet (metre gauges converted)
   const ft = assessTown(base({ primary: g({ unit: "ft", level: 5 }) }), 4.5);
-  assert.match(ft.reasons.find((x) => x.kind === "personal").vars.level, /5 ft$/);
+  assert.match(ft.reasons.find((x) => x.kind === "personal").vars.level, /^5\.0 ft$/);
   const m = assessTown(base({ primary: g({ unit: "m", level: 1.4 }) }), 1.25);
-  assert.match(m.reasons.find((x) => x.kind === "personal").vars.mine, /1\.25 m$/);
+  assert.match(m.reasons.find((x) => x.kind === "personal").vars.mine, /^4\.1 ft$/); // 1.25 m
   // a reading with unknown unit has no suffix
   const u = assessTown(base({ primary: g({ unit: null, level: 5 }) }), 4.5);
   assert.equal(u.reasons.find((x) => x.kind === "personal").vars.level, "5");
