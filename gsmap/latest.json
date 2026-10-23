@@ -1,70 +1,70 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-23T13:24:48.078Z",
- "latestStart": "2026-10-23T12:00:00.000Z",
- "latestEnd": "2026-10-23T13:00:00.000Z",
+ "generatedAt": "2026-10-23T16:36:58.721Z",
+ "latestStart": "2026-10-23T15:30:00.000Z",
+ "latestEnd": "2026-10-23T16:30:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
    "basin": "Kelani Ganga",
    "station": "Nagalagam Street",
    "cells": 9,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0.02,
    "mm1h": 0,
-   "mm3h": 0,
-   "mm6h": 0.1,
-   "mm24h": 10.9
+   "mm3h": 0.2,
+   "mm6h": 0.2,
+   "mm24h": 3.9
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
    "station": "Hanwella",
    "cells": 8,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0.02,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.1,
-   "mm24h": 11.2
+   "mm3h": 0.2,
+   "mm6h": 0.2,
+   "mm24h": 3.7
   },
   "Kelani Ganga/Glencourse": {
    "basin": "Kelani Ganga",
    "station": "Glencourse",
    "cells": 6,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0.03,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.1,
-   "mm24h": 7
+   "mm3h": 0.2,
+   "mm6h": 0.3,
+   "mm24h": 1.9
   },
   "Kelani Ganga/Kithulgala": {
    "basin": "Kelani Ganga",
    "station": "Kithulgala",
    "cells": 3,
-   "rateMmPerHour": 0.03,
-   "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.2,
-   "mm24h": 0.2
+   "rateMmPerHour": 0.06,
+   "mm1h": 0.1,
+   "mm3h": 0.5,
+   "mm6h": 0.6,
+   "mm24h": 0.8
   },
   "Kelani Ganga/Holombuwa": {
    "basin": "Kelani Ganga",
    "station": "Holombuwa",
    "cells": 6,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0.03,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.1,
-   "mm24h": 7
+   "mm3h": 0.2,
+   "mm6h": 0.3,
+   "mm24h": 1.9
   },
   "Kelani Ganga/Deraniyagala": {
    "basin": "Kelani Ganga",
    "station": "Deraniyagala",
    "cells": 4,
-   "rateMmPerHour": 0.02,
+   "rateMmPerHour": 0.04,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.1,
-   "mm24h": 0.8
+   "mm3h": 0.3,
+   "mm6h": 0.5,
+   "mm24h": 1.1
   },
   "Kelani Ganga/Norwood": {
    "basin": "Kelani Ganga",
@@ -84,7 +84,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 4
+   "mm24h": 1.4
   },
   "Kalu Ganga/Ellagawa": {
    "basin": "Kalu Ganga",
@@ -94,7 +94,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 3.3
+   "mm24h": 0.5
   },
   "Kalu Ganga/Rathnapura": {
    "basin": "Kalu Ganga",
@@ -114,7 +114,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 4
+   "mm24h": 1.4
   },
   "Kalu Ganga/Magura": {
    "basin": "Kalu Ganga",
@@ -124,7 +124,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 3.9
+   "mm24h": 0.9
   },
   "Gin Ganga/Baddegama": {
    "basin": "Gin Ganga",
@@ -194,7 +194,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 21.8
+   "mm24h": 13.7
   },
   "Deduru Oya/Moragaswewa": {
    "basin": "Deduru Oya",
@@ -202,9 +202,9 @@
    "cells": 12,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0,
-   "mm6h": 0,
-   "mm24h": 0.8
+   "mm3h": 0.1,
+   "mm6h": 0.1,
+   "mm24h": 0.9
   },
   "Heda Oya/Siyambalanduwa": {
    "basin": "Heda Oya",
@@ -280,21 +280,21 @@
    "basin": "Maha Oya",
    "station": "Badalgama",
    "cells": 22,
-   "rateMmPerHour": 0,
+   "rateMmPerHour": 0.01,
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 7.6
+   "mm24h": 3.9
   },
   "Maha Oya/Giriulla": {
    "basin": "Maha Oya",
    "station": "Giriulla",
    "cells": 20,
-   "rateMmPerHour": 0,
+   "rateMmPerHour": 0.01,
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 7
+   "mm24h": 3.6
   },
   "Mahaweli Ganga/Manampitiya": {
    "basin": "Mahaweli Ganga",
@@ -334,7 +334,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.1
+   "mm24h": 0
   },
   "Mahaweli Ganga/Thaldena": {
    "basin": "Mahaweli Ganga",
@@ -395,6 +395,17 @@
    "mm3h": 0,
    "mm6h": 0,
    "mm24h": 0
+  }
+ },
+ "zones": {
+  "colombo-east": {
+   "name": "Greater Colombo east (Wellampitiya, Kolonnawa, Kotikawatta, Mulleriyawa ...)",
+   "cells": 4,
+   "rateMmPerHour": 0,
+   "mm1h": 0,
+   "mm3h": 0,
+   "mm6h": 0,
+   "mm24h": 4.7
   }
  }
 }
