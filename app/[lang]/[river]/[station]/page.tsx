@@ -26,6 +26,7 @@ import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { Anomaly } from "@/app/Anomaly";
 import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
+import { RiverMap } from "@/app/RiverMap";
 import { StationNearby } from "@/app/StationNearby";
 
 export const revalidate = 60;
@@ -227,6 +228,11 @@ export default async function StationPage({
             <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
               <Forecast lang={lang} basin={basin} selectedStation={station} />
             </Suspense>
+
+            {/* A river with one gauge has no river page to hold its map: it lives here. */}
+            {stations.filter((s) => s.basin === basin).length === 1 && (
+              <Suspense key={`map-${station}`} fallback={null}><RiverMap lang={lang} basin={basin} /></Suspense>
+            )}
 
             <StationNearby
               current={station}

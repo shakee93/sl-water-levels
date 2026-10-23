@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Waves } from "lucide-react";
 import { getReservoirs, riverMatches, type RV } from "@/lib/reservoirData";
@@ -5,7 +6,8 @@ import { reservoirsForStation } from "@/lib/reservoirs";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
-import { StatusChip } from "./bits";
+import { SpillWatchChip } from "@/app/SpillWatchChip";
+import { SizeChip, StatusChip } from "./bits";
 import { localName } from "./RvCard";
 
 /** "Reservoirs on this river" (basin) or "Reservoirs above this gauge" (station): a small strip of links. Fails soft, empty = nothing. */
@@ -22,7 +24,7 @@ export async function RiverReservoirs({ lang, basin, station }: { lang: Locale; 
   if (list.length === 0) return null;
   const order = { spilling: 0, releasing: 1, holding: 2, nodata: 3 } as const;
   list = [...list].sort((a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name)).slice(0, 12);
-  const { p } = getI18n(lang);
+  const { t, p } = getI18n(lang);
   const rt = rtFor(lang);
   return (
     <section className="mt-8" aria-label={rt(station ? "strip.station" : "strip.river")}>
@@ -38,6 +40,8 @@ export async function RiverReservoirs({ lang, basin, station }: { lang: Locale; 
             >
               {localName(r, lang)}
               <StatusChip status={r.status} rt={rt} />
+              {r.flow && r.flow.kind !== "outlets" && !r.barrage && <SizeChip cusecs={r.flow.cusecs} t={t} />}
+              <Suspense fallback={null}><SpillWatchChip lang={lang} slug={r.slug} catalogueId={r.catalogueId} /></Suspense>
             </Link>
           </li>
         ))}

@@ -20,6 +20,7 @@ import { cache } from "react";
 import { arcgis } from "./arcgis";
 import { getReleaseSources, getReleases, parseCsv, parseGatesOpen, parseSheetDay, type Release } from "./releases";
 import { RESERVOIRS, matchReservoir, type GaugeLink } from "./reservoirs";
+import { RESERVOIR_COORDS } from "./reservoirCoords";
 import { slugify } from "./slug";
 
 // ---------------------------------------------------------------- types
@@ -278,7 +279,11 @@ const NATIVE: Record<string, { si?: string; ta?: string }> = {
 
 // Rivers for the reservoirs of lib/dams.ts that are not in the Survey123 form (basin spelling as in the gauge feed).
 const DAM_RIVER: Record<string, string> = {
-  maussakele: "Kelani Ganga", castlereagh: "Kelani Ganga", samanalawewa: "Walawe Ganga", bowatenna: "Mahaweli Ganga", moragahakanda: "Mahaweli Ganga",
+  maussakele: "Kelani Ganga", castlereagh: "Kelani Ganga", bowatenna: "Mahaweli Ganga", moragahakanda: "Mahaweli Ganga",
+  // squash() drops the "wewa" ending, so these are keyed without it (Samanalawewa was keyed with it and never matched).
+  samanala: "Walawe Ganga",
+  // Not in the Survey123 river list, but on this river (Kala Wewa is the Kala Oya reservoir).
+  kala: "Kala Oya",
 };
 
 const titleCase = (s: string) => s.replace(/\s+/g, " ").trim().replace(/\b[a-z]/g, (c) => c.toUpperCase());
@@ -507,9 +512,15 @@ export type ReservoirMeta = {
   name: string;
   /** River basin as in the gauge feed (trimmed), or null when not known. */
   basin: string | null;
-  /** No reliable coordinates exist in any source we use (the ArcGIS reservoir layers carry none), so these stay null rather than guessed. */
+  /** From lib/reservoirCoords.ts (public references, each checked); null when none could be verified. The ArcGIS layers carry none. */
   lat: number | null;
   lon: number | null;
+  /** Catalogue id (lib/reservoirs.ts) when it is one of the hand-linked reservoirs. */
+  catalogueId: string | null;
+  /** A diversion barrage: always passes water, never a warning. */
+  barrage: boolean;
+  /** Release now in cusecs when it is going into the river (not routine canal outlets), else null. */
+  releaseCusecs: number | null;
   /** Gauges of ours downstream of it (exact station names), with the measured travel time if any. */
   linkedGauges: { station: string; basin: string; eta: [number, number] | null }[];
   /** Hand-picked towns below it (lib/places.ts names). */
@@ -521,8 +532,11 @@ export const toMeta = (rv: RV): ReservoirMeta => ({
   slug: rv.slug,
   name: rv.name,
   basin: rv.river ? rv.river.trim() : null,
-  lat: null,
-  lon: null,
+  lat: RESERVOIR_COORDS[rv.slug]?.lat ?? null,
+  lon: RESERVOIR_COORDS[rv.slug]?.lon ?? null,
+  catalogueId: rv.catalogueId,
+  barrage: rv.barrage,
+  releaseCusecs: rv.flow && rv.flow.kind !== "outlets" ? rv.flow.cusecs : null,
   linkedGauges: rv.gauges.map((g) => ({ station: g.station, basin: g.basin, eta: g.eta })),
   downstreamTowns: [...new Set(rv.gauges.map((g) => g.town).filter((t): t is string => !!t))],
   status: rv.status,

@@ -14,7 +14,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   const { lang } = await params;
   if (!isLocale(lang)) return {};
   const s = statusT(lang);
-  return { title: s("title"), description: s("desc"), robots: { index: false, follow: false } };
+  // absolute: the dictionary title already carries the site name, the layout template would add it twice.
+  return { title: { absolute: s("title") }, description: s("desc"), robots: { index: false, follow: false } };
 }
 
 const GROUPS: { key: StatusKey; ids: (id: string) => boolean }[] = [

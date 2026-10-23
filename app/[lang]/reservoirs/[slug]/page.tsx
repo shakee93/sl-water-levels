@@ -22,6 +22,8 @@ import { HistoryChart } from "@/app/reservoirs/HistoryChart";
 import { BasinWarning } from "@/app/reservoirs/BasinWarning";
 import { localName } from "@/app/reservoirs/RvCard";
 import { Suspense } from "react";
+import { RiverMap } from "@/app/RiverMap";
+import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
 
 export const revalidate = 600;
 
@@ -351,6 +353,13 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             </ul>
           )}
         </section>
+
+        {/* ---- the river on a map, this reservoir marked */}
+        {ourBasin && RESERVOIR_COORDS[rv.slug] && (
+          <div className="mt-3">
+            <Suspense fallback={null}><RiverMap lang={lang} basin={ourBasin} highlight={rv.slug} /></Suspense>
+          </div>
+        )}
 
         {/* ---- same river */}
         {ourBasin && (

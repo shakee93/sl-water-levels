@@ -114,3 +114,18 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* River map: water moving down the river from a releasing reservoir, and a ring on that reservoir. */
+@keyframes rm-flow {
+  to { stroke-dashoffset: -22; }
+}
+@keyframes rm-ring {
+  0% { opacity: 0.9; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+.rm-flow { animation: rm-flow 1.1s linear infinite; }
+.rm-ring { transform-box: fill-box; transform-origin: center; animation: rm-ring 1.8s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .rm-flow, .rm-ring { animation: none; }
+  .rm-ring { opacity: 0.6; }
+}

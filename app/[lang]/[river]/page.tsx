@@ -14,6 +14,7 @@ import { TimeAgo } from "@/app/TimeAgo";
 import { colomboTime } from "@/app/tierUi";
 import { BasinDams } from "@/app/BasinDams";
 import { ReleaseCard } from "@/app/ReleaseCard";
+import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
@@ -233,6 +234,8 @@ export default async function BasinPage({
         </Suspense>
 
         <Suspense key={`release-${basin}`} fallback={null}><ReleaseCard lang={lang} basin={basin} /></Suspense>
+
+        <Suspense key={`map-${basin}`} fallback={null}><RiverMap lang={lang} basin={basin} jsonLd /></Suspense>
 
         {snap.length > 0 ? (
           <RiverGauges lang={lang} stations={snap} serverNow={serverNow} />

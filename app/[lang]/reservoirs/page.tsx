@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Map as MapIcon } from "lucide-react";
 import { getReservoirs, type RV } from "@/lib/reservoirData";
+import { fetchStations } from "@/lib/arcgis";
+import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
+import { basinPath, stationPath } from "@/lib/slug";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { rtFor } from "@/lib/i18n/reservoirs";
@@ -66,6 +69,16 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
   const districts = [...new Set(items.map((r) => r.district).filter((d): d is string => !!d))].sort();
   const day = (d: string | null) => (d ? shortDay(d, t) : "—");
 
+  // Rivers that have a map: the river page for a river with several gauges, the gauge page for one with a single gauge.
+  const gaugeStations = await fetchStations().catch(() => []);
+  const mapLinks = rivers.flatMap((r) => {
+    const on = gaugeStations.filter((g) => g.basin.trim().toLowerCase() === r.trim().toLowerCase());
+    // A one-gauge river only has a map when a reservoir on it has known coordinates.
+    if (on.length === 0 || (on.length === 1 && !items.some((rv) => rv.river === r && RESERVOIR_COORDS[rv.slug]))) return [];
+    const path = on.length === 1 ? stationPath(on[0].basin, on[0].station) : basinPath(on[0].basin);
+    return [{ river: r, href: `${p(path)}#map` }];
+  });
+
   const filterItems: FilterItem[] = items.map((rv) => ({
     key: rv.slug,
     river: rv.river,
@@ -109,6 +122,22 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
           </p>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{rt("idx.asOf", { a: day(data.sheetDate), b: day(data.wmsDate) })}</p>
         </header>
+        {mapLinks.length > 0 && (
+          <nav className="mb-4" aria-label={rt("idx.maps")}>
+            <h2 className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
+              <MapIcon className="size-4" aria-hidden /> {rt("idx.maps")}
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {mapLinks.map((m) => (
+                <li key={m.river}>
+                  <Link href={m.href} className="inline-flex items-center min-h-11 sm:min-h-9 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm hover:border-sky-300 dark:hover:border-sky-700 transition">
+                    {riverName(m.river, lang)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
         <ReservoirFilter
           items={filterItems}
           rivers={rivers}

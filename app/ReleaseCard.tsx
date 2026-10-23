@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronRight, CircleHelp, Clock, Gauge, MapPin, TrendingDown, TrendingUp, Waves } from "lucide-react";
 import { getReleases, type Release } from "@/lib/releases";
 import { reservoirById, type GaugeLink } from "@/lib/reservoirs";
+import { reservoirPath } from "@/lib/reservoirData";
 import { releaseTrend, type Trend } from "@/lib/releaseTrend";
 import { SIZE_STEP, litresPerSecond, releaseSize, roundCusecs } from "@/lib/releaseUi";
 import { stationDisplayName } from "@/lib/displayName";
@@ -62,6 +63,19 @@ function CusecFigure({ t, cusecs }: { t: TFn; cusecs: number }) {
   );
 }
 
+/** The sentence with the reservoir's name turned into a link to its page (the name sits inside a translated string, so split on it). */
+function WithLink({ text, name, href }: { text: string; name: string; href: string | null }) {
+  const at = text.indexOf(name);
+  if (!href || at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <Link href={href} className="underline decoration-dotted underline-offset-2 hover:decoration-solid">{name}</Link>
+      {text.slice(at + name.length)}
+    </>
+  );
+}
+
 function pickLink(res: ReturnType<typeof reservoirById>, station?: string, basin?: string): GaugeLink | undefined {
   if (!res) return undefined;
   if (station) return res.gauges.find((g) => g.station === station);
@@ -70,6 +84,8 @@ function pickLink(res: ReturnType<typeof reservoirById>, station?: string, basin
 
 function RowBody({ t, lang, rel, trend, link, note }: { t: TFn; lang: Locale; rel: Release; trend: Trend | null; link?: GaugeLink; note: boolean }) {
   const sw = swFor(lang);
+  const resPath = reservoirPath(rel.reservoirId);
+  const resHref = resPath ? getI18n(lang).p(resPath) : null;
   const confirmed = rel.kind === "confirmed";
   const size = confirmed && rel.cusecs ? releaseSize(rel.cusecs) : null;
   const gauge = link ? stationDisplayName(link.station) : null;
@@ -77,7 +93,7 @@ function RowBody({ t, lang, rel, trend, link, note }: { t: TFn; lang: Locale; re
   return (
     <>
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-semibold">{rel.watch ? sw("watch.lead", { name: rel.name }) : t(confirmed ? "release.lead" : "release.leadReported", { name: rel.name })}</span>
+        <span className="font-semibold"><WithLink text={rel.watch ? sw("watch.lead", { name: rel.name }) : t(confirmed ? "release.lead" : "release.leadReported", { name: rel.name })} name={rel.name} href={resHref} /></span>
         {size && rel.cusecs && (
           <span className={chip}>
             <SizeMeter step={SIZE_STEP[size]} />
@@ -98,7 +114,7 @@ function RowBody({ t, lang, rel, trend, link, note }: { t: TFn; lang: Locale; re
       {link && gauge && (
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs" aria-label={t("release.chainLabel", { a: rel.name, b: gauge })}>
           <Waves className="size-3.5 shrink-0" aria-hidden />
-          <span>{rel.name}</span>
+          {resHref ? <Link href={resHref} className="underline decoration-dotted underline-offset-2 hover:decoration-solid">{rel.name}</Link> : <span>{rel.name}</span>}
           <ChevronRight className="size-3 shrink-0 opacity-60" aria-hidden />
           <Gauge className="size-3.5 shrink-0" aria-hidden />
           <span>{gauge}</span>
