@@ -19,6 +19,10 @@ const IMAGE = /\/(opengraph|twitter)-image(-[\w]+)?$/;
 // instantly while a new one renders. Single-segment pages other than these are static or ISR.
 const TOP_LEVEL = new Set(["about", "help", "status", "data", "history", "flood", "reservoirs"]);
 const STREAMED_CACHE = "public, s-maxage=60, stale-while-revalidate=300";
+// On Vercel the platform replaces Cache-Control on a dynamic render with private/no-store (seen live, 24 Oct),
+// so the CDN would never store these pages. Vercel-CDN-Cache-Control is read only by Vercel's CDN, wins over
+// Cache-Control there, and is not sent on to browsers.
+const STREAMED_HEADERS = { "Cache-Control": STREAMED_CACHE, "Vercel-CDN-Cache-Control": STREAMED_CACHE };
 function isStreamedPage(path: string): boolean {
   if (IMAGE.test(path)) return false; // /<river>/opengraph-image keeps its own ISR header
   const segs = path.split("/").filter(Boolean);
@@ -59,7 +63,7 @@ export function proxy(req: NextRequest) {
     return NextResponse.rewrite(to);
   }
 
-  const headers = isStreamedPage(path) ? { "Cache-Control": STREAMED_CACHE } : undefined;
+  const headers = isStreamedPage(path) ? STREAMED_HEADERS : undefined;
   if (m) return NextResponse.next({ headers });
   const to = url.clone();
   to.pathname = `/en${path === "/" ? "" : path}`;
