@@ -22,19 +22,25 @@ jobs:
   gsmap:
     runs-on: ubuntu-latest
     steps:
+      # Until the owner adds the secrets, skip quietly (no failure, no Slack alert every 30 min).
       - name: Check JAXA secrets
+        id: secrets
         env:
           JAXA_FTP_USER: ${{ secrets.JAXA_FTP_USER }}
           JAXA_FTP_PASSWORD: ${{ secrets.JAXA_FTP_PASSWORD }}
         run: |
           if [ -z "$JAXA_FTP_USER" ] || [ -z "$JAXA_FTP_PASSWORD" ]; then
-            echo "::error::JAXA_FTP_USER and/or JAXA_FTP_PASSWORD repository secrets are missing. Add both under Settings > Secrets and variables > Actions."
-            exit 1
+            echo "::warning::JAXA_FTP_USER and/or JAXA_FTP_PASSWORD repository secrets are missing; skipping. Add both under Settings > Secrets and variables > Actions."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
 
       - name: Check out data branch
+        if: steps.secrets.outputs.ready == 'true'
         run: |
           if git ls-remote --exit-code --heads origin data >/dev/null; then
             git fetch --depth=1 origin data
@@ -45,16 +51,19 @@ jobs:
           fi
 
       - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
         with:
           node-version: 22
 
       - name: Compute catchment rain
+        if: steps.secrets.outputs.ready == 'true'
         env:
           JAXA_FTP_USER: ${{ secrets.JAXA_FTP_USER }}
           JAXA_FTP_PASSWORD: ${{ secrets.JAXA_FTP_PASSWORD }}
         run: node scripts/gsmap-snapshot.mjs archive
 
       - name: Commit and push
+        if: steps.secrets.outputs.ready == 'true'
         working-directory: archive
         run: |
           git config user.name "github-actions[bot]"
