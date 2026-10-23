@@ -21,18 +21,16 @@ export const ta: Dict = {
   "crumb.allBasins": "எல்லா ஆறுகளும்",
   "crumb.home": "முகப்பு",
   "footer.blurb": "இலங்கை முழுவதும் நேரடி ஆறு மற்றும் நீர்த்தேக்க மட்டங்கள், வெள்ள முன்னறிவிப்புகளுடன்.",
-  "footer.basins": "ஆறுகள்",
-  "footer.loading": "ஏற்றுகிறது…",
-  "footer.site": "தளம்",
-  "footer.allBasinsStations": "எல்லா ஆறுகளும் நிலையங்களும்",
-  "footer.aboutMethod": "பற்றியும் முறையும்",
-  "footer.floodHelp": "வெள்ள உதவி",
-  "footer.source": "GitHub இல் மூலக் குறியீடு",
-  "footer.data": "தரவு",
-  "footer.readingsPre": "அளவீடுகள்: ",
-  "footer.irrigation": "இலங்கை நீர்ப்பாசனத் திணைக்களம்",
-  "footer.readingsPost": ".",
+  "footer.basins": "ஆறுகள்", // needs native review
+  "footer.site": "ஆராய்க", // needs native review
+  "footer.aboutMethod": "பற்றி", // needs native review
+  "footer.floodHelp": "வெள்ள உதவி", // needs native review
+  "footer.source": "GitHub", // needs native review
+  "footer.data": "தரவும் நன்றியும்", // needs native review
   "footer.notOfficial": "இது அதிகாரப்பூர்வ எச்சரிக்கை சேவை அல்ல. அவசரத்தில் 117 ஐ அழைக்கவும்.",
+  "footer.home": "முகப்பு", // needs native review
+  "footer.floodHistory": "வெள்ள வரலாறு", // needs native review
+  "footer.credits": "அளவீடுகள்: நீர்ப்பாசனத் திணைக்களம் மற்றும் மகாவலி அதிகாரசபை. எச்சரிக்கைகள்: அனர்த்த முகாமைத்துவ நிலையம். மழை முன்னறிவிப்பு: Open-Meteo. வரைபடம் © Esri மற்றும் OpenStreetMap பங்களிப்பாளர்கள்.", // needs native review
   "footer.copyright": "© {year} இலங்கை நீர் மட்டங்கள். இலங்கையில் உருவாக்கப்பட்டது.",
 
   // ---- date and time ----

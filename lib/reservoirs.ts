@@ -19,6 +19,9 @@
 // Maduru Oya reservoir (Padiyathalawa gauge is upstream of it), Nachchaduwa (Malwathu Oya;
 // listed with low confidence).
 
+import { BASIN_ORDER } from "./basinOrder";
+import { RIVER_SHAPE } from "./riverTopology";
+
 export type Confidence = "high" | "medium" | "low";
 
 export type GaugeLink = {
@@ -31,6 +34,8 @@ export type GaugeLink = {
   note: string;
   /** Town shown at the end of the chain "reservoir -> gauge -> town": a gazetteer place (lib/places.ts) this gauge covers, picked by hand as the best-known place downstream. */
   town?: string;
+  /** Not a link we curated: the gauge is further down the same river than a linked one. No travel time. */
+  indirect?: boolean;
 };
 
 export type Reservoir = {
@@ -327,3 +332,88 @@ export function reservoirsForStation(station: string): { res: Reservoir; link: G
 }
 
 export const reservoirsForBasin = (basin: string): Reservoir[] => RESERVOIRS.filter((r) => r.basin === basin.trim());
+
+// ---- Transitive links: a reservoir also feeds every gauge further down the same river.
+
+/** The river's main line, source to sea: gauge names, and "@slug" for a dam the river passes through. */
+function mainLine(basin: string): string[] {
+  const b = basin.trim();
+  return RIVER_SHAPE[b]?.main ?? BASIN_ORDER[b] ?? [];
+}
+
+/**
+ * Gauges below the linked ones on the same river, nearest first, as `indirect` links. The walk stops
+ * at the next dam on the river (it soaks the release up), as the catalogue already does by hand.
+ */
+export function withDownstreamGauges(gauges: GaugeLink[]): GaugeLink[] {
+  const out = [...gauges];
+  const have = new Set(gauges.map((g) => `${g.basin.trim()}|${g.station}`));
+  for (const g of gauges) {
+    const line = mainLine(g.basin);
+    const i = line.indexOf(g.station);
+    if (i < 0) continue;
+    for (const next of line.slice(i + 1)) {
+      if (next.startsWith("@")) break;
+      const key = `${g.basin.trim()}|${next}`;
+      if (have.has(key)) continue;
+      have.add(key);
+      out.push({ station: next, basin: g.basin, eta: null, confidence: "low", indirect: true, note: `Further down the same river than ${g.station}.` });
+    }
+  }
+  return out;
+}
+
+/** Gauges at or above `station` that water can reach it from, with how many gauges/dams away (0 = itself), nearest first. */
+function upstreamGauges(basin: string, station: string): { station: string; steps: number }[] {
+  const line = mainLine(basin);
+  const out: { station: string; steps: number }[] = [];
+  const at = line.indexOf(station);
+  if (at >= 0) {
+    for (let i = at, steps = 0; i >= 0; i--, steps++) {
+      if (i < at && line[i].startsWith("@")) break; // a dam in between soaks the release up
+      if (!line[i].startsWith("@")) out.push({ station: line[i], steps });
+    }
+    for (const t of RIVER_SHAPE[basin.trim()]?.tribs ?? []) {
+      const j = line.indexOf(t.joins[1]);
+      if (j < 0 || j > at) continue;
+      t.path.forEach((name, k) => {
+        if (!name.startsWith("@")) out.push({ station: name, steps: at - j + 1 + (t.path.length - 1 - k) });
+      });
+    }
+    return out;
+  }
+  // A gauge on a side branch: itself and the gauges above it on that branch.
+  for (const t of RIVER_SHAPE[basin.trim()]?.tribs ?? []) {
+    const k = t.path.indexOf(station);
+    if (k < 0) continue;
+    for (let i = k, steps = 0; i >= 0; i--, steps++) if (!t.path[i].startsWith("@")) out.push({ station: t.path[i], steps });
+    return out;
+  }
+  const order = BASIN_ORDER[basin.trim()] ?? [];
+  const i = order.indexOf(station);
+  return i < 0 ? [{ station, steps: 0 }] : order.slice(0, i + 1).reverse().map((s, steps) => ({ station: s, steps }));
+}
+
+export type ConnectingReservoir = {
+  res: Reservoir;
+  /** 0 = linked to this gauge itself; otherwise how many gauges upstream the nearest link is. */
+  steps: number;
+  /** The upstream gauge it is linked to (null when linked to this gauge). */
+  via: string | null;
+};
+
+/** Reservoirs linked to this gauge or to any gauge above it on the same river, nearest first. */
+export function connectingReservoirs(basin: string, station: string): ConnectingReservoir[] {
+  const up = upstreamGauges(basin, station);
+  const best = new Map<string, ConnectingReservoir>();
+  for (const res of RESERVOIRS) {
+    for (const g of res.gauges) {
+      if (g.basin.trim() !== basin.trim()) continue;
+      const hit = up.find((u) => u.station === g.station);
+      if (!hit) continue;
+      const cur = best.get(res.id);
+      if (!cur || hit.steps < cur.steps) best.set(res.id, { res, steps: hit.steps, via: hit.steps === 0 ? null : g.station });
+    }
+  }
+  return [...best.values()].sort((a, b) => a.steps - b.steps || a.res.name.localeCompare(b.res.name));
+}

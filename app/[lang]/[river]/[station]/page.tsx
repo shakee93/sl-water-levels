@@ -265,7 +265,7 @@ export default async function StationPage({
               <BasinFlow lang={lang} basin={basin} selectedStation={station} />
             </Suspense>
 
-            <Suspense key={`reservoirs-${station}`} fallback={null}><RiverReservoirs lang={lang} station={station} /></Suspense>
+            <Suspense key={`reservoirs-${station}`} fallback={null}><RiverReservoirs lang={lang} basin={basin} station={station} /></Suspense>
 
             <Suspense key={`dams-${station}`} fallback={null}>
               <BasinDams basin={basin} lang={lang} />

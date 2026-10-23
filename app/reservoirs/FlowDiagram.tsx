@@ -90,7 +90,7 @@ export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea }: { rv: RV; by
         const prev = pos[i - 1];
         const leg = (() => {
           if (row.k !== "gauge") return null;
-          const text = row.g.eta ? `${rt("down.arrives")} ${t("release.eta", { a: row.g.eta[0], b: row.g.eta[1] })}` : rt("down.etaUnknown");
+          const text = row.g.eta ? `${rt("down.arrives")} ${t("release.eta", { a: row.g.eta[0], b: row.g.eta[1] })}` : row.g.indirect ? rt("down.far") : rt("down.etaUnknown");
           const w = Math.min(CW, text.length * cw * 0.95 + 38);
           const my = (prev.y0 + H[prev.row.k] + y0) / 2;
           return (

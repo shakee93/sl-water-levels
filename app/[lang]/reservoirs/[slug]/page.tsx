@@ -16,6 +16,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { litresPerSecond, releaseSize } from "@/lib/releaseUi";
 import { TimeAgo } from "@/app/TimeAgo";
 import { Basin, SizeMeter, fmt, levelOf } from "@/app/reservoirs/bits";
+import { withDownstreamGauges } from "@/lib/reservoirs";
 import { FlowDiagram } from "@/app/reservoirs/FlowDiagram";
 import { orderStations } from "@/lib/basinOrder";
 import { shapeFor } from "@/lib/riverTopology";
@@ -195,7 +196,8 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const chip = "inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200";
 
   // Does the water reach the sea at the end of the last gauge below this reservoir?
-  const lastGauge = [...rv.gauges].sort((a, b) => (a.eta ? a.eta[0] : 1e9) - (b.eta ? b.eta[0] : 1e9)).at(-1);
+  const flowGauges = withDownstreamGauges(rv.gauges);
+  const lastGauge = [...flowGauges].sort((a, b) => (a.eta ? a.eta[0] : 1e9) - (b.eta ? b.eta[0] : 1e9)).at(-1);
   const shape = ourBasin ? shapeFor(ourBasin, orderStations(ourBasin, sameRiverGauges).map((x) => x.station)) : null;
   const mainGauges = shape ? shape.main.filter((x) => !x.startsWith("@")) : [];
   const sea = !!(shape?.sea && lastGauge && lastGauge.station === mainGauges[mainGauges.length - 1] && lastGauge.basin.trim() === ourBasin);
@@ -402,7 +404,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
           {rv.gauges.length === 0 ? (
             <p className={`text-sm ${muted}`}>{rt("down.none")}</p>
           ) : (
-            <FlowDiagram rv={rv} byStation={byStation} lang={lang} t={t} rt={rt} p={p} sea={sea} />
+            <FlowDiagram rv={{ ...rv, gauges: flowGauges }} byStation={byStation} lang={lang} t={t} rt={rt} p={p} sea={sea} />
           )}
           {ourBasin && (
             <p className="mt-3 text-sm">

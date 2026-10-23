@@ -78,6 +78,7 @@ const en = {
   "down.title": "Where the water goes",
   "down.none": "No river gauge of ours is directly below this reservoir.",
   "down.etaUnknown": "Travel time not measured yet",
+  "down.far": "Far downstream: travel time not known",
   "down.noReading": "No reading",
   "same.title": "On the same river",
   "same.river": "River page",
@@ -99,7 +100,7 @@ const en = {
   "map.ldName": "Gauges and reservoirs on the {river}",
   "map.link": "Map of this river",
   "idx.maps": "Rivers on a map",
-  "strip.station": "Reservoirs above this gauge",
+  "strip.station": "Reservoirs upstream",  "strip.far": "Far upstream", "strip.via": "via {n}",
   "src.note": "Figures from the daily Irrigation Department and Mahaweli Authority reports. A blank there shows here as “no data”, never zero.",
   "title": "{name} Reservoir Water Level & Spill Today",
   "d.spilling": "{name} reservoir is spilling about {c} cusecs{p}. {src}. Live storage and the river gauges below it.",
@@ -214,6 +215,7 @@ const si: RDict = {
   "down.title": "ජලය යන්නේ කොහාටද",
   "down.none": "මෙම ජලාශයට කෙලින්ම පහළින් අපගේ ගංගා මාපකයක් නැත.",
   "down.etaUnknown": "ගමන් කාලය තවම මැනලා නැත",
+  "down.far": "ඈත පහළ: ගමන් කාලය නොදනී", // needs native review
   "down.noReading": "කියවීමක් නැත",
   "same.title": "එම ගඟේම",
   "same.river": "ගඟේ පිටුව",
@@ -235,7 +237,7 @@ const si: RDict = {
   "map.ldName": "{river} හි මාපක සහ ජලාශ",
   "map.link": "මෙම ගඟේ සිතියම",
   "idx.maps": "සිතියමේ ගංගා",
-  "strip.station": "මෙම මාපකයට ඉහළ ජලාශ",
+  "strip.station": "ඉහළ ජලාශ",  "strip.far": "ඈත ඉහළ", "strip.via": "{n} හරහා", // needs native review
   "src.note": "දත්ත වාරිමාර්ග දෙපාර්තමේන්තුවේ සහ මහවැලි අධිකාරියේ දෛනික වාර්තාවලින්. එහි හිස් අගයක් මෙහි “දත්ත නැත” ලෙස පෙන්වයි, කිසිවිටෙක බිංදුව ලෙස නොවේ.",
   "title": "{name} ජලාශය: අද ජල මට්ටම සහ ජලය පිටවීම",
   "d.spilling": "{name} ජලාශය කියුසෙක් {c}ක් පමණ වාන් දමයි{p}. {src}. සජීවී ගබඩාව සහ පහළ ගංගා මාපක.",
@@ -348,6 +350,7 @@ const ta: RDict = {
   "down.title": "நீர் செல்லும் இடம்",
   "down.none": "இந்த நீர்த்தேக்கத்தின் நேர் கீழே எங்கள் ஆற்று அளவீட்டு நிலையம் இல்லை.",
   "down.etaUnknown": "பயண நேரம் இன்னும் அளக்கப்படவில்லை",
+  "down.far": "தொலைவில் கீழே: பயண நேரம் தெரியவில்லை", // needs native review
   "down.noReading": "அளவீடு இல்லை",
   "same.title": "அதே ஆற்றில்",
   "same.river": "ஆற்றுப் பக்கம்",
@@ -369,7 +372,7 @@ const ta: RDict = {
   "map.ldName": "{river} ஆற்றின் நிலையங்களும் நீர்த்தேக்கங்களும்",
   "map.link": "இந்த ஆற்றின் வரைபடம்",
   "idx.maps": "வரைபடத்தில் ஆறுகள்",
-  "strip.station": "இந்த நிலையத்துக்கு மேலுள்ள நீர்த்தேக்கங்கள்",
+  "strip.station": "மேலுள்ள நீர்த்தேக்கங்கள்",  "strip.far": "தொலைவில் மேலே", "strip.via": "{n} வழியாக", // needs native review
   "src.note": "தரவு நீர்ப்பாசனத் திணைக்களம் மற்றும் மகாவலி அதிகார சபையின் தினசரி அறிக்கைகளிலிருந்து. அங்கு வெற்றிடம் இங்கு “தரவு இல்லை” என்று காட்டப்படும், பூஜ்யமாக அல்ல.",
   "title": "{name} நீர்த்தேக்கம்: இன்றைய நீர்மட்டமும் வெளியேற்றமும்",
   "d.spilling": "{name} நீர்த்தேக்கம் சுமார் {c} கியூசெக் வழிந்தோடுகிறது{p}. {src}. நேரடி சேமிப்பு மற்றும் கீழ்ப்பகுதி ஆற்று நிலையங்கள்.",

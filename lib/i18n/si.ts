@@ -21,18 +21,16 @@ export const si: Dict = {
   "crumb.allBasins": "සියලු ගංගා",
   "crumb.home": "මුල් පිටුව",
   "footer.blurb": "ශ්‍රී ලංකාව පුරා සජීවී ගංගා සහ ජලාශ මට්ටම්, ගංවතුර පුරෝකථන සමඟ.",
-  "footer.basins": "ගංගා",
-  "footer.loading": "පූරණය වෙමින්…",
-  "footer.site": "වෙබ් අඩවිය",
-  "footer.allBasinsStations": "සියලු ගංගා සහ ස්ථාන",
-  "footer.aboutMethod": "පිළිබඳව සහ ක්‍රමවේදය",
-  "footer.floodHelp": "ගංවතුර උදව්",
-  "footer.source": "GitHub හි මූලාශ්‍රය",
-  "footer.data": "දත්ත",
-  "footer.readingsPre": "ජල මට්ටම් ලබාගන්නේ ",
-  "footer.irrigation": "ශ්‍රී ලංකා වාරිමාර්ග දෙපාර්තමේන්තුව",
-  "footer.readingsPost": " වෙතිනි.",
+  "footer.basins": "ගංගා", // needs native review
+  "footer.site": "ගවේෂණය", // needs native review
+  "footer.aboutMethod": "පිළිබඳව", // needs native review
+  "footer.floodHelp": "ගංවතුර උදව්", // needs native review
+  "footer.source": "GitHub", // needs native review
+  "footer.data": "දත්ත සහ ස්තූතිය", // needs native review
   "footer.notOfficial": "මෙය නිල අනතුරු ඇඟවීමේ සේවාවක් නොවේ. හදිසි අවස්ථාවක 117 අමතන්න.",
+  "footer.home": "මුල් පිටුව", // needs native review
+  "footer.floodHistory": "ගංවතුර ඉතිහාසය", // needs native review
+  "footer.credits": "මට්ටම් කියවීම්: වාරිමාර්ග දෙපාර්තමේන්තුව සහ මහවැලි අධිකාරිය. අනතුරු ඇඟවීම්: ආපදා කළමනාකරණ මධ්‍යස්ථානය. වැසි පුරෝකථන: Open-Meteo. සිතියම © Esri සහ OpenStreetMap දායකයින්.", // needs native review
   "footer.copyright": "© {year} ශ්‍රී ලංකා ජල මට්ටම්. ශ්‍රී ලංකාවේ නිර්මාණය කරන ලදී.",
 
   // ---- date and time ----
