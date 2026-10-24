@@ -62,6 +62,14 @@ jobs:
           JAXA_FTP_PASSWORD: ${{ secrets.JAXA_FTP_PASSWORD }}
         run: node scripts/gsmap-snapshot.mjs archive
 
+      # Daily rain from rain GAUGES (Met Dept SYNOP via OGIMET + Irrigation Dept rain_fall) -> rain-gauges/YYYY.jsonl on the
+      # data branch. Feeds the SHADOW street-flood rule (scripts/street-rain-log.mjs) and is a valuable archive on its own.
+      # Best effort: never fails the run (OGIMET is rate-limited and is only asked every 3 h).
+      - name: Archive daily gauge rain
+        if: steps.secrets.outputs.ready == 'true'
+        continue-on-error: true
+        run: node scripts/rain-gauges-snapshot.mjs archive
+
       - name: Commit and push
         if: steps.secrets.outputs.ready == 'true'
         working-directory: archive

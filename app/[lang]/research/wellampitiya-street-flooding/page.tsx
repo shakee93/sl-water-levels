@@ -297,6 +297,7 @@ export default async function WellampitiyaResearch({ params }: { params: Promise
               <li>The cap on hourly rain was picked from four caps on these same floods. It should be tested again after the next wet season.</li>
               <li>Satellite rain is one pixel box, not a gauge in the neighbourhood. The satellite algorithm changed three times; no step change in skill was found at any of those dates.</li>
               <li>The rule reads observed rain, so the warning time is hours, not a day.</li>
+              <li><strong>Shadow test running since 24 Oct 2026.</strong> A candidate rule is being logged quietly beside the live one and shown to nobody: &ldquo;possible&rdquo; from about 45 mm of satellite rain when the week before was wet by rain gauges (Met Department and Irrigation Department), otherwise from 60 mm; &ldquo;likely&rdquo; unchanged. In the back-test the wet-week condition caught more of the small floods with fewer false alarms, but that rests on 16 floods and thresholds picked on them, so it will be judged on this wet season&rsquo;s days and residents&rsquo; answers before anything changes.</li>
               <li>The 22 Oct 2026 flood is one resident&rsquo;s report. Whether the evening of 12 Oct 2026, when Colombo city roads flooded, also put water on Wellampitiya streets is unknown.</li>
             </ul>
             <h3 className="mt-4 font-medium text-slate-900 dark:text-slate-100">What would improve it</h3>

@@ -29,6 +29,27 @@ export function streetState(mm24hClipped: number | null | undefined, river = fal
   return mm24hClipped >= STREET_LIKELY_MM_24H ? "likely" : mm24hClipped >= STREET_POSSIBLE_MM_24H ? "possible" : "none";
 }
 
+/** SHADOW rule (candidate, nothing users see; research/wellampitiya-flood-rule-backtest.md G3 and G5): "possible" already from this clipped 24 h rain when the week before was wet by rain GAUGES ... */
+export const SHADOW_POSSIBLE_WET_MM_24H = 45;
+/** ... meaning the gauge antecedent index (k 0.9, lag 2 days; lib/gaugeRain.mjs API_WET_MM, repeated here, the test checks both) is at least this many mm. */
+export const SHADOW_API_WET_MM = 96;
+
+/**
+ * The candidate rule: like streetState (river, 100 mm = likely; 60 mm = possible) plus possible from 45 mm when the
+ * gauge index says the week was wet. The index only matters between 45 and 60 mm, so it is only needed there: when
+ * the answer depends on it and it is missing the result is null (unknown), NEVER "none". Below 45 mm it is "none"
+ * whatever the gauges say; at 60 mm or more the live answer stands without the gauges.
+ */
+export function shadowStreetState(mm24hClipped: number | null | undefined, river = false, apiMm: number | null | undefined = null): StreetState | null {
+  if (river) return "likely";
+  if (typeof mm24hClipped !== "number" || !Number.isFinite(mm24hClipped)) return null;
+  if (mm24hClipped >= STREET_LIKELY_MM_24H) return "likely";
+  if (mm24hClipped >= STREET_POSSIBLE_MM_24H) return "possible";
+  if (mm24hClipped < SHADOW_POSSIBLE_WET_MM_24H) return "none";
+  if (typeof apiMm !== "number" || !Number.isFinite(apiMm)) return null;
+  return apiMm >= SHADOW_API_WET_MM ? "possible" : "none";
+}
+
 export type RiverReading = {
   station: string;
   /** Latest level in FEET (metre gauges converted); null = no usable reading. */

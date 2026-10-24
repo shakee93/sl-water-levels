@@ -22,13 +22,20 @@
 // or "likely". (Push alerts to residents are separate: scripts/push-notify.mjs sends "likely" only.) A message that fails to send is
 // retried by the next run for up to 6 h (street_rain_changes.notified: 0 pending, 1 sent, 2 skipped).
 // The rule only reads data the website would also show: latest.json older than 3 h is not logged.
+// SHADOW test (since 24 Oct 2026, d1/0005_street_shadow.sql): each run also computes a candidate rule that is NOT shown to
+// anyone: "possible" from 45 mm of clipped rain when the past week was wet by rain gauges (index from
+// <dataDir>/rain-gauges, lib/gaugeRain.mjs; >= 96 mm), else 60 mm; likely unchanged. It is stored in street_rain_log
+// (shadow_state, api_gauge_mm, gauge_source, api_ogimet_mm, api_arcgis_mm) and its changes in street_rain_shadow_changes.
+// No Slack or push of its own: only a "(Shadow rule: x.)" tail on a ping the live rule already sends, when they disagree.
+// shadow_state is NULL (unknown, never "none") when the answer depends on a gauge week we could not compute.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { streetState, stateChange, isReportable, noticeFor, riverTrigger, STREET_POSSIBLE_MM_24H, STREET_LIKELY_MM_24H, STREET_HOURLY_CAP_MM } from "../lib/streetRainLog.ts";
+import { streetState, shadowStreetState, stateChange, isReportable, noticeFor, riverTrigger, STREET_POSSIBLE_MM_24H, STREET_LIKELY_MM_24H, STREET_HOURLY_CAP_MM } from "../lib/streetRainLog.ts";
 import { PLACES } from "../lib/places.ts";
+import { gaugeWetness, readGaugeArchive, colomboDay, API_WET_MM } from "../lib/gaugeRain.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -69,8 +76,9 @@ const rowsOf = (sql) => {
 
 if (!DRY) {
   wrangler(["--yes", "--file", path.join(here, "../d1/0003_street_flood.sql")]);
+  wrangler(["--yes", "--file", path.join(here, "../d1/0005_street_shadow.sql")]);
   // idempotent column migration: SQLite has no ADD COLUMN IF NOT EXISTS, so look first
-  for (const [table, cols] of [["street_rain_log", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"]]], ["street_rain_changes", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"]]]]) {
+  for (const [table, cols] of [["street_rain_log", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"], ["api_gauge_mm", "REAL"], ["gauge_source", "TEXT"], ["shadow_state", "TEXT"], ["api_ogimet_mm", "REAL"], ["api_arcgis_mm", "REAL"]]], ["street_rain_changes", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"]]]]) {
     const have = new Set(rowsOf(`PRAGMA table_info(${table})`).map((r) => r.name));
     for (const [c, type] of cols) if (!have.has(c)) wrangler(["--yes", "--command", `ALTER TABLE ${table} ADD COLUMN ${c} ${type}`]);
   }
@@ -98,6 +106,11 @@ async function readRiver() {
 const river = await readRiver();
 const riverOn = river ? river.on : false;
 
+// SHADOW rule (candidate; nothing users see): the gauge wetness for today's Colombo date from the rain-gauges archive
+// (scripts/rain-gauges-snapshot.mjs wrote it into <dataDir> just before this step). Same for every zone.
+const wet = gaugeWetness(readGaugeArchive(dataDir), colomboDay(dataEnd));
+console.log(`shadow: gauge antecedent index ${wet.apiMm ?? "unknown"} mm (${wet.source ?? "no source"}; ogimet ${wet.ogimetMm ?? "-"}, arcgis ${wet.arcgisMm ?? "-"}), wet at ${API_WET_MM} mm`);
+
 const sql = [];
 const notices = []; // {zone, changedMs, from, to, mm1h, mm6h, mm24h, kind}
 for (const [zone, z] of Object.entries(latest.zones ?? {})) {
@@ -106,13 +119,14 @@ for (const [zone, z] of Object.entries(latest.zones ?? {})) {
   let state = streetState(clipped, riverOn);
   const riverCol = river ? (river.on ? 1 : 0) : null;
   // what D1 already knows about this zone
-  let newestLogged = 0, lastKnown = null, lastRiseNoticeMs = null, pending = [];
+  let newestLogged = 0, lastKnown = null, lastShadow = null, lastRiseNoticeMs = null, pending = [];
   if (DRY) {
     lastKnown = prevFlag && prevFlag !== "null" ? prevFlag : null;
   } else {
     const z1 = q(zone);
     newestLogged = Number(rowsOf(`SELECT COALESCE(MAX(data_end_ms), 0) AS t FROM street_rain_log WHERE zone = ${z1}`)[0]?.t ?? 0);
     lastKnown = rowsOf(`SELECT state FROM street_rain_log WHERE zone = ${z1} AND state IS NOT NULL ORDER BY data_end_ms DESC LIMIT 1`)[0]?.state ?? null;
+    lastShadow = rowsOf(`SELECT shadow_state AS s FROM street_rain_log WHERE zone = ${z1} AND shadow_state IS NOT NULL ORDER BY data_end_ms DESC LIMIT 1`)[0]?.s ?? null;
     lastRiseNoticeMs = rowsOf(`SELECT MAX(notified_ms) AS t FROM street_rain_changes WHERE zone = ${z1} AND notified = 1 AND to_state <> 'none'`)[0]?.t ?? null;
     pending = rowsOf(`SELECT changed_ms, from_state, to_state, mm1h, mm6h, mm24h, mm24h_clipped, river_trigger FROM street_rain_changes WHERE zone = ${z1} AND notified = 0 ORDER BY changed_ms`).map((r) => ({
       zone, changedMs: Number(r.changed_ms), from: r.from_state, to: r.to_state, mm1h: r.mm1h, mm6h: r.mm6h, mm24h: r.mm24h, clipped: r.mm24h_clipped, river: Number(r.river_trigger) === 1, riverStation: null, riverFt: null,
@@ -120,9 +134,14 @@ for (const [zone, z] of Object.entries(latest.zones ?? {})) {
   }
   // gauges unreadable this run: do not let "river unknown" read as "river fell" and clear a likely that the river caused
   if (!river && lastKnown === "likely" && state !== "likely") state = null;
+  // the candidate rule, with the same river-unknown guard as the live one
+  let shadow = shadowStreetState(clipped, riverOn, wet.apiMm);
+  if (!river && lastShadow === "likely" && shadow !== "likely") shadow = null;
   const fresh = dataEnd > newestLogged;
   if (fresh) {
-    sql.push(`INSERT OR IGNORE INTO street_rain_log (zone, data_end_ms, run_ms, rate_mm_h, mm1h, mm3h, mm6h, mm24h, mm24h_clipped, river_trigger, state) VALUES (${[zone, dataEnd, NOW, z.rateMmPerHour, z.mm1h, z.mm3h, z.mm6h, z.mm24h, clipped, riverCol, state].map(q).join(", ")});`);
+    sql.push(`INSERT OR IGNORE INTO street_rain_log (zone, data_end_ms, run_ms, rate_mm_h, mm1h, mm3h, mm6h, mm24h, mm24h_clipped, river_trigger, state, api_gauge_mm, gauge_source, shadow_state, api_ogimet_mm, api_arcgis_mm) VALUES (${[zone, dataEnd, NOW, z.rateMmPerHour, z.mm1h, z.mm3h, z.mm6h, z.mm24h, clipped, riverCol, state, wet.apiMm, wet.source, shadow, wet.ogimetMm, wet.arcgisMm].map(q).join(", ")});`);
+    const sc = stateChange(lastShadow, shadow);
+    if (sc && isReportable(sc)) sql.push(`INSERT OR IGNORE INTO street_rain_shadow_changes (zone, changed_ms, from_state, to_state, live_state, mm24h_clipped, api_gauge_mm, gauge_source) VALUES (${[zone, dataEnd, sc.from, sc.to, state, clipped, wet.apiMm, wet.source].map(q).join(", ")});`);
     const c = stateChange(lastKnown, state);
     if (c && isReportable(c)) {
       sql.push(`INSERT OR IGNORE INTO street_rain_changes (zone, changed_ms, from_state, to_state, mm1h, mm6h, mm24h, mm24h_clipped, river_trigger, towns, notified) VALUES (${[zone, dataEnd, c.from, c.to, z.mm1h, z.mm6h, z.mm24h, clipped, riverCol, townsOf(zone).join(",")].map(q).join(", ")}, 0);`);
@@ -132,9 +151,10 @@ for (const [zone, z] of Object.entries(latest.zones ?? {})) {
   for (const p of pending) {
     const kind = noticeFor({ from: p.from, to: p.to }, lastRiseNoticeMs, p.changedMs, NOW);
     if (kind === "rise") lastRiseNoticeMs = NOW; // a second pending rise in this run is a flap
-    notices.push({ ...p, kind });
+    // one extra line when the candidate disagrees with the live state in the run that caused this ping
+    notices.push({ ...p, kind, shadow: p.changedMs === dataEnd && shadow != null && shadow !== state ? shadow : null });
   }
-  console.log(`${zone}: ${clipped ?? "?"} mm/24h counted (${z.mm24h ?? "?"} raw), river ${river ? (river.on ? "AT MINOR" : "below minor") : "unknown"} -> ${state ?? "no state"}${fresh ? "" : " (already logged)"}; last known ${lastKnown ?? "none"}`);
+  console.log(`${zone}: ${clipped ?? "?"} mm/24h counted (${z.mm24h ?? "?"} raw), river ${river ? (river.on ? "AT MINOR" : "below minor") : "unknown"} -> ${state ?? "no state"} (shadow ${shadow ?? "unknown"})${fresh ? "" : " (already logged)"}; last known ${lastKnown ?? "none"}`);
 }
 
 if (sql.length) {
@@ -155,6 +175,10 @@ if (sql.length) {
 // ---- Slack ------------------------------------------------------------------------------------
 const mm = (v) => (v == null ? "?" : String(Math.round(v)));
 function text(n) {
+  const t = textLive(n);
+  return n.shadow ? `${t} (Shadow rule: ${n.shadow}.)` : t;
+}
+function textLive(n) {
   const link = `${SITE}/flood/${LEAD_TOWN}`;
   const counted = n.clipped ?? n.mm24h;
   const nums = `24 h ${mm(counted)} mm counted (each hour capped at ${STREET_HOURLY_CAP_MM} mm${n.mm24h != null && n.clipped != null && n.mm24h - n.clipped >= 1 ? `; ${mm(n.mm24h)} mm uncapped` : ""}), 6 h ${mm(n.mm6h)} mm, 1 h ${mm(n.mm1h)} mm`;

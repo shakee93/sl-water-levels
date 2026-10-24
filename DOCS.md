@@ -452,6 +452,58 @@ Tables are in `d1/0003_street_flood.sql`.
   with only `dry` answers are false alarms. Answers are self-selected (people who flooded answer more), so count
   towns and days, not people.
 
+### Shadow test of a candidate rule (since 24 Oct 2026)
+
+Nothing users see changes. Every logging run also computes what a candidate "possible" tier WOULD have said and stores it
+next to the live state. Evidence and why: `research/wellampitiya-flood-rule-backtest.md`, "Antecedent wetness and upstream
+rain" (G1 to G5): floods follow wetter weeks when wetness is measured by rain gauges (AUC 0.72), not by the satellite (0.50).
+
+- **Candidate** (`shadowStreetState()` in `lib/streetRainLog.ts`): river at minor level = likely; clipped 24 h rain >= 100 mm =
+  likely; **possible from 45 mm when the week was wet by gauges (index >= 96 mm), otherwise from 60 mm**; below 45 mm none.
+  Backtest (fixed thresholds, chosen on the same 16 floods, so optimistic): 14 of 16 floods, about 5.3 unmatched alarms a
+  year, against 12 of 16 and 8.4 for today's possible. Out of sample: 12 to 14 of 16 at 4.6 to 8.4 a year against 10 to 11.
+- **Gauge wetness** (`lib/gaugeRain.mjs`, exactly the backtest's definition): daily area rain = mean of the gauges that
+  reported; index = sum of k^i x rain(day - 2 - i) with **k = 0.9 a day and a 2-day lag** (so none of the event's own rain
+  is in it), a missing day adds 0, and **at least 5 of the 7 days ending 2 days before must have a value or the index is
+  unknown**. Wet = 96 mm or more. Check: the code gives 151 mm for 22 Oct 2026 and 60 mm for 12 Oct 2026, the report's 152 and 60.
+- **Which gauges.** Backtest: Met Dept SYNOP Colombo 43466, Katunayake 43450, Ratmalana 43467 (03 UTC report, 24 h to
+  08:30 Colombo, from OGIMET). Live, preferred: the same three from OGIMET. Fallback when OGIMET gave too few days:
+  Irrigation Dept ArcGIS `gauges_2_view.rain_fall` (hourly mm, summed per Colombo calendar day) for **Hanwella, Glencourse,
+  Dunamale and Badalgama**, the rain-reporting gauges nearest Colombo (18 to 37 km; Hanwella/Glencourse on the Kelani
+  stand in for Kaduwela/Avissawella, Badalgama for Katunayake). Nagalagam Street (4 km away) is not used: its rain column
+  is always 0, which would bias the index down. A gauge-day needs 16+ hourly readings, a day needs 2+ gauges. **The ArcGIS
+  network is a different network (inland, calendar-day windows), so its index is not the number the 96 mm was set on:**
+  `gauge_source` says which was used, and both indexes are stored (`api_ogimet_mm`, `api_arcgis_mm`) so the review can
+  compare them (September and October 2026 overlap).
+- **Archive** (`scripts/rain-gauges-snapshot.mjs`, a step of `gsmap-snapshot.yml`, before the data push): `rain-gauges/YYYY.jsonl`
+  on the `data` branch, one line per Colombo day `{"d","og":{station:mm},"ag":{gauge:{mm,n}}}`, plus `state.json`. OGIMET is
+  asked at most every 3 h (4 s between stations; the first run backfills 45 days, later runs 14) and the ArcGIS feed's 7 days are re-read every run, keeping the more
+  complete count. Both are best effort and never fail the run. This archive is useful on its own (Colombo-area gauge rain
+  history the satellite under-reads).
+- **D1** (`d1/0005_street_shadow.sql`; the logging script applies it every run, columns via `PRAGMA table_info`):
+  `street_rain_log.shadow_state` (`none` / `possible` / `likely` / **NULL = unknown**), `api_gauge_mm`, `gauge_source`
+  (`ogimet` / `arcgis`), `api_ogimet_mm`, `api_arcgis_mm`; and `street_rain_shadow_changes` (every change of the shadow
+  state with the live state of the same run). **Missing gauge data gives NULL, never `none`**: NULL only arises when the
+  clipped rain is 45 to 60 mm (the only band the gauges decide) or when there is no rain total and no river trigger.
+  No Slack or push of its own; the only trace is a "(Shadow rule: x.)" tail on a Slack ping the live rule already sends, when
+  they disagree.
+- **Export**: `scripts/export-street-flood.sh YYYY-MM <dir>` now also writes `shadow_changes.json` and `shadow_by_day.json`
+  (every day of the month: runs, highest clipped rain, highest live state, highest shadow state, runs with unknown shadow,
+  gauge index, residents' deep / little / dry answers for the day), and the shadow columns in `rain_log.json`; `reports_by_day.json`
+  gains `max_shadow_state_0none_1possible_2likely`, `shadow_unknown_runs` and `api_gauge_mm`.
+- **How to judge it** (monthly, and in December over the whole north-east monsoon): states are 0 none, 1 possible, 2 likely.
+  1. List the days where `max_shadow` > `max_live`: those are the days the candidate would have said "possible" earlier. For
+     each, count residents' answers that day (`deep` / `little` against `dry`; count towns and days, not people, and answers are
+     self-selected). Candidate wins if these days have more `deep` / `little` than the days where live said possible and the
+     candidate did not.
+  2. List days with live >= 1 and shadow 0: false alarms the candidate would have removed. Any `deep` answers on them are floods
+     the candidate would have missed (the backtest misses were E02 and N07).
+  3. Count `shadow_unknown_runs`: unknown is not dry. Do not score those days either way.
+  4. Compare `api_ogimet_mm` and `api_arcgis_mm` on days both exist. If ArcGIS runs much lower or higher, decide the fallback
+     threshold separately or drop the fallback.
+  5. Only a handful of events happen in a season (16 floods in 8.65 years): one more or fewer matters more than any threshold.
+     Do not change the live rule on fewer than about 5 heavy-rain days with residents' answers; leave "likely" alone either way.
+
 ---
 
 ## Reasons to come back (return-visit features)
