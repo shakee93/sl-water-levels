@@ -8,9 +8,10 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { AnswerLine, FaqList, JsonLd } from "@/app/Answer";
+import { AnswerLine, JsonLd } from "@/app/Answer";
+import { NextHourFaq, StationNextHourLine } from "@/app/NextHour";
 import { stationAnswer, stationFaq } from "@/lib/answers";
-import { breadcrumbLd, faqLd, placeLd, webPageLd, PUBLISHER_ID, DATA_BRANCH } from "@/lib/seo";
+import { breadcrumbLd, placeLd, publisherLd, webPageLd, DATA_BRANCH } from "@/lib/seo";
 import {
   fetchStations,
   fetchStationData,
@@ -162,7 +163,6 @@ export default async function StationPage({
   // The one-sentence answer and FAQ come from the same snapshot the chart and verdict use.
   const nat = resolved ? ((await nationalP).find((x) => x.station === resolved.station) ?? null) : null;
   const answer = nat ? stationAnswer(lang, t, nat) : null;
-  const faq = nat && answer ? stationFaq(lang, nat, answer) : [];
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
 
   return (
@@ -201,7 +201,6 @@ export default async function StationPage({
                     },
                   ]
                 : []),
-              ...(faq.length ? [faqLd(faq)] : []),
             ]}
           />
         )}
@@ -234,6 +233,11 @@ export default async function StationPage({
             {station ? heading(t, station, basin, lang) : t("station.fallbackHeading")}
           </h1>
           {answer && <AnswerLine text={answer} note={mt} />}
+          {nat && nat.tier !== "stale" && (
+            <Suspense key={`nh-${station}`} fallback={null}>
+              <StationNextHourLine lang={lang} basin={basin} station={station} />
+            </Suspense>
+          )}
         </header>
 
         {stationsError ? (
@@ -300,7 +304,11 @@ export default async function StationPage({
               <StationHelpCard lang={lang} basin={basin} station={station} variant="link" />
             </Suspense>
 
-            <FaqList lang={lang} items={faq} note={mt} />
+            {nat && answer && (
+              <Suspense key={`faq-${station}`} fallback={null}>
+                <NextHourFaq lang={lang} basin={basin} build={(m) => stationFaq(lang, nat, answer, m?.[station] ?? null)} note={mt} />
+              </Suspense>
+            )}
           </>
         )}
       </div>
@@ -321,7 +329,7 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
     "@context": "https://schema.org",
     "@type": "Dataset",
     name: `${name} river gauge water level (${basin.trim()})`,
-    description: `Hourly water-level readings at the ${name} gauge on the ${basin.trim()}, Sri Lanka, with alert, minor flood and major flood levels. Last 7 days. Shown in feet.`,
+    description: `Hourly water-level readings at the ${name} gauge on the ${basin.trim()}, Sri Lanka, with alert, minor flood and major flood levels and a next-hour forecast. Last 7 days. Shown in feet.`,
     url: `${SITE}${canonical}`,
     inLanguage: lang,
     isAccessibleForFree: true,
@@ -329,12 +337,13 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
     // license: the agencies publish no licence text; this page states the sources and terms.
     license: "https://sl-water-levels.vercel.app/about#data-sources",
     creator: { "@type": "Organization", name: "Department of Irrigation, Sri Lanka", url: "https://www.irrigation.gov.lk" },
-    publisher: { "@id": PUBLISHER_ID },
+    publisher: publisherLd(),
     isBasedOn: "https://www.irrigation.gov.lk/",
     ...(modified ? { dateModified: new Date(modified).toISOString() } : {}),
     temporalCoverage: `${day(start)}/${day(end)}`,
     variableMeasured: [
       { "@type": "PropertyValue", name: "River water level", unitText: "feet" },
+      { "@type": "PropertyValue", name: "Next-hour river level forecast (expected level and range in about one hour)", unitText: "feet" },
       { "@type": "PropertyValue", name: "Alert, minor flood and major flood levels", unitText: "feet" },
     ],
     ...(s && Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
@@ -349,7 +358,7 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
     distribution: [
       {
         "@type": "DataDownload",
-        name: "Current level and flood marks (JSON)",
+        name: "Current level, flood marks and next-hour forecast (JSON)",
         encodingFormat: "application/json",
         contentUrl: `${SITE}/api/levels?station=${encodeURIComponent(stationSlug(station))}`,
       },

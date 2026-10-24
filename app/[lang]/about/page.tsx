@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { isLocale, pageAlternates } from "@/lib/i18n/config";
 import { AboutTrust } from "@/app/AboutTrust";
 import { JsonLd } from "@/app/Answer";
-import { breadcrumbLd, publisherLd, webPageLd, CONTENT_UPDATED } from "@/lib/seo";
+import { breadcrumbLd, publisherLd, webPageLd, CONTENT_UPDATED, REPO } from "@/lib/seo";
+import { ACCURACY } from "@/lib/accuracy";
 import { getI18n } from "@/lib/i18n/server";
 
 export const revalidate = 86400;
@@ -89,6 +90,31 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
             <p>{t("about.fc.p1")}</p>
             <p>{t("about.fc.p2")}</p>
           </Card>
+
+          <div id="next-hour" className="scroll-mt-20">
+            <Card icon={<Activity className="size-5" />} title={t("about.nh.h")}>
+              <p>{t("about.nh.p1")}</p>
+              <p>
+                {t("about.nh.p2", {
+                  span: `${ACCURACY.from} – ${ACCURACY.to}`,
+                  n: ACCURACY.model.checked,
+                  g: ACCURACY.model.gauges,
+                  mae: ACCURACY.model.maeFt.toFixed(2),
+                  base: ACCURACY.model.noChangeMaeFt.toFixed(2),
+                  pct: ACCURACY.model.inRangePct,
+                  dir: ACCURACY.model.directionPct,
+                  dirb: ACCURACY.model.noChangeDirectionPct,
+                })}
+              </p>
+              <p>{t("about.nh.p3", { w: ACCURACY.model.rangeWidthFt })}</p>
+              <p>
+                <a className="underline" href={`${REPO}/blob/main/DOCS.md`} target="_blank" rel="noreferrer">{t("about.nh.how")}</a>
+                {" · "}
+                <Link className="underline" href="/data#next-hour">{t("about.nh.data")}</Link>
+                {lang !== "en" ? ` (${t("common.machineTranslated")})` : ""}
+              </p>
+            </Card>
+          </div>
 
           <AboutTrust lang={lang} />
 

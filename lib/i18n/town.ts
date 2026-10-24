@@ -5,7 +5,7 @@ import type { Locale } from "./config";
 
 const en = {
   "title": "{town} flood today – live river level & rain | Sri Lanka Water Levels",
-  "desc": "Is {town} flooding? Flood estimate for {town} from the {gauge} river gauge, rain at the town and official warnings. Updated every few minutes.",
+  "desc": "Is {town} flooding? Live flood estimate and next-hour river forecast for {town} from the {gauge} river gauge, rain at the town and official warnings. Updated every few minutes.",
   "descNoGauge": "Is {town} flooding? Flood estimate for {town} from the nearest river gauge, rain at the town and official warnings.",
   "h1": "Is {town} flooding?",
   "h1sub": "{town}, {district}",
@@ -211,7 +211,7 @@ type D = Record<TKey, string>;
 
 const si: D = {
   "title": "{town} ගංවතුර අද – සජීවී ගං මට්ටම සහ වැසි | Sri Lanka Water Levels",
-  "desc": "{town} ගංවතුරට යටද? {gauge} ජල මට්ටම මාපකය, නගරයේ වැසි සහ නිල අනතුරු ඇඟවීම් අනුව {town} සඳහා ඇස්තමේන්තුව.",
+  "desc": "{town} ගංවතුරට යටද? {gauge} ජල මට්ටම මාපකය, නගරයේ වැසි සහ නිල අනතුරු ඇඟවීම් අනුව {town} සඳහා සජීවී ඇස්තමේන්තුව සහ ඊළඟ පැය ගංගා පුරෝකථනය.",
   "descNoGauge": "{town} ගංවතුරට යටද? ආසන්නතම ජල මට්ටම මාපකය, නගරයේ වැසි සහ නිල අනතුරු ඇඟවීම් අනුව {town} සඳහා ඇස්තමේන්තුව.",
   "h1": "{town} ගංවතුරට යටද?",
   "h1sub": "{town}, {district}",
@@ -414,7 +414,7 @@ const si: D = {
 
 const ta: D = {
   "title": "{town} வெள்ளம் இன்று – நேரலை ஆற்று மட்டம் & மழை | Sri Lanka Water Levels",
-  "desc": "{town} வெள்ளத்தில் உள்ளதா? {gauge} ஆற்று மானி, நகரின் மழை மற்றும் அதிகாரப்பூர்வ எச்சரிக்கைகளின் அடிப்படையில் {town} க்கான மதிப்பீடு.",
+  "desc": "{town} வெள்ளத்தில் உள்ளதா? {gauge} ஆற்று மானி, நகரின் மழை மற்றும் அதிகாரப்பூர்வ எச்சரிக்கைகளின் அடிப்படையில் {town} க்கான மதிப்பீடு. அடுத்த மணி நேர ஆற்று முன்னறிவிப்பும் உள்ளது.",
   "descNoGauge": "{town} வெள்ளத்தில் உள்ளதா? அருகிலுள்ள ஆற்று மானி, நகரின் மழை மற்றும் அதிகாரப்பூர்வ எச்சரிக்கைகளின் அடிப்படையில் {town} க்கான மதிப்பீடு.",
   "h1": "{town} வெள்ளத்தில் உள்ளதா?",
   "h1sub": "{town}, {district}",

@@ -115,13 +115,11 @@ export const en = {
 
   // ---- home ----------------------------------------------------------------------------------
   "home.metaTitle": "Sri Lanka Water Levels Today – Live River Gauges & Flood Levels",
-  "home.metaDesc":
-    "Latest water-level readings for every river gauge in Sri Lanka, grouped by basin. Tap a station for flood thresholds, next-hour forecast, upstream stations, and connected dams.",
-  "home.ogDesc": "Live river and reservoir levels across Sri Lanka, with flood forecasts.",
-  "home.twDesc": "Live river-gauge readings + next-hour flood forecast for every basin in Sri Lanka.",
-  "home.ldDesc": "Latest Sri Lanka river-gauge readings + next-hour flood forecast.",
-  "home.layoutDesc":
-    "Realtime water-level readings from Sri Lanka Department of Irrigation river gauges, plotted against alert, minor-flood and major-flood thresholds for every major basin — Kelani, Mahaweli, Kalu, Nilwala and more.",
+  "home.metaDesc": "Live river levels and a next-hour forecast for every river gauge in Sri Lanka, grouped by basin. Tap a station for flood levels, upstream stations and connected dams.",
+  "home.ogDesc": "Live river and reservoir levels across Sri Lanka, with a next-hour river forecast.",
+  "home.twDesc": "Live river levels + a next-hour river forecast for every gauge in Sri Lanka.",
+  "home.ldDesc": "Live river levels and next-hour forecasts for every river gauge in Sri Lanka, with flood warnings and reservoir releases.",
+  "home.layoutDesc": "Live river levels and a next-hour forecast for every Sri Lanka Department of Irrigation river gauge, against alert, minor-flood and major-flood levels for every major basin — Kelani, Mahaweli, Kalu, Nilwala and more.",
   "home.h1": "Sri Lanka Water Levels",
   "home.subtitle": "River gauges from the Department of Irrigation.",
   "home.allRivers": "All rivers",
@@ -204,7 +202,7 @@ export const en = {
 
   // ---- river page ----------------------------------------------------------------------------
   "river.metaTitle": "{river} Water Level Today – Live Gauges & Flood Alerts",
-  "river.metaDesc": "{river} water level today: {names} gauges, upstream to downstream.{now} Flood thresholds and forecast, updated hourly.",
+  "river.metaDesc": "{river} water level today with next-hour forecast: {names} gauges, upstream to downstream.{now} Flood levels, updated hourly.",
   "river.metaNow": " Now: {phrase}.",
   "river.noReadings": "No readings available right now",
   "river.delayed": "Data delayed — last reading ",
@@ -227,10 +225,8 @@ export const en = {
   "station.headingNoRiver": "{name} water level",
   "station.fallbackHeading": "Station water level",
   "station.metaTitle": "{heading} today (live)",
-  "station.metaDescLevel":
-    "Live reading at {name} on {basin}: {level} — {status}. Alert {alert}, minor flood {minor}, major flood {major}. Includes next-hour forecast and upstream basin view.",
-  "station.metaDescNone":
-    "{name} river gauge on {basin}, Sri Lanka. Live water-level readings from the Department of Irrigation with alert / minor-flood / major-flood thresholds and next-hour forecast.",
+  "station.metaDescLevel": "Live level and next-hour forecast for {name} on {basin}: {level} — {status}. Alert {alert}, minor flood {minor}, major flood {major}. Upstream gauges included.",
+  "station.metaDescNone": "Live level and next-hour forecast for the {name} river gauge on {basin}, Sri Lanka, with the Department of Irrigation’s alert, minor-flood and major-flood levels.",
   "station.ogTitle": "{heading} — Sri Lanka Water Levels",
   "station.other": "Other stations",
   "station.thisStation": "(this station)",
@@ -564,11 +560,10 @@ export const en = {
 
   // ---- about ---------------------------------------------------------------------------------
   "about.metaTitle": "About",
-  "about.metaDesc":
-    "Where the river levels come from, what alert, minor flood and major flood mean, and how the next-hour and next-24-hour forecast works.",
+  "about.metaDesc": "How the next-hour river forecast works, where the river levels come from, and what alert, minor flood and major flood mean.",
   "about.ogTitle": "About — Sri Lanka Water Levels",
   "about.ogDesc": "Where the river levels come from, what the flood levels mean, and how the forecast works.",
-  "about.twDesc": "Where the river-gauge data comes from, what the flood thresholds mean, and how the next-hour forecast works.",
+  "about.twDesc": "How the next-hour river forecast works, where the river-gauge data comes from, and what the flood levels mean.",
   "about.h1": "About",
   "about.intro":
     "A free, independent site that shows how high Sri Lanka’s rivers are right now, whether they’re rising, and what to expect next, using the Department of Irrigation’s own river gauges.",
@@ -587,6 +582,12 @@ export const en = {
     "The “next hour” and “next 24 hours” estimates look at how the river has been moving, what the gauges upstream are doing, and the rain falling and forecast over the hills that drain into it.",
   "about.fc.p2":
     "It’s new and still learning from this season’s data, so it’s marked experimental. Always go by official warnings first.",
+  "about.nh.h": "Next-hour forecasts",
+  "about.nh.p1": "Every river gauge on this site has a next-hour forecast: where the river is expected to be in about an hour, with a range, refreshed every hour. As far as we know, it is the only public next-hour river forecast for Sri Lanka.",
+  "about.nh.p2": "How well has it done? We check every forecast against what the gauge actually read an hour later. So far ({span}) that is {n} forecasts at {g} gauges: they missed by about {mae} ft on average, against {base} ft for guessing “no change”. The real level landed inside the stated range {pct}% of the time, and rising, falling or steady was called right {dir}% of the time, against {dirb}% for always saying steady.",
+  "about.nh.p3": "That is only about a day and a half of data, so it is an early result, not a promise. The ranges are wide (about {w} ft) on purpose while the forecast is new. Gauges without enough history use a simple trend estimate instead, which has not yet beaten “no change”. It is a forecast, not an official warning.",
+  "about.nh.how": "How the forecast is made",
+  "about.nh.data": "Get it as data",
   "about.notOfficial": "Not an official warning service",
   "about.disc1": "For official flood warnings, follow the ",
   "about.dmc": "Disaster Management Centre",

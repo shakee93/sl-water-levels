@@ -10,7 +10,7 @@ export const revalidate = 86400;
 
 // A developers' page: written in English for every language, and always canonical to the English URL.
 const TITLE = "Free data and API for Sri Lanka river levels and reservoirs";
-const DESC = "Current river levels in feet, flood marks, reservoir spill and release figures as JSON, an alerts feed and an MCP server for AI tools. Free, no key.";
+const DESC = "Current river levels in feet, a next-hour river forecast for every gauge, flood marks, reservoir spill and release figures as JSON, an alerts feed and an MCP server for AI tools. Free, no key.";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
@@ -60,7 +60,14 @@ export default async function DataPage({ params }: { params: Promise<{ lang: str
             <code className={`${code} mt-1`}>GET {SITE}/api/levels?station=hanwella</code>
             <code className={`${code} mt-1`}>GET {SITE}/api/levels?river=kelani-ganga</code>
             <code className={`${code} mt-1`}>GET {SITE}/api/levels?town=wellampitiya</code>
-            <p className="mt-2">Each record has <code>level</code>, <code>unit</code> (ft), <code>marks</code> (alert, minor, major), <code>status</code> (normal, watch, alert, minor, major, none, stale), <code>trend</code>, <code>observedAt</code> (ISO 8601, with <code>ageMinutes</code>) and the page <code>url</code>. <code>published</code> keeps the figure exactly as the agency released it.</p>
+            <p className="mt-2">Each record has <code>level</code>, <code>nextHour</code> (below), <code>unit</code> (ft), <code>marks</code> (alert, minor, major), <code>status</code> (normal, watch, alert, minor, major, none, stale), <code>trend</code>, <code>observedAt</code> (ISO 8601, with <code>ageMinutes</code>) and the page <code>url</code>. <code>published</code> keeps the figure exactly as the agency released it.</p>
+          </section>
+
+          <section className={card} aria-labelledby="next-hour-h" id="next-hour">
+            <h2 id="next-hour-h" className="text-lg font-semibold tracking-tight mb-2">Next-hour river forecast</h2>
+            <p className="mb-2">Every gauge in <code>/api/levels</code> carries <code>nextHour</code>: where the river is expected to be in about an hour, with a range, refreshed hourly. As far as we know it is the only public next-hour river forecast for Sri Lanka. It is a forecast, not an official warning.</p>
+            <code className={code}>GET {SITE}/api/levels?station=hanwella</code>
+            <p className="mt-2">Fields: <code>level_ft</code> (expected level), <code>low_ft</code> and <code>high_ft</code> (the range it should stay inside; null for a simple trend estimate), <code>change_ft</code>, <code>direction</code> (rising, falling, steady), <code>crossing</code> (for example &ldquo;may reach alert level&rdquo;, else null), <code>issuedAt</code> (the reading it starts from, ISO 8601), <code>method</code> (<code>model</code>: upstream gauges and rain; <code>trend</code>: recent change carried forward) and <code>experimental</code>. The whole <code>nextHour</code> is null when the gauge is not reporting or has no forecast. How well it has done: <Link className="underline" href={p("/about#next-hour")}>{t("nav.about")}</Link>.</p>
           </section>
 
           <section className={card} aria-labelledby="reservoirs">
@@ -78,7 +85,7 @@ export default async function DataPage({ params }: { params: Promise<{ lang: str
 
           <section className={card} aria-labelledby="mcp">
             <h2 id="mcp" className="text-lg font-semibold tracking-tight mb-2">For AI assistants</h2>
-            <p className="mb-2">An MCP server (Streamable HTTP) lets an assistant look up stations, read a gauge, walk a river from upstream to downstream and fetch the current official warnings. Tools: <code>list_basins</code>, <code>list_stations</code>, <code>get_station_readings</code>, <code>get_basin_snapshot</code>, <code>get_official_warnings</code>.</p>
+            <p className="mb-2">An MCP server (Streamable HTTP) lets an assistant look up stations, read a gauge, walk a river from upstream to downstream and fetch the current official warnings. Tools: <code>get_next_hour_forecast</code>, <code>list_basins</code>, <code>list_stations</code>, <code>get_station_readings</code>, <code>get_basin_snapshot</code>, <code>get_official_warnings</code>, <code>get_reservoir_releases</code>, <code>get_spill_watch</code>. The station and river tools include the next-hour forecast.</p>
             <code className={code}>{SITE}/mcp</code>
             <p className="mt-2">A plain-text summary written for language models is at <a className="underline" href="/llms.txt">/llms.txt</a>, with every gauge, reservoir and town in <a className="underline" href="/llms-full.txt">/llms-full.txt</a>.</p>
           </section>

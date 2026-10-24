@@ -19,10 +19,11 @@ import { d1Configured } from "@/lib/d1";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
 import { TownVerdict } from "@/app/flood/TownVerdict";
-import { AnswerLine, FaqList, JsonLd } from "@/app/Answer";
+import { AnswerLine, JsonLd } from "@/app/Answer";
+import { NextHourFaq } from "@/app/NextHour";
 import { townAnswer, townFaq } from "@/lib/answers";
 import { assessTown } from "@/lib/townRisk";
-import { breadcrumbLd, faqLd, placeLd, webPageLd } from "@/lib/seo";
+import { breadcrumbLd, placeLd, webPageLd } from "@/lib/seo";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 
@@ -75,7 +76,6 @@ export default async function TownPage({ params }: Params) {
     tone: tt(toneKey),
     gauge: g ? { name: g.name, basin: g.basin, km, level: g.level, unit: g.unit, ts: g.ts } : null,
   });
-  const faq = townFaq(lang, place.name, answer, g ? { name: g.name, km } : null);
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
 
   const ld = [
@@ -102,7 +102,6 @@ export default async function TownPage({ params }: Params) {
       lon: place.lon,
       containedIn: `${place.district} District, Sri Lanka`,
     }),
-    faqLd(faq),
   ];
 
   return (
@@ -172,7 +171,16 @@ export default async function TownPage({ params }: Params) {
             <LifeBuoy className="size-4" aria-hidden /> {tt("sec.helpLink")}
           </Link>
         </p>
-        <FaqList lang={lang} items={faq} note={mt} />
+        <Suspense key={`faq-${place.slug}`} fallback={null}>
+          <NextHourFaq
+            lang={lang}
+            basin={g?.basin ?? null}
+            build={(m) =>
+              townFaq(lang, place.name, answer, g ? { name: g.name, km } : null, g ? { basin: g.basin, station: g.station, nh: m?.[g.station] ?? null } : null)
+            }
+            note={mt}
+          />
+        </Suspense>
         {g && (
           <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
             <Link href={p(basinPath(g.basin))} className="hover:underline">{riverName(g.basin, lang)}</Link> · {tt("foot.sources")}

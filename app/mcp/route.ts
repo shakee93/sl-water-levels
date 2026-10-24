@@ -12,6 +12,11 @@ import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { getReleases } from "@/lib/releases";
 import { WEEKLY_PDF, getWeeklyOutcome, windowState } from "@/lib/wmsWeekly";
 import { reservoirById } from "@/lib/reservoirs";
+import { getNextHourForBasin, getNextHourForBasins, timeBox } from "@/lib/nextHour";
+import { ACCURACY } from "@/lib/accuracy";
+
+const NEXT_HOUR_DOC =
+  "next_hour = the next-hour river forecast (the headline feature of this service): level_ft is the expected level in about an hour from issuedAt, low_ft..high_ft the range it should stay in, direction rising/falling/steady, crossing a flood mark the range reaches, method model|trend. A forecast, not an official warning; null when not available.";
 
 const handler = createMcpHandler(
   (server) => {
@@ -53,7 +58,7 @@ const handler = createMcpHandler(
 
     server.tool(
       "get_station_readings",
-      "Get water-level (and rainfall where reported) readings for a single station. Returns up to the last `days` of readings (the source only retains ~7 days) plus alert / minor-flood / major-flood thresholds. Units vary by station — Kelani Ganga gauges are in feet; other basins may differ.",
+      "Get water-level (and rainfall where reported) readings for a single station, plus its next-hour forecast (`next_hour`: expected level in about an hour with a range, updated hourly). Returns up to the last `days` of readings (the source only retains ~7 days) plus alert / minor-flood / major-flood thresholds. Readings and thresholds are in the gauge's published unit (feet or metres, depending on the gauge); next_hour is always in feet. " + NEXT_HOUR_DOC,
       {
         station: z.string().describe("Exact station name, e.g. 'Nagalagam Street' or 'Hanwella'"),
         days: z
@@ -67,6 +72,7 @@ const handler = createMcpHandler(
       async ({ station, days }) => {
         const data = await fetchStationData(station, days ?? 4);
         const status = statusFor(data.latest?.water_level ?? null, data.thresholds, data.latest?.ts);
+        const nh = await timeBox(getNextHourForBasin(data.basin), 4000);
         return {
           content: [
             {
@@ -75,6 +81,7 @@ const handler = createMcpHandler(
                 {
                   station: data.station,
                   basin: data.basin,
+                  next_hour: nh?.[data.station] ?? null,
                   status: status.label,
                   tier: status.tier,
                   age_minutes: ageMinutes(data.latest),
@@ -94,13 +101,14 @@ const handler = createMcpHandler(
 
     server.tool(
       "get_basin_snapshot",
-      "Get every station in a basin ordered upstream → downstream (canonical order for known basins, longitude desc otherwise). For each station: current level, 3-hour trend rate, full 24h time series. Useful for spotting a flood wave moving down a river.",
+      "Get every station in a basin ordered upstream → downstream (canonical order for known basins, longitude desc otherwise). For each station: current level, 3-hour trend rate and its next-hour forecast (`next_hour`). Useful for spotting a flood wave moving down a river and seeing where each gauge will be in an hour. " + NEXT_HOUR_DOC,
       {
         basin: z.string().describe("Basin name, e.g. 'Kelani Ganga'"),
       },
       async ({ basin }) => {
         const raw = await fetchBasinSnapshot(basin);
         const ordered = orderStations(basin, raw);
+        const nh = await timeBox(getNextHourForBasin(basin), 4000);
         const summary = ordered.map((s, i) => {
           const status = statusFor(s.latest?.water_level ?? null, s.thresholds, s.latest?.ts);
           return {
@@ -109,6 +117,7 @@ const handler = createMcpHandler(
             station: s.station,
             latest_level: s.latest?.water_level ?? null,
             latest_ts: s.latest?.ts ?? null,
+            next_hour: nh?.[s.station] ?? null,
             status: status.label,
             tier: status.tier,
             age_minutes: s.ageMin,
@@ -124,6 +133,49 @@ const handler = createMcpHandler(
               type: "text",
               text: JSON.stringify(
                 { basin, station_count: summary.length, stations: summary },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
+      },
+    );
+
+    server.tool(
+      "get_next_hour_forecast",
+      "Get the next-hour river forecast: for every gauge (or one river, or one gauge) where the river is expected to be in about an hour, with a range, updated hourly. This is the main thing this service adds: as far as we know it is the only public next-hour river forecast for Sri Lanka. Built from the recent trend, the gauges upstream and rain. Returns per gauge: level_ft, low_ft, high_ft, change_ft, direction (rising/falling/steady), crossing (e.g. 'may reach alert level', else null), issuedAt (the reading it starts from), method (model or trend) and experimental. Also returns an accuracy summary measured against what the gauges then read. Always quote it as a forecast, not an official warning, with the issuedAt time (Sri Lanka time, UTC+5:30).",
+      {
+        basin: z.string().optional().describe("Optional river filter, e.g. 'Kelani Ganga'"),
+        station: z.string().optional().describe("Optional exact gauge name, e.g. 'Hanwella'"),
+      },
+      async ({ basin, station }) => {
+        const all = await fetchStations();
+        const b = basin?.trim().toLowerCase();
+        const st = station?.trim().toLowerCase();
+        const picked = all.filter((s) => (b ? s.basin.trim().toLowerCase().includes(b) : true) && (st ? s.station.toLowerCase() === st : true));
+        const nh = await timeBox(getNextHourForBasins(picked.map((s) => s.basin)), 8000);
+        const forecasts = picked.map((s) => ({ station: s.station, river: s.basin.trim(), next_hour: nh?.[s.station] ?? null }));
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  count: forecasts.length,
+                  ready: nh != null,
+                  note: NEXT_HOUR_DOC,
+                  accuracy: {
+                    sample: `${ACCURACY.model.checked} one-hour forecasts at ${ACCURACY.model.gauges} gauges, ${ACCURACY.from} to ${ACCURACY.to} (small sample, early result)`,
+                    average_miss_ft: ACCURACY.model.maeFt,
+                    average_miss_if_no_change_ft: ACCURACY.model.noChangeMaeFt,
+                    share_inside_stated_range_pct: ACCURACY.model.inRangePct,
+                    direction_right_pct: ACCURACY.model.directionPct,
+                    direction_right_if_always_steady_pct: ACCURACY.model.noChangeDirectionPct,
+                    details: "https://sl-water-levels.vercel.app/about#next-hour",
+                  },
+                  forecasts,
+                },
                 null,
                 2,
               ),

@@ -56,7 +56,10 @@ async function page(label, path, { faq = false, answer = false, noHreflang = fal
     check(!!f && f.mainEntity?.length >= 2, `${label}: FAQPage with questions`);
     for (const q of f?.mainEntity ?? []) check(text.includes(q.name), `${label}: FAQ "${q.name}" is visible on the page`);
   }
-  for (const n of nodes) if (n["@type"] === "Dataset") check(n.name && n.description && n.license && n.distribution, `${label}: Dataset has name, description, license, distribution`);
+  for (const n of nodes) if (n["@type"] === "Dataset") {
+    check(n.name && n.description && n.license && n.distribution, `${label}: Dataset has name, description, license, distribution`);
+    for (const k of ["publisher", "creator"]) for (const o of [].concat(n[k] ?? [])) check(o && typeof o === "object" && o["@type"], `${label}: Dataset ${k} has an @type (not a bare @id)`);
+  }
 }
 
 // ---- robots, llms, sitemap, key, feeds
@@ -69,7 +72,12 @@ check(/Sitemap: .*sitemap\.xml/.test(robots.text), "robots.txt lists the sitemap
 for (const f of ["/llms.txt", "/llms-full.txt"]) {
   const r = await get(f);
   check(r.status === 200 && r.type.startsWith("text/plain") && r.text.length > (f === "/llms.txt" ? 1500 : 5000), `${f}: 200 text/plain, ${r.text.length} chars`);
-  if (f === "/llms.txt") check(/Cite as/.test(r.text) && /117/.test(r.text) && /\/api\/levels/.test(r.text), "llms.txt has citation, 117 and the API");
+  if (f === "/llms.txt") {
+    check(/Cite as/.test(r.text) && /117/.test(r.text) && /\/api\/levels/.test(r.text), "llms.txt has citation, 117 and the API");
+    const head = r.text.slice(0, 900);
+    check(/next-hour forecast/i.test(head), "llms.txt summary leads with the next-hour forecast");
+    check(/## Next-hour forecast/.test(r.text) && /nextHour/.test(r.text) && /not an official warning/.test(r.text), "llms.txt has a Next-hour forecast section with the API field and the warning caveat");
+  }
 }
 
 const sm = await get("/sitemap.xml");
@@ -83,9 +91,17 @@ const key = (await get("/robots.txt")) && (await import("node:fs")).readdirSync(
 if (key) { const k = await get(`/${key}`); check(k.status === 200 && k.text.trim() === key.replace(".txt", ""), "IndexNow key file is live"); }
 else bad("IndexNow key file missing from public/");
 
-const lv = await get("/api/levels");
+let lv = await get("/api/levels");
 let lvj = null; try { lvj = JSON.parse(lv.text); } catch {}
 check(lv.status === 200 && lvj?.stations?.length > 30, `/api/levels: ${lvj?.stations?.length} stations`);
+// The next-hour forecast is time-boxed, so the first call after a deploy can come back without it: retry a few times.
+for (let i = 0; i < 4 && !lvj?.stations?.some((s) => s.nextHour); i++) {
+  await new Promise((r) => setTimeout(r, 4000));
+  lv = await get(`/api/levels?nocache=${Date.now()}`);
+  try { lvj = JSON.parse(lv.text); } catch {}
+}
+const nhSt = lvj?.stations?.find((s) => s.status !== "stale" && s.nextHour);
+check(!!nhSt && typeof nhSt.nextHour.level_ft === "number" && ["rising", "falling", "steady"].includes(nhSt.nextHour.direction) && nhSt.nextHour.issuedAt && nhSt.nextHour.method, `/api/levels: nextHour on a reporting gauge (${nhSt?.id}: ${nhSt?.nextHour?.level_ft} ft, ${nhSt?.nextHour?.direction})`);
 const feed = await get("/feed.xml");
 check(feed.status === 200 && feed.type.includes("atom") && feed.text.includes("<feed"), "/feed.xml is Atom");
 

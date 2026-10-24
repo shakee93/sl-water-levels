@@ -18,9 +18,10 @@ import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
-import { AnswerLine, FaqList, JsonLd } from "@/app/Answer";
+import { AnswerLine, JsonLd } from "@/app/Answer";
+import { NextHourFaq } from "@/app/NextHour";
 import { riverAnswer, riverFaq } from "@/lib/answers";
-import { breadcrumbLd, faqLd, webPageLd } from "@/lib/seo";
+import { breadcrumbLd, webPageLd } from "@/lib/seo";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
@@ -206,7 +207,6 @@ export default async function BasinPage({
         : "text-yellow-800 dark:text-yellow-300 font-medium";
 
   const answer = snap.length ? riverAnswer(lang, t, basin, snap) : null;
-  const faq = answer ? riverFaq(lang, basin, answer, names) : [];
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
 
   return (
@@ -230,7 +230,6 @@ export default async function BasinPage({
               ],
               lang,
             ),
-            ...(faq.length ? [faqLd(faq)] : []),
           ]}
         />
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
@@ -283,7 +282,18 @@ export default async function BasinPage({
           <ChevronRight className="size-3.5" aria-hidden />
         </Link>
 
-        <FaqList lang={lang} items={faq} note={mt} />
+        {answer && (
+          <Suspense key={`faq-${basin}`} fallback={null}>
+            <NextHourFaq
+              lang={lang}
+              basin={basin}
+              build={(m) =>
+                riverFaq(lang, basin, answer, names, snap.filter((s) => s.tier !== "stale").map((s) => ({ station: s.station, nh: m?.[s.station] ?? null })))
+              }
+              note={mt}
+            />
+          </Suspense>
+        )}
       </div>
     </main>
   );

@@ -2,7 +2,7 @@
 // The long article is English only; Sinhala and Tamil get the answer and the key findings (machine-drafted,
 // flagged for native review) and the rest links back to the English text. Numbers come from
 // research/wellampitiya-flood-rule-backtest.md, "Validation (complete)": change them there first.
-import { abs, OWNER, SITE } from "./seo";
+import { abs, OWNER, SITE, publisherLd } from "./seo";
 import type { Locale } from "./i18n/config";
 
 export const WF_PATH = "/research/wellampitiya-street-flooding";
@@ -61,7 +61,7 @@ export const WF_I18N: Record<Locale, { note: string; findings: string; english: 
 export const WF_CITE = `${OWNER.name} (${WF_PUBLISHED}). ${WF_TITLE.en}. Sri Lanka Water Levels. ${SITE}${WF_PATH}`;
 
 /** Article + Dataset nodes for the research page. */
-export function wfArticleLd(lang: Locale, publisherId: string) {
+export function wfArticleLd(lang: Locale, _publisherId?: string) {
   const url = abs(lang, WF_PATH);
   const place = { "@type": "Place", name: "Wellampitiya and Kolonnawa, Colombo, Sri Lanka", geo: { "@type": "GeoCoordinates", latitude: 6.9, longitude: 79.9 } };
   return [
@@ -76,7 +76,7 @@ export function wfArticleLd(lang: Locale, publisherId: string) {
       datePublished: WF_PUBLISHED,
       dateModified: WF_MODIFIED,
       author: { "@type": "Person", name: OWNER.name, url: OWNER.x, sameAs: [OWNER.x, OWNER.github] },
-      publisher: { "@id": publisherId },
+      publisher: publisherLd(),
       image: `${SITE}${WF_IMG}/22-oct-2026-timeline.png`,
       about: ["Pluvial flooding", "Urban flood warning", "Kelani Ganga", "Wellampitiya", "Kolonnawa", "Sri Lanka"],
       keywords: ["Wellampitiya flood", "Kolonnawa flood", "street flooding", "satellite rainfall", "GSMaP", "Kelani Ganga", "Sri Lanka"],
@@ -102,8 +102,8 @@ export function wfArticleLd(lang: Locale, publisherId: string) {
       inLanguage: "en",
       isAccessibleForFree: true,
       license: `${SITE}/about#data-sources`,
-      creator: { "@id": publisherId },
-      publisher: { "@id": publisherId },
+      creator: publisherLd(),
+      publisher: publisherLd(),
       isBasedOn: ["https://www.dmc.gov.lk/", "https://www.irrigation.gov.lk/", "https://sharaku.eorc.jaxa.jp/GSMaP/"],
       keywords: ["flood", "Wellampitiya", "Kolonnawa", "Kelani Ganga", "GSMaP", "Sri Lanka"],
       temporalCoverage: "2018-10-06/2026-10-22",

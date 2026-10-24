@@ -12,6 +12,7 @@ import { fullStamp, riverName } from "./i18n/format";
 import type { Locale } from "./i18n/config";
 import type { TFn } from "./i18n/translate";
 import { shownNumber, type Unit } from "./units";
+import type { NextHour } from "./nextHour";
 
 type L3 = Record<Locale, string>;
 type Vars = Record<string, string | number>;
@@ -77,6 +78,64 @@ export function stationAnswer(lang: Locale, t: TFn, s: NationalStation): string 
   const r = s.rate3hM;
   const dir = r == null ? "" : W(Math.abs(r) < STEADY ? D.steady : r < 0 ? D.falling : r < SLOW ? D.risingSlow : D.rising, lang);
   return W(river ? D.sentence : D.sentenceNoRiver, lang, { asOf: W(D.asOf, lang, { stamp }), river, name, lv, rel, dir });
+}
+
+
+// ---- next hour ------------------------------------------------------------------------------------
+// The next-hour forecast, in words. Used for the second sentence under a page's heading and for the
+// "Will ... in the next hour?" answers. Shown in feet to one decimal like the rest of the page: a change
+// too small to show at that precision reads "stay about the same". Always a forecast, never a warning.
+
+const NH = {
+  subjIt: { en: "it", si: "ජල මට්ටම", ta: "நீர்மட்டம்" },
+  subjAt: { en: "the {river} at {name}", si: "{river} හි {name} හි ජල මට්ටම", ta: "{river} ஆற்றின் {name} இல் நீர்மட்டம்" },
+  subjAtNoRiver: { en: "the water level at {name}", si: "{name} හි ජල මට්ටම", ta: "{name} இல் நீர்மட்டம்" },
+  steady: {
+    en: "In the next hour {subj} is expected to stay about the same{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} පාහේ වෙනස් නොවී පවතිනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} ஏறக்குறைய மாறாமல் இருக்கும் என எதிர்பார்க்கப்படுகிறது{rng}.",
+  },
+  rise: {
+    en: "In the next hour {subj} is expected to rise to about {lv} ft{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් අඩි {lv} දක්වා ඉහළ යනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} அடிக்கு உயரும் என எதிர்பார்க்கப்படுகிறது{rng}.",
+  },
+  fall: {
+    en: "In the next hour {subj} is expected to fall to about {lv} ft{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් අඩි {lv} දක්වා පහළ යනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} அடிக்குக் குறையும் என எதிர்பார்க்கப்படுகிறது{rng}.",
+  },
+  reachAlert: { en: " It {how} reach the alert level.", si: " එය අනතුරු ඇඟවීමේ මට්ටමට {how}.", ta: " அது எச்சரிக்கை மட்டத்தை {how}." },
+  reachMinor: { en: " It {how} reach the minor flood level.", si: " එය සුළු ගංවතුර මට්ටමට {how}.", ta: " அது சிறிய வெள்ள மட்டத்தை {how}." },
+  reachMajor: { en: " It {how} reach the major flood level.", si: " එය මහා ගංවතුර මට්ටමට {how}.", ta: " அது பெரிய வெள்ள மட்டத்தை {how}." },
+  may: { en: "may", si: "ළඟා විය හැක", ta: "எட்டலாம்" },
+  expected: { en: "is expected to", si: "ළඟා වනු ඇතැයි අපේක්ෂා කෙරේ", ta: "எட்டும் என எதிர்பார்க்கப்படுகிறது" },
+} satisfies Record<string, L3>;
+
+/** The next hour in one sentence, or null when there is no forecast. `subject` names what is forecast (default "it"). */
+export function nextHourSentence(lang: Locale, nh: NextHour | null, subject?: string): string | null {
+  if (!nh) return null;
+  const subj = subject ?? NH.subjIt[lang];
+  const dec = (v: number) => v.toFixed(1);
+  const lo = nh.low_ft != null ? dec(nh.low_ft) : null;
+  const hi = nh.high_ft != null ? dec(nh.high_ft) : null;
+  const rng = lo != null && hi != null && lo !== hi ? ` (${lo}–${hi} ft)` : "";
+  const lv = dec(nh.level_ft);
+  const small = Math.abs(Number(dec(nh.change_ft))) < 0.1;
+  const d = small ? NH.steady : nh.change_ft < 0 ? NH.fall : NH.rise;
+  let out = W(d, lang, { subj, lv, rng });
+  if (nh.crossing) {
+    const k = nh.crossing.includes("major") ? NH.reachMajor : nh.crossing.includes("minor") ? NH.reachMinor : NH.reachAlert;
+    out += W(k, lang, { how: W(nh.crossing.startsWith("expected") ? NH.expected : NH.may, lang) });
+  }
+  return out;
+}
+
+/** "the Kelani Ganga at Hanwella" in the page language, for a sentence about one gauge. */
+export function nextHourSubject(lang: Locale, basin: string | null | undefined, station: string): string {
+  const name = stationDisplayName(station);
+  const river = basin ? riverName(basin.trim(), lang) : "";
+  return W(river ? NH.subjAt : NH.subjAtNoRiver, lang, { river, name });
 }
 
 // ---- river ----------------------------------------------------------------------------------------
@@ -148,6 +207,29 @@ const Q = {
     si: "ජල සම්පාදන දෙපාර්තමේන්තුවේ දෛනික වැව් වාර්තාවෙන් සහ මහවැලි අධිකාරියේ දෛනික වාර්තාවෙන්. දෙකම දිනකට වරක් පමණ යාවත්කාලීන වේ, එබැවින් පෙන්වන දිනය බලන්න. මෙය ස්වාධීන වෙබ් අඩවියකි: වාන් දොරටු අනතුරු ඇඟවීම් සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානය අනුගමනය කර 117 අමතන්න.",
     ta: "நீர்ப்பாசனத் திணைக்களத்தின் தினசரி நீர்த்தேக்க அறிக்கையிலிருந்தும் மகாவலி அதிகாரசபையின் தினசரி அறிக்கையிலிருந்தும். இரண்டும் நாளுக்கு ஒருமுறை புதுப்பிக்கப்படும், எனவே காட்டப்படும் திகதியைப் பார்க்கவும். இது சுயாதீனத் தளம்: வான் கதவு எச்சரிக்கைகளுக்கு அனர்த்த முகாமைத்துவ நிலையத்தைப் பின்பற்றி 117 ஐ அழைக்கவும்.",
   },
+  nhStation: { en: "Will the {river} at {name} rise in the next hour?", si: "{river} හි {name} හි ජල මට්ටම ඊළඟ පැය තුළ ඉහළ යාවිද?", ta: "{river} ஆற்றின் {name} இல் அடுத்த மணி நேரத்தில் நீர்மட்டம் உயருமா?" },
+  nhStationNoRiver: { en: "Will the water level at {name} rise in the next hour?", si: "{name} හි ජල මට්ටම ඊළඟ පැය තුළ ඉහළ යාවිද?", ta: "{name} இல் அடுத்த மணி நேரத்தில் நீர்மட்டம் உயருமா?" },
+  nhRiver: { en: "Will the {river} rise in the next hour?", si: "{river} ඊළඟ පැය තුළ ඉහළ යාවිද?", ta: "{river} ஆற்றில் அடுத்த மணி நேரத்தில் நீர்மட்டம் உயருமா?" },
+  nhTown: { en: "Will {town} flood in the next hour?", si: "{town} ඊළඟ පැය තුළ ගංවතුරට යටවේද?", ta: "அடுத்த மணி நேரத்தில் {town} வெள்ளத்தில் மூழ்குமா?" },
+  nhNote: {
+    en: "This is a forecast from the recent trend, the gauges upstream and rain, not an official warning.",
+    si: "මෙය මෑත ප්‍රවණතාව, ඉහළ මාන සහ වර්ෂාව මත පදනම් වූ පුරෝකථනයකි, නිල අනතුරු ඇඟවීමක් නොවේ.",
+    ta: "இது சமீபத்திய போக்கு, மேல்நிலை நிலையங்கள் மற்றும் மழையை அடிப்படையாகக் கொண்ட முன்னறிவிப்பு, அதிகாரப்பூர்வ எச்சரிக்கை அல்ல.",
+  },
+  nhTownNote: {
+    en: "This is a forecast for the river, not an official warning, and streets can flood before the river reaches a flood mark.",
+    si: "මෙය ගඟ සඳහා පුරෝකථනයකි, නිල අනතුරු ඇඟවීමක් නොවේ; ගඟ ගංවතුර මට්ටමට පැමිණීමට පෙර වීදි ගංවතුරට යටවිය හැක.",
+    ta: "இது ஆற்றுக்கான முன்னறிவிப்பு, அதிகாரப்பூர்வ எச்சரிக்கை அல்ல; ஆறு வெள்ள மட்டத்தை எட்டும் முன்பே தெருக்கள் வெள்ளத்தில் மூழ்கலாம்.",
+  },
+  nhRiverA: {
+    en: "In the next hour, of the {m} gauges on the {river} with a forecast, {parts}.{cross}",
+    si: "ඊළඟ පැය තුළ, පුරෝකථනයක් ඇති {river} හි මාන {m} න්: {parts}.{cross}",
+    ta: "அடுத்த மணி நேரத்தில், முன்னறிவிப்பு உள்ள {river} இன் {m} நிலையங்களில்: {parts}.{cross}",
+  },
+  nhUp: { en: "{n} rising", si: "{n} ඉහළ යයි", ta: "{n} உயரும்" },
+  nhSame: { en: "{n} about the same", si: "{n} පාහේ වෙනසක් නැත", ta: "{n} ஏறக்குறைய மாற்றமில்லை" },
+  nhDown: { en: "{n} falling", si: "{n} පහළ යයි", ta: "{n} குறையும்" },
+  nhCross: { en: " {names} may reach a flood mark.", si: " {names} ගංවතුර මට්ටමකට ළඟා විය හැක.", ta: " {names} வெள்ள மட்டத்தை எட்டலாம்." },
   townHow: { en: "How is the flood risk for {name} worked out?", si: "{name} සඳහා ගංවතුර අවදානම ගණනය කරන්නේ කෙසේද?", ta: "{name} க்கான வெள்ள அபாயம் எப்படிக் கணிக்கப்படுகிறது?" },
   townHowA: {
     en: "From the nearest river gauge ({gauge}, {km} away), recent and expected rain, the gauge's forecast and any official warning. It is an estimate for the town, not an official warning, and streets can flood before the river reaches a flood mark.",
@@ -158,7 +240,7 @@ const Q = {
 
 export const faqHeading = (lang: Locale) => Q.heading[lang];
 
-export function stationFaq(lang: Locale, s: NationalStation, answer: string): Faq[] {
+export function stationFaq(lang: Locale, s: NationalStation, answer: string, nh: NextHour | null = null): Faq[] {
   const name = stationDisplayName(s.station);
   const th = s.thresholds;
   const parts: string[] = [];
@@ -166,17 +248,37 @@ export function stationFaq(lang: Locale, s: NationalStation, answer: string): Fa
   add(Q.alertWord, th.alert);
   add(Q.minorWord, th.minor);
   add(Q.majorWord, th.major);
+  const river = s.basin.trim() ? riverName(s.basin.trim(), lang) : "";
+  const next = nextHourSentence(lang, nh, nextHourSubject(lang, s.basin, s.station));
   return [
     { q: W(Q.now, lang, { name }), a: answer },
+    ...(next ? [{ q: W(river ? Q.nhStation : Q.nhStationNoRiver, lang, { name, river }), a: `${next} ${W(Q.nhNote, lang)}` }] : []),
     { q: W(Q.marks, lang, { name }), a: parts.length ? W(Q.marksA, lang, { list: parts.join(", ") }) : W(Q.marksNone, lang) },
     { q: W(Q.source, lang), a: W(Q.sourceA, lang) },
   ];
 }
 
-export function riverFaq(lang: Locale, basin: string, answer: string, orderedStationNames: string[]): Faq[] {
+export function riverFaq(
+  lang: Locale,
+  basin: string,
+  answer: string,
+  orderedStationNames: string[],
+  next: { station: string; nh: NextHour | null }[] = [],
+): Faq[] {
   const river = riverName(basin, lang);
+  const have = next.filter((x): x is { station: string; nh: NextHour } => x.nh != null);
+  const flat = (n: NextHour) => Math.abs(Number(n.change_ft.toFixed(1))) < 0.1;
+  const up = have.filter((x) => !flat(x.nh) && x.nh.change_ft > 0).length;
+  const down = have.filter((x) => !flat(x.nh) && x.nh.change_ft < 0).length;
+  const same = have.length - up - down;
+  const parts = [up && W(Q.nhUp, lang, { n: up }), same && W(Q.nhSame, lang, { n: same }), down && W(Q.nhDown, lang, { n: down })].filter(Boolean).join(", ");
+  const reach = have.filter((x) => x.nh.crossing).map((x) => stationDisplayName(x.station));
+  const nhItem: Faq[] = have.length
+    ? [{ q: W(Q.nhRiver, lang, { river }), a: `${W(Q.nhRiverA, lang, { m: have.length, river, parts, cross: reach.length ? W(Q.nhCross, lang, { names: reach.join(", ") }) : "" })} ${W(Q.nhNote, lang)}` }]
+    : [];
   return [
     { q: W(Q.now, lang, { name: river }), a: answer },
+    ...nhItem,
     { q: W(Q.gauges, lang, { river }), a: W(Q.gaugesA, lang, { list: orderedStationNames.join(", ") }) },
     { q: W(Q.source, lang), a: W(Q.sourceA, lang) },
   ];
@@ -189,8 +291,16 @@ export function reservoirFaq(lang: Locale, name: string, answer: string, storage
   return out;
 }
 
-export function townFaq(lang: Locale, town: string, answer: string, gauge: { name: string; km: string } | null): Faq[] {
+export function townFaq(
+  lang: Locale,
+  town: string,
+  answer: string,
+  gauge: { name: string; km: string } | null,
+  next: { basin: string; station: string; nh: NextHour | null } | null = null,
+): Faq[] {
   const out: Faq[] = [{ q: W(Q.now, lang, { name: town }), a: answer }];
+  const sentence = next ? nextHourSentence(lang, next.nh, nextHourSubject(lang, next.basin, next.station)) : null;
+  if (sentence) out.push({ q: W(Q.nhTown, lang, { town }), a: `${answer} ${sentence} ${W(Q.nhTownNote, lang)}` });
   if (gauge) out.push({ q: W(Q.townHow, lang, { name: town }), a: W(Q.townHowA, lang, gauge) });
   out.push({ q: W(Q.source, lang), a: W(Q.sourceA, lang) });
   return out;

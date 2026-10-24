@@ -3,12 +3,16 @@
 //   /api/levels?river=kelani-ganga  one river, upstream to downstream
 //   /api/levels?station=hanwella    one gauge (slug as in the page URL)
 //   /api/levels?town=wellampitiya   the gauges the town page is based on
+// Every station also carries `nextHour`: the next-hour river forecast (expected level, range, direction),
+// null when there is none. It comes from the cached forecast and is time-boxed to 1.5 s, so a slow forecast
+// never delays the levels (the response then says `nextHourReady: false`).
 // Cached at the edge for a minute; the underlying source refreshes about hourly.
 import { connection } from "next/server";
 import { getNational } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 import { API_META, CORS, levelRecord } from "@/lib/apiData";
 import { placeBySlug } from "@/lib/places";
+import { getNextHourForBasins, timeBox } from "@/lib/nextHour";
 import { basinSlug, stationSlug } from "@/lib/slug";
 
 // Per request, not prerendered (a build must not depend on the data sources). Not `dynamic = "force-dynamic"`:
@@ -44,10 +48,20 @@ export async function GET(req: Request) {
   if ((river || station || town) && list.length === 0) {
     return Response.json({ error: "Not found", hint: "Use slugs as in the page URLs, e.g. river=kelani-ganga, station=hanwella" }, { status: 404, headers: CORS });
   }
-  const stations = list.map((s) => levelRecord(s, now));
+  const nh = await timeBox(getNextHourForBasins(list.map((s) => s.basin)));
+  const stations = list.map((s) => ({ ...levelRecord(s, now), nextHour: nh?.[s.station] ?? null }));
   const newest = stations.reduce<string | null>((m, s) => (s.observedAt && (!m || s.observedAt > m) ? s.observedAt : m), null);
   return Response.json(
-    { generatedAt: new Date(now).toISOString(), newestReading: newest, count: stations.length, ...API_META, stations },
+    {
+      generatedAt: new Date(now).toISOString(),
+      newestReading: newest,
+      count: stations.length,
+      nextHourReady: nh != null,
+      ...API_META,
+      nextHourNote:
+        "nextHour is a forecast, not an official warning: level_ft is the expected level in about an hour from issuedAt, low_ft to high_ft the range it is expected to stay in (80%; null for a simple trend estimate), direction is rising / falling / steady, crossing names a flood mark the range reaches (else null) and method is model (upstream gauges and rain) or trend. null when the gauge is not reporting or has no forecast.",
+      stations,
+    },
     { headers: CORS },
   );
 }
