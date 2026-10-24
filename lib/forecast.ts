@@ -31,6 +31,8 @@ import { ageMinutes, HOUR_MS, isStale, rainTotal, rate, STALE_MINUTES } from "./
 import { formatDelta, formatLevel, type Unit } from "./units";
 import { getBasinWeather, getGlofas, hasCatchment, type BasinWeather, type Fetched, type Glofas, type RainSeries } from "./weather";
 import coefficientsJson from "./model/coefficients.json";
+import gaugeModelJson from "./model/gauge-model.json";
+import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import {
   evalStation,
   floorSigmaM,
@@ -47,6 +49,13 @@ const COEF_FILE = coefficientsJson as unknown as {
   unfitted?: Record<string, string>;
 };
 const COEFFS = COEF_FILE.stations;
+/** Gauge-only 1/3/6 h models (lib/model/gaugeModel.mjs, fitted by scripts/fit-gauge-model.mjs on ~11 months of hourly readings). */
+/**
+ * The ranges are the 10% / 90% residual quantiles of the cross-validated backtest, widened 15% because live
+ * coverage in the busy week 17-24 Oct (rain events) was 66-74% against 79% over the 60-day holdout.
+ */
+const GM_WIDEN = 1.15;
+const GAUGE_MODEL = gaugeModelJson as unknown as { stations: Record<string, GaugeStationModel> };
 const UNFITTED = COEF_FILE.unfitted ?? {};
 
 /** One monsoon season of archive before we drop the "experimental" label. */
@@ -208,7 +217,7 @@ export function makeForecast(input: ForecastInput): Forecast {
   }
 
   const coef = COEFFS[station];
-  if (!coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)) return fromTrend(station, me, trend, L0, anchor, input.weather);
+  if (!coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)) return fromTrend(station, me, trend, L0, anchor, input.weather, gaugeSteps(snapshot, station, anchor, now));
   return fromModel(input, me, coef, trend, L0, anchor, now);
 }
 
@@ -224,18 +233,23 @@ const rainBits = (r: NonNullable<Forecast["rain"]>) =>
   `${r.past6hMm != null ? `${r.past6hMm.toFixed(1)} mm in the last 6 hours, ` : ""}${r.past24hMm != null ? `${r.past24hMm.toFixed(0)} mm in the last 24 hours` : ""}${r.next24hMm.det != null ? `, ${r.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}`.replace(/^, /, "");
 
 /** Trend-only forecast for stations without a fitted model. */
-function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number, anchor: number, weather: ForecastInput["weather"]): Forecast {
-  const pred = t.predictedLevel;
-  const dir = t.direction;
+function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number, anchor: number, weather: ForecastInput["weather"], steps: GaugeStep[] | null): Forecast {
+  // The next hour is the gauge-only model where it beat "level stays put" out of sample, and plain "level stays put"
+  // (never an extrapolated trend: it was less accurate than no change) with an honest range everywhere else.
+  const step = steps?.find((x) => x.h === 1) ?? null;
+  const mpu = me.metresPerUnit;
+  const pred = step ? L0 + step.delta : L0;
+  const steadyBand = STEADY_3H_M / mpu / 3;
+  const dir: Forecast["direction"] = step ? (step.delta > steadyBand ? "rising" : step.delta < -steadyBand ? "falling" : "steady") : "steady";
   const word = dir === "rising" ? "Rising" : dir === "falling" ? "Falling" : dir === "steady" ? "Steady" : "Unclear";
   const w = weather && weather.ok ? weather.data : null;
   const rain: Forecast["rain"] = w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null;
   const grid = weather !== undefined && weather !== null;
   const reason = noModelReason(station, grid);
-  const headline =
-    pred == null
-      ? "No forecast: not enough recent readings to see a trend."
-      : `${word}: about ${formatLevel(pred, me.unit)} in an hour.`;
+  const headline = `${word}: about ${formatLevel(pred, me.unit)} in an hour.`;
+  const infl = GM_WIDEN * (step && step.missing.length ? 1.3 : 1); // an upstream gauge that is not reporting widens the range
+  const low = step ? pred + step.q10 * infl : null;
+  const high = step ? pred + step.q90 * infl : null;
   // The headline is user-facing (and feeds the AI line); the method reason is in notes below.
   const notes = t.notes.filter((n) => !(w && n.startsWith("No rain data reported nearby")));
   if (w && rain) {
@@ -246,12 +260,14 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
   notes.unshift(`Trend only: ${reason}.`);
   return {
     station, unit: me.unit, currentLevel: L0, asOfTs: anchor,
-    method: "trend", status: pred == null ? "unavailable" : "degraded", direction: dir, experimental: true,
+    method: "trend", status: "degraded", direction: dir, experimental: true,
     basis: [
-      "Recent trend at this gauge and the gauges upstream of it (one hour ahead only)." +
+      (step?.skilled
+        ? "This gauge's own recent changes and the other gauges on the river, fitted to about 11 months of hourly readings (one hour ahead only). In a backtest on the last 60 days it missed by less than 'no change'."
+        : "'Level stays the same' with a range taken from how much this gauge has really changed in an hour. In a backtest no model beat 'no change' here (one hour ahead only).") +
         (t.upstreamCount === 0 ? " This is the topmost gauge on its river, so there is no upstream gauge; the catchment rain above is the only upstream signal." : ""),
     ],
-    horizons: pred == null ? [] : [{ h: 1, ts: anchor + HOUR_MS, level: pred, low: null, high: null }],
+    horizons: [{ h: 1, ts: anchor + HOUR_MS, level: pred, low, high }],
     crossings: [], outlook: null, headline,
     notes,
     signals: signalsOf(t, w?.past6hMm ?? null), rain,
@@ -349,11 +365,25 @@ function fromModel(
       level: mixQuantile(0.5, mix), low: mixQuantile(0.1, mix), high: mixQuantile(0.9, mix),
     };
   });
+  // Gauge-only model for 1/3/6 h (backtest on 11 months, last 60 days held out): where it beat "level stays put" it replaces
+  // the rain-ridge point and range; where the rain-ridge horizon was only persistence it supplies the honest empirical range.
+  const gsteps = gaugeSteps(snapshot, station, anchor, now);
+  const v2h = new Set<number>();
+  for (const st of gsteps ?? []) {
+    const j = hs.findIndex((x) => x.h === st.h);
+    if (j < 0 || !(st.skilled || hs[j].persistence)) continue;
+    const gi = GM_WIDEN * (st.missing.length ? 1.3 : 1);
+    const mu = L0 + st.delta;
+    const tiny = 0.003 / mpu;
+    const mix: Comp[] = [{ w: 1, mu, sd: Math.max(-st.q10 * gi, tiny) / Z80, su: Math.max(st.q90 * gi, tiny) / Z80 }];
+    hs[j] = { h: st.h, mix, persistence: !st.skilled, level: mu, low: mu + st.q10 * gi, high: mu + st.q90 * gi };
+    v2h.add(st.h);
+  }
   // A persistence horizon says "stays where it is", which is wrong right after a rain-driven
   // rise: a river that peaks at 12h is rarely back to normal by 24h. Blend 40% of the previous
   // horizon's distribution into it so a forecast flood does not vanish from the 24h column.
   for (let i = 1; i < hs.length; i++) {
-    if (!hs[i].persistence) continue;
+    if (!hs[i].persistence || v2h.has(hs[i].h)) continue;
     const mix = [...hs[i].mix.map((c) => ({ ...c, w: c.w * 0.6 })), ...hs[i - 1].mix.map((c) => ({ ...c, w: c.w * 0.4 }))];
     hs[i] = { ...hs[i], mix, level: mixQuantile(0.5, mix), low: mixQuantile(0.1, mix), high: mixQuantile(0.9, mix) };
   }
@@ -421,7 +451,7 @@ function fromModel(
   if (Math.max(...hs.map((x) => x.high)) > coef.levelMax) {
     notes.push(`Part of the range is above the highest level this model has seen (${formatLevel(coef.levelMax, unit)}); treat it as a rough guide.`);
   }
-  const noSkill = hs.filter((x) => x.persistence).map((x) => `${x.h} h`);
+  const noSkill = hs.filter((x) => x.persistence && !v2h.has(x.h)).map((x) => `${x.h} h`);
   if (noSkill.length) notes.push(`In testing the model was no better than 'level stays the same' at ${noSkill.join(", ")}, so those hours blend that with the earlier outlook and carry a wide range.`);
   if (w) {
     const n = w.next24hMm;
@@ -462,6 +492,7 @@ function fromModel(
     const past = w.past24hMm;
     basis.push(`Catchment rain from Open-Meteo (area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm in the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
   }
+  if (v2h.size) basis.push(`The ${[...v2h].sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings); in a backtest on the last 60 days they missed by less than 'level stays the same'.`);
   const skilled = hs.filter((x) => !x.persistence).map((x) => `${x.h} h`);
   const m6 = coef.horizons["6"];
   if (m6?.mae != null && !m6.persistence) basis.push(`Fitted to ${coef.trainDays} days of readings; out-of-sample 6-hour error about ${formatDelta(m6.mae, unit)} (a 'no change' guess: ${m6.maePersistence.toFixed(2)}).`);
@@ -492,6 +523,38 @@ function interpSeries(a: { ts: number; wl: number }[], t: number): number | null
   if (!q) return t - p.ts <= 2 * HOUR_MS ? p.wl : null;
   if (q.ts - p.ts > 6 * HOUR_MS) return null;
   return p.wl + ((q.wl - p.wl) * (t - p.ts)) / (q.ts - p.ts);
+}
+
+
+/** One horizon of the gauge-only model: the predicted CHANGE and the signed 10% / 90% residuals (native units). */
+type GaugeStep = { h: number; delta: number; q10: number; q90: number; skilled: boolean; missing: string[] };
+
+/**
+ * Gauge-only forecast steps for 1/3/6 h from the gauge's own recent changes, the other gauges on the river and (tidal
+ * gauges) a tide term. Horizons without a clear out-of-sample win over "level stays put" come back with delta 0 and the
+ * empirical range of the hourly change. Returns null when the gauge has no entry in the model file. When the gauge's
+ * own history is too short for the features the range comes from the middle volatility bin and `missing` names it.
+ */
+function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number): GaugeStep[] | null {
+  const gm = GAUGE_MODEL.stations[station];
+  if (!gm) return null;
+  const series = new Map<string, { ts: number; wl: number }[]>();
+  for (const g of [station, ...gm.up]) {
+    const s = snapshot.find((x) => x.station === g);
+    if (!s || !s.latest || isStale(s.latest, now)) continue;
+    series.set(g, s.trend24h.filter((r) => r.water_level != null).map((r) => ({ ts: r.ts, wl: r.water_level as number })));
+  }
+  const ctx = { level: (g: string, t: number) => { const a = series.get(g); return a ? interpSeries(a, t) : null; } };
+  const out: GaugeStep[] = [];
+  for (const key of Object.keys(gm.horizons)) {
+    const h = +key;
+    const hm = gm.horizons[key];
+    const f = gaugeFeatures(station, gm.up, hm.tide, ctx, anchor, h);
+    const skilled = hm.skilled && !!f;
+    const band = bandFor(hm, f ? f.vol : hm.edges[0] ?? 0);
+    out.push({ h, delta: skilled && f ? predictGauge(hm, f.x) : 0, q10: band.q10, q90: band.q90, skilled, missing: f ? f.missing : [station] });
+  }
+  return out.sort((a, b) => a.h - b.h);
 }
 
 // ===========================================================================

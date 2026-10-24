@@ -279,6 +279,30 @@ leader or failed rain fetch is named on the page, widens the band and drops the 
 event start by ~1 m), has no skill beyond ~12 h (24 h ships as persistence blended with the 12 h outlook),
 and knows nothing about dam releases or tides (Nagalagam Street is tidal). Treat it as a heads-up, not a warning;
 official flood warnings come from the Department of Irrigation and the Disaster Management Centre.
+**Gauge-only 1 / 3 / 6 h model (added 2026-10-24; `lib/model/gaugeModel.mjs`, `lib/model/gauge-model.json`,
+`node scripts/fit-gauge-model.mjs`, `node --experimental-strip-types scripts/gauge-model.test.mts`).** The first live
+check (516 forecasts, 22-24 Oct) showed the rain-ridge next hour barely beat "no change" (0.10 vs 0.12 ft) and the
+trend-only gauges were worse (0.38 vs 0.32 ft). The fix was more history, not more inputs: the fit script merges our
+archive with the hourly feed scraped by github.com/nuuuwan/lk_irrigation (MIT; 2025-11-23 on, ~8,000 readings per gauge,
+metres, converted back to feet for ft gauges) = 11 months including the Nov-Dec 2025 floods. Per gauge and horizon it
+fits a least-absolute-deviation (IRLS ridge) regression of the level change on the gauge's own 1/2/3/6/12 h changes, its
+level against the last-12-h mean, the 1/3/6 h changes at the other gauges on the river, and (only where it wins by 5% in
+CV: Nagalagam Street, Peradeniya, Putupaula, Thalgahagoda) a harmonic tide term (M2 S2 N2 K1 O1, fixed periods). The
+80% range is the empirical 10/90% quantile of the cross-validated residuals in three volatility bins (recent hourly
+movement), widened 15% in `lib/forecast.ts` (`GM_WIDEN`). Horizons that do not beat "level stays put" by 3% in BOTH the
+blocked CV and the holdout ship as persistence with the empirical range (never an extrapolated trend). Trend-only gauges
+now use it too (1 h, with a range). It replaces the rain-ridge point and range at 1/3/6 h where it is skilled (or where
+the rain-ridge horizon was already persistence); 12/24 h are unchanged.
+*Backtest, not live results (the last 60 days held out, never used to fit or choose; mean over gauges of MAE in each
+gauge's own unit, 36 gauges, 30 of them the previously fitted ones):* next hour error 0.027 vs 0.040 for "no change" (-32%;
+the old model structure re-scored the same way: -10%), 3 h -25%, 6 h -21%; 80% range covers 79% (83% with the 15% widening)
+and is about 0.07 m wide at 1 h (was ~0.25 m); rising / falling called right in 54% of the hours that really moved at 1 h
+(always saying "steady" scores 0% there). 31 of 36 gauges are skilled at 1 h, 23 at 3 h, 21 at 6 h; Hanwella -69%,
+Nagalagam Street -61% (tide), Glencourse -47%. Not skilled: Horowpothana, Katharagama, Kuda Oya, Thaldena, Yaka Wewa and
+the sparse gauges Weraganthota, Thanthirimale, Galgamuwa. Catchment rain (Open-Meteo historical forecasts) was tested as an extra
+feature: it changed the 1 h error by < 1% and 6 h by ~1%, so it is not in this model; satellite (GSMaP) rain has only
+3 days of archive and was not testable. `lib/accuracy.ts` is still the LIVE verification only; refresh it from the
+prediction log in a few days. Refit: `git fetch origin data`, then the script (about a minute), commit the JSON.
 `snapshot.mjs` also archives hourly catchment rain and daily GloFAS discharge to `rain/` and `glofas/` on
 the `data` branch so later refits can use real history.
 
