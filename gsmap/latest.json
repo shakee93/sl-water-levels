@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-24T02:38:25.449Z",
- "latestStart": "2026-10-24T01:30:00.000Z",
- "latestEnd": "2026-10-24T02:30:00.000Z",
+ "generatedAt": "2026-10-24T03:07:42.096Z",
+ "latestStart": "2026-10-24T02:00:00.000Z",
+ "latestEnd": "2026-10-24T03:00:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -14,7 +14,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.3
+   "mm24h": 0.2
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
@@ -64,7 +64,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.6
+   "mm24h": 0.5
   },
   "Kelani Ganga/Norwood": {
    "basin": "Kelani Ganga",
@@ -82,7 +82,7 @@
    "cells": 11,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
+   "mm3h": 0,
    "mm6h": 0.3,
    "mm24h": 0.7
   },
@@ -92,7 +92,7 @@
    "cells": 9,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
+   "mm3h": 0,
    "mm6h": 0.3,
    "mm24h": 0.6
   },
@@ -112,7 +112,7 @@
    "cells": 11,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
+   "mm3h": 0,
    "mm6h": 0.3,
    "mm24h": 0.7
   },
@@ -122,8 +122,8 @@
    "cells": 10,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.3,
+   "mm3h": 0,
+   "mm6h": 0.2,
    "mm24h": 0.5
   },
   "Gin Ganga/Baddegama": {
