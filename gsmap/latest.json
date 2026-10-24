@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-24T03:08:40.795Z",
- "latestStart": "2026-10-24T02:00:00.000Z",
- "latestEnd": "2026-10-24T03:00:00.000Z",
+ "generatedAt": "2026-10-24T03:37:44.981Z",
+ "latestStart": "2026-10-24T02:30:00.000Z",
+ "latestEnd": "2026-10-24T03:30:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -14,7 +14,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.2
+   "mm24h": 0.3
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
@@ -44,7 +44,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.8
+   "mm24h": 0.7
   },
   "Kelani Ganga/Holombuwa": {
    "basin": "Kelani Ganga",
@@ -93,7 +93,7 @@
    "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0,
-   "mm6h": 0.3,
+   "mm6h": 0.2,
    "mm24h": 0.6
   },
   "Kalu Ganga/Rathnapura": {
