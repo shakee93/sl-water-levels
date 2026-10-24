@@ -19,7 +19,8 @@ export function Footer({ lang }: { lang: Locale }) {
   const s = STRIP[lang];
   return (
     <>
-      <div className="sm:hidden border-t border-slate-200 dark:border-slate-800 px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-3 text-center text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+      {/* Phone strip only in the installed app; browsers (and crawlers) keep the full footer. */}
+      <div className="app-footer-strip border-t border-slate-200 dark:border-slate-800 px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-3 text-center text-[11px] leading-snug text-slate-500 dark:text-slate-400">
         <p className="font-medium text-slate-600 dark:text-slate-300">{s.warn}</p>
         <p>
           {s.data}
@@ -28,7 +29,7 @@ export function Footer({ lang }: { lang: Locale }) {
           <a href="https://x.com/shakeeb_x" target="_blank" rel="noreferrer" className="font-medium">@shakeeb_x</a>
         </p>
       </div>
-      <div className="hidden sm:block">
+      <div className="app-footer-full">
         <Suspense fallback={null}>
           <FullFooter lang={lang} />
         </Suspense>

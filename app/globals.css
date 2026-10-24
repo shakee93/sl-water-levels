@@ -149,3 +149,10 @@ html.dark { background-color: #020617; }
 @media (display-mode: standalone) {
   body { overscroll-behavior-y: none; -webkit-touch-callout: none; }
 }
+/* Footer: the installed app on a phone gets a one-line strip (links live in the More tab);
+   every browser, including phones, keeps the full footer. Both are in the HTML. */
+.app-footer-strip { display: none; }
+@media (display-mode: standalone) and (max-width: 639.98px) {
+  .app-footer-strip { display: block; }
+  .app-footer-full { display: none; }
+}
