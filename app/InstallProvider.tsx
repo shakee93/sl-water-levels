@@ -39,6 +39,9 @@ export const isStandalone = () =>
 // iPadOS 13+ says "Macintosh" but has a touch screen
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 // Chrome, Firefox, Edge, Opera and Google app on iOS; in-app browsers (Instagram, Facebook...) count as "not Safari" too
+// Install prompts are for phones and tablets only; desktop browsers never see the card or button.
+const isPhone = () =>
+  isIos() || /android|mobile/i.test(navigator.userAgent) || window.matchMedia("(pointer: coarse) and (hover: none)").matches;
 const isIosSafari = () => isIos() && !/crios|fxios|edgios|opios|gsa\/|fban|fbav|instagram|line\/|twitter/i.test(navigator.userAgent);
 
 type Install = {
@@ -72,12 +75,12 @@ export function useInstall(): Install {
 
 export function InstallProvider({ children }: { children: React.ReactNode }) {
   const [event, setEvent] = useState<InstallEvent | null>(null);
-  const [env, setEnv] = useState<{ ios: boolean; safari: boolean; installed: boolean; dismissed: boolean } | null>(null);
+  const [env, setEnv] = useState<{ ios: boolean; phone: boolean; safari: boolean; installed: boolean; dismissed: boolean } | null>(null);
   const [sheet, setSheet] = useState(false);
   const eventRef = useRef<InstallEvent | null>(null);
 
   useEffect(() => {
-    const read = () => ({ ios: isIos(), safari: isIosSafari(), installed: isStandalone(), dismissed: Date.now() - (Number(get(DISMISSED)) || 0) < DISMISS_MS });
+    const read = () => ({ ios: isIos(), phone: isPhone(), safari: isIosSafari(), installed: isStandalone(), dismissed: Date.now() - (Number(get(DISMISSED)) || 0) < DISMISS_MS });
     // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state, read after hydration
     setEnv(read());
     const onPrompt = (e: Event) => {
@@ -129,7 +132,7 @@ export function InstallProvider({ children }: { children: React.ReactNode }) {
     if (!env || env.installed) return { ...NONE, installed: !!env?.installed };
     const iosNeedsInstall = env.ios;
     return {
-      canInstall: !!event || iosNeedsInstall,
+      canInstall: env.phone && (!!event || iosNeedsInstall),
       iosNeedsInstall,
       cardWanted: !env.dismissed,
       hasPrompt: !!event,
