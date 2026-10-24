@@ -22,7 +22,7 @@ export default async function Image({ params }: { params: Promise<{ town: string
   const name = place?.name ?? town.replace(/-/g, " ");
   let tone = "stale";
   try {
-    if (place) tone = (await loadTownStates([place])).get(place.slug)?.tone ?? "stale";
+    if (place) tone = (await loadTownStates([place], { street: false })).get(place.slug)?.tone ?? "stale";
   } catch {
     // generic card during an outage
   }
