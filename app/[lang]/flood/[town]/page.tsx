@@ -144,7 +144,7 @@ export default async function TownPage({ params }: Params) {
 
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
 
-        <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} />
+        <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} street={data.input.streetRain} />
 
         {/* Hidden until the site can save answers (CLOUDFLARE_API_TOKEN set), so nobody sees an error. */}
         {d1Configured() && place.rainZone && <TownOutcome slug={place.slug} />}

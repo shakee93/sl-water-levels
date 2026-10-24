@@ -38,6 +38,8 @@ export type TownData = {
     next24: number | null;
   } | null;
   rain: TownRain | null;
+  /** Satellite rain hour by hour over the town's canal-flood zone (past 24 h), when the rule's zone applies and the file is fresh. */
+  rainSat: { hours: { end: number; mm: number | null }[]; mm24h: number | null; mm24hClipped: number | null } | null;
   rainReason: string | null;
   office: { district: string; tel: string } | null;
 };
@@ -113,7 +115,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
           .catch(() => null)
       : Promise.resolve(null),
     eff ? box(releaseAffecting(eff.station).catch(() => null), null) : Promise.resolve(null),
-    place.rainZone ? getGsmapZone(place.rainZone, now).catch(() => null) : Promise.resolve(null),
+    place.rainZone ? box(getGsmapZone(place.rainZone, now).catch(() => null), null) : Promise.resolve(null),
   ]);
 
   // Official warning: the current one that names this river basin or the town's district; strongest wins.
@@ -175,6 +177,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
           }
         : null,
     rain: rainR.ok ? rainR.data : null,
+    rainSat: zone?.hourly && zone.hourly.length >= 20 ? { hours: zone.hourly, mm24h: zone.mm24h, mm24hClipped: zone.mm24hClipped ?? null } : null,
     rainReason: rainR.ok ? null : rainR.reason,
     office: dc ? { district: dc.district, tel: dc.tel } : null,
   };

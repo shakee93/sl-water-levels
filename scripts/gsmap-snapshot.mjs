@@ -36,7 +36,7 @@ import { gunzipSync } from "node:zlib";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { zoneWindow as zoneWindowOf, STREET_HOURLY_CAP_MM } from "../lib/streetRainWindow.mjs";
+import { zoneWindow as zoneWindowOf, zoneHours as zoneHoursOf, STREET_HOURLY_CAP_MM } from "../lib/streetRainWindow.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2];
@@ -224,6 +224,8 @@ for (const z of zones) {
     // 24 h sum with each hour capped at hourlyCapMm: the number the street rule compares with 60 / 100 mm
     mm24hClipped: zoneWindow(z.key, 24)?.clipped ?? null,
     hourlyCapMm: STREET_HOURLY_CAP_MM,
+    // the 24 hours one by one, oldest first, for the rain chart on the town page ({end: ms, mm: hourly mean or null})
+    hourly: zoneHoursOf((t) => rec.get(t)?.[z.key], anchor, 24),
   };
 }
 for (const g of gauges) {

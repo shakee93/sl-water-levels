@@ -43,6 +43,8 @@ export type GsmapZone = Omit<GsmapGauge, "basin" | "station"> & {
    */
   mm24hClipped?: number | null;
   hourlyCapMm?: number;
+  /** The last 24 clock hours one by one, oldest first: end of the hour (ms) and its mean rain, unclipped (null = no data). Absent in older files. */
+  hourly?: { end: number; mm: number | null }[];
 };
 
 export type GsmapFile = {
