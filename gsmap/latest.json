@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-24T01:08:46.747Z",
- "latestStart": "2026-10-24T00:00:00.000Z",
- "latestEnd": "2026-10-24T01:00:00.000Z",
+ "generatedAt": "2026-10-24T01:37:39.042Z",
+ "latestStart": "2026-10-24T00:30:00.000Z",
+ "latestEnd": "2026-10-24T01:30:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -14,7 +14,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.2
+   "mm24h": 0.3
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
@@ -80,7 +80,7 @@
    "basin": "Kalu Ganga",
    "station": "Putupaula",
    "cells": 11,
-   "rateMmPerHour": 0.02,
+   "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0.2,
    "mm6h": 0.4,
@@ -90,10 +90,10 @@
    "basin": "Kalu Ganga",
    "station": "Ellagawa",
    "cells": 9,
-   "rateMmPerHour": 0.02,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.2,
-   "mm6h": 0.4,
+   "mm3h": 0.1,
+   "mm6h": 0.3,
    "mm24h": 0.6
   },
   "Kalu Ganga/Rathnapura": {
@@ -110,7 +110,7 @@
    "basin": "Kalu Ganga",
    "station": "Kalawellawa (Millakanda)",
    "cells": 11,
-   "rateMmPerHour": 0.02,
+   "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0.2,
    "mm6h": 0.4,
@@ -120,7 +120,7 @@
    "basin": "Kalu Ganga",
    "station": "Magura",
    "cells": 10,
-   "rateMmPerHour": 0.02,
+   "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0.1,
    "mm6h": 0.3,
@@ -204,7 +204,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.2
+   "mm24h": 0.1
   },
   "Heda Oya/Siyambalanduwa": {
    "basin": "Heda Oya",
@@ -364,7 +364,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.1
+   "mm24h": 0
   },
   "Menik Ganga/Katharagama": {
    "basin": "Menik Ganga",
