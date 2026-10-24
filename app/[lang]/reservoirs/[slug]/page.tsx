@@ -32,7 +32,7 @@ import { WEEKLY_PDF } from "@/lib/wmsWeekly";
 import { windowLabel } from "@/lib/i18n/spillWatch";
 import { AnswerLine, FaqList } from "@/app/Answer";
 import { reservoirFaq } from "@/lib/answers";
-import { faqLd, webPageLd, DATA_BRANCH, PUBLISHER_ID } from "@/lib/seo";
+import { faqLd, webPageLd, DATA_BRANCH, publisherLd } from "@/lib/seo";
 import { KnownChip, NearSpillChip } from "@/app/reservoirs/KnownChip";
 import { ReservoirPhotos } from "@/app/ReservoirPhotos";
 import { photoLd, photosFor } from "@/lib/reservoirPhotoData";
@@ -173,7 +173,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         creator: { "@type": "Organization", name: sh ? "Irrigation Department, Sri Lanka" : "Mahaweli Authority of Sri Lanka" },
         temporalCoverage: `${covStart}/${covEnd}`,
         variableMeasured: ["Storage (% full)", "Spill (cusecs)", "Outlet discharge (cusecs)"],
-        publisher: { "@id": PUBLISHER_ID },
+        publisher: publisherLd(),
         distribution: [
           { "@type": "DataDownload", name: "Storage and release (JSON)", encodingFormat: "application/json", contentUrl: `${SITE}/api/reservoirs?slug=${encodeURIComponent(rv.slug)}` },
           { "@type": "DataDownload", name: "Archive of past snapshots", encodingFormat: "application/x-ndjson", contentUrl: DATA_BRANCH },
