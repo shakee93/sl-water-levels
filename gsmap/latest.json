@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-24T08:08:27.392Z",
- "latestStart": "2026-10-24T07:00:00.000Z",
- "latestEnd": "2026-10-24T08:00:00.000Z",
+ "generatedAt": "2026-10-24T08:37:38.981Z",
+ "latestStart": "2026-10-24T07:30:00.000Z",
+ "latestEnd": "2026-10-24T08:30:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -24,7 +24,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.3
+   "mm24h": 0.2
   },
   "Kelani Ganga/Glencourse": {
    "basin": "Kelani Ganga",
@@ -44,7 +44,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.7
+   "mm24h": 0.6
   },
   "Kelani Ganga/Holombuwa": {
    "basin": "Kelani Ganga",
@@ -280,7 +280,7 @@
    "basin": "Maha Oya",
    "station": "Badalgama",
    "cells": 22,
-   "rateMmPerHour": 0.03,
+   "rateMmPerHour": 0.01,
    "mm1h": 0,
    "mm3h": 0.1,
    "mm6h": 0.2,
@@ -290,7 +290,7 @@
    "basin": "Maha Oya",
    "station": "Giriulla",
    "cells": 20,
-   "rateMmPerHour": 0.03,
+   "rateMmPerHour": 0.01,
    "mm1h": 0,
    "mm3h": 0.1,
    "mm6h": 0.2,
