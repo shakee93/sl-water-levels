@@ -31,7 +31,7 @@ export function BottomTabs() {
   return (
     <nav
       aria-label={rt("tab.label")}
-      className="sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-slate-950/80 pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
+      className="tabbar sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
     >
       <ul className="flex">
         {tabs.map(({ href, label, icon: Icon, active, event }) => (

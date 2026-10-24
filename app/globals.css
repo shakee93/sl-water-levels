@@ -156,3 +156,8 @@ html.dark { background-color: #020617; }
   .app-footer-strip { display: block; }
   .app-footer-full { display: none; }
 }
+
+/* Phone tab bar: its own compositing layer and a solid background (no backdrop blur), so iOS
+   Safari / the Home Screen app keeps it pinned to the bottom during momentum scroll instead of
+   painting it mid-screen (seen on iPhone, Oct 2026). */
+.tabbar { transform: translate3d(0, 0, 0); will-change: transform; -webkit-backface-visibility: hidden; }
