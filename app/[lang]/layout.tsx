@@ -153,10 +153,10 @@ export default async function RootLayout({
           <ThemeSync />
           <LocationPrompt variant="banner" />
           <ReturnShell />
-          <div className="flex-1">{children}</div>
-          <Suspense fallback={null}>
-            <Footer lang={lang} />
-          </Suspense>
+          {/* Reserve at least the visible height (viewport minus header and phone tab bar) so while a page is still
+              streaming in, the footer stays below the fold instead of jumping up under a short skeleton. */}
+          <div className="flex-1 min-h-[calc(100dvh-3.5rem-3.5rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))] sm:min-h-[calc(100dvh-3.5rem)]">{children}</div>
+          <Footer lang={lang} />
           <BottomTabs />
           </InstallProvider>
         </LocaleProvider>

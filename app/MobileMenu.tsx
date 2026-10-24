@@ -7,11 +7,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LifeBuoy, Info, X } from "lucide-react";
+import { LifeBuoy, Info, FlaskConical, Activity, Code, X } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
 import { ThemeSegmented } from "./ThemeSwitch";
 import { InstallButton } from "./InstallButton";
 import { OPEN_MENU_EVENT } from "./BottomTabs";
+import { RESEARCH } from "@/lib/i18n/footer";
+import { statusT } from "@/lib/i18n/status";
 
 const ring =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
@@ -19,7 +21,7 @@ const ring =
 export type MenuRiver = { href: string; label: string; slug: string };
 
 export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
-  const { t, p } = useI18n();
+  const { t, p, lang } = useI18n();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLElement | null>(null);
@@ -77,6 +79,8 @@ export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
   const main = [
     { href: p("/help"), label: t("nav.help"), icon: LifeBuoy, event: "help_nav_click" },
     { href: p("/about"), label: t("nav.about"), icon: Info, event: "about_nav_click" },
+    { href: p("/research"), label: RESEARCH[lang], icon: FlaskConical, event: "research_nav_click" },
+    { href: p("/status"), label: statusT(lang)("footer"), icon: Activity, event: "status_nav_click" },
   ];
 
   return (
@@ -119,6 +123,18 @@ export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
                       </Link>
                     </li>
                   ))}
+                  <li>
+                    <a
+                      href="https://github.com/shakee93/sl-water-levels"
+                      target="_blank"
+                      rel="noreferrer"
+                      data-umami-event="github_click"
+                      className={`flex items-center gap-3 min-h-12 rounded-md px-2 text-base font-medium hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}
+                    >
+                      <Code className="size-5 text-slate-500 dark:text-slate-400" aria-hidden />
+                      {t("footer.source")}
+                    </a>
+                  </li>
                   <li>
                     <InstallButton variant="row" source="menu" onDone={close} />
                   </li>

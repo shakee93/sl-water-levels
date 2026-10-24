@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { fetchStations, type Station } from "@/lib/arcgis";
 import { basinPath, stationPath } from "@/lib/slug";
@@ -9,11 +10,34 @@ import { FooterLangLinks } from "./FooterLangLinks";
 import { statusT } from "@/lib/i18n/status";
 import { ttFor } from "@/lib/i18n/town";
 
-// si/ta drafts: need native review.
-const MADE_BY: Record<Locale, string> = { en: "Made by", si: "නිර්මාණය කළේ", ta: "உருவாக்கியவர்" };
-const RESEARCH: Record<Locale, string> = { en: "Research", si: "පර්යේෂණ", ta: "ஆய்வுகள்" };
+import { MADE_BY, RESEARCH, STRIP } from "@/lib/i18n/footer";
 
-export async function Footer({ lang }: { lang: Locale }) {
+// Phones (below sm) get a one-line strip instead of the big footer: apps do not have footers, and the links live in the
+// More sheet. Both are plain server HTML switched by CSS, so crawlers still get the full footer's internal links.
+// The strip needs no data, so it sits outside the Suspense that waits for the station list: nothing jumps in later.
+export function Footer({ lang }: { lang: Locale }) {
+  const s = STRIP[lang];
+  return (
+    <>
+      <div className="sm:hidden border-t border-slate-200 dark:border-slate-800 px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-3 text-center text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+        <p className="font-medium text-slate-600 dark:text-slate-300">{s.warn}</p>
+        <p>
+          {s.data}
+          <span aria-hidden> · </span>
+          {MADE_BY[lang]}{" "}
+          <a href="https://x.com/shakeeb_x" target="_blank" rel="noreferrer" className="font-medium">@shakeeb_x</a>
+        </p>
+      </div>
+      <div className="hidden sm:block">
+        <Suspense fallback={null}>
+          <FullFooter lang={lang} />
+        </Suspense>
+      </div>
+    </>
+  );
+}
+
+async function FullFooter({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
   let stations: Station[] = [];
   try {
