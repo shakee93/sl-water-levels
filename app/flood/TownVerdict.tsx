@@ -5,7 +5,7 @@ import { VerdictCard, type T3, type VerdictTone } from "../ShareButton";
 import { TimeAgo } from "../TimeAgo";
 import { useI18n } from "../LocaleProvider";
 import { CALL } from "../verdict";
-import { assessTown, type ReasonKind, type TownRiskInput } from "@/lib/townRisk";
+import { assessTown, type ReasonKind, type TownRisk, type TownRiskInput } from "@/lib/townRisk";
 import { ttFor, type TKey } from "@/lib/i18n/town";
 import { formatKm } from "@/lib/nearby";
 import { riverName, clock } from "@/lib/i18n/format";
@@ -35,6 +35,13 @@ const ICON: Record<ReasonKind, typeof Waves> = {
   release: Landmark,
   calm: CircleCheck,
   nogauge: Info,
+};
+
+const HOUR_ARROW: Partial<Record<TownRisk["hourKey"], TownRisk["trend"]>> = {
+  "dir.rising": "up",
+  "dir.slow": "up",
+  "dir.falling": "down",
+  "dir.steady": "steady",
 };
 
 export type TownVerdictProps = {
@@ -84,7 +91,9 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
         fact={stale && !r.heavyRain ? null : t3(r.day.key as TKey, dayVars)}
         labels={{ direction: t3("label.hour"), fact: t3("label.day") }}
         action={r.actionKey ? t3(r.actionKey) : null}
-        outlook={{ trend: r.trend === "unknown" ? "unknown" : r.trend, text: <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{note}</p> }}
+        // The arrow follows the same next-hour call as the words beside it ("River rising slowly"
+        // with a down arrow happened when the past 3 h fell but the forecast turned up).
+        outlook={{ trend: HOUR_ARROW[r.hourKey] ?? r.trend, text: <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{note}</p> }}
         call={elevated ? CALL : null}
         office={elevated && office ? { label: t("common.callDmcOffice", { district: office.district }), tel: office.tel } : null}
         footer={
