@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-24T01:38:37.174Z",
- "latestStart": "2026-10-24T00:30:00.000Z",
- "latestEnd": "2026-10-24T01:30:00.000Z",
+ "generatedAt": "2026-10-24T02:07:39.374Z",
+ "latestStart": "2026-10-24T01:00:00.000Z",
+ "latestEnd": "2026-10-24T02:00:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -14,7 +14,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.3
+   "mm24h": 0.2
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
@@ -82,8 +82,8 @@
    "cells": 11,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.2,
-   "mm6h": 0.4,
+   "mm3h": 0.1,
+   "mm6h": 0.3,
    "mm24h": 0.7
   },
   "Kalu Ganga/Ellagawa": {
@@ -112,8 +112,8 @@
    "cells": 11,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.2,
-   "mm6h": 0.4,
+   "mm3h": 0.1,
+   "mm6h": 0.3,
    "mm24h": 0.7
   },
   "Kalu Ganga/Magura": {
@@ -364,7 +364,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0
+   "mm24h": 0.1
   },
   "Menik Ganga/Katharagama": {
    "basin": "Menik Ganga",
