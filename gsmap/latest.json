@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-24T07:38:39.284Z",
- "latestStart": "2026-10-24T06:30:00.000Z",
- "latestEnd": "2026-10-24T07:30:00.000Z",
+ "generatedAt": "2026-10-24T08:07:38.450Z",
+ "latestStart": "2026-10-24T07:00:00.000Z",
+ "latestEnd": "2026-10-24T08:00:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -280,9 +280,9 @@
    "basin": "Maha Oya",
    "station": "Badalgama",
    "cells": 22,
-   "rateMmPerHour": 0.05,
-   "mm1h": 0.1,
-   "mm3h": 0.2,
+   "rateMmPerHour": 0.03,
+   "mm1h": 0,
+   "mm3h": 0.1,
    "mm6h": 0.2,
    "mm24h": 0.2
   },
