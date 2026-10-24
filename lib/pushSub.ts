@@ -65,4 +65,5 @@ export const PUSH_SCHEMA: string[] = [
   `CREATE TABLE IF NOT EXISTS push_place_state (key TEXT PRIMARY KEY, level INTEGER NOT NULL, notified INTEGER NOT NULL, last_rise_ms INTEGER, clear_runs INTEGER NOT NULL DEFAULT 0, updated_ms INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS push_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, kind TEXT NOT NULL, place TEXT, sent INTEGER NOT NULL, gone INTEGER NOT NULL, failed INTEGER NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS idx_push_log_ts ON push_log (ts)`,
+  `CREATE TABLE IF NOT EXISTS push_prefs (endpoint TEXT PRIMARY KEY, prefs TEXT, state TEXT, updated_ms INTEGER NOT NULL)`,
 ];

@@ -12,7 +12,9 @@ const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring
 export function InstallButton({ variant, source, onDone }: { variant: "header" | "row"; source: string; onDone?: () => void }) {
   const { lang } = useI18n();
   const { canInstall, install } = useInstall();
-  const label = rtFor(lang)("ins.btn");
+  const rt = rtFor(lang);
+  const label = rt("ins.btn");
+  const hint = rt("ins.btnHint");
   if (!canInstall) return null;
   const click = () => {
     onDone?.();
@@ -21,8 +23,11 @@ export function InstallButton({ variant, source, onDone }: { variant: "header" |
   if (variant === "row") {
     return (
       <button type="button" onClick={click} className={`flex w-full items-center gap-3 min-h-12 rounded-md px-2 text-left text-base font-medium hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}>
-        <Download className="size-5 text-slate-500 dark:text-slate-400" aria-hidden />
-        {label}
+        <Download className="size-5 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
+        <span className="min-w-0">
+          <span className="block">{label}</span>
+          <span className="block text-sm font-normal text-slate-600 dark:text-slate-400">{hint}</span>
+        </span>
       </button>
     );
   }
@@ -30,7 +35,7 @@ export function InstallButton({ variant, source, onDone }: { variant: "header" |
     <button
       type="button"
       onClick={click}
-      title={label}
+      title={`${label}: ${hint}`}
       aria-label={label}
       className={`hidden sm:inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sky-700 dark:text-sky-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition ${ring}`}
     >

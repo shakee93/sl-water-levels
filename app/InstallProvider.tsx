@@ -203,7 +203,7 @@ function IosSheet({ safari, onClose }: { safari: boolean; onClose: () => void })
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 id="ins-sheet-title" className="text-lg font-semibold tracking-tight">{rt("ins.sheetTitle")}</h2>
-            <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{rt("ins.sheetIntro")}</p>
+            <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{rt("ins.benefit")} {rt("ins.sheetIntro")}</p>
           </div>
           <button ref={closeBtn} type="button" onClick={onClose} aria-label={rt("ins.dismiss")} className={`-mr-1.5 -mt-1.5 inline-flex size-11 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}>
             <X className="size-5" aria-hidden />
@@ -222,7 +222,8 @@ function IosSheet({ safari, onClose }: { safari: boolean; onClose: () => void })
             </li>
           ))}
         </ol>
-        {!safari && <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{rt("ins.otherIos")}</p>}
+        <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-300">{rt("ins.alertsNeed")}</p>
+        {!safari && <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{rt("ins.otherIos")}</p>}
         {lang !== "en" && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
         <button type="button" onClick={onClose} className={`mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200 ${ring}`}>
           {rt("ins.dismiss")}

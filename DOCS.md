@@ -520,12 +520,12 @@ browser, except an opted-in push subscription. Strings: `lib/i18n/return.ts` (Si
    `loadTown`/`assessTown` as the pages), `GET /api/places-state`, `lib/myPlaces.ts`.
 2. **Alerts at the right time (Web Push) + installable app.** "Tell me when it changes" sends ONE push when a pinned place rises to
    "Get ready" or worse (street water "likely" counts; "possible" never pings), and ONE all-clear after two calm checks in a row (closure matters). Never for
-   a plain "keep an eye", never twice for a wobble (3 h flap guard, `pushStep` in `lib/myPlaces.ts`). Optional short morning summary,
-   skipped when a person's places cannot be read. Subscriptions: D1 `push_subscriptions` (endpoint + two public keys + place keys +
+   a plain "keep an eye", never twice for a wobble (3 h flap guard, `pushStep` in `lib/myPlaces.ts`). Optional short morning summary at a time they choose,
+   skipped when a person's places cannot be read. Each subscriber's own settings decide which of these they hear (see "Alert settings" below). Subscriptions: D1 `push_subscriptions` (endpoint + two public keys + place keys +
    language; nothing else; "Turn off alerts" deletes the row; dead endpoints are deleted). PWA: `app/manifest.ts`, `public/sw.js`
    (network first, last-known page offline, push handler), a quiet dismissible install card after a second-day visit or a pinned place
    (`app/ReturnShell.tsx`). Sender: `scripts/push-notify.mjs`, run at the end of `gsmap-snapshot.yml` (every 30 min) and by
-   `push-notify.yml` (morning, manual test). Telegram channel option for later: a bot posting the same rise/all-clear text from
+   `push-notify.yml` (morning, stats, manual test and broadcast). Telegram channel option for later: a bot posting the same rise/all-clear text from
    `pushText` to a public channel needs only a bot token and a call in the sender.
 3. **Closure and trust: "How our warnings did".** On towns with the street-rain rule: what we said recently ("Yesterday we said water
    on the streets was possible") and what neighbours reported, a running score once 3 "likely" days could be judged, and one line of
@@ -550,9 +550,54 @@ vercel env add VAPID_PUBLIC_KEY production
 # 3. Both keys: GitHub Actions secrets
 gh secret set VAPID_PUBLIC_KEY
 gh secret set VAPID_PRIVATE_KEY
-# 4. Check delivery: subscribe on the site, then
-gh workflow run push-notify.yml -f mode=test
+# 4. Check delivery: subscribe on the site, then (manual runs are dry runs unless dry_run=false)
+gh workflow run push-notify.yml -f mode=test -f dry_run=false
 ```
+
+#### Alert settings (what each subscriber chose)
+
+"Alert settings" (Your places card, next to the alerts switch; and More on phones) lets each browser choose, per subscription:
+which of its pinned places to hear about (all by default); the lowest river level that should send an alert (**Get ready**
+= Alert level, the default and what everyone had before; **Flooding likely** = Minor level; **Move to safety** = Major flood);
+street water "likely" (canal towns, default on); the early street-water "possible" heads-up (default off, it is often wrong,
+about 8 times a year); a reservoir upstream starts releasing water (default off); all-clear (default on); a morning summary at a
+chosen half hour from 05:00 to 09:00 Colombo (default off); quiet hours in Colombo time (default off; **Major flood and street
+water "likely" always come through**, everything else waits and is sent when quiet hours end, if still true); occasional
+announcements from the site (default on); and a "Send me a test alert" button.
+
+- **Stored** in D1 `push_prefs` (`d1/0004_push.sql`, created idempotently like the other push tables): one JSON text of choices and, in a second column, the
+  sender's memory of what that person was told per place. No row means the defaults. Deleted with the subscription. Edited through `POST /api/push/prefs`
+  (the push endpoint is the key, like turning alerts off), without subscribing again. Rules and sanitising: `lib/pushPrefs.ts`.
+- **Applied** by `scripts/push-eval.mjs` inside `scripts/push-notify.mjs`: the shared rise / flap / all-clear state machine (`pushStep`) now runs per subscriber on
+  the level they asked for; a rise below their chosen level advances silently; an all-clear goes only to someone who was actually told, and only if they want it.
+  A subscriber is seeded from the shared `push_place_state` the first time, so nobody is told twice about a flood already announced.
+- **The test button** shows a notification on this phone through its own service worker, at most once a minute. It proves permission and display; it does
+  not travel through the push service, because the site deliberately never holds the private VAPID key (only GitHub Actions does).
+  For a true end-to-end check use `gh workflow run push-notify.yml -f mode=test -f dry_run=false` (newest subscription only).
+- Tests: `node --experimental-strip-types --no-warnings scripts/push-prefs.test.mts` (defaults, filtering, levels, quiet hours, all-clear, broadcast, stats)
+  and `scripts/push.test.mts` (the whole sender).
+
+#### Owner broadcast (manual only)
+
+One message from the owner to every subscriber who has not turned off "Occasional announcements from the site". It never runs by itself: it exists only as a
+manual `workflow_dispatch` run, and the job refuses to start a broadcast from any other trigger. `dry_run` defaults to **true**, which prints only the recipient
+count (never an endpoint) and sends nothing. The url must be on `https://sl-water-levels.vercel.app` (empty = the home page); title up to 80 and body up to 240
+characters; `language` is all, en, si or ta (by the language the person uses the site in; the text is sent as you wrote it). Announcements ignore quiet hours:
+send them in the daytime (Colombo). The dry run says how many recipients are in their quiet hours right now.
+
+```
+# 1. count only (nothing is sent)
+gh workflow run push-notify.yml -f mode=broadcast -f title="New: choose your alerts" -f body="Open Alert settings to pick what you hear about." -f url="https://sl-water-levels.vercel.app/en" -f language=all
+# 2. send for real
+gh workflow run push-notify.yml -f mode=broadcast -f title="New: choose your alerts" -f body="Open Alert settings to pick what you hear about." -f url="https://sl-water-levels.vercel.app/en" -f language=all -f dry_run=false
+gh run list --workflow push-notify.yml --limit 3     # then: gh run view <id> --log
+```
+
+#### Subscriber stats for the owner
+
+The 06:10 Colombo run posts one line to Slack (`SLACK_WEBHOOK_URL`): subscribers, new in 24 h, by push service (apple / google / mozilla), by language, top five
+followed places, how many chose their own settings, messages sent in 24 h. Counts only, no endpoints. Run it any time: `gh workflow run push-notify.yml -f mode=stats -f dry_run=false`
+(with `dry_run=true`, the default, the line is only printed in the run log).
 
 ### What to measure
 

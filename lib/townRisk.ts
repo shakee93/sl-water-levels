@@ -178,6 +178,8 @@ export type Reason = {
 
 export type TownRisk = {
   tone: Tone;
+  /** The tone before the street-rain rule (step 6): river, rain and official warnings only. "stale" when none. */
+  baseTone: Tone;
   /** Tone from the river alone (steps 1-2), before rain and warnings. */
   riverTone: Tone | null;
   /** The gauge actually used (primary, else secondary), or null. */
@@ -327,6 +329,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   const streetSource: "rain" | "river" | "both" = sriver ? (rainLevel === "likely" ? "both" : "river") : "rain";
   const streetTone: Tone | null = streetLevel === "likely" ? "minor" : streetLevel === "possible" ? "watch" : null;
   const streetDrives = streetTone != null && (tone == null || rank(streetTone) > rank(tone));
+  const baseTone: Tone = tone ?? "stale";
   if (streetTone) tone = maxTone(tone, streetTone);
 
   // ---- reasons (most important first)
@@ -449,6 +452,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   const final: Tone = tone ?? "stale";
   return {
     tone: final,
+    baseTone,
     riverTone: river,
     gauge,
     heavyRain: heavy,

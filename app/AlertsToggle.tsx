@@ -5,15 +5,15 @@
 // keys are saved (app/api/push/route.ts); "Turn off alerts" deletes them. Renders nothing until the server says it can
 // both send and save (GET /api/push), so nobody meets a button that cannot work.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, BellOff, CircleCheck, Download } from "lucide-react";
+import { Bell, BellOff, CircleCheck, Download, SlidersHorizontal } from "lucide-react";
 import { rtFor } from "@/lib/i18n/return";
 import { trackEvent } from "@/lib/umami";
 import { useI18n } from "./LocaleProvider";
 import { useInstall } from "./InstallProvider";
+import { useAlertSettings } from "./AlertSettings";
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const btn = `inline-flex items-center justify-center gap-2 min-h-11 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-sm font-medium text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60 transition-colors ${ring}`;
-const MORNING_KEY = "sl_push_morning";
 
 type Status = "loading" | "hidden" | "off" | "on" | "busy" | "denied" | "unsupported" | "error";
 
@@ -31,29 +31,21 @@ async function registration(): Promise<ServiceWorkerRegistration> {
   return (await navigator.serviceWorker.getRegistration("/")) ?? (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
 }
 
-const getMorning = () => {
-  try {
-    return window.localStorage.getItem(MORNING_KEY) === "1";
-  } catch {
-    return false;
-  }
-};
-
 export function AlertsToggle({ keys }: { keys: string[] }) {
   const { lang } = useI18n();
   const rt = rtFor(lang);
   const { iosNeedsInstall, install } = useInstall();
+  const settings = useAlertSettings();
   const [status, setStatus] = useState<Status>("loading");
-  const [morning, setMorning] = useState(false);
   const vapid = useRef<string | null>(null);
   const joined = keys.join("|");
 
   const save = useCallback(
-    async (sub: PushSubscription, m: boolean) => {
+    async (sub: PushSubscription) => {
       const res = await fetch("/api/push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub.toJSON(), places: joined ? joined.split("|") : [], lang, morning: m }),
+        body: JSON.stringify({ subscription: sub.toJSON(), places: joined ? joined.split("|") : [], lang }),
       });
       return res.ok;
     },
@@ -69,7 +61,6 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
         if (!alive) return;
         if (!cfg.enabled || !cfg.key) return setStatus("hidden");
         vapid.current = cfg.key;
-        setMorning(getMorning());
         if (!supported()) return setStatus("unsupported");
         if (Notification.permission === "denied") return setStatus("denied");
         const reg = await navigator.serviceWorker.getRegistration("/");
@@ -91,13 +82,13 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
       try {
         const reg = await navigator.serviceWorker.getRegistration("/");
         const sub = reg ? await reg.pushManager.getSubscription() : null;
-        if (sub) await save(sub, morning);
+        if (sub) await save(sub);
       } catch {
         /* the next change tries again */
       }
     }, 800);
     return () => clearTimeout(id);
-  }, [status, joined, morning, save]);
+  }, [status, joined, save]);
 
   async function enable() {
     if (!vapid.current || !joined) return;
@@ -117,7 +108,7 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
         await sub?.unsubscribe().catch(() => {});
         sub = await subscribe();
       }
-      if (!(await save(sub, morning))) {
+      if (!(await save(sub))) {
         await sub.unsubscribe().catch(() => {});
         return setStatus("error");
       }
@@ -145,15 +136,6 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
     }
   }
 
-  function toggleMorning(v: boolean) {
-    setMorning(v);
-    try {
-      window.localStorage.setItem(MORNING_KEY, v ? "1" : "0");
-    } catch {
-      /* storage blocked: the choice lasts until the page closes */
-    }
-  }
-
   if (status === "loading" || status === "hidden") return null;
 
   return (
@@ -168,10 +150,9 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
               <BellOff className="size-4" aria-hidden /> {rt("al.disable")}
             </button>
           </div>
-          <label className="mt-1 flex min-h-11 items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
-            <input type="checkbox" checked={morning} onChange={(e) => toggleMorning(e.target.checked)} className={`size-5 rounded border-slate-300 dark:border-slate-600 accent-sky-600 ${ring}`} />
-            {rt("al.morning")}
-          </label>
+          <button type="button" onClick={settings.open} className={`${btn} mt-1 border-transparent bg-transparent dark:bg-transparent text-sky-700 dark:text-sky-300`}>
+            <SlidersHorizontal className="size-4" aria-hidden /> {rt("as.open")}
+          </button>
         </div>
       ) : iosNeedsInstall && (status === "unsupported" || status === "off") ? (
         // iPhone and iPad only deliver alerts to a site that sits on the Home Screen

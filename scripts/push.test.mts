@@ -128,12 +128,12 @@ sent.length = 0;
 
 // morning summary: only opted-in, only readable
 world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya");
-await run({ mode: "morning" }, (t += H));
+await run({ mode: "morning", force: true }, (t += H));
 assert.deepEqual(sent.map((m) => m.to), ["b"]);
 assert.ok(sent[0].body.length > 0);
 sent.length = 0;
 world = {};
-await run({ mode: "morning" }, (t += H));
+await run({ mode: "morning", force: true }, (t += H));
 assert.equal(sent.length, 0, "no readable place: no 'all calm' claim");
 
 // test mode

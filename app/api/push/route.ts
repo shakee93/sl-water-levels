@@ -1,7 +1,8 @@
 // /api/push: alerts for pinned places (Web Push). No account.
 //   GET     -> { enabled, key }   enabled only when the site has a VAPID public key AND can save (D1); the page
 //                                 shows the "Tell me when it changes" button only then, so nobody meets an error.
-//   POST    {subscription, places[], lang, morning}  -> saves / updates this browser's subscription.
+//   POST    {subscription, places[], lang, morning}  -> saves / updates this browser's subscription (morning only on first save;
+//                                 later it is changed through /api/push/prefs, which keeps the settings apart from the places).
 //   DELETE  {endpoint}            -> deletes it (the "Turn off alerts" button). Knowing the endpoint is the key.
 // Needs, in the Vercel project's environment variables:
 //   VAPID_PUBLIC_KEY      the public half of the VAPID pair (not secret; the browser needs it to subscribe)
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       }
       await d1Query(
         "INSERT INTO push_subscriptions (endpoint, p256dh, auth, places, lang, morning, created_ms, updated_ms, fail_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0) " +
-          "ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, places = excluded.places, lang = excluded.lang, morning = excluded.morning, updated_ms = excluded.updated_ms, fail_count = 0",
+          "ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, places = excluded.places, lang = excluded.lang, updated_ms = excluded.updated_ms, fail_count = 0",
         [sub.endpoint, sub.p256dh, sub.auth, sub.places.join("|"), sub.lang, sub.morning ? 1 : 0, now, now],
       );
     });
@@ -79,7 +80,10 @@ export async function DELETE(req: NextRequest) {
   if (!endpointOk(endpoint, anyHost())) return reply(400, { ok: false, error: "invalid" });
   if (!d1Configured()) return reply(200, { ok: true }); // nothing could have been saved
   try {
-    await withSchema(() => d1Query("DELETE FROM push_subscriptions WHERE endpoint = ?", [endpoint as string]));
+    await withSchema(async () => {
+      await d1Query("DELETE FROM push_subscriptions WHERE endpoint = ?", [endpoint as string]);
+      await d1Query("DELETE FROM push_prefs WHERE endpoint = ?", [endpoint as string]); // the settings go with the subscription
+    });
   } catch (e) {
     console.error("push: delete failed:", e instanceof Error ? e.message : e);
     return reply(502, { ok: false, error: "unavailable" });

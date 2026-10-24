@@ -9,6 +9,7 @@ import { placeBySlug } from "./places";
 import { stationDisplayName } from "./displayName";
 import { formatLevel } from "./units";
 import { STEADY_M_PER_H } from "../app/verdict";
+import { getReleases, releaseAffectingFrom } from "./releases";
 import type { Glance, ParsedKey } from "./myPlaces";
 
 const trendOf = (rateM: number | null): Glance["trend"] => (rateM == null ? "unknown" : Math.abs(rateM) < STEADY_M_PER_H ? "steady" : rateM > 0 ? "up" : "down");
@@ -48,6 +49,7 @@ async function townGlance(k: Extract<ParsedKey, { kind: "t" }>, lv: Record<strin
     name: place.name,
     href: `/flood/${place.slug}`,
     tone: r.tone,
+    baseTone: r.baseTone,
     street: r.street?.level ?? null,
     streetDrives: !!r.street?.drives,
     trend: stale || r.trend === "unknown" ? "unknown" : r.trend,
@@ -82,5 +84,15 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
       }
     }),
   );
-  return out.filter((g): g is Glance => g !== null);
+  const glances = out.filter((g): g is Glance => g !== null);
+  // which reservoir release (if any) is heading for each place's gauge; fails soft: no answer = no release claimed
+  const rel = await getReleases().catch(() => null);
+  if (rel) {
+    for (const g of glances) {
+      if (!g.gaugeStation) continue;
+      const a = releaseAffectingFrom(rel, g.gaugeStation);
+      g.release = a.active && a.reservoir ? { name: a.reservoir, confirmed: a.confirmed, etaHours: a.etaHours } : null;
+    }
+  }
+  return glances;
 }

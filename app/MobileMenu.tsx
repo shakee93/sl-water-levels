@@ -11,6 +11,7 @@ import { LifeBuoy, Info, FlaskConical, Activity, Code, X } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
 import { ThemeSegmented } from "./ThemeSwitch";
 import { InstallButton } from "./InstallButton";
+import { AlertSettingsRow } from "./AlertSettings";
 import { OPEN_MENU_EVENT } from "./BottomTabs";
 import { RESEARCH } from "@/lib/i18n/footer";
 import { statusT } from "@/lib/i18n/status";
@@ -137,6 +138,9 @@ export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
                   </li>
                   <li>
                     <InstallButton variant="row" source="menu" onDone={close} />
+                  </li>
+                  <li>
+                    <AlertSettingsRow onDone={close} />
                   </li>
                 </ul>
 

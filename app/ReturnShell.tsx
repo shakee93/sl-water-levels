@@ -73,7 +73,8 @@ export function ReturnShell() {
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{rt("ins.title")}</p>
-          <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{hasPrompt ? rt("ins.body") : <><Share className="mr-1 inline size-3.5 -mt-0.5" aria-hidden />{rt("ins.ios")}</>}</p>
+          <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{rt("ins.benefit")}</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{hasPrompt ? rt("ins.body") : <><Share className="mr-1 inline size-3.5 -mt-0.5" aria-hidden />{rt("ins.ios")}</>}</p>
         </div>
         <button type="button" onClick={dismissCard} aria-label={rt("ins.dismiss")} className={`-m-1.5 inline-flex size-11 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}>
           <X className="size-4" aria-hidden />

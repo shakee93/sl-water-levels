@@ -62,6 +62,10 @@ export type Glance = {
   /** Unprefixed site path of the place's page. */
   href: string;
   tone: GlanceTone;
+  /** Tone before the street-rain rule (towns); absent for gauges, where it is `tone`. Lets alerts treat river and street water apart. */
+  baseTone?: GlanceTone;
+  /** A reservoir upstream of this place's gauge is releasing water (official figures or a news report), or null. */
+  release?: { name: string; confirmed: boolean; etaHours: number | null } | null;
   /** Satellite street-rain rule level, towns in a rain zone only. */
   street: "possible" | "likely" | null;
   /** True when the street rule is what sets the tone (the river alone would say less). */

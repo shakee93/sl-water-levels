@@ -1,8 +1,12 @@
 # Web Push alerts for pinned places (scripts/push-notify.mjs).
 #   - The "something changed" check runs at the end of gsmap-snapshot.yml (every 30 minutes, right after the new
 #     satellite rain is in), so it is not scheduled here.
-#   - This workflow: the optional morning summary (06:10 Colombo) and manual runs. Run it by hand with
-#     mode = test to send one test push to the most recent subscription (to check delivery end to end).
+#   - This workflow: the morning summaries (a 06:10 Colombo run, then the 30-minute checks cover later times people chose),
+#     a daily counts-only subscriber line for the owner in Slack, and manual runs:
+#       mode = test       one test push to the newest subscription
+#       mode = broadcast  ONE message from the owner to everyone who did not turn announcements off. Manual only, never
+#                         scheduled. dry_run defaults to true: it prints the recipient count and sends nothing.
+#       mode = stats      post the subscriber line to Slack now (dry_run=true only prints it)
 # Needs the repository secrets CLOUDFLARE_API_TOKEN, VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY. Without the VAPID pair the
 # job exits quietly with a warning. See DOCS.md "Reasons to come back".
 
@@ -14,14 +18,31 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "check = look for changes now, morning = send the morning summary now, test = one test push to the newest subscription"
+        description: "check = look for changes now, morning = send today's morning summaries now, test = one test push to the newest subscription, broadcast = one owner message to all subscribers, stats = subscriber counts to Slack"
         type: choice
-        options: [check, morning, test]
+        options: [check, morning, test, broadcast, stats]
         default: check
       dry_run:
-        description: "Print what would be sent, send nothing"
+        description: "Print what would be sent (a broadcast: only the recipient count), send nothing. Set false to really send."
         type: boolean
-        default: false
+        default: true
+      title:
+        description: "broadcast only: title (80 characters at most)"
+        type: string
+        required: false
+      body:
+        description: "broadcast only: message (240 characters at most)"
+        type: string
+        required: false
+      url:
+        description: "broadcast only: page to open, must be on https://sl-water-levels.vercel.app (empty = home page)"
+        type: string
+        required: false
+      language:
+        description: "broadcast only: who gets it, by the language they use the site in"
+        type: choice
+        options: [all, en, si, ta]
+        default: all
 
 permissions:
   contents: read
@@ -66,16 +87,34 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          EVENT: ${{ github.event_name }}
           MODE: ${{ github.event.inputs.mode || 'morning' }}
-          DRY: ${{ github.event.inputs.dry_run }}
+          # a scheduled run is never a dry run; a manual run is one unless dry_run is set to false
+          DRY: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'false' }}
+          # user input goes in through the environment, never pasted into the shell command
+          BC_TITLE: ${{ github.event.inputs.title }}
+          BC_BODY: ${{ github.event.inputs.body }}
+          BC_URL: ${{ github.event.inputs.url }}
+          BC_LANGUAGE: ${{ github.event.inputs.language }}
         run: |
           args=""
           [ "$DRY" = "true" ] && args="--dry-run"
-          if [ "$MODE" = "test" ]; then
-            node --experimental-strip-types --no-warnings scripts/push-notify.mjs --test latest $args
-          else
-            node --experimental-strip-types --no-warnings scripts/push-notify.mjs --mode "$MODE" $args
-          fi
+          run() { node --experimental-strip-types --no-warnings scripts/push-notify.mjs "$@"; }
+          case "$MODE" in
+            test)      run --test latest $args ;;
+            stats)     run --stats $args ;;
+            broadcast)
+              # owner-only: a broadcast can only start from a manual run
+              [ "$EVENT" = "workflow_dispatch" ] || { echo "::error::a broadcast can only be started by hand"; exit 1; }
+              run --broadcast $args ;;
+            morning)
+              # by hand: send today's summaries now. On the schedule: only the ones whose chosen time has come.
+              if [ "$EVENT" = "workflow_dispatch" ]; then args="$args --force"; fi
+              run --mode morning $args
+              if [ "$EVENT" = "schedule" ]; then run --stats; fi ;;
+            *)         run --mode "$MODE" $args ;;
+          esac
 
       - name: Tell Slack the workflow failed
         if: failure()

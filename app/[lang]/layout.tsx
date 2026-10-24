@@ -12,6 +12,7 @@ import { LangSideEffects } from "../LanguageBar";
 import { ThemeSync } from "../ThemeSync";
 import { ReturnShell } from "../ReturnShell";
 import { InstallProvider } from "../InstallProvider";
+import { AlertSettingsProvider } from "../AlertSettings";
 import { NavProgress } from "../NavProgress";
 import { BottomTabs } from "../BottomTabs";
 import { splashShots } from "@/lib/splash";
@@ -143,6 +144,7 @@ export default async function RootLayout({
       >
         <LocaleProvider lang={lang} dict={DICTS[lang]}>
           <InstallProvider>
+          <AlertSettingsProvider>
           <Suspense fallback={null}>
             <NavProgress />
           </Suspense>
@@ -158,6 +160,7 @@ export default async function RootLayout({
           <div className="flex-1 min-h-[calc(100dvh-3.5rem-3.5rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))] sm:min-h-[calc(100dvh-3.5rem)]">{children}</div>
           <Footer lang={lang} />
           <BottomTabs />
+          </AlertSettingsProvider>
           </InstallProvider>
         </LocaleProvider>
         <Script

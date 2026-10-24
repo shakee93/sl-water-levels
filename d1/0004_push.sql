@@ -14,3 +14,9 @@ CREATE TABLE IF NOT EXISTS push_place_state (key TEXT PRIMARY KEY, level INTEGER
 -- Counts only (no endpoints): how many messages of each kind went out, for the monthly review.
 CREATE TABLE IF NOT EXISTS push_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, kind TEXT NOT NULL, place TEXT, sent INTEGER NOT NULL, gone INTEGER NOT NULL, failed INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_push_log_ts ON push_log (ts);
+
+-- What each browser asked to be alerted about (lib/pushPrefs.ts: places muted, river level, street water, reservoir,
+-- all-clear, morning summary + time, quiet hours, announcements) and the sender's per-subscriber memory (what this person
+-- was told per place, the day the morning summary last went out). One JSON text each; no row = the defaults, which equal
+-- the behaviour before settings existed. Deleted together with the subscription. Choices only; nothing personal.
+CREATE TABLE IF NOT EXISTS push_prefs (endpoint TEXT PRIMARY KEY, prefs TEXT, state TEXT, updated_ms INTEGER NOT NULL);
