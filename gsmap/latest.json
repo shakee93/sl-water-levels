@@ -1,9 +1,9 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-23T23:59:11.089Z",
- "latestStart": "2026-10-23T22:30:00.000Z",
- "latestEnd": "2026-10-23T23:30:00.000Z",
+ "generatedAt": "2026-10-24T00:07:39.485Z",
+ "latestStart": "2026-10-23T23:00:00.000Z",
+ "latestEnd": "2026-10-24T00:00:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
@@ -14,7 +14,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.3
+   "mm24h": 0.2
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
@@ -90,11 +90,11 @@
    "basin": "Kalu Ganga",
    "station": "Ellagawa",
    "cells": 9,
-   "rateMmPerHour": 0.06,
+   "rateMmPerHour": 0.08,
    "mm1h": 0.1,
    "mm3h": 0.2,
    "mm6h": 0.4,
-   "mm24h": 0.5
+   "mm24h": 0.6
   },
   "Kalu Ganga/Rathnapura": {
    "basin": "Kalu Ganga",
@@ -120,7 +120,7 @@
    "basin": "Kalu Ganga",
    "station": "Magura",
    "cells": 10,
-   "rateMmPerHour": 0.06,
+   "rateMmPerHour": 0.07,
    "mm1h": 0.1,
    "mm3h": 0.2,
    "mm6h": 0.4,
@@ -334,7 +334,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0
+   "mm24h": 0.1
   },
   "Mahaweli Ganga/Thaldena": {
    "basin": "Mahaweli Ganga",
