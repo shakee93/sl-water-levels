@@ -1,70 +1,70 @@
 {
  "source": "GSMaP_NOW (JAXA)",
  "credit": "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
- "generatedAt": "2026-10-25T01:08:35.206Z",
- "latestStart": "2026-10-25T00:00:00.000Z",
- "latestEnd": "2026-10-25T01:00:00.000Z",
+ "generatedAt": "2026-10-25T01:37:37.847Z",
+ "latestStart": "2026-10-25T00:30:00.000Z",
+ "latestEnd": "2026-10-25T01:30:00.000Z",
  "unit": "mm",
  "stations": {
   "Kelani Ganga/Nagalagam Street": {
    "basin": "Kelani Ganga",
    "station": "Nagalagam Street",
    "cells": 9,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.8,
-   "mm6h": 2.6,
-   "mm24h": 3.7
+   "mm3h": 0.4,
+   "mm6h": 2,
+   "mm24h": 3
   },
   "Kelani Ganga/Hanwella": {
    "basin": "Kelani Ganga",
    "station": "Hanwella",
    "cells": 8,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.5,
-   "mm6h": 2.2,
-   "mm24h": 3.5
+   "mm3h": 0.2,
+   "mm6h": 1.6,
+   "mm24h": 2.8
   },
   "Kelani Ganga/Glencourse": {
    "basin": "Kelani Ganga",
    "station": "Glencourse",
    "cells": 6,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.2,
-   "mm6h": 2.1,
-   "mm24h": 3.5
+   "mm3h": 0,
+   "mm6h": 1.4,
+   "mm24h": 2.7
   },
   "Kelani Ganga/Kithulgala": {
    "basin": "Kelani Ganga",
    "station": "Kithulgala",
    "cells": 3,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 3.1,
-   "mm24h": 5
+   "mm3h": 0,
+   "mm6h": 2,
+   "mm24h": 3.9
   },
   "Kelani Ganga/Holombuwa": {
    "basin": "Kelani Ganga",
    "station": "Holombuwa",
    "cells": 6,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.2,
-   "mm6h": 2.1,
-   "mm24h": 3.5
+   "mm3h": 0,
+   "mm6h": 1.4,
+   "mm24h": 2.7
   },
   "Kelani Ganga/Deraniyagala": {
    "basin": "Kelani Ganga",
    "station": "Deraniyagala",
    "cells": 4,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 2.4,
-   "mm24h": 3.8
+   "mm3h": 0,
+   "mm6h": 1.5,
+   "mm24h": 2.9
   },
   "Kelani Ganga/Norwood": {
    "basin": "Kelani Ganga",
@@ -72,69 +72,69 @@
    "cells": 1,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.2,
-   "mm6h": 5.3,
-   "mm24h": 8.1
+   "mm3h": 0,
+   "mm6h": 3.4,
+   "mm24h": 6.2
   },
   "Kalu Ganga/Putupaula": {
    "basin": "Kalu Ganga",
    "station": "Putupaula",
    "cells": 11,
-   "rateMmPerHour": 0.21,
-   "mm1h": 0.2,
-   "mm3h": 3.6,
-   "mm6h": 7.4,
-   "mm24h": 8.9
+   "rateMmPerHour": 0,
+   "mm1h": 0,
+   "mm3h": 2.8,
+   "mm6h": 6.4,
+   "mm24h": 7.8
   },
   "Kalu Ganga/Ellagawa": {
    "basin": "Kalu Ganga",
    "station": "Ellagawa",
    "cells": 9,
-   "rateMmPerHour": 0.15,
-   "mm1h": 0.2,
-   "mm3h": 2.9,
-   "mm6h": 6.6,
-   "mm24h": 8.4
+   "rateMmPerHour": 0,
+   "mm1h": 0,
+   "mm3h": 2.1,
+   "mm6h": 5.4,
+   "mm24h": 7.1
   },
   "Kalu Ganga/Rathnapura": {
    "basin": "Kalu Ganga",
    "station": "Rathnapura",
    "cells": 6,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 1.2,
-   "mm6h": 4.8,
-   "mm24h": 6.5
+   "mm3h": 0.9,
+   "mm6h": 3.8,
+   "mm24h": 5.5
   },
   "Kalu Ganga/Kalawellawa (Millakanda)": {
    "basin": "Kalu Ganga",
    "station": "Kalawellawa (Millakanda)",
    "cells": 11,
-   "rateMmPerHour": 0.21,
-   "mm1h": 0.2,
-   "mm3h": 3.6,
-   "mm6h": 7.4,
-   "mm24h": 8.9
+   "rateMmPerHour": 0,
+   "mm1h": 0,
+   "mm3h": 2.8,
+   "mm6h": 6.4,
+   "mm24h": 7.8
   },
   "Kalu Ganga/Magura": {
    "basin": "Kalu Ganga",
    "station": "Magura",
    "cells": 10,
-   "rateMmPerHour": 0.15,
-   "mm1h": 0.2,
-   "mm3h": 2.9,
-   "mm6h": 6.7,
-   "mm24h": 8.3
+   "rateMmPerHour": 0,
+   "mm1h": 0,
+   "mm3h": 2,
+   "mm6h": 5.5,
+   "mm24h": 7
   },
   "Gin Ganga/Baddegama": {
    "basin": "Gin Ganga",
    "station": "Baddegama",
    "cells": 15,
-   "rateMmPerHour": 1.02,
-   "mm1h": 1,
-   "mm3h": 4.4,
-   "mm6h": 4.8,
-   "mm24h": 6
+   "rateMmPerHour": 0,
+   "mm1h": 0,
+   "mm3h": 4.6,
+   "mm6h": 5.3,
+   "mm24h": 6.4
   },
   "Gin Ganga/Thawalama": {
    "basin": "Gin Ganga",
@@ -143,8 +143,8 @@
    "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0,
-   "mm6h": 0.3,
-   "mm24h": 3.8
+   "mm6h": 0.4,
+   "mm24h": 4
   },
   "Nilwala Ganga/Panadugama": {
    "basin": "Nilwala Ganga",
@@ -152,7 +152,7 @@
    "cells": 11,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.2,
+   "mm3h": 0,
    "mm6h": 0.3,
    "mm24h": 0.3
   },
@@ -162,7 +162,7 @@
    "cells": 7,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.4,
+   "mm3h": 0,
    "mm6h": 0.7,
    "mm24h": 0.7
   },
@@ -172,7 +172,7 @@
    "cells": 7,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.4,
+   "mm3h": 0,
    "mm6h": 0.7,
    "mm24h": 0.7
   },
@@ -182,7 +182,7 @@
    "cells": 14,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
+   "mm3h": 0,
    "mm6h": 0.2,
    "mm24h": 0.2
   },
@@ -194,7 +194,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 0.6
+   "mm24h": 0.5
   },
   "Deduru Oya/Moragaswewa": {
    "basin": "Deduru Oya",
@@ -224,7 +224,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 5
+   "mm24h": 5.2
   },
   "Kirindi Oya/Wellawaya": {
    "basin": "Kirindi Oya",
@@ -234,7 +234,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 3.3
+   "mm24h": 3.4
   },
   "Kirindi Oya/Kuda Oya": {
    "basin": "Kirindi Oya",
@@ -244,7 +244,7 @@
    "mm1h": 0,
    "mm3h": 0,
    "mm6h": 0,
-   "mm24h": 5.5
+   "mm24h": 5.6
   },
   "Kumbukkan Oya/Nakkala": {
    "basin": "Kumbukkan Oya",
@@ -303,8 +303,8 @@
    "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0,
-   "mm6h": 0.1,
-   "mm24h": 0.3
+   "mm6h": 0.2,
+   "mm24h": 0.4
   },
   "Mahaweli Ganga/Weraganthota": {
    "basin": "Mahaweli Ganga",
@@ -313,8 +313,8 @@
    "rateMmPerHour": 0,
    "mm1h": 0,
    "mm3h": 0,
-   "mm6h": 0.2,
-   "mm24h": 0.3
+   "mm6h": 0.4,
+   "mm24h": 0.5
   },
   "Mahaweli Ganga/Peradeniya": {
    "basin": "Mahaweli Ganga",
@@ -322,19 +322,19 @@
    "cells": 10,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.4,
-   "mm24h": 0.5
+   "mm3h": 0,
+   "mm6h": 0.7,
+   "mm24h": 0.9
   },
   "Mahaweli Ganga/Nawalapitiya": {
    "basin": "Mahaweli Ganga",
    "station": "Nawalapitiya",
    "cells": 5,
-   "rateMmPerHour": 0.01,
+   "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.4,
-   "mm24h": 0.7
+   "mm3h": 0,
+   "mm6h": 1.1,
+   "mm24h": 1.5
   },
   "Mahaweli Ganga/Thaldena": {
    "basin": "Mahaweli Ganga",
@@ -342,9 +342,9 @@
    "cells": 10,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.4,
-   "mm24h": 0.5
+   "mm3h": 0,
+   "mm6h": 0.7,
+   "mm24h": 0.9
   },
   "Malwathu Oya/Thanthirimale": {
    "basin": "Malwathu Oya",
@@ -370,11 +370,11 @@
    "basin": "Menik Ganga",
    "station": "Katharagama",
    "cells": 17,
-   "rateMmPerHour": 0.79,
-   "mm1h": 0.8,
-   "mm3h": 0.8,
-   "mm6h": 0.8,
-   "mm24h": 8.1
+   "rateMmPerHour": 0.88,
+   "mm1h": 0.9,
+   "mm3h": 1.2,
+   "mm6h": 1.2,
+   "mm24h": 8.6
   },
   "Walawe Ganga/Moraketiya": {
    "basin": "Walawe Ganga",
@@ -382,9 +382,9 @@
    "cells": 10,
    "rateMmPerHour": 0,
    "mm1h": 0,
-   "mm3h": 0.1,
-   "mm6h": 0.4,
-   "mm24h": 1.8
+   "mm3h": 0,
+   "mm6h": 1,
+   "mm24h": 2.7
   },
   "Yan Oya/Horowpothana": {
    "basin": "Yan Oya",
@@ -401,8 +401,8 @@
   "colombo-east": {
    "name": "Greater Colombo east (Wellampitiya, Kolonnawa, Kotikawatta, Mulleriyawa ...)",
    "cells": 4,
-   "rateMmPerHour": 0.07,
-   "mm1h": 0.1,
+   "rateMmPerHour": 0,
+   "mm1h": 0,
    "mm3h": 1.8,
    "mm6h": 3,
    "mm24h": 3,
@@ -503,7 +503,7 @@
     },
     {
      "end": 1792890000000,
-     "mm": 0.07
+     "mm": 0.04
     }
    ]
   }
