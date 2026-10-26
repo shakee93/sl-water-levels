@@ -50,3 +50,15 @@ export const BASINS: Basin[] = [
 export const basinOfTown = (slug: string): Basin | undefined => BASINS.find((b) => b.towns.includes(slug));
 /** Towns on the Nagalagam gauge's tide (it is tidal), where the tide line belongs. */
 export const SEA_DRAINING = new Set(["wellawatta", "dehiwala", "kirulapone"]);
+
+export type BasinStateKey = "higher" | "normal" | "lower" | "learning" | "offline";
+/** One plain state for a basin from its gauges: "higher" when at least two (or all, if fewer) are rising or higher than usual. */
+export function basinState(b: Basin, gauges: { name: string; state: string }[] | null | undefined): BasinStateKey {
+  const own = (gauges ?? []).filter((g) => b.gauges.includes(g.name));
+  const live = own.filter((g) => g.state !== "offline" && g.state !== "learning");
+  if (!live.length) return own.some((g) => g.state === "learning") ? "learning" : "offline";
+  const hi = live.filter((g) => g.state === "higher" || g.state === "rising").length;
+  if (hi >= Math.min(2, live.length)) return "higher";
+  if (live.filter((g) => g.state === "lower").length * 2 > live.length) return "lower";
+  return "normal";
+}

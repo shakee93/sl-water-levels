@@ -6,15 +6,21 @@ import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { clock } from "@/lib/i18n/format";
 import { ccFor } from "@/lib/i18n/colombo";
-import { BASINS } from "@/lib/colombo";
+import { BASINS, basinState } from "@/lib/colombo";
 import { placeBySlug } from "@/lib/places";
 import { getCanals } from "@/lib/curw";
+import { getNational } from "@/lib/arcgis";
+import { formatLevel } from "@/lib/units";
+import { soft } from "@/lib/soft";
+import { tierLabel } from "@/app/tierUi";
+import { toFt } from "@/lib/geo/colomboMap";
+import type { CanalMapData } from "@/app/colombo/canalMapTypes";
 import { tideEvents } from "@/lib/tide";
 import { AnswerLine, JsonLd } from "@/app/Answer";
 import { breadcrumbLd, webPageLd } from "@/lib/seo";
 import { TideLine, highTideTimes } from "@/app/colombo/TideLine";
 import { CanalLevels } from "@/app/colombo/CanalLevels";
-import { ColomboMap } from "@/app/colombo/ColomboMap";
+import { CanalMap } from "@/app/colombo/CanalMap";
 
 const SITE = "https://sl-water-levels.vercel.app";
 type Params = { params: Promise<{ lang: string }> };
@@ -42,10 +48,32 @@ export default async function ColomboCanalsPage({ params }: Params) {
   const cc = ccFor(lang);
   // eslint-disable-next-line react-hooks/purity -- rendered per request (connection() above), the tide times are for right now
   const now = Date.now();
-  const canals = await getCanals();
+  const [canals, national] = await Promise.all([getCanals(), soft(getNational().catch(() => null), 2500, null)]);
   const h = highTideTimes(lang, now);
   const answer = cc("page.answer", { tide: h.times ? cc("tide.highs", { times: h.times }) : "" }).replace("  ", " ");
   const events = tideEvents(now, 48);
+  const nagS = national?.find((x) => x.station === "Nagalagam Street");
+  // The map gets our own canal data in feet; the browser never calls CUrW.
+  const mapData: CanalMapData = {
+    basins: BASINS.map((b) => ({
+      id: b.id,
+      name: cc(b.nameKey),
+      drain: cc(b.drainKey),
+      state: basinState(b, canals?.gauges),
+      gauges: b.gauges,
+      towns: b.towns.map((s) => placeBySlug(s)).filter((x): x is NonNullable<typeof x> => !!x).map((x) => ({ name: x.name, href: `/flood/${x.slug}` })),
+    })),
+    gauges: (canals?.gauges ?? []).map((g) => ({
+      name: g.name,
+      state: g.state,
+      ft: g.level == null ? null : Math.round(toFt(g.level) * 10) / 10,
+      observedMs: g.observedMs,
+      series: g.series.map((q) => ({ ms: q.ms, ft: Math.round(toFt(q.m) * 100) / 100 })),
+    })),
+    sea: canals?.sea.level != null ? { ft: Math.round(toFt(canals.sea.level) * 10) / 10, trend: canals.sea.trend, observedMs: canals.sea.observedMs } : null,
+    nextHigh: h.times,
+    nag: nagS?.latest?.water_level != null ? { level: formatLevel(nagS.latest.water_level, nagS.unit), tier: tierLabel(t, nagS.tier), observedMs: nagS.latest.ts } : null,
+  };
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
   const ld = [
     webPageLd({ lang, path: "/colombo-canals", name: cc("page.title"), description: answer, modified: now, speakable: [".answer-line"] }),
@@ -81,8 +109,8 @@ export default async function ColomboCanalsPage({ params }: Params) {
 
         <section className="mt-6" aria-label={cc("map.title")}>
           <h2 className="text-base font-semibold">{cc("map.title")}</h2>
-          <div className="mt-2"><ColomboMap lang={lang} /></div>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{cc("map.note")}</p>
+          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{cc("map.lead")}</p>
+          <div className="mt-3"><CanalMap data={mapData} /></div>
         </section>
 
         {BASINS.map((b) => (
