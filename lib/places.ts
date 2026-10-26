@@ -23,7 +23,7 @@ export type Place = {
   stations: string[];
   /**
    * Set only for towns the satellite street-rain rule was backtested for (lib/townRisk.ts, STREET_RAIN_ZONES in
-   * scripts/gsmap-snapshot.mjs): the id of the rain zone whose 24 h total drives "water on the streets".
+   * scripts/gsmap-snapshot.mjs): the id of the rain zone whose 24 h total drives the personal "my spot floods in heavy rain" note (lib/lowSpots.ts); never a town warning.
    */
   rainZone?: string;
 };

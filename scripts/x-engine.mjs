@@ -1,4 +1,4 @@
-// What is worth saying on X right now: turns one snapshot of the site (levels, reservoirs, street water, official
+// What is worth saying on X right now: turns one snapshot of the site (levels, reservoirs, official
 // bulletins, rain) plus the memory of what was already said into a list of events. Pure: no I/O, no clock (now is
 // passed in), so scripts/x-post.test.mts drives it. The words are in lib/xCompose.ts; the sending is scripts/x-post.mjs.
 //
@@ -65,7 +65,7 @@ const byRiver = (list, key) => {
 };
 
 /**
- * @param snap  { now, stations|null, reservoirs|null, street: {towns:[{slug,name,street|undefined,rain24}], zone}|null, warnings|null, rain: {mm,place}|null, site }
+ * @param snap  { now, stations|null, reservoirs|null, warnings|null, rain: {mm,place}|null, site }
  * @param state memory from the last run (emptyState() the first time)
  * @param cfg   DEFAULTS overrides
  * @returns { events, state }  events are in order of importance; state is the new memory (always advance it, posted or not)
@@ -162,33 +162,8 @@ export function evaluate(snap, prevState, cfgIn = {}) {
     }
   }
 
-  // ---- street water in the canal towns: "likely" only (possible is a quiet heads-up that never posts)
-  if (snap.street) {
-    const known = snap.street.towns.filter((t) => t.street !== undefined);
-    const key = snap.street.zone ?? "colombo-east";
-    if (known.length) {
-      const likely = known.filter((t) => t.street === "likely");
-      const lvl = likely.length ? 3 : known.some((t) => t.street === "possible") ? 1 : 0;
-      const mine = state.st[key];
-      const step = pushStep(mine ? toStep(mine) : null, lvl, now);
-      let told = mine ? mine.t === 1 : false;
-      const first = likely.find((t) => t.slug === "wellampitiya") ?? likely[0] ?? known.find((t) => t.slug === "wellampitiya") ?? known[0];
-      const ng = stations?.find((s) => s.station === "Nagalagam Street" && usable(s)) ?? null;
-      if (step.send === "rise") {
-        told = true;
-        const rains = likely.map((t) => t.rain24).filter((x) => typeof x === "number");
-        events.push({
-          type: "street_likely", kind: "street", urgent: true,
-          street: { towns: likely.map((t) => t.name), rain24Mm: rains.length ? Math.max(...rains) : null, windowH: 24, gaugeStation: ng?.station ?? null, gaugeLevel: ng?.level ?? null, url: `${site}/flood/${first.slug}`, at: now },
-          dedupe: `street:${key}:likely:${b}`, priority: 30,
-        });
-      } else if (step.send === "clear") {
-        if (told) events.push({ type: "street_clear", kind: "street", urgent: false, street: { towns: known.map((t) => t.name), url: `${site}/flood/${first.slug}`, at: now }, dedupe: `street:${key}:clear:${b}`, priority: 6 });
-        told = false;
-      }
-      state.st[key] = fromStep(step.next, told);
-    }
-  }
+  // Heavy rain over a canal town's low spots is never posted: only a few spots ever get water, and the rule is often wrong.
+  // It is a personal, opt-in note on the site (lib/lowSpots.ts). River gauges and official warnings are what X says.
 
   // ---- official bulletins (DMC / Irrigation Department / Met): each new one with Alert or worse, once
   if (snap.warnings) {

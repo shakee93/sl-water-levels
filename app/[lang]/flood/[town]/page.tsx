@@ -14,7 +14,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { formatKm } from "@/lib/nearby";
 import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
-import { TownOutcome } from "@/app/flood/TownOutcome";
+import { LowSpot } from "@/app/flood/LowSpot";
 import { d1Configured } from "@/lib/d1";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
@@ -69,7 +69,7 @@ export default async function TownPage({ params }: Params) {
 
   // One-sentence answer, from the same estimate the verdict card shows (the visitor's own street level is not part of it).
   const risk = assessTown(data.input, null);
-  const toneKey = (risk.street?.drives ? (risk.street.level === "likely" ? "tone.streetLikely" : "tone.streetPossible") : `tone.${risk.tone}`) as Parameters<typeof tt>[0];
+  const toneKey = `tone.${risk.tone}` as Parameters<typeof tt>[0];
   const km = g ? formatKm(g.km, t) : "";
   const answer = townAnswer(lang, t, {
     town: place.name,
@@ -143,10 +143,10 @@ export default async function TownPage({ params }: Params) {
 
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
 
-        <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} street={data.input.streetRain} />
+        <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} />
+        {place.rainZone && data.input.streetRain !== undefined && <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} />}
 
         {/* Hidden until the site can save answers (CLOUDFLARE_API_TOKEN set), so nobody sees an error. */}
-        {d1Configured() && place.rainZone && <TownOutcome slug={place.slug} />}
         {d1Configured() && <FloodReport slug={place.slug} town={place.name} />}
 
         {g && (

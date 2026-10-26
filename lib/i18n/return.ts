@@ -80,30 +80,15 @@ const en = {
   // ---- Offline
   "off.title": "You are offline",
   "off.body": "Showing what we knew at {time}. Levels may have changed since.",
-  // ---- How our warnings did (town page)
-  "cl.title": "How our warnings did",
-  "cl.today": "Today",
-  "cl.yesterday": "Yesterday",
-  "cl.said.possible": "{when} we said water on the streets was possible.",
-  "cl.said.likely": "{when} we said water on the streets was likely.",
-  "cl.wet": "Most of the {n} neighbours who answered said there was water. Thank you.",
-  "cl.dry": "Most of the {n} neighbours who answered said it stayed dry. Thank you: that helps us avoid false alarms.",
-  "cl.mixed": "{n} neighbours answered and it was mixed: some had water, some stayed dry. Thank you.",
-  "cl.score": "Warnings we could check so far: neighbours confirmed water on {c} of {k} of them.",
-  "cl.river": "River forecasts: the real level stayed inside our stated range {pct}% of the time over the last 30 days ({n} checks).",
-  "cl.empty": "Not enough neighbour answers yet to judge our recent warnings.",
-  "cl.help": "Your answer below makes this more reliable.",
   // ---- After a street-flood answer
   "im.thanks": "Thank you. Your answer joins {n} from {town} this month.",
   "im.first": "Thank you. Yours is one of the first answers from {town} this month, and each one helps.",
-  "im.tune": "Answers like yours are how we check the {mm} mm street-water warning.",
+  "im.tune": "Answers like yours help us check the low-spot rain heads-up.",
   "im.again": "Come back tomorrow: we will show how today's warning did.",
   // ---- Push messages (sent by scripts/push-notify.mjs)
   "pn.l2": "Get ready",
   "pn.l3": "Flooding likely",
   "pn.l4": "Move to safety",
-  "pn.s2": "Water on the streets possible",
-  "pn.s3": "Water on the streets likely",
   "pn.riseTitle": "{place}: {verdict}",
   "pn.riseBody": "Open for the latest and what to do.",
   "pn.riseBody4": "Open for the latest. Call 117 if you need help.",
@@ -136,10 +121,8 @@ const en = {
   "as.rv2": "Get ready (Alert level)",
   "as.rv3": "Flooding likely (Minor level)",
   "as.rv4": "Move to safety (Major flood)",
-  "as.streetLikely": "Water on the streets is likely",
-  "as.streetLikelyHelp": "For canal towns such as Wellampitiya.",
-  "as.streetPossible": "Early heads-up: water on the streets is possible",
-  "as.streetPossibleHelp": "Often a false alarm (around 8 times a year), so it is off unless you want it.",
+  "as.lowSpot": "My spot floods in heavy rain (low ground near a canal)",
+  "as.lowSpotHelp": "Tells you once when very heavy rain falls here. An early heads-up that is often wrong.",
   "as.reservoir": "A reservoir upstream starts releasing water",
   "as.reservoirHelp": "Water can reach your river within hours.",
   "as.allClear": "Tell me when it is clear again",
@@ -158,8 +141,8 @@ const en = {
   "as.testWait": "Please wait a minute before sending another.",
   "as.testFail": "Could not show a test alert. Check that this browser allows notifications.",
   "as.close": "Done",
-  "pn.headsTitle": "{place}: water on the streets is possible",
-  "pn.headsBody": "An early heads-up. It is often a false alarm. Open to see the latest.",
+  "pn.lowTitle": "Heavy rain near {place}: your low spot is likely to get water",
+  "pn.lowBody": "An early heads-up from rain totals. It is often wrong and does not mean the area is flooding. Open to see the latest.",
   "pn.relTitle": "{place}: water released upstream",
   "pn.relBody": "{name} has opened its gates. Levels near you may rise over the next hours. Open to check.",
   "pn.relBodyReported": "{name} is reported to have opened its gates (a news report, not official). Levels near you may rise. Open to check.",
@@ -240,27 +223,13 @@ const si: Dict = {
   "tab.more": "තවත්",
   "off.title": "ඔබ සබැඳි නොවේ",
   "off.body": "{time} වන විට අප දැන සිටි දේ පෙන්වයි. ඉන්පසු මට්ටම් වෙනස් වී තිබිය හැක.",
-  "cl.title": "අපගේ අනතුරු ඇඟවීම් කෙසේද",
-  "cl.today": "අද",
-  "cl.yesterday": "ඊයේ",
-  "cl.said.possible": "{when} අපි කීවේ වීදිවලට වතුර ඒමට ඉඩ ඇති බවයි.",
-  "cl.said.likely": "{when} අපි කීවේ වීදිවලට වතුර ඒමට බොහෝ දුරට ඉඩ ඇති බවයි.",
-  "cl.wet": "පිළිතුරු දුන් අසල්වැසියන් {n} දෙනාගෙන් බොහෝ දෙනෙක් වතුර තිබුණා යැයි කීවා. ස්තූතියි.",
-  "cl.dry": "පිළිතුරු දුන් අසල්වැසියන් {n} දෙනාගෙන් බොහෝ දෙනෙක් වියළිව තිබුණා යැයි කීවා. ස්තූතියි: එය වැරදි අනතුරු ඇඟවීම් අවම කිරීමට උදව් වේ.",
-  "cl.mixed": "අසල්වැසියන් {n} දෙනෙක් පිළිතුරු දුන්නා; මිශ්‍රයි: සමහරුන්ට වතුර ආවා, සමහරුන්ට වියළිව තිබුණා. ස්තූතියි.",
-  "cl.score": "මෙතෙක් පරීක්ෂා කළ හැකි වූ අනතුරු ඇඟවීම් {k}න් {c}කදී අසල්වැසියන් වතුර තිබූ බව තහවුරු කළා.",
-  "cl.river": "ගංගා අනාවැකි: පසුගිය දින 30 තුළ සැබෑ මට්ටම අපගේ සඳහන් පරාසය තුළ {pct}%ක් පැවතුණා (පරීක්ෂා {n}).",
-  "cl.empty": "අපගේ මෑත අනතුරු ඇඟවීම් විනිශ්චය කිරීමට අසල්වැසි පිළිතුරු තවම ප්‍රමාණවත් නැත.",
-  "cl.help": "පහත ඔබේ පිළිතුර මෙය තවත් විශ්වසනීය කරයි.",
   "im.thanks": "ස්තූතියි. ඔබේ පිළිතුර මෙම මාසයේ {town} සිට ලැබුණු {n}ට එකතු වේ.",
   "im.first": "ස්තූතියි. මෙම මාසයේ {town} සිට ලැබුණු මුල්ම පිළිතුරු අතර ඔබේ එකක් වන අතර, සෑම එකක්ම උදව් වේ.",
-  "im.tune": "ඔබේ වැනි පිළිතුරු මගින් අපි මි.මී. {mm} වීදි-වතුර අනතුරු ඇඟවීම පරීක්ෂා කරමු.",
+  "im.tune": "ඔබේ වැනි පිළිතුරු තද වැසි පහත් ස්ථාන ඉඟිය පරීක්ෂා කිරීමට අපට උදව් වේ.",
   "im.again": "හෙට නැවත එන්න: අද අනතුරු ඇඟවීම කෙසේ වූයේදැයි පෙන්වන්නෙමු.",
   "pn.l2": "සූදානම් වන්න",
   "pn.l3": "ගංවතුර ඇතිවීමට ඉඩ ඇත",
   "pn.l4": "ආරක්ෂිත ස්ථානයකට යන්න",
-  "pn.s2": "වීදිවලට වතුර ඒමට ඉඩ ඇත",
-  "pn.s3": "වීදිවලට වතුර ඒමට බොහෝ දුරට ඉඩ ඇත",
   "pn.riseTitle": "{place}: {verdict}",
   "pn.riseBody": "නවතම තොරතුරු සහ කළ යුතු දේ බැලීමට විවෘත කරන්න.",
   "pn.riseBody4": "නවතම තොරතුරු බැලීමට විවෘත කරන්න. උදව් අවශ්‍ය නම් 117 අමතන්න.",
@@ -293,10 +262,8 @@ const si: Dict = {
   "as.rv2": "සූදානම් වන්න (Alert මට්ටම)",
   "as.rv3": "ගංවතුර ඇතිවිය හැක (Minor මට්ටම)",
   "as.rv4": "ආරක්ෂිත ස්ථානයකට යන්න (Major ගංවතුර)",
-  "as.streetLikely": "වීථි වලට ජලය ඒමට ඉඩ වැඩියි",
-  "as.streetLikelyHelp": "වැල්ලම්පිටිය වැනි ඇළ අසල නගර සඳහා.",
-  "as.streetPossible": "මුල් ඉඟිය: වීථි වලට ජලය ඒමට ඉඩ ඇත",
-  "as.streetPossibleHelp": "බොහෝවිට අනවශ්‍ය අනතුරු ඇඟවීමකි (වසරකට 8ක් පමණ), එබැවින් ඔබ අවශ්‍ය නම් පමණක් ක්‍රියාත්මක කරන්න.",
+  "as.lowSpot": "තද වැසි වලදී මගේ ස්ථානයට ජලය එයි (ඇළක් අසල පහත් බිම)",
+  "as.lowSpotHelp": "මෙහි ඉතා තද වැසි ඇති විට එක් වරක් දැනුම් දෙයි. බොහෝවිට වැරදි වන මුල් ඉඟියකි.",
   "as.reservoir": "ඉහළ ජලාශයක් ජලය මුදා හැරීම අරඹයි",
   "as.reservoirHelp": "පැය කිහිපයකින් ජලය ඔබේ ගඟට ළඟා විය හැක.",
   "as.allClear": "නැවත ආරක්ෂිත වූ විට මට කියන්න",
@@ -315,8 +282,8 @@ const si: Dict = {
   "as.testWait": "තවත් එකක් යැවීමට පෙර විනාඩියක් රැඳී සිටින්න.",
   "as.testFail": "පරීක්ෂණ ඇඟවීම පෙන්විය නොහැකි විය. මෙම බ්‍රව්සරයට දැනුම්දීම් ඉඩ දී ඇතිදැයි බලන්න.",
   "as.close": "අවසන්",
-  "pn.headsTitle": "{place}: වීථි වලට ජලය ඒමට ඉඩ ඇත",
-  "pn.headsBody": "මුල් ඉඟියකි. බොහෝවිට අනවශ්‍ය අනතුරු ඇඟවීමකි. නවතම තත්ත්වය බැලීමට විවෘත කරන්න.",
+  "pn.lowTitle": "{place} අසල තද වැසි: ඔබේ පහත් ස්ථානයට ජලය පැමිණීමට ඉඩ ඇත",
+  "pn.lowBody": "වැසි ප්‍රමාණයෙන් ලැබෙන මුල් ඉඟියකි. එය බොහෝවිට වැරදි වන අතර ප්‍රදේශය ගංවතුරට යටවී ඇති බව අදහස් නොවේ. නවතම තත්ත්වය බැලීමට විවෘත කරන්න.",
   "pn.relTitle": "{place}: ඉහළින් ජලය මුදා හරී",
   "pn.relBody": "{name} එහි දොරටු විවෘත කර ඇත. ඔබ අසල මට්ටම් ඉදිරි පැය කිහිපයේ ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
   "pn.relBodyReported": "{name} එහි දොරටු විවෘත කළ බව වාර්තා වේ (පුවත් වාර්තාවකි, නිල නොවේ). ඔබ අසල මට්ටම් ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
@@ -395,27 +362,13 @@ const ta: Dict = {
   "tab.more": "மேலும்",
   "off.title": "நீங்கள் இணையத்தில் இல்லை",
   "off.body": "{time} நிலவரப்படி எங்களுக்குத் தெரிந்ததைக் காட்டுகிறோம். அதன் பிறகு மட்டங்கள் மாறியிருக்கலாம்.",
-  "cl.title": "எங்கள் எச்சரிக்கைகள் எப்படி இருந்தன",
-  "cl.today": "இன்று",
-  "cl.yesterday": "நேற்று",
-  "cl.said.possible": "{when} தெருக்களில் நீர் வர வாய்ப்புள்ளது என்று கூறினோம்.",
-  "cl.said.likely": "{when} தெருக்களில் நீர் வர வாய்ப்பு அதிகம் என்று கூறினோம்.",
-  "cl.wet": "பதிலளித்த {n} அண்டை வீட்டாரில் பெரும்பாலானோர் நீர் இருந்தது என்றனர். நன்றி.",
-  "cl.dry": "பதிலளித்த {n} அண்டை வீட்டாரில் பெரும்பாலானோர் வறண்டே இருந்தது என்றனர். நன்றி: இது தவறான எச்சரிக்கைகளைத் தவிர்க்க உதவும்.",
-  "cl.mixed": "{n} அண்டை வீட்டார் பதிலளித்தனர்; கலவையான பதில்: சிலருக்கு நீர் வந்தது, சிலருக்கு வறண்டிருந்தது. நன்றி.",
-  "cl.score": "இதுவரை சரிபார்க்க முடிந்த {k} எச்சரிக்கைகளில் {c} இல் அண்டை வீட்டார் நீர் இருந்ததை உறுதிப்படுத்தினர்.",
-  "cl.river": "ஆற்று முன்னறிவிப்புகள்: கடந்த 30 நாட்களில் உண்மையான மட்டம் நாங்கள் கூறிய வரம்புக்குள் {pct}% நேரம் இருந்தது ({n} சரிபார்ப்புகள்).",
-  "cl.empty": "எங்கள் சமீபத்திய எச்சரிக்கைகளை மதிப்பிட அண்டை வீட்டாரின் பதில்கள் இன்னும் போதவில்லை.",
-  "cl.help": "கீழே உங்கள் பதில் இதை மேலும் நம்பகமாக்கும்.",
   "im.thanks": "நன்றி. உங்கள் பதில் இந்த மாதம் {town} இலிருந்து வந்த {n} பதில்களுடன் சேர்கிறது.",
   "im.first": "நன்றி. இந்த மாதம் {town} இலிருந்து வந்த முதல் பதில்களில் உங்களுடையதும் ஒன்று; ஒவ்வொன்றும் உதவும்.",
-  "im.tune": "உங்களைப் போன்றோரின் பதில்களால் {mm} மி.மீ தெரு-நீர் எச்சரிக்கையைச் சரிபார்க்கிறோம்.",
+  "im.tune": "உங்களைப் போன்றோரின் பதில்கள் தாழ்வான இடக் கனமழைக் குறிப்பைச் சரிபார்க்க உதவுகின்றன.",
   "im.again": "நாளை மீண்டும் வாருங்கள்: இன்றைய எச்சரிக்கை எப்படி இருந்தது என்பதைக் காட்டுவோம்.",
   "pn.l2": "தயாராகுங்கள்",
   "pn.l3": "வெள்ளம் ஏற்பட வாய்ப்பு",
   "pn.l4": "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள்",
-  "pn.s2": "தெருக்களில் நீர் வர வாய்ப்புள்ளது",
-  "pn.s3": "தெருக்களில் நீர் வர வாய்ப்பு அதிகம்",
   "pn.riseTitle": "{place}: {verdict}",
   "pn.riseBody": "புதிய தகவலையும் செய்ய வேண்டியதையும் காணத் திறக்கவும்.",
   "pn.riseBody4": "புதிய தகவலைக் காணத் திறக்கவும். உதவி தேவைப்பட்டால் 117 ஐ அழைக்கவும்.",
@@ -448,10 +401,8 @@ const ta: Dict = {
   "as.rv2": "தயாராகுங்கள் (Alert மட்டம்)",
   "as.rv3": "வெள்ளம் ஏற்பட வாய்ப்பு (Minor மட்டம்)",
   "as.rv4": "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள் (Major வெள்ளம்)",
-  "as.streetLikely": "தெருக்களில் நீர் வர வாய்ப்பு அதிகம்",
-  "as.streetLikelyHelp": "வெல்லம்பிட்டிய போன்ற கால்வாய் நகரங்களுக்கு.",
-  "as.streetPossible": "முன்கூட்டிய குறிப்பு: தெருக்களில் நீர் வர வாய்ப்புள்ளது",
-  "as.streetPossibleHelp": "பெரும்பாலும் தவறான எச்சரிக்கை (ஆண்டுக்கு சுமார் 8 முறை), எனவே விரும்பினால் மட்டும் இயக்கவும்.",
+  "as.lowSpot": "கனமழையில் என் இடத்தில் நீர் புகும் (கால்வாய் அருகிலுள்ள தாழ்வான நிலம்)",
+  "as.lowSpotHelp": "மிகக் கனமழை பெய்யும்போது ஒருமுறை தெரிவிக்கும். அடிக்கடி தவறாகும் ஆரம்பக் குறிப்பு.",
   "as.reservoir": "மேலே உள்ள நீர்த்தேக்கம் நீரைத் திறக்கத் தொடங்குகிறது",
   "as.reservoirHelp": "சில மணி நேரத்தில் நீர் உங்கள் ஆற்றை எட்டலாம்.",
   "as.allClear": "மீண்டும் பாதுகாப்பானபோது சொல்லுங்கள்",
@@ -470,8 +421,8 @@ const ta: Dict = {
   "as.testWait": "மற்றொன்றை அனுப்ப ஒரு நிமிடம் காத்திருங்கள்.",
   "as.testFail": "சோதனை அறிவிப்பைக் காட்ட முடியவில்லை. இந்த உலாவி அறிவிப்புகளை அனுமதிக்கிறதா எனப் பாருங்கள்.",
   "as.close": "முடிந்தது",
-  "pn.headsTitle": "{place}: தெருக்களில் நீர் வர வாய்ப்புள்ளது",
-  "pn.headsBody": "முன்கூட்டிய குறிப்பு. பெரும்பாலும் தவறான எச்சரிக்கை. புதிய தகவலைக் காணத் திறக்கவும்.",
+  "pn.lowTitle": "{place} அருகே கனமழை: உங்கள் தாழ்வான இடத்தில் நீர் வர வாய்ப்பு அதிகம்",
+  "pn.lowBody": "மழை அளவிலிருந்து வரும் ஆரம்பக் குறிப்பு. இது அடிக்கடி தவறாகும், அந்தப் பகுதி வெள்ளத்தில் உள்ளது என்று பொருளல்ல. புதிய தகவலைக் காணத் திறக்கவும்.",
   "pn.relTitle": "{place}: மேலே நீர் திறக்கப்பட்டது",
   "pn.relBody": "{name} தனது மதகுகளைத் திறந்துள்ளது. உங்கள் அருகில் மட்டங்கள் சில மணி நேரத்தில் உயரலாம். பார்க்கத் திறக்கவும்.",
   "pn.relBodyReported": "{name} தனது மதகுகளைத் திறந்ததாகத் தெரிவிக்கப்படுகிறது (செய்தி, அதிகாரப்பூர்வமற்றது). உங்கள் அருகில் மட்டங்கள் உயரலாம். பார்க்கத் திறக்கவும்.",
@@ -498,27 +449,29 @@ export function seasonKey(month: number): RKey {
   return "season.inter1";
 }
 
-export type PushPlace = { name: string; level: number; street: "possible" | "likely" | null };
+export type PushPlace = {
+  name: string;
+  level: number;
+  /** Heavy-rain level over a spot this subscriber marked as low (lib/lowSpots.ts); null for everyone else. */
+  street: "possible" | "likely" | null;
+  /** The river-and-warnings level (0-4) behind the message, to tell a river rise from a low-spot rain note. */
+  riverLevel?: number;
+};
 export type PushMessage = { title: string; body: string };
 
 /** The wording of a rise ping, an all-clear and the morning summary, in the subscriber's language. */
-export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "heads" | "release", places: PushPlace[], extra?: { reservoir?: string; confirmed?: boolean; rainRisk?: boolean | null }): PushMessage {
+export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "release", places: PushPlace[], extra?: { reservoir?: string; confirmed?: boolean; rainRisk?: boolean | null }): PushMessage {
   const rt = rtFor(lang);
   if (kind === "test") return { title: rt("pn.testTitle"), body: rt("pn.testBody") };
-  if (kind === "heads") {
-    const p = places[0];
-    // street water already "likely" for someone who only asked for the early heads-up: say what the site says
-    if (p.street === "likely") return { title: rt("pn.riseTitle", { place: p.name, verdict: rt("pn.s3") }), body: rt("pn.riseBody") };
-    return { title: rt("pn.headsTitle", { place: p.name }), body: rt("pn.headsBody") };
-  }
   if (kind === "release") {
     const name = extra?.reservoir ?? "";
     return { title: rt("pn.relTitle", { place: places[0].name }), body: rt(extra?.confirmed === false ? "pn.relBodyReported" : "pn.relBody", { name }) };
   }
   if (kind === "rise") {
     const p = places[0];
-    // street "possible" is a quiet heads-up that never pings; if such a place is at level 2 anyway, the river is why ("Get ready")
-    const verdict = p.street === "likely" && p.level <= 3 ? rt("pn.s3") : rt(`pn.l${Math.min(4, Math.max(2, p.level))}` as RKey);
+    // heavy rain over a spot the subscriber marked as low is a gentle heads-up, never "Flooding likely" for the town; when the river is what lifted the level, the river verdict wins
+    if (p.street === "likely" && p.level <= 3 && (p.riverLevel ?? 0) < p.level) return { title: rt("pn.lowTitle", { place: p.name }), body: rt("pn.lowBody") };
+    const verdict = rt(`pn.l${Math.min(4, Math.max(2, p.level))}` as RKey);
     // heavy rain forecast above the gauge (lib/rainRisk.ts): one more plain sentence, so the person knows it may get worse faster
     const more = extra?.rainRisk ? ` ${rt("pn.rainRisk")}` : "";
     return { title: rt("pn.riseTitle", { place: p.name, verdict }), body: (p.level >= 4 ? rt("pn.riseBody4") : rt("pn.riseBody")) + more };
@@ -528,7 +481,7 @@ export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "tes
   const worst = [...places].sort((a, b) => b.level - a.level)[0];
   const body =
     worst && worst.level >= 2
-      ? rt("pn.morningAttn", { name: worst.name, verdict: worst.street === "likely" && worst.level <= 3 ? rt("pn.s3") : rt(`pn.l${Math.min(4, worst.level)}` as RKey) })
+      ? rt("pn.morningAttn", { name: worst.name, verdict: rt(`pn.l${Math.min(4, worst.level)}` as RKey) })
       : places.length === 1
         ? rt("pn.morningCalm1", { name: places[0].name })
         : rt("pn.morningCalm", { n: places.length });

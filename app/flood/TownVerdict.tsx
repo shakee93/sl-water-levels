@@ -12,15 +12,12 @@ import { riverName, clock } from "@/lib/i18n/format";
 import { formatLevel, type Unit } from "@/lib/units";
 import type { Thresholds } from "@/lib/readings";
 import { useMyLevel } from "./useMyLevel";
-import { StreetResearchLink } from "./StreetResearchLink";
 
 const t3 = (key: TKey, vars?: Record<string, string | number>): T3 => ({
   en: ttFor("en")(key, vars),
   si: ttFor("si")(key, vars),
   ta: ttFor("ta")(key, vars),
 });
-
-const r1 = (v: number) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10);
 
 /** Closer than this, the gauge is effectively in the town: do not say "no gauge here". */
 const ON_GAUGE_KM = 1.5;
@@ -64,8 +61,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
   const tone = r.tone as VerdictTone;
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const stale = tone === "stale";
-  // when the satellite street-rain trigger is what sets the verdict, say what it is about; otherwise the usual scale wording
-  const verdict = t3(r.street?.drives ? (r.street.level === "likely" ? "tone.streetLikely" : "tone.streetPossible") : (`tone.${r.tone}` as TKey));
+  const verdict = t3(`tone.${r.tone}` as TKey);
   const level = gauge?.level ?? null;
   const g = r.gauge;
 
@@ -116,25 +112,6 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
               <li key={k}>· {tt(k)}</li>
             ))}
           </ul>
-          {input.streetRain !== undefined && (
-            <div className="mt-2.5 border-t border-slate-200 dark:border-slate-800 pt-2.5 text-slate-600 dark:text-slate-400" lang={lang}>
-              <p>{tt("details.street")}</p>
-              <p className="mt-1.5 tabular-nums">
-                {input.streetRain
-                  ? tt("details.streetNow", {
-                      mm24: r1(input.streetRain.mm24h),
-                      mm6: input.streetRain.mm6h != null ? r1(input.streetRain.mm6h) : "–",
-                      time: clock(input.streetRain.endsAt, t),
-                    })
-                  : tt("details.streetNone")}
-                {input.streetRain && input.streetRain.mm24hRaw != null && input.streetRain.mm24hRaw - input.streetRain.mm24h >= 1
-                  ? ` ${tt("details.streetRaw", { raw: r1(input.streetRain.mm24hRaw) })}`
-                  : ""}
-              </p>
-              <p className="mt-1.5">{tt("details.streetHonest")}</p>
-              <StreetResearchLink />
-            </div>
-          )}
         </div>
       </VerdictCard>
 

@@ -63,7 +63,7 @@ export function allowedNumbers(facts: unknown): Set<number> {
 }
 
 export type Post = {
-  /** alert | clear | reservoir | street | warning | morning | evening | storm */
+  /** alert | clear | reservoir | warning | morning | evening | storm */
   kind: string;
   text: string;
   /** The same post without the link. */
@@ -269,26 +269,6 @@ export function composeReservoirStop(rs: { name: string; river: string | null; d
   const tags = ["#SriLanka"];
   const mk = (k: number) => (rs.length === 1 ? `${rs[0].name} reservoir has stopped letting water out (${dayOf(rs[0].day)}).` : `${listMore(rs.slice(0, k).map((r) => r.name), rs.length - k)}: reservoirs have stopped letting water out (${dayOf(rs[0].day)}).`);
   return assemble([3, 2, 1].map((k) => ({ body: mk(Math.min(k, rs.length)), link: rs[0].url, must: [rs[0].name], tags })));
-}
-
-export type StreetFact = { towns: string[]; rain24Mm: number | null; windowH: number; gaugeStation: string | null; gaugeLevel: number | null; url: string; at: number };
-
-export function composeStreetLikely(f: StreetFact): Composed {
-  const t = f.towns;
-  const where = t.length > 1 ? `${list(t.slice(0, 2))} and nearby canal areas` : t[0];
-  const rain = f.rain24Mm != null ? ` About ${int(f.rain24Mm)} mm of rain fell in the last ${f.windowH} hours (satellite estimate).` : "";
-  const gauge = f.gaugeStation && f.gaugeLevel != null ? ` ${f.gaugeStation} gauge: ${ft(f.gaugeLevel)}.` : "";
-  const body = `Street flooding is likely in ${where} (${clock(f.at)}).${rain}`;
-  const short = `Street flooding likely in ${where} (${clock(f.at)}).`;
-  const reply = `Why: heavy rain on low canal areas, which can flood streets before the river reaches any official level.${gauge} This is our own estimate from satellite rain, not an official warning.`;
-  return assemble({ body, short, link: f.url, must: [t[0], "likely"], tags: ["#SriLanka", "#floods"], reply: `${reply}\n${f.url}` });
-}
-
-export function composeStreetClear(f: { towns: string[]; url: string; at: number }): Composed {
-  const t = f.towns;
-  const where = t.length > 1 ? `${list(t.slice(0, 2))} and nearby canal areas` : t[0];
-  const body = `Street flood risk has eased in ${where} (${clock(f.at)}). Water already on the streets can take hours to drain.`;
-  return assemble({ body, short: `Street flood risk has eased in ${where} (${clock(f.at)}).`, link: f.url, must: [t[0], "eased"], tags: ["#SriLanka"] });
 }
 
 export type WarningFact = { source: string; severity: string; basins: string[]; issuedAt: number; releaseCusecs: number | null; bulletinUrl: string; url: string };

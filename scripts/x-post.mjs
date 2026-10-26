@@ -15,14 +15,14 @@
 //      X_ACCESS_SECRET, OPENAI_API_KEY (optional polish), X_AI_POLISH=off, X_LANGS=en,si,ta (default en), X_DAILY_MAX,
 //      X_EVENING=on.
 // Cost (the X API is pay-per-use; a post with a link costs about 13 times a post without): links are OFF by default
-// (X_LINKS=off|alerts|all; "alerts" = major-flood rises, major official warnings, street-flood "likely"), thread
+// (X_LINKS=off|alerts|all; "alerts" = major-flood rises, major official warnings), thread
 // replies are OFF (X_REPLIES=on), and a monthly budget guard (X_MONTHLY_BUDGET_USD, default 10; X_COST_POST=0.015,
 // X_COST_LINK_POST=0.20 are estimates) stops everything except Major-flood rises and all-clears at 80% of the budget.
 import { pathToFileURL } from "node:url";
 import { d1Query } from "../lib/d1.ts";
 import { gate, postTweet } from "../lib/xClient.ts";
 import {
-  composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop, composeStreetLikely, composeStreetClear,
+  composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop,
   composeWarning, composeSummary, composeStorm, composeRainWatch, validatePost, validateText, polish, tweetLength, colomboDay, MAX_TWEET,
 } from "../lib/xCompose.ts";
 import { evaluate, applyCaps, emptyState, summaryEvent, tierLevel } from "./x-engine.mjs";
@@ -68,20 +68,6 @@ export async function buildSnapshot({ site = SITE_DEFAULT, now = Date.now(), doF
     : null;
   const reservoirs = rsv?.reservoirs ?? null;
 
-  // street water: the rule's own logged state (D1 street_rain_log), only if the satellite data behind it is fresh
-  let street = null;
-  try {
-    const row = (await query("SELECT state, mm24h, data_end_ms FROM street_rain_log WHERE zone = ? ORDER BY data_end_ms DESC LIMIT 1", ["colombo-east"]))[0];
-    const towns = PLACES.filter((p) => p.rainZone === "colombo-east");
-    if (row && towns.length) {
-      const fresh = now - Number(row.data_end_ms) < 3 * 3_600_000 && row.state != null;
-      const st = fresh ? (row.state === "none" ? null : String(row.state)) : undefined;
-      street = { zone: "colombo-east", towns: towns.map((p) => ({ slug: p.slug, name: p.name, street: st, rain24: row.mm24h == null ? null : Number(row.mm24h) })) };
-    }
-  } catch (e) {
-    log(`street rule not readable: ${e instanceof Error ? e.message : e}`);
-  }
-
   // rain expected in the next 24 h: the heaviest among a few towns around the country (same figure the town pages show)
   let rain = null;
   const keys = RAIN_PLACES.filter((s) => PLACES.some((p) => p.slug === s)).map((s) => `t:${s}`);
@@ -93,7 +79,7 @@ export async function buildSnapshot({ site = SITE_DEFAULT, now = Date.now(), doF
       rain = { mm: Math.round(top.rainNext24), place: top.name };
     }
   }
-  return { now, site, stations, reservoirs, street, warnings: warn?.warnings ?? null, rain };
+  return { now, site, stations, reservoirs, warnings: warn?.warnings ?? null, rain };
 }
 
 // ---- words ---------------------------------------------------------------------------------------------------------
@@ -107,8 +93,6 @@ export function composeEvent(ev) {
     case "gauge_clear": c = composeGaugeClear(ev.gauges); facts = ev.gauges; break;
     case "reservoir_start": c = composeReservoirStart(ev.reservoirs); facts = ev.reservoirs; break;
     case "reservoir_stop": c = composeReservoirStop(ev.reservoirs); facts = ev.reservoirs; break;
-    case "street_likely": c = composeStreetLikely(ev.street); facts = ev.street; break;
-    case "street_clear": c = composeStreetClear(ev.street); facts = ev.street; break;
     case "warning": c = composeWarning(ev.warning); facts = ev.warning; break;
     case "summary": c = composeSummary(ev.summary); facts = ev.summary; break;
     case "storm": c = composeStorm(ev.storm); facts = ev.storm; break;
@@ -120,12 +104,11 @@ export function composeEvent(ev) {
 
 /** Optional Sinhala / Tamil reply (draft wording from the push-message strings), for the event types that have one. */
 export function localisedReply(ev, lang) {
-  const base = new URL(ev.gauges?.[0]?.url ?? ev.street?.url ?? ev.reservoirs?.[0]?.url ?? ev.summary?.url ?? SITE_DEFAULT);
+  const base = new URL(ev.gauges?.[0]?.url ?? ev.reservoirs?.[0]?.url ?? ev.summary?.url ?? SITE_DEFAULT);
   const link = `${base.origin}${localePath(lang, base.pathname)}`;
   let m = null;
   if (ev.type === "gauge_rise") m = pushText(lang, "rise", [{ name: ev.gauges[0].station, level: Math.max(2, tierLevel(ev.gauges.reduce((a, g) => (tierLevel(g.tier) > tierLevel(a) ? g.tier : a), "alert"))), street: null }]);
   else if (ev.type === "gauge_clear") m = pushText(lang, "clear", [{ name: ev.gauges[0].station, level: 0, street: null }]);
-  else if (ev.type === "street_likely") m = pushText(lang, "rise", [{ name: ev.street.towns[0], level: 3, street: "likely" }]);
   else if (ev.type === "reservoir_start") m = pushText(lang, "release", [{ name: ev.reservoirs[0].name, level: 0, street: null }], { reservoir: ev.reservoirs[0].name, confirmed: true });
   if (!m) return null;
   const text = `${m.title}\n${m.body}\n${link}\n117`;
@@ -159,15 +142,14 @@ export function linkWanted(ev, mode) {
   if (mode === "all") return true;
   if (mode !== "alerts") return false;
   if (ev.type === "gauge_rise") return ev.gauges.some((g) => g.tier === "major");
-  if (ev.type === "warning") return ev.warning.severity === "major flood" || ev.warning.severity === "evacuation";
-  return ev.type === "street_likely";
+  return ev.type === "warning" && (ev.warning.severity === "major flood" || ev.warning.severity === "evacuation");
 }
 
 /** Always allowed, even over budget: a Major-flood rise, any all-clear, a major official warning. */
 export function isCritical(ev) {
   if (ev.type === "gauge_rise") return ev.gauges.some((g) => g.tier === "major");
   if (ev.type === "warning") return ev.warning.severity === "major flood" || ev.warning.severity === "evacuation";
-  return ev.type === "gauge_clear" || ev.type === "street_clear";
+  return ev.type === "gauge_clear";
 }
 
 /** Estimated API cost in dollars of a post (and its replies). */

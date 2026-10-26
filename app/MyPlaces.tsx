@@ -4,6 +4,8 @@
 // answers "are my places OK?", then a row per place. Remembered on this device only (localStorage "sl_favourites",
 // no account). The answer comes from /api/places-state, the same code the town and gauge pages use; the last answer is
 // kept on the device so the card still shows something, clearly dated, when there is no connection.
+import { hasLowSpot } from "@/lib/lowSpots";
+import { useLowSpotsRaw } from "./flood/useLowSpot";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ChevronRight, CircleCheck, CircleHelp, Eye, Share2, Star, TriangleAlert } from "lucide-react";
@@ -64,7 +66,7 @@ const writeCache = (c: Cache) => {
 function fromStation(s: HomeStation): Glance {
   const rate = s.rate3hM;
   return {
-    key: `s:${s.station}`, kind: "s", name: stationDisplayName(s.station), href: s.href, tone: s.tier, street: null, streetDrives: false,
+    key: `s:${s.station}`, kind: "s", name: stationDisplayName(s.station), href: s.href, tone: s.tier, street: null,
     trend: s.tier === "stale" || rate == null ? "unknown" : Math.abs(rate) < 0.006 ? "steady" : rate > 0 ? "up" : "down",
     levelText: null, rain24: null, rainNext24: null, gaugeStation: s.station, ts: s.ts,
   };
@@ -77,6 +79,7 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
   const rt = rtFor(lang);
   const tt = ttFor(lang);
   const snap = useSyncExternalStore(subscribeAll, snapshot, () => null);
+  const lowRaw = useLowSpotsRaw();
   // the last answer kept on this device (also what an offline visit shows). Only read once the card renders, i.e. after hydration.
   const [saved] = useState<Cache | null>(() => (typeof window === "undefined" ? null : readCache()));
   const [fetched, setFetched] = useState<Record<string, Glance>>(saved?.places ?? {});
@@ -182,7 +185,6 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
   const verdictText = (g: Glance): string => {
     const lvl = levelOf(g);
     if (g.kind === "t") {
-      if (g.street && g.streetDrives) return tt(g.street === "likely" ? "tone.streetLikely" : "tone.streetPossible");
       return tt(`tone.${g.tone === "none" ? "stale" : g.tone}` as TKey);
     }
     return lvl == null && g.tone !== "none" ? VERDICT.stale[lang] : VERDICT[g.tone][lang];
@@ -272,13 +274,16 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
             const trend = g.trend === "up" ? rt("mp.rising") : g.trend === "down" ? rt("mp.falling") : g.trend === "steady" ? rt("mp.steady") : null;
             const rain = g.rain24 == null ? null : g.rain24 < 1 ? rt("mp.noRain") : rt("mp.rain", { mm: Math.round(g.rain24) });
             const detail = [verdictText(g), tone !== "stale" ? trend : null, rain].filter(Boolean).join(" · ");
+            // heavy rain over a spot the visitor marked as low ground (lib/lowSpots.ts): a quiet second line, never the verdict
+            const lowNote = g.kind === "t" && g.street && hasLowSpot(lowRaw, k.slice(2)) ? tt(g.street === "likely" ? "low.likely" : "low.possible") : null;
             return (
               <li key={k}>
-                <Link href={p(g.href)} aria-label={`${rt("mp.open", { name: g.name })}: ${detail}`} className={`group flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}>
+                <Link href={p(g.href)} aria-label={`${rt("mp.open", { name: g.name })}: ${detail}${lowNote ? `. ${lowNote}` : ""}`} className={`group flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}>
                   <span className={`size-2.5 shrink-0 rounded-full ${TIER_DOT[tone]}`} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">{g.name}</span>
                     <span className={`block text-xs leading-snug ${TIER_TEXT_CLASS[tone]}`}>{detail}</span>
+                    {lowNote && <span className="mt-0.5 block text-xs leading-snug text-slate-500 dark:text-slate-400">{lowNote}</span>}
                   </span>
                   {g.levelText && <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">{g.levelText}</span>}
                   <ChevronRight className="size-4 shrink-0 text-slate-400 group-hover:text-sky-500 transition" aria-hidden />

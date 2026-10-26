@@ -43,22 +43,19 @@
 //     works for a visitor who has saved their street's level, because that comparison needs no official marks.
 //  Missing data is never zero: no rain feed means no rain lines and no "no heavy rain expected" claim.
 //
-//  6. Street rain (satellite). A SEPARATE trigger for the few canal-backwater towns it was backtested on
-//     (lib/places.ts rainZone; research/wellampitiya-flood-rule-backtest.md, "Validation (complete)"). The rain
-//     number is the 24 h SUM of hourly GSMaP_NOW means over the town's 4-pixel box with EACH HOUR CLIPPED AT 15 mm
-//     (cuts impossible one-hour spikes; computed in scripts/gsmap-snapshot.mjs as mm24hClipped). Then:
-//       - "likely" ("Water on the streets likely", tone: minor, "Flooding likely") when that clipped sum reaches
-//         100 mm, OR the Kelani is at its minor flood level (input.streetRiver.triggered: Nagalagam Street at
-//         5 ft or Hanwella at its own published minor mark; decided in lib/streetRainLog.ts riverTrigger);
-//       - "possible" ("Water on the streets possible", tone: watch, "Keep an eye on it") at 60 mm. This is a quiet
-//         heads-up: it is often wrong (about 8 times a year with no flood on record), so it never reaches
-//         "Get ready" and never sends a push alert (lib/myPlaces.ts levelOf).
-//     No burst (1/6/12 h) term and no season thresholds: neither beat the plain 24 h sum in validation.
-//     The final tone is the HIGHER of this and steps 1-5; it is never added on top, and it clears by itself once
-//     the clipped total drops below 60 mm and the river is below its minor level. It uses satellite rain only: the
-//     Open-Meteo model had no skill for these floods, and the thresholds belong to GSMaP_NOW. Missing or stale
-//     satellite data (input.streetRain === null) switches the RAIN part off silently (no calm claim); the river
-//     part still works because it reads gauges, not the satellite.
+//  6. Kelani at its minor flood level (canal-backwater towns it was backtested on, lib/places.ts rainZone). This is a
+//     RIVER level: Nagalagam Street at 5 ft or Hanwella at its own published minor mark (input.streetRiver.triggered,
+//     decided in lib/streetRainLog.ts riverTrigger). Canals back up then, so it lifts the tone to minor ("Flooding
+//     likely") like any other river reading, and it is part of baseTone.
+//
+//  Low-spot rain heads-up (NOT part of the verdict). Satellite rain over the town (24 h SUM of hourly GSMaP_NOW means over
+//     the 4-pixel box, each hour clipped at 15 mm, scripts/gsmap-snapshot.mjs mm24hClipped) is reported as `lowSpot`:
+//     "possible" at 60 mm, "likely" at 100 mm (research/wellampitiya-flood-rule-backtest.md). It never changes the tone,
+//     the reasons or the next-24-hours line, and it is never shown to the public as a flood claim: only about 2% of a
+//     town's streets (the lowest ground beside a canal) ever get water, and the rule is often wrong. It exists for the
+//     visitor who has switched on "My spot floods in heavy rain" for this place (lib/lowSpots.ts): their Your places row
+//     shows a quiet note, and only "likely" can send them a push (lib/pushPrefs.ts lowSpots). Missing or stale satellite
+//     data (input.streetRain === null) switches it off silently (no calm claim).
 // Constants below are the only tuning knobs.
 import type { Tier } from "./status";
 import type { Unit } from "./units";
@@ -75,7 +72,7 @@ const maxTone = (...ts: (Tone | null)[]): Tone | null => {
 
 export type Drainage = "canal-backwater" | "riverbank" | "upland";
 
-/** Satellite (GSMaP_NOW) rain over the area, 24 h total (each hour clipped at STREET_HOURLY_CAP_MM) at which street water is "possible" ... */
+/** Satellite (GSMaP_NOW) rain over the area, 24 h total (each hour clipped at STREET_HOURLY_CAP_MM) at which the personal low-spot note appears ("may get water"). */
 export const STREET_POSSIBLE_MM_24H = 60;
 /** ... and "likely". Calibrated on GSMaP_NOW only. */
 export const STREET_LIKELY_MM_24H = 100;
@@ -178,7 +175,7 @@ export type Reason = {
 
 export type TownRisk = {
   tone: Tone;
-  /** The tone before the street-rain rule (step 6): river, rain and official warnings only. "stale" when none. */
+  /** The tone before any rain-only input is added (no longer different from `tone`, kept for the push rules): "stale" when none. */
   baseTone: Tone;
   /** Tone from the river alone (steps 1-2), before rain and warnings. */
   riverTone: Tone | null;
@@ -187,17 +184,8 @@ export type TownRisk = {
   heavyRain: boolean;
   /** True when heavy rain lifted the tone. */
   rainRaised: boolean;
-  /** The satellite street-rain level (null when below 60 mm, data missing, or the rule does not apply). */
-  street: {
-    level: "possible" | "likely";
-    /** Clipped 24 h rain, mm (0 when only the river triggered and rain data is missing). */
-    mm: number;
-    tone: Tone;
-    /** What raised it: the satellite rain, the Kelani at its minor level, or both. */
-    source: "rain" | "river" | "both";
-    /** true when it is what sets the verdict (the river alone would say less) */
-    drives: boolean;
-  } | null;
+  /** The satellite low-spot rain level (null when below 60 mm, data missing, or the rule does not apply). Never part of `tone`. */
+  lowSpot: { level: "possible" | "likely"; /** clipped 24 h rain, mm */ mm: number } | null;
   trend: "up" | "down" | "steady" | "unknown";
   reasons: Reason[];
   /** Next-hour line: key into the dictionary. */
@@ -321,25 +309,19 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   const warnRaised = floor != null && (tone == null || rank(floor) > rank(tone));
   if (floor) tone = maxTone(tone, floor);
 
-  // ---- 6. street rain: a separate trigger, the higher of the two wins
+  // ---- 6. the Kelani at its minor flood level (a river reading), then the low-spot rain level (kept apart from the tone)
   const sr = input.streetRain;
   const sriver = input.streetRiver?.triggered ? input.streetRiver : null;
-  const rainLevel: "possible" | "likely" | null = sr ? (sr.mm24h >= STREET_LIKELY_MM_24H ? "likely" : sr.mm24h >= STREET_POSSIBLE_MM_24H ? "possible" : null) : null;
-  const streetLevel: "possible" | "likely" | null = sriver ? "likely" : rainLevel;
-  const streetSource: "rain" | "river" | "both" = sriver ? (rainLevel === "likely" ? "both" : "river") : "rain";
-  const streetTone: Tone | null = streetLevel === "likely" ? "minor" : streetLevel === "possible" ? "watch" : null;
-  const streetDrives = streetTone != null && (tone == null || rank(streetTone) > rank(tone));
+  const lowSpot: TownRisk["lowSpot"] = sr && sr.mm24h >= STREET_POSSIBLE_MM_24H ? { level: sr.mm24h >= STREET_LIKELY_MM_24H ? "likely" : "possible", mm: r1(sr.mm24h) } : null;
+  const riverStreetDrives = !!sriver && (tone == null || rank("minor") > rank(tone));
+  if (sriver) tone = maxTone(tone, "minor");
   const baseTone: Tone = tone ?? "stale";
-  if (streetTone) tone = maxTone(tone, streetTone);
 
   // ---- reasons (most important first)
   if (warning && floor) {
     reasons.push({ kind: "official", key: "r.official", vars: { source: warning.source, area: warning.area }, warn: warnRaised });
   }
   if (personalReason) reasons.push(personalReason);
-  if (sr && rainLevel) {
-    reasons.push({ kind: "rain", key: rainLevel === "likely" ? "r.streetLikely" : "r.streetPossible", vars: { mm: r1(sr.mm24h) }, warn: rainLevel === "likely" });
-  }
   if (sriver) {
     reasons.push({ kind: "river", key: "r.streetRiver", vars: { gauge: sriver.gauge, level: sriver.level }, warn: true });
   }
@@ -431,7 +413,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   if (gauge || tone != null) {
     // heavy rain still to come (not merely fallen): the headline for the day ahead
     const heavyAhead = !!rain && (rain.next6hMm >= HEAVY_MM_6H || rain.next24hMm >= HEAVY_MM_24H);
-    if (streetDrives && !(forecastReason && forecastReason.key.startsWith("r.forecast"))) {
+    if (riverStreetDrives && !(forecastReason && forecastReason.key.startsWith("r.forecast"))) {
       day = { key: "n24.street", vars: {} };
     } else if (forecastReason && forecastReason.key.startsWith("r.forecast")) {
       day = { key: forecastReason.key.replace("r.forecast", "n24.reach"), vars: "h" in forecastReason.vars ? { h: forecastReason.vars.h } : {} };
@@ -457,7 +439,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     gauge,
     heavyRain: heavy,
     rainRaised,
-    street: streetLevel && streetTone ? { level: streetLevel, mm: sr ? r1(sr.mm24h) : 0, tone: streetTone, source: streetSource, drives: streetDrives } : null,
+    lowSpot,
     trend,
     reasons,
     hourKey: gauge ? hourKey : "dir.unknown",

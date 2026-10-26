@@ -64,7 +64,7 @@ for (const s of PUSH_SCHEMA) await d1Query(s);
 for (const [i, s] of [sub("a", ["t:wellampitiya", "s:Hanwella"]), sub("b", ["t:wellampitiya"], { lang: "si", morning: true }), sub("c", ["s:Hanwella"])].entries()) {
   await d1Query("INSERT INTO push_subscriptions (endpoint, p256dh, auth, places, lang, morning, created_ms, updated_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [s.endpoint, s.p256dh, s.auth, s.places, s.lang, s.morning, 1000 + i, 1000 + i]);
 }
-const glance = (key, name, o = {}) => ({ key, kind: key[0], name, href: key.startsWith("t:") ? `/flood/${key.slice(2)}` : "/kelani-ganga/hanwella", tone: "normal", street: null, streetDrives: false, trend: "steady", levelText: null, rain24: null, rainNext24: null, gaugeStation: null, ts: 1, ...o });
+const glance = (key, name, o = {}) => ({ key, kind: key[0], name, href: key.startsWith("t:") ? `/flood/${key.slice(2)}` : "/kelani-ganga/hanwella", tone: "normal", street: null, trend: "steady", levelText: null, rain24: null, rainNext24: null, gaugeStation: null, ts: 1, ...o });
 let world = {};
 const doFetch = async (url) => {
   const keys = decodeURIComponent(new URL(url).searchParams.get("keys")).split("|");
@@ -84,14 +84,8 @@ world = { "t:wellampitiya": glance("t:wellampitiya", "Wellampitiya"), "s:Hanwell
 await run({}, t);
 assert.equal(sent.length, 0, "first sight sends nothing");
 
-// the quiet "possible" heads-up never pings
-world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya", { tone: "watch", street: "possible", streetDrives: true });
-await run({}, (t += H / 2));
-assert.equal(sent.length, 0, "street 'possible' sends nothing");
-await run({}, (t += H / 2));
-assert.equal(sent.length, 0, "still nothing while it stays 'possible'");
-
-world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya", { tone: "minor", street: "likely", streetDrives: true });
+// the river at Flooding likely is for everybody who pinned the town (heavy rain alone is not: see the low-spot block below)
+world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya", { tone: "minor", baseTone: "minor" });
 await run({}, (t += H / 2));
 assert.deepEqual(sent.map((m) => m.to).sort(), ["a", "b"], "only people who pinned Wellampitiya");
 const mb = sent.find((m) => m.to === "b");
@@ -135,6 +129,34 @@ sent.length = 0;
 world = {};
 await run({ mode: "morning", force: true }, (t += H));
 assert.equal(sent.length, 0, "no readable place: no 'all calm' claim");
+
+world = { "t:wellampitiya": glance("t:wellampitiya", "Wellampitiya") };
+await run({}, (t += H));
+sent.length = 0;
+// heavy rain over the town (any level) is not a town warning: nobody who did not mark a low spot hears anything
+world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya", { street: "possible" });
+await run({}, (t += H / 2));
+assert.equal(sent.length, 0, "rain 'possible' sends nothing");
+world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya", { street: "likely" });
+await run({}, (t += H / 2));
+assert.equal(sent.length, 0, "rain 'likely' sends nothing to someone who did not mark a low spot");
+
+// subscriber b marks their spot as low ground: only b is told, gently, and only at the higher mark
+const bEndpoint = "https://fcm.googleapis.com/fcm/send/b";
+const bPrefs = (await d1Query("SELECT prefs FROM push_prefs WHERE endpoint = ?", [bEndpoint]))[0]?.prefs ?? null;
+const setB = (prefs) => d1Query(prefs == null ? "DELETE FROM push_prefs WHERE endpoint = ?" : "INSERT INTO push_prefs (endpoint, prefs, updated_ms) VALUES (?, ?, 1) ON CONFLICT(endpoint) DO UPDATE SET prefs = excluded.prefs", prefs == null ? [bEndpoint] : [bEndpoint, prefs]);
+await setB(JSON.stringify({ ...(bPrefs ? JSON.parse(bPrefs) : {}), lowSpots: ["t:wellampitiya"] }));
+await run({}, (t += H / 2));
+assert.deepEqual(sent.map((m) => m.to), ["b"], "only the person who marked a low spot");
+assert.ok(!/Flooding likely|Water on the streets/i.test(sent[0].title), "no town-wide claim in the title");
+assert.ok(sent[0].title.includes("Wellampitiya"), "names the place");
+sent.length = 0;
+world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya");
+await run({}, (t += H / 2));
+await run({}, (t += H / 2));
+assert.deepEqual(sent.map((m) => m.to), ["b"], "and the all-clear goes to b only");
+sent.length = 0;
+await setB(bPrefs);
 
 // test mode
 await run({ test: "latest" }, (t += H));

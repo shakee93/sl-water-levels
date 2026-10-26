@@ -7,12 +7,12 @@
 //
 // Every subscriber has settings (lib/pushPrefs.ts, table push_prefs; no row = the defaults, which equal the behaviour
 // before settings existed). scripts/push-eval.mjs decides per subscriber what they hear: which places, the lowest river
-// level, street water likely / possible, reservoir releases, all-clear, quiet hours (Colombo time).
+// level, heavy rain over a marked low spot (opt-in), reservoir releases, all-clear, quiet hours (Colombo time).
 //
 // check    (every ~30 min, after the satellite-rain snapshot): reads the subscriptions from Cloudflare D1, asks the
 //          site what it says about every pinned place (GET /api/places-state: the same answer the pages show), runs each
 //          place through the state machine (lib/myPlaces.ts pushStep) and sends ONE message per real change:
-//          a rise to "get ready" or worse (street water "likely" counts; "possible" is a quiet heads-up and never pings), and one all-clear. Nothing else is sent.
+//          a rise to "get ready" or worse (heavy rain over a spot the subscriber marked as low ground counts, at the higher mark only), and one all-clear. Nothing else is sent.
 // morning  (once a day, 06:00 Colombo): a short summary to the people who ticked "send a summary each morning".
 //          Skipped for a person whose places we cannot read (we never say "all calm" without data).
 // Needs: CLOUDFLARE_API_TOKEN, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (GitHub Actions secrets). Without the VAPID pair it
@@ -23,7 +23,7 @@ import { pathToFileURL } from "node:url";
 import { d1Query } from "../lib/d1.ts";
 import { levelOf, pushStep, parseKey } from "../lib/myPlaces.ts";
 import { PUSH_SCHEMA, MAX_FAILS } from "../lib/pushSub.ts";
-import { parsePrefs, baseKey, morningDue, colombo, inQuiet } from "../lib/pushPrefs.ts";
+import { parsePrefs, baseKey, morningDue, colombo, inQuiet, riverRank } from "../lib/pushPrefs.ts";
 import { evalSub, broadcastPayload, broadcastRecipients } from "./push-eval.mjs";
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
@@ -140,7 +140,7 @@ function morningJobs(subs, glances, now, force) {
     if (!sub.prefs.morning) continue;
     const md = sub.state?.md ?? null;
     if (force ? md === day : !morningDue(sub.prefs, now, md)) continue;
-    const places = sub.places.filter((k) => !sub.prefs.muted.includes(baseKey(k))).map((k) => glances.get(k)).filter(Boolean).map((g) => ({ name: g.name, level: levelOf(g), street: g.street })).filter((p) => p.level != null);
+    const places = sub.places.filter((k) => !sub.prefs.muted.includes(baseKey(k))).map((k) => glances.get(k)).filter(Boolean).map((g) => ({ name: g.name, level: levelOf(g), street: null })).filter((p) => p.level != null);
     if (places.length === 0) continue; // nothing readable: say nothing rather than "all calm"
     const m = pushText(sub.lang, "morning", places);
     jobs.push({ sub, kind: "morning", place: null, payload: { title: m.title, body: m.body, url: urlFor(sub, "/"), tag: "morning", lang: sub.lang } });
@@ -207,7 +207,7 @@ export async function main({ mode = "check", dry = false, test = null, now = Dat
   if (mode === "morning") {
     const jobs = morningJobs(subs, glances, now, force);
     const c = await deliver(send, jobs, now, dry);
-    if (!dry) for (const j of jobs) if (!j.sub.gone) await saveState(j.sub, { ...(j.sub.state ?? { pl: {}, hp: {}, rl: {} }), md: colombo(now).day });
+    if (!dry) for (const j of jobs) if (!j.sub.gone) await saveState(j.sub, { ...(j.sub.state ?? { pl: {}, rl: {} }), md: colombo(now).day });
     console.log(`morning: ${JSON.stringify(c)}`);
     if (!dry) await logRow(now, "morning", null, c, dry);
     return c;
@@ -237,10 +237,11 @@ export async function main({ mode = "check", dry = false, test = null, now = Dat
     nextStates.set(sub, state);
     for (const m of messages) {
       const g = m.g;
-      const street = sub.prefs.streetLikely || m.kind === "heads" ? g.street : null;
+      // low-spot heavy rain is only ever worded as such for someone who marked this place as a low spot
+      const street = sub.prefs.lowSpots.includes(baseKey(m.key)) ? g.street : null;
       const text = m.kind === "release"
         ? pushText(sub.lang, "release", [{ name: g.name, level: 0, street: null }], { reservoir: g.release?.name, confirmed: g.release?.confirmed })
-        : pushText(sub.lang, m.kind, [{ name: g.name, level: m.level, street }], { rainRisk: m.kind === "rise" ? g.rainRisk : null });
+        : pushText(sub.lang, m.kind, [{ name: g.name, level: m.level, street, riverLevel: riverRank(g) }], { rainRisk: m.kind === "rise" ? g.rainRisk : null });
       jobs.push({ sub, kind: m.kind, place: m.key, payload: { title: text.title, body: text.body, url: urlFor(sub, g.href), tag: m.kind === "rise" || m.kind === "clear" ? m.key : `${m.key}:${m.kind}`, lang: sub.lang } });
     }
   }

@@ -489,6 +489,30 @@ the site watches itself and tells the owner.
 
 ## Street-flood validation (is the satellite-rain rule right?)
 
+**Status since 26 Oct 2026: the rain rule is a personal opt-in for low-lying spots, not a town warning.** The owner (who lives in
+the lowest spot of Wellampitiya) pointed out that about 98% of a town's streets stay dry when the rule fires, and that the rule is
+often wrong. So heavy satellite rain no longer changes any public output: not the town verdict or tone, the "Why" list, the
+next-24-hours line, the index rows, the social image, the answer sentences / llms.txt, the APIs, or X posts (X never posts it).
+What remains:
+- `assessTown().lowSpot` (`lib/townRisk.ts`): `{level: possible|likely, mm}` from the clipped 24 h sum (60 / 100 mm, unchanged).
+  It never touches `tone`. The Kelani at its minor flood level (below) is a river reading: it still lifts the town to "Flooding
+  likely" for everyone and is part of `baseTone`.
+- Town pages of canal towns (`rainZone`) show a small neutral panel "Low ground near the canals" below the rain chart
+  (`app/flood/LowSpot.tsx`; no verdict, badge or colour): at 60 mm or more it states the rain as a fact and how past events went
+  (only a few low spots beside the canals got water), with a "My spot is low - tell me" button; below 60 mm one muted invite line.
+- The choice is stored on the device (`localStorage sl_low_spots`, `lib/lowSpots.ts`) and, when alerts are on, in the push prefs
+  (`lowSpots: ["t:wellampitiya"]`, `lib/pushPrefs.ts`; also a per-town switch in Alert settings). Default off for everyone.
+- Only for people who opted in: the Your places row (`app/MyPlaces.tsx`) shows the river verdict as the main word and a quiet
+  second line ("Heavy rain: your low spot may get water" at 60 mm, "Very heavy rain: your low spot is likely to get water" at
+  100 mm), and one push at 100 mm ("Heavy rain near X: your low spot is likely to get water") plus the all-clear. No push at
+  60 mm; the push waits through quiet hours. `Glance.street` carries the rain level to the card and the sender; `levelOf` ignores it.
+- The owner Slack ping (`scripts/street-rain-log.mjs`) is labelled "low-spot rain heads-up". D1 logging, the shadow test and
+  the research page are unchanged (the page's "What the site does" paragraph says the above). "How our warnings did" and
+  `/api/town-outcome` were removed. Wording everywhere: no "Water on the streets likely"; the honest line "an early heads-up from
+  rain totals; it is often wrong and does not mean the area is flooding" is shown with the panel and in the push body.
+
+The rest of this section describes the rule itself, as validated.
+
 The rule in `lib/townRisk.ts` step 6 was backtested on 14 documented floods (16 with the merged ledger) and then
 validated on every day of the GSMaP_NOW archive, 2017-2026 (`research/wellampitiya-flood-rule-backtest.md`, section
 "Validation (complete)"; public write-up at `/research/wellampitiya-street-flooding`). The validated rule:
@@ -499,18 +523,17 @@ validated on every day of the GSMaP_NOW archive, 2017-2026 (`research/wellampiti
   in `gsmap/latest.json`; hour = mean of the :00 and :30 files, window = the last 24 clock hours. The raw total stays in
   `mm24h` (display and logging only; the rule never reads it). Files from before the clip have no `mm24hClipped`: the
   rain half of the rule is then off until the next snapshot.
-- **Likely** ("Water on the streets likely", tone minor): clipped 24 h rain >= 100 mm, **or the Kelani at its minor
+- **Likely** (now: the personal "very heavy rain" note at 100 mm; the Kelani-at-minor part is a river level, tone minor): clipped 24 h rain >= 100 mm, **or the Kelani at its minor
   flood level**: Nagalagam Street >= 5 ft, or Hanwella at/above the minor mark the gauge itself publishes (24.6 ft = 7.5 m
   in 2026; never hardcoded). Only readings under 3 h old count. `riverTrigger()` in `lib/streetRainLog.ts`; the site reads
   the gauges in `lib/townData.ts`, the logging job reads `/api/levels`.
-- **Possible** ("Water on the streets possible", tone watch = "Keep an eye on it"): clipped 24 h rain >= 60 mm. A quiet
-  heads-up, often wrong (about 8 alarm episodes a year with no flood on record): it never reaches "Get ready", **never sends
-  a push alert** (`levelOf` in `lib/myPlaces.ts` gives it level 1, pushes start at level 2) and is not scored in "How our
-  warnings did". Only "likely" (and its all-clear) pushes.
+- **Possible** (now: the personal "heavy rain" note at 60 mm): clipped 24 h rain >= 60 mm. A quiet
+  heads-up, often wrong (about 8 alarm episodes a year with no flood on record): never a verdict, **never sends
+  a push alert**. Only "likely" (and its all-clear) pushes, and only to people who marked a low spot.
 - No burst (1 / 6 / 12 h) term and no season thresholds: neither beat the plain 24 h sum.
 - Expected scores (16 floods, 8.65 years): likely = 11 of 16 floods caught (69%, 95% CI 44-86%), about 1.3 alarm episodes a
   year with no documented flood; possible = 12 of 16, about 8.4 a year. "No documented flood" is not "no flood": the
-  unmatched counts are an upper bound. Details-section note (`details.streetHonest`, en/si/ta; si/ta are drafts for native
+  unmatched counts are an upper bound. The panel note (`low.honest`, en/si/ta; si/ta are drafts for native
   review) states these in plain words. Re-test after the next wet season: the 15 mm cap was chosen from 4 caps on the same
   floods.
 
@@ -527,8 +550,8 @@ Tables are in `d1/0003_street_flood.sql`.
   on the old unclipped 60 / 100 mm rule. If the gauges cannot be read in a run, a `likely` is not cleared by that
   (state stays unknown). State logic: `lib/streetRainLog.ts`.
 - **Owner ping**: on a rise (none to possible or likely, possible to likely) and when it clears, one Slack message
-  via `SLACK_WEBHOOK_URL`, labelled "possible (heads-up)" or "likely", with the counted and uncapped rain numbers, why
-  (rain and/or river), the Wellampitiya page link and "Did your street flood?". Residents are pinged only for "likely". A rise within
+  via `SLACK_WEBHOOK_URL`, labelled "low-spot rain heads-up (early)" or "(higher level)", with the counted and uncapped rain numbers, why
+  (rain and/or river), the Wellampitiya page link and "Did your street flood?". Only residents who marked a low spot are pinged, and only for "likely". A rise within
   3 h of the previous rise message is held back; likely to possible is silent. A message that failed is retried for 6 h.
   Dry run: `node --experimental-strip-types scripts/street-rain-log.mjs <dir containing gsmap/latest.json> --dry-run --prev none [--river 0|1]`.
 - **Resident answers** (`street_flood_reports`): the "Did the streets near you get water today?" control
@@ -624,7 +647,7 @@ browser, except an opted-in push subscription. Strings: `lib/i18n/return.ts` (Si
    (`sl_my_levels`) is applied, so it matches their town page. Code: `app/MyPlaces.tsx`, `lib/placeGlance.ts` (same
    `loadTown`/`assessTown` as the pages), `GET /api/places-state`, `lib/myPlaces.ts`.
 2. **Alerts at the right time (Web Push) + installable app.** "Tell me when it changes" sends ONE push when a pinned place rises to
-   "Get ready" or worse (street water "likely" counts; "possible" never pings), and ONE all-clear after two calm checks in a row (closure matters). Never for
+   "Get ready" or worse (for someone who marked their spot as low ground, very heavy rain at 100 mm counts too; nothing else about rain pings), and ONE all-clear after two calm checks in a row (closure matters). Never for
    a plain "keep an eye", never twice for a wobble (3 h flap guard, `pushStep` in `lib/myPlaces.ts`). Optional short morning summary at a time they choose,
    skipped when a person's places cannot be read. Each subscriber's own settings decide which of these they hear (see "Alert settings" below). Subscriptions: D1 `push_subscriptions` (endpoint + two public keys + place keys +
    language; nothing else; "Turn off alerts" deletes the row; dead endpoints are deleted). PWA: `app/manifest.ts`, `public/sw.js`
@@ -632,10 +655,7 @@ browser, except an opted-in push subscription. Strings: `lib/i18n/return.ts` (Si
    (`app/ReturnShell.tsx`). Sender: `scripts/push-notify.mjs`, run at the end of `gsmap-snapshot.yml` (every 30 min) and by
    `push-notify.yml` (morning, stats, manual test and broadcast). Telegram channel option for later: a bot posting the same rise/all-clear text from
    `pushText` to a public channel needs only a bot token and a call in the sender.
-3. **Closure and trust: "How our warnings did".** On towns with the street-rain rule: what we said recently ("Yesterday we said water
-   on the streets was possible") and what neighbours reported, a running score once 3 "likely" days could be judged, and one line of
-   river-forecast accuracy from the prediction log (`forecast_verification`, 24 h, share of real levels inside the stated range, last
-   30 days, needs 100 checks). Code: `app/flood/TownOutcome.tsx`, `lib/townOutcome.ts`, `GET /api/town-outcome`.
+3. **Closure and trust: removed.** The town-page "How our warnings did" section (what we said about street water, neighbours' answers, a score) and `GET /api/town-outcome` were removed on 26 Oct 2026 with the public rain warning; the answers are still collected (`street_flood_reports`) and reviewed monthly.
 4. **Contribution reward.** After "Did the streets near you get water today?" the thank-you says what the answer joined ("joins 14 from
    Wellampitiya this month") and, for rule towns, that answers tune the 100 mm warning, and invites a return tomorrow to see how the
    warning did. Counts below 3 are never shown (k-anonymity: `K_MIN`, `shownCount`); the API returns totals only.
@@ -664,10 +684,9 @@ gh workflow run push-notify.yml -f mode=test -f dry_run=false
 "Alert settings" (Your places card, next to the alerts switch; and More on phones) lets each browser choose, per subscription:
 which of its pinned places to hear about (all by default); the lowest river level that should send an alert (**Get ready**
 = Alert level, the default and what everyone had before; **Flooding likely** = Minor level; **Move to safety** = Major flood);
-street water "likely" (canal towns, default on); the early street-water "possible" heads-up (default off, it is often wrong,
-about 8 times a year); a reservoir upstream starts releasing water (default off); all-clear (default on); a morning summary at a
-chosen half hour from 05:00 to 09:00 Colombo (default off); quiet hours in Colombo time (default off; **Major flood and street
-water "likely" always come through**, everything else waits and is sent when quiet hours end, if still true); occasional
+"my spot floods in heavy rain" per canal town (default off for everyone: one push at 100 mm of satellite rain and its all-clear, only
+for the places they marked; see the Street-flood validation section); a reservoir upstream starts releasing water (default off); all-clear (default on); a morning summary at a
+chosen half hour from 05:00 to 09:00 Colombo (default off); quiet hours in Colombo time (default off; **Major flood always comes through**, everything else waits and is sent when quiet hours end, if still true); occasional
 announcements from the site (default on); and a "Send me a test alert" button.
 
 - **Stored** in D1 `push_prefs` (`d1/0004_push.sql`, created idempotently like the other push tables): one JSON text of choices and, in a second column, the
@@ -722,7 +741,7 @@ creates the account, adds the keys and flips one switch.
 
 | Piece | Where |
 |---|---|
-| Decides what changed (gauges, reservoirs, street water, official bulletins, storm mode, morning/evening summary) | `scripts/x-engine.mjs` (reuses `pushStep` from `lib/myPlaces.ts`, so X and push alerts agree on rise / all-clear / flap) |
+| Decides what changed (gauges, reservoirs, official bulletins, storm mode, morning/evening summary) | `scripts/x-engine.mjs` (reuses `pushStep` from `lib/myPlaces.ts`, so X and push alerts agree on rise / all-clear / flap) |
 | Writes the posts (templates, length, validation, optional AI reword) | `lib/xCompose.ts` |
 | Gate (off / dry / live), OAuth 1.0a signing, `POST /2/tweets` | `lib/xClient.ts` |
 | One run: read the site, decide, compose, send, remember | `scripts/x-post.mjs` |
@@ -731,16 +750,15 @@ creates the account, adds the keys and flips one switch.
 | Tests | `node --experimental-strip-types --no-warnings scripts/x-post.test.mts` |
 
 Data read: `/api/levels` (levels, status, next-hour forecast), `/api/reservoirs` (spill / release), `/api/warnings`
-(current DMC / Irrigation bulletins, new), `/api/places-state` (rain expected), and the street-flood rule's own log
-(D1 `street_rain_log`, only if under 3 h old). A source that cannot be read leaves its memory unchanged: unknown is never "calm".
+(current DMC / Irrigation bulletins, new), and `/api/places-state` (rain expected). Heavy rain over a canal town's low spots is never posted. A source that cannot be read leaves its memory unchanged: unknown is never "calm".
 
 Post types: **alert** (a gauge rising to Alert / Minor flood / Major flood; gauges of one river rising together are one post),
 **all-clear** (after 2 calm checks, only for something we posted about), **reservoir** starts or stops letting water out
-(spill from 300 cusecs, gate release from 2,000), **street flooding likely** (canal towns), **official warning** (a new bulletin
+(spill from 300 cusecs, gate release from 2,000), **official warning** (a new bulletin
 issued in the last 6 h, passed on once), **storm mode** (3+ gauges at Alert, any Minor/Major, 3+ rising towards a mark, or 100 mm
 forecast: hourly update per affected river, at most 3 rivers, an unchanged update waits 3 h; with its next-hour forecast and range, called
 a forecast) and the **morning summary** (06:30 to 11:00 Colombo, once a day; `X_EVENING=on` adds one at 18:00 to 21:00).
-Limit: 15 routine posts a day (`X_DAILY_MAX`); urgent ones (Minor/Major, street likely, storm, official warnings) up to 40.
+Limit: 15 routine posts a day (`X_DAILY_MAX`); urgent ones (Minor/Major, storm, official warnings) up to 40.
 
 Words: the template prints only numbers from the data, and a checker re-reads every finished post: every number must appear
 in the data (117 aside), at most 280 characters the way X counts them (a link is 23), the disclaimer present, hashtags only the

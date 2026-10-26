@@ -62,7 +62,7 @@ Where to get it:
 - [Flood help and emergency contacts](${SITE}/help): who to call, what to do, by district
 - [How it works, next-hour forecast accuracy, sources and limits](${SITE}/about)
 - [Data and API for developers](${SITE}/data)
-- [Research: street flooding in Wellampitiya and Kolonnawa](${SITE}/research/wellampitiya-street-flooding): 16 documented floods since 2018, 9 with the Kelani at minor flood level and 6 with a normal river; recommended rule: "possible" at 60 mm and "likely" at 100 mm of satellite rain in 24 h (each hour capped at 15 mm) or river at minor level; "likely" caught 11 of 16 floods with about 1.3 alarms a year and no recorded flood, "possible" about 8 a year. Cite as in the page. Index: ${SITE}/research
+- [Research: street flooding in Wellampitiya and Kolonnawa](${SITE}/research/wellampitiya-street-flooding): 16 documented floods since 2018, 9 with the Kelani at minor flood level and 6 with a normal river; rain totals of 60 mm and 100 mm in 24 h (each hour capped at 15 mm) preceded most of them, but only a few low-lying spots beside the canals get water, so the site offers them only as a personal opt-in note for low ground, never as a town warning; the rule is often wrong (about 8 early alarms a year with no recorded flood). Cite as in the page. Index: ${SITE}/research
 - [Source health](${SITE}/status): whether each data source is up right now
 - Sinhala: ${SITE}/si/ . Tamil: ${SITE}/ta/ . Every page exists in all three languages at the same path (English unprefixed).
 

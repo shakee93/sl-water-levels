@@ -18,8 +18,8 @@
 //   street_rain_changes  one row per change of state (none -> possible -> likely -> none ...)
 // Slack: once per rise (none -> possible / likely, possible -> likely) and once when it clears, with the numbers,
 // a link to the town page and "Did your street flood?". A rise within 3 h of the last rise message is held back
-// (24 h totals wobble around a threshold); likely -> possible is logged but silent. Rises are labelled "possible (heads-up)"
-// or "likely". (Push alerts to residents are separate: scripts/push-notify.mjs sends "likely" only.) A message that fails to send is
+// (24 h totals wobble around a threshold); likely -> possible is logged but silent. Rises are labelled "low-spot rain heads-up (early)"
+// or "(higher level)". (Push goes only to people who marked their spot as low ground: scripts/push-notify.mjs, "likely" only.) A message that fails to send is
 // retried by the next run for up to 6 h (street_rain_changes.notified: 0 pending, 1 sent, 2 skipped).
 // The rule only reads data the website would also show: latest.json older than 3 h is not logged.
 // SHADOW test (since 24 Oct 2026, d1/0005_street_shadow.sql): each run also computes a candidate rule that is NOT shown to
@@ -183,12 +183,12 @@ function textLive(n) {
   const counted = n.clipped ?? n.mm24h;
   const nums = `24 h ${mm(counted)} mm counted (each hour capped at ${STREET_HOURLY_CAP_MM} mm${n.mm24h != null && n.clipped != null && n.mm24h - n.clipped >= 1 ? `; ${mm(n.mm24h)} mm uncapped` : ""}), 6 h ${mm(n.mm6h)} mm, 1 h ${mm(n.mm1h)} mm`;
   if (n.kind === "clear")
-    return `Street-water rule has cleared for Wellampitiya and nearby (satellite rain: ${nums}; below ${STREET_POSSIBLE_MM_24H} mm, Kelani below minor level). Did your street flood today? ${link}`;
+    return `Low-spot rain heads-up has cleared for Wellampitiya and nearby (satellite rain: ${nums}; below ${STREET_POSSIBLE_MM_24H} mm, Kelani below minor level). Did your street flood today? ${link}`;
   if (n.to === "likely") {
     const why = n.river ? `the Kelani is at its minor flood level${n.riverStation ? ` (${n.riverStation}${n.riverFt != null ? ` ${n.riverFt.toFixed(1)} ft` : ""})` : ""}${(counted ?? 0) >= STREET_LIKELY_MM_24H ? ` and 24 h rain is at or above ${STREET_LIKELY_MM_24H} mm` : ""}` : `24 h rain at or above ${STREET_LIKELY_MM_24H} mm`;
-    return `Street water *likely* in Wellampitiya and nearby (${why}). Satellite rain: ${nums}. Residents with alerts on are being told. Did your street flood? ${link}`;
+    return `Low-spot rain heads-up *(higher level)* for Wellampitiya and nearby (${why}). Satellite rain: ${nums}. Only people who marked their own spot as low ground are told; the site shows no town warning. Did your street flood? ${link}`;
   }
-  return `Street water *possible (heads-up)* in Wellampitiya and nearby (24 h rain at or above ${STREET_POSSIBLE_MM_24H} mm; often wrong, about 8 times a year with no recorded flood; residents are NOT alerted). Satellite rain: ${nums}. Did your street flood? ${link}`;
+  return `Low-spot rain heads-up *(early)* for Wellampitiya and nearby (24 h rain at or above ${STREET_POSSIBLE_MM_24H} mm; often wrong, about 8 times a year with no recorded flood; nobody is alerted, and the site shows no town warning). Satellite rain: ${nums}. Did your street flood? ${link}`;
 }
 async function slack(msg) {
   if (DRY) return console.log(`[dry-run] Slack: ${msg}`), true;

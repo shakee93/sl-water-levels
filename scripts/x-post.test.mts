@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { gate, oauthHeader, postTweet } from "../lib/xClient.ts";
-import { composeGaugeRise, composeGaugeClear, composeSummary, composeStorm, composeStreetLikely, composeWarning, composeReservoirStart, validatePost, validateText, polish, tweetLength, numbersIn, MAX_TWEET, DISCLAIMER } from "../lib/xCompose.ts";
+import { composeGaugeRise, composeGaugeClear, composeSummary, composeStorm, composeWarning, composeReservoirStart, validatePost, validateText, polish, tweetLength, numbersIn, MAX_TWEET, DISCLAIMER } from "../lib/xCompose.ts";
 import { evaluate, applyCaps, emptyState } from "./x-engine.mjs";
 import { run, X_SCHEMA, prepare, linkWanted, isCritical, costOf } from "./x-post.mjs";
 
@@ -116,10 +116,6 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   assert.ok(/Forecast next hour: about 8.4 ft \(8.3 ft to 8.6 ft\)/.test(c.text), c.text);
   const nof = composeStorm({ ...sf, gauges: [gf({ nextHour: null })] });
   assert.ok(!/forecast/i.test(nof.text), "no forecast words without a forecast");
-  const sfx = { towns: ["Wellampitiya", "Kolonnawa", "Kotikawatta"], rain24Mm: 112.4, windowH: 24, gaugeStation: "Nagalagam Street", gaugeLevel: 3.1, url: `${SITE}/flood/wellampitiya`, at: NOW };
-  const s = composeStreetLikely(sfx);
-  assert.deepEqual(validatePost({ kind: "street", facts: sfx, ...s }), []);
-  assert.ok(/112 mm/.test(s.text) && /likely/.test(s.text));
   const wf = { source: "Irrigation Department", severity: "minor flood", basins: ["Kelani Ganga"], issuedAt: NOW, releaseCusecs: 12000, bulletinUrl: "https://www.dmc.gov.lk/x.pdf", url: `${SITE}/kelani-ganga` };
   const w = composeWarning(wf);
   assert.deepEqual(validatePost({ kind: "warning", facts: wf, ...w }), []);
@@ -215,19 +211,13 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   assert.equal(evaluate(snap(calm(), { reservoirs: rv("spilling", 5000, "2026-10-20") }), q.state).events.filter((e) => e.type === "reservoir_start").length, 0);
   assert.equal(evaluate(snap(calm(), { reservoirs: rv("nodata", null) }), q.state).events.length >= 0, true);
 
-  // street: possible never posts; likely posts once; clear after two calm checks
+  // heavy rain over a canal town's low spots is never posted, whatever a (legacy) snapshot says: only a few low spots ever get water
   const towns = (street) => ({ zone: "colombo-east", towns: [{ slug: "wellampitiya", name: "Wellampitiya", street, rain24: 112 }, { slug: "kolonnawa", name: "Kolonnawa", street, rain24: 112 }] });
-  let s = evaluate(snap(calm(), { street: towns(null) }), emptyState());
-  s = evaluate(snap(calm(), { street: towns("possible") }), s.state);
-  assert.equal(s.events.filter((e) => e.type === "street_likely").length, 0);
+  let s = evaluate(snap(calm(), { street: towns("likely") }), emptyState());
   s = evaluate(snap(calm(), { street: towns("likely") }), s.state);
-  const sl = s.events.filter((e) => e.type === "street_likely");
-  assert.equal(sl.length, 1); assert.equal(sl[0].urgent, true); assert.equal(sl[0].street.towns.length, 2);
-  s = evaluate(snap(calm(), { street: towns(undefined) }), s.state); // unreadable: unchanged
-  assert.equal(s.events.filter((e) => e.type === "street_clear").length, 0);
   s = evaluate(snap(calm(), { street: towns(null) }), s.state);
   s = evaluate(snap(calm(), { street: towns(null) }), s.state);
-  assert.equal(s.events.filter((e) => e.type === "street_clear").length, 1);
+  assert.equal(s.events.filter((e) => /street/.test(e.type) || e.kind === "street").length, 0);
 
   // official bulletin: once, only recent, only Alert or worse
   const wn = (o) => ({ source: "Irrigation Department", url: "https://dmc/x.pdf", title: "t", issuedAt: iso(NOW - 3_600_000), basins: ["Kelani Ganga"], severity: "minor flood", ...o });

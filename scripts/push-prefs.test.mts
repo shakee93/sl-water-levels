@@ -15,10 +15,11 @@ assert.deepEqual(parsePrefs(undefined), DEFAULT_PREFS);
 assert.deepEqual(parsePrefs(null), DEFAULT_PREFS);
 assert.deepEqual(parsePrefs("garbage"), DEFAULT_PREFS);
 assert.deepEqual(parsePrefs({}), DEFAULT_PREFS);
-assert.deepEqual(parsePrefs({ riverMin: 9, morningAt: "03:00", quiet: { from: "22:00", to: "22:00" }, streetLikely: "yes" }), DEFAULT_PREFS, "malformed fields fall back");
+assert.deepEqual(parsePrefs({ riverMin: 9, morningAt: "03:00", quiet: { from: "22:00", to: "22:00" }, lowSpots: "yes" }), DEFAULT_PREFS, "malformed fields fall back");
 assert.equal(DEFAULT_PREFS.riverMin, 2, "today's behaviour: Alert level, 'Get ready'");
-assert.equal(DEFAULT_PREFS.streetLikely, true);
-assert.equal(DEFAULT_PREFS.streetPossible, false);
+assert.deepEqual(DEFAULT_PREFS.lowSpots, [], "low-spot rain alerts are off for everyone unless chosen");
+assert.deepEqual(parsePrefs({ lowSpots: ["t:wellampitiya@3.4", "s:Hanwella", 5, "t:wellampitiya"] }).lowSpots, ["t:wellampitiya"], "towns only, by place");
+assert.equal(parsePrefs({ streetLikely: true, streetPossible: true }).lowSpots.length, 0, "old street switches mean nothing now");
 assert.equal(DEFAULT_PREFS.reservoir, false);
 assert.equal(DEFAULT_PREFS.allClear, true);
 assert.equal(DEFAULT_PREFS.morning, false);
@@ -60,21 +61,24 @@ assert.equal(morningDue(DEFAULT_PREFS, at("2026-10-25T01:00:00Z"), null), false,
 // ---------- what a place says to a subscriber
 const G = (o = {}) => ({ key: "t:wellampitiya", name: "Wellampitiya", href: "/flood/wellampitiya", tone: "normal", baseTone: "normal", street: null, release: undefined, ...o });
 const alert = G({ tone: "alert", baseTone: "alert" }), minor = G({ tone: "minor", baseTone: "minor" }), major = G({ tone: "major", baseTone: "major" });
-const streetLikely = G({ tone: "minor", baseTone: "normal", street: "likely" });
-const streetPossible = G({ tone: "watch", baseTone: "normal", street: "possible" });
-assert.equal(subLevel(DEFAULT_PREFS, alert), 2);
-assert.equal(subLevel(DEFAULT_PREFS, streetLikely), 3);
-assert.equal(subLevel(parsePrefs({ streetLikely: false }), streetLikely), 0, "street 'likely' off: the river alone decides");
-assert.equal(subLevel(DEFAULT_PREFS, G({ tone: "stale", baseTone: "stale" })), null, "no data is never calm");
-assert.equal(subLevel(DEFAULT_PREFS, G({ tone: "minor", baseTone: "stale", street: "likely" })), 3, "street answer stands without a river reading");
-assert.equal(qualifies(parsePrefs({ riverMin: 3 }), alert), false);
-assert.equal(qualifies(parsePrefs({ riverMin: 3 }), minor), true);
-assert.equal(qualifies(parsePrefs({ riverMin: 4 }), streetLikely), true, "street likely is its own choice");
-assert.equal(qualifies(parsePrefs({ riverMin: 4, streetLikely: false }), streetLikely), false);
+const BK = "t:wellampitiya";
+const streetLikely = G({ street: "likely" }); // heavy rain, river and verdict normal
+const streetPossible = G({ street: "possible" });
+const LOW = { lowSpots: [BK] };
+assert.equal(subLevel(DEFAULT_PREFS, alert, BK), 2);
+assert.equal(subLevel(DEFAULT_PREFS, streetLikely, BK), 0, "heavy rain means nothing to someone who did not mark a low spot");
+assert.equal(subLevel(parsePrefs(LOW), streetLikely, BK), 3);
+assert.equal(subLevel(parsePrefs({ lowSpots: ["t:kolonnawa"] }), streetLikely, BK), 0, "marked for another town: not this one");
+assert.equal(subLevel(parsePrefs(LOW), streetPossible, BK), 0, "the early mark never counts");
+assert.equal(subLevel(DEFAULT_PREFS, G({ tone: "stale", baseTone: "stale" }), BK), null, "no data is never calm");
+assert.equal(subLevel(parsePrefs(LOW), G({ tone: "stale", baseTone: "stale", street: "likely" }), BK), 3, "the low-spot answer stands without a river reading");
+assert.equal(qualifies(parsePrefs({ riverMin: 3 }), alert, BK), false);
+assert.equal(qualifies(parsePrefs({ riverMin: 3 }), minor, BK), true);
+assert.equal(qualifies(parsePrefs({ riverMin: 4, ...LOW }), streetLikely, BK), true, "heavy rain over a marked low spot is its own choice");
+assert.equal(qualifies(parsePrefs({ riverMin: 4 }), streetLikely, BK), false);
 assert.equal(bypassesQuiet(DEFAULT_PREFS, major), true);
-assert.equal(bypassesQuiet(DEFAULT_PREFS, streetLikely), true);
+assert.equal(bypassesQuiet(parsePrefs(LOW), streetLikely, BK), false, "the low-spot note waits for the morning");
 assert.equal(bypassesQuiet(DEFAULT_PREFS, minor), false);
-assert.equal(bypassesQuiet(parsePrefs({ streetLikely: false }), streetLikely), false);
 
 // ---------- evalSub: a walk through a flood
 const H = 3_600_000;
@@ -92,10 +96,12 @@ assert.deepEqual(walk(DEFAULT_PREFS, [calm, alert, minor, minor, calm, calm, cal
 assert.deepEqual(walk(parsePrefs({ riverMin: 3 }), [calm, alert, alert, minor, calm, calm]), ["-", "-", "-", "rise", "-", "clear"], "Minor level: silent at Alert, told at Minor, all-clear after");
 assert.deepEqual(walk(parsePrefs({ riverMin: 3 }), [calm, alert, alert, calm, calm, calm]), ["-", "-", "-", "-", "-", "-"], "never told, so no all-clear");
 assert.deepEqual(walk(parsePrefs({ riverMin: 4 }), [calm, minor, major, calm, calm]), ["-", "-", "rise", "-", "clear"], "Major only");
-assert.deepEqual(walk(parsePrefs({ riverMin: 4 }), [calm, streetLikely, streetLikely, calm, calm]), ["-", "rise", "-", "-", "clear"], "street likely comes through even when the river level asked for is Major");
-assert.deepEqual(walk(parsePrefs({ riverMin: 4, streetLikely: false }), [calm, streetLikely, calm, calm]), ["-", "-", "-", "-"], "street likely switched off");
+assert.deepEqual(walk(parsePrefs({ riverMin: 4, ...LOW }), [calm, streetLikely, streetLikely, calm, calm]), ["-", "rise", "-", "-", "clear"], "marked low spot: heavy rain comes through even when the river level asked for is Major, then one all-clear");
+assert.deepEqual(walk(parsePrefs({ riverMin: 4 }), [calm, streetLikely, calm, calm]), ["-", "-", "-", "-"], "not marked: heavy rain is silent");
+assert.deepEqual(walk(DEFAULT_PREFS, [calm, streetLikely, streetLikely, calm]), ["-", "-", "-", "-"], "default: silent");
 assert.deepEqual(walk(parsePrefs({ allClear: false }), [calm, alert, calm, calm, calm, alert]), ["-", "rise", "-", "-", "-", "rise"], "no all-clear message, but a later rise is still announced");
-assert.deepEqual(walk(DEFAULT_PREFS, [calm, streetPossible, streetPossible, calm]), ["-", "-", "-", "-"], "'possible' never pings by default");
+assert.deepEqual(walk(DEFAULT_PREFS, [calm, streetPossible, streetPossible, calm]), ["-", "-", "-", "-"], "'possible' never pings");
+assert.deepEqual(walk(parsePrefs(LOW), [calm, streetPossible, streetPossible, calm]), ["-", "-", "-", "-"], "even for a marked low spot only the higher mark pings");
 { // flap guard still applies: a wobble within 3 h is silent
   let st = null, t = at("2026-10-24T06:00:00Z"), out = [];
   for (const [g, gap] of [[calm, H], [alert, H], [calm, H / 2], [calm, H / 2], [alert, H / 2], [calm, H / 2]]) {
@@ -129,7 +135,7 @@ assert.deepEqual(Object.keys(evalSub({ prefs: DEFAULT_PREFS, state: step(DEFAULT
   assert.deepEqual(r.messages.map((m) => m.key), ["s:Hanwella"], "Wellampitiya at Alert is below this person's level; Hanwella at Minor is not");
 }
 
-// quiet hours hold a message and send it afterwards; Major and street 'likely' never wait
+// quiet hours hold a message and send it afterwards; Major never waits
 {
   const qp = parsePrefs({ quiet: { from: "22:00", to: "06:00" } });
   const night = at("2026-10-24T18:00:00Z"), morning = at("2026-10-25T01:00:00Z"); // 23:30 and 06:30 Colombo
@@ -141,9 +147,12 @@ assert.deepEqual(Object.keys(evalSub({ prefs: DEFAULT_PREFS, state: step(DEFAULT
   let m = step(qp, null, calm, night - H);
   m = step(qp, m.state, major, night);
   assert.equal(m.messages[0]?.kind, "rise", "Major flood comes through the night");
-  let s = step(qp, null, calm, night - H);
-  s = step(qp, s.state, streetLikely, night);
-  assert.equal(s.messages[0]?.kind, "rise", "street 'likely' comes through the night");
+  const lq = parsePrefs({ quiet: { from: "22:00", to: "06:00" }, ...LOW });
+  let s = step(lq, null, calm, night - H);
+  s = step(lq, s.state, streetLikely, night);
+  assert.equal(s.messages.length, 0, "the low-spot heavy-rain note waits for the end of quiet hours");
+  s = step(lq, s.state, streetLikely, morning);
+  assert.equal(s.messages[0]?.kind, "rise");
   // all-clear waits too
   let c = step(qp, null, calm, night - 3 * H);
   c = step(qp, c.state, alert, night - 2 * H);
@@ -156,14 +165,6 @@ assert.deepEqual(Object.keys(evalSub({ prefs: DEFAULT_PREFS, state: step(DEFAULT
   assert.equal(c4.messages[0]?.kind, "clear", "and sent when they end");
 }
 
-// street 'possible' heads-up (opt-in): once, silent when already under way, resets after two clear checks
-{
-  const p = parsePrefs({ streetPossible: true });
-  assert.deepEqual(walk(p, [calm, streetPossible, streetPossible, calm, calm, streetPossible]), ["-", "heads", "-", "-", "-", "heads"]);
-  assert.deepEqual(walk(p, [streetPossible, streetPossible, calm]), ["-", "-", "-"], "already possible when first seen: silent");
-  assert.deepEqual(walk(p, [calm, streetPossible, calm, streetPossible]), ["-", "heads", "-", "-"], "one calm check in between does not re-arm it");
-  assert.deepEqual(walk(p, [calm, streetLikely]), ["-", "rise"], "straight to 'likely': the rise message covers it");
-}
 // reservoir release (opt-in)
 {
   const p = parsePrefs({ reservoir: true });

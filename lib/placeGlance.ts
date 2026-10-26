@@ -24,7 +24,6 @@ function stationGlance(s: NationalStation): Glance {
     href: s.href,
     tone: s.tier,
     street: null,
-    streetDrives: false,
     trend: s.tier === "stale" ? "unknown" : trendOf(s.rate3hM),
     levelText: s.latest?.water_level != null && s.tier !== "stale" ? formatLevel(s.latest.water_level, s.unit) : null,
     rain24: null,
@@ -52,8 +51,7 @@ async function townGlance(k: Extract<ParsedKey, { kind: "t" }>, lv: Record<strin
     href: `/flood/${place.slug}`,
     tone: r.tone,
     baseTone: r.baseTone,
-    street: r.street?.level ?? null,
-    streetDrives: !!r.street?.drives,
+    street: r.lowSpot?.level ?? null,
     trend: stale || r.trend === "unknown" ? "unknown" : r.trend,
     levelText: g?.level != null && !stale ? formatLevel(g.level, g.unit) : null,
     rain24: data.input.streetRain ? data.input.streetRain.mm24h : data.input.rain?.past24hMm ?? null,
@@ -80,7 +78,7 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
         // one place failing must not blank the rest; "stale" says "we cannot check", never "calm"
         if (k.kind === "t") {
           const p = placeBySlug(k.slug);
-          return p ? { key: k.key, kind: "t", name: p.name, href: `/flood/${p.slug}`, tone: "stale", street: null, streetDrives: false, trend: "unknown", levelText: null, rain24: null, rainNext24: null, gaugeStation: null, ts: null } : null;
+          return p ? { key: k.key, kind: "t", name: p.name, href: `/flood/${p.slug}`, tone: "stale", street: null, trend: "unknown", levelText: null, rain24: null, rainNext24: null, gaugeStation: null, ts: null } : null;
         }
         return null;
       }

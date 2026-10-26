@@ -264,90 +264,56 @@ assert.equal(PLACES.find((p) => p.name === "Nuwara Eliya").drainage, "upland");
 }
 
 // ---------------------------------------------------------------------------------------------
-// Street-rain rule: satellite 24 h rain 60 mm = "possible" (watch), 100 mm = "likely" (minor); separate from the river, higher wins.
-// mm24h in StreetRainIn is the CLIPPED sum (each hour capped at 15 mm, scripts/gsmap-snapshot.mjs); mm24hRaw is display only.
+// Low-spot rain level: satellite 24 h rain 60 mm = "possible", 100 mm = "likely". It is a personal opt-in note (lib/lowSpots.ts):
+// it NEVER changes the verdict, the reasons or the next-24-hours line. The Kelani at its minor flood level is a river reading
+// and does lift the tone. mm24h in StreetRainIn is the CLIPPED sum (each hour capped at 15 mm); mm24hRaw is display only.
 {
   const sr = (mm24h: number, mm24hRaw: number | null = mm24h) => ({ mm24h, mm24hRaw, mm6h: 10, mm1h: 1, endsAt: 0 });
   const t = (o = {}) => assessTown(base({ streetRain: sr(0), ...o }));
-  // thresholds, edge by edge
-  for (const [mm, tone, level] of [[0, "normal", null], [59, "normal", null], [59.9, "normal", null], [60, "watch", "possible"], [99, "watch", "possible"], [99.9, "watch", "possible"], [100, "minor", "likely"], [250, "minor", "likely"]] as const) {
+  // thresholds, edge by edge; the tone never moves
+  for (const [mm, level] of [[0, null], [59, null], [59.9, null], [60, "possible"], [99, "possible"], [99.9, "possible"], [100, "likely"], [250, "likely"]] as const) {
     const r = t({ streetRain: sr(mm) });
-    assert.equal(r.tone, tone, `${mm} mm`);
-    assert.equal(r.street?.level ?? null, level, `${mm} mm level`);
+    assert.equal(r.tone, "normal", `${mm} mm: rain alone leaves the verdict to the river`);
+    assert.equal(r.lowSpot?.level ?? null, level, `${mm} mm level`);
+    assert.equal(r.actionKey, null);
+    assert.ok(!keys(r).some((k) => k.startsWith("r.street")), "no street line in Why");
+    assert.notEqual(r.day.key, "n24.street");
   }
-  // wording: rain-driven line, never "flooding now"
-  assert.deepEqual(keys(t({ streetRain: sr(112) })).filter((k) => k.startsWith("r.street")), ["r.streetLikely"]);
-  assert.equal(t({ streetRain: sr(112) }).reasons.find((x) => x.key === "r.streetLikely").vars.mm, 112);
-  assert.deepEqual(keys(t({ streetRain: sr(65) })).filter((k) => k.startsWith("r.street")), ["r.streetPossible"]);
-  assert.equal(t({ streetRain: sr(65) }).day.key, "n24.street");
-  assert.equal(t({ streetRain: sr(65) }).street?.drives, true);
-  // clears by itself when the total falls
-  assert.equal(t({ streetRain: sr(120) }).tone, "minor");
-  assert.equal(t({ streetRain: sr(55) }).tone, "normal");
-  assert.equal(t({ streetRain: sr(55) }).street, null);
-  // missing / stale data (null) or a town without the rule (undefined): rule silent, no calm claim made by it, no street reason
-  for (const streetRain of [null, undefined]) {
-    const r = t({ streetRain });
-    assert.equal(r.tone, "normal");
-    assert.equal(r.street, null);
-    assert.ok(!keys(r).some((k) => k.startsWith("r.street")));
-  }
+  assert.equal(t({ streetRain: sr(112) }).lowSpot?.mm, 112);
+  // missing / stale data (null) or a town without the rule (undefined): no level, no calm claim
+  for (const streetRain of [null, undefined]) assert.equal(t({ streetRain }).lowSpot, null);
   assert.equal(t({ streetRain: null, primary: g({ tier: "stale" }) }).tone, "stale"); // no data and no gauge: still "no estimate"
-  // no usable river gauge: the rain rule alone still gives a verdict
-  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "stale" }) }).tone, "watch");
-  assert.equal(t({ streetRain: sr(110), primary: null }).tone, "minor");
-  // river higher than rain: the river verdict stands and the street headline does not take over
-  const rv = t({ streetRain: sr(70), primary: g({ tier: "alert" }) });
-  assert.equal(rv.tone, "alert");
-  assert.equal(rv.street?.drives, false);
-  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "major" }) }).tone, "major");
-  assert.equal(t({ streetRain: sr(110), primary: g({ tier: "major" }) }).tone, "major");
-  // rain higher than river: rain wins, and it is not stacked on top of the river step
-  assert.equal(t({ streetRain: sr(110), primary: g({ tier: "watch" }) }).tone, "minor");
-  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "watch" }) }).tone, "watch");
-  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "watch" }) }).street?.drives, false); // equal tone: ordinary wording
-  assert.equal(t({ streetRain: sr(110), primary: g({ tier: "alert" }) }).street?.drives, true);
-  // the Open-Meteo model is not part of this rule: model rain alone never fires it, and a satellite total below 60 ignores it
+  // heavy satellite rain does not turn "no estimate" or any river tier into something else
+  assert.equal(t({ streetRain: sr(70), primary: g({ tier: "stale" }) }).tone, "stale");
+  assert.equal(t({ streetRain: sr(250), primary: null }).tone, "stale");
+  for (const tier of ["watch", "alert", "major"] as const) assert.equal(t({ streetRain: sr(250), primary: g({ tier }) }).tone, tier);
+  assert.equal(t({ streetRain: sr(250), primary: g({ tier: "watch" }) }).baseTone, "watch");
+  // the Open-Meteo model is not part of this rule: model rain alone never sets the level, and its own step is unchanged
   const om = t({ streetRain: sr(10), rain: rain({ past24hMm: 300 }) });
-  assert.equal(om.street, null);
-  assert.equal(om.tone, "watch"); // the existing model-rain step, unchanged
-  assert.equal(t({ streetRain: sr(110), rain: rain({ past24hMm: 300 }) }).tone, "minor"); // higher of the two, no extra step
-  // official warning and the rule: higher wins
+  assert.equal(om.lowSpot, null);
+  assert.equal(om.tone, "watch");
+  assert.equal(t({ streetRain: sr(110), rain: rain({ past24hMm: 300 }) }).tone, "watch"); // satellite adds nothing on top
+  // official warning: unchanged by the rule
   assert.equal(t({ streetRain: sr(70), warning: { severity: "alert", source: "DMC", area: "Kelani Ganga" } }).tone, "alert");
-  // the rule reads the clipped sum, not the raw one: raw 140 mm with a 59 mm clipped sum is NOT a warning, raw 80 / clipped 100 is
-  assert.equal(t({ streetRain: sr(59, 140) }).street, null);
-  assert.equal(t({ streetRain: sr(59, 140) }).tone, "normal");
-  assert.equal(t({ streetRain: sr(100, 80) }).street?.level, "likely");
-  assert.equal(t({ streetRain: sr(100, 80) }).street?.source, "rain");
-  // "possible" is a quiet heads-up: tone watch ("Keep an eye on it"), never "Get ready", no action sentence, no amber warning line
-  {
-    const p = t({ streetRain: sr(75) });
-    assert.equal(p.tone, "watch");
-    assert.equal(p.actionKey, null);
-    assert.equal(p.reasons.find((x) => x.key === "r.streetPossible").warn, false);
-    assert.equal(t({ streetRain: sr(120) }).reasons.find((x) => x.key === "r.streetLikely").warn, true);
-  }
-  // river trigger: the Kelani at its minor flood level makes "likely" with NO rain at all, or with satellite data missing
+  // the rule reads the clipped sum, not the raw one: raw 140 mm with a 59 mm clipped sum is nothing, raw 80 / clipped 100 is "likely"
+  assert.equal(t({ streetRain: sr(59, 140) }).lowSpot, null);
+  assert.equal(t({ streetRain: sr(100, 80) }).lowSpot?.level, "likely");
+  // river trigger: the Kelani at its minor flood level lifts the town to "Flooding likely" with NO rain at all, or with satellite data missing
   const riv = { triggered: true, gauge: "Hanwella", level: "25.1 ft" };
   {
     const r = t({ streetRain: sr(0), streetRiver: riv });
-    assert.equal(r.street?.level, "likely");
-    assert.equal(r.street?.source, "river");
     assert.equal(r.tone, "minor");
+    assert.equal(r.baseTone, "minor"); // a river reading: part of the base tone the alerts follow
+    assert.equal(r.lowSpot, null);
     assert.deepEqual(r.reasons.find((x) => x.key === "r.streetRiver")?.vars, { gauge: "Hanwella", level: "25.1 ft" });
+    assert.equal(r.day.key, "n24.street");
     assert.equal(r.actionKey, "a.minor");
-    const noSat = t({ streetRain: null, streetRiver: riv });
-    assert.equal(noSat.street?.level, "likely"); // the river half does not need the satellite
-    assert.equal(noSat.tone, "minor");
-    assert.equal(noSat.street?.mm, 0);
-    // river + heavy rain: both
-    assert.equal(t({ streetRain: sr(130), streetRiver: riv }).street?.source, "both");
-    // river + 70 mm: the river makes it "likely" (the rain alone would be "possible")
-    assert.equal(t({ streetRain: sr(70), streetRiver: riv }).street?.level, "likely");
+    assert.equal(t({ streetRain: null, streetRiver: riv }).tone, "minor"); // the river half does not need the satellite
+    assert.equal(t({ streetRain: sr(130), streetRiver: riv }).lowSpot?.level, "likely");
     // not triggered, or town without the rule: nothing
-    assert.equal(t({ streetRain: sr(0), streetRiver: { triggered: false, gauge: "", level: "" } }).street, null);
-    assert.equal(t({ streetRain: sr(0), streetRiver: null }).street, null);
-    assert.equal(t({ streetRain: sr(0), streetRiver: undefined }).street, null);
+    assert.equal(t({ streetRain: sr(0), streetRiver: { triggered: false, gauge: "", level: "" } }).tone, "normal");
+    assert.equal(t({ streetRain: sr(0), streetRiver: null }).tone, "normal");
+    assert.equal(t({ streetRain: sr(0), streetRiver: undefined }).tone, "normal");
     // a major river still wins on tone
     assert.equal(t({ streetRain: sr(0), streetRiver: riv, primary: g({ tier: "major" }) }).tone, "major");
   }

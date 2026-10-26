@@ -188,48 +188,28 @@ export type TownState = {
   station: string | null;
   /** River the gauge sits on (trimmed), or null when no gauge is known. */
   basin: string | null;
-  /** The street-water level for canal-flood towns (satellite rain or the Kelani at minor), null otherwise. */
-  street: "possible" | "likely" | null;
-  /** True when the street level is what sets the verdict, so the page shows the "water on the streets" words. */
-  streetDrives: boolean;
 };
 
 /**
- * Cheap state for every town (the /flood index): gauge-only, same gauge choice as the page, plus the street-water
- * rule for the canal-flood towns (one cached satellite file and the two Kelani gauges already in the national
- * snapshot, so no per-town fetch). No forecast, local rain or warnings: those make the full estimate on the town page.
- * `street: false` (the social-image route) keeps the plain gauge tone.
+ * Cheap state for every town (the /flood index): gauge-only, same gauge choice as the page, plus the
+ * Kelani-at-minor-level rule for the canal-flood towns (the two Kelani gauges already in the national snapshot, so no
+ * per-town fetch). No satellite rain (heavy rain is a personal opt-in note, never a town state), no forecast, local rain
+ * or warnings: those make the full estimate on the town page.
  */
-export async function loadTownStates(places: Place[], opts: { street?: boolean } = {}): Promise<Map<string, TownState>> {
-  const withStreet = opts.street !== false;
+export async function loadTownStates(places: Place[]): Promise<Map<string, TownState>> {
   const now = Date.now();
   const national = await getNational();
   const byName = new Map(national.map((s) => [s.station, s]));
-  const zoneIds = withStreet ? [...new Set(places.flatMap((p) => (p.rainZone ? [p.rainZone] : [])))] : [];
-  const zones = new Map(
-    await Promise.all(zoneIds.map(async (id) => [id, await soft(getGsmapZone(id, now).catch(() => null), PAGE_BUDGET_MS, null)] as const)),
-  );
   const out = new Map<string, TownState>();
   for (const p of places) {
     const primary = gaugeIn(byName.get(p.stations[0]), p);
     const secondary = gaugeIn(p.stations[1] ? byName.get(p.stations[1]) : undefined, p);
-    const zone = p.rainZone ? zones.get(p.rainZone) : undefined;
     const r = assessTown({
       drainage: p.drainage, primary, secondary, forecast: null, rain: null, release: null, warning: null, now,
-      // same inputs as loadTown: undefined = the rule does not apply here, null = it does but the satellite file is missing or stale
-      streetRain: withStreet && p.rainZone
-        ? zone && zone.mm24hClipped != null ? { mm24h: zone.mm24hClipped, mm24hRaw: zone.mm24h, mm6h: zone.mm6h, mm1h: zone.mm1h, endsAt: zone.endsAt } : null
-        : undefined,
-      streetRiver: withStreet && p.rainZone ? streetRiverIn(byName, now) : undefined,
+      streetRiver: p.rainZone ? streetRiverIn(byName, now) : undefined,
     });
     const g = r.gauge ?? primary;
-    out.set(p.slug, {
-      tone: r.tone,
-      station: g?.station ?? null,
-      basin: g?.basin ?? null,
-      street: r.street?.level ?? null,
-      streetDrives: !!r.street?.drives,
-    });
+    out.set(p.slug, { tone: r.tone, station: g?.station ?? null, basin: g?.basin ?? null });
   }
   return out;
 }

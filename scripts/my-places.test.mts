@@ -20,18 +20,18 @@ assert.equal(parseKeys(Array.from({ length: 30 }, (_, i) => `t:p${i}`).join("|")
 assert.deepEqual(parseKeys(null), []);
 
 // ---- levels and the overall line
-const g = (o) => ({ key: "t:a", kind: "t", name: "A", href: "/flood/a", tone: "normal", street: null, streetDrives: false, trend: "steady", levelText: null, rain24: null, rainNext24: null, gaugeStation: null, ts: 1, ...o });
+const g = (o) => ({ key: "t:a", kind: "t", name: "A", href: "/flood/a", tone: "normal", street: null, trend: "steady", levelText: null, rain24: null, rainNext24: null, gaugeStation: null, ts: 1, ...o });
 assert.equal(levelOf(g({})), 0);
 assert.equal(levelOf(g({ tone: "watch" })), 1);
 assert.equal(levelOf(g({ tone: "alert" })), 2);
-assert.equal(levelOf(g({ tone: "normal", street: "possible" })), 1, "street 'possible' is a quiet heads-up: keep an eye, never a push");
-assert.equal(levelOf(g({ tone: "normal", street: "likely" })), 3);
-assert.equal(levelOf(g({ tone: "watch", street: "likely" })), 3);
+assert.equal(levelOf(g({ tone: "normal", street: "possible" })), 0, "heavy rain over a low spot is a personal note, never a level");
+assert.equal(levelOf(g({ tone: "normal", street: "likely" })), 0);
+assert.equal(levelOf(g({ tone: "watch", street: "likely" })), 1);
 assert.equal(levelOf(g({ tone: "minor", street: "possible" })), 3);
 assert.equal(levelOf(g({ tone: "alert", street: "possible" })), 2);
 assert.equal(levelOf(g({ tone: "stale" })), null, "no data is unknown, never calm");
 assert.equal(levelOf(g({ tone: "none" })), null, "no published flood levels is unknown, never calm");
-assert.equal(levelOf(g({ tone: "stale", street: "possible" })), 1);
+assert.equal(levelOf(g({ tone: "stale", street: "possible" })), null, "rain does not make a place readable");
 assert.equal(overall([]).kind, "empty");
 assert.deepEqual(overall([g({}), g({})]), { kind: "calm", n: 2 });
 assert.equal(overall([g({}), g({ tone: "stale" })]).kind, "unknown", "one calm + one unknown is not 'all calm'");
@@ -120,7 +120,9 @@ assert.equal(seasonKey(10), "season.inter2");
 assert.equal(seasonKey(7), "season.sw");
 assert.equal(seasonKey(1), "season.ne");
 assert.equal(seasonKey(3), "season.inter1");
-assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely" }]).title, "Wellampitiya: Water on the streets likely");
+assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely", riverLevel: 0 }]).title, "Heavy rain near Wellampitiya: your low spot is likely to get water");
+assert.ok(!/flood|Water on the streets/i.test(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely", riverLevel: 0 }]).body.replace("does not mean the area is flooding", "")), "no flood claim in the low-spot push");
+assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely", riverLevel: 3 }]).title, "Wellampitiya: Flooding likely", "when the river is at that level the river verdict wins");
 assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 2, street: "possible" }]).title, "Wellampitiya: Get ready", "a river alert is 'Get ready' even when the quiet street heads-up is also on");
 assert.equal(pushText("en", "rise", [{ name: "Hanwella", level: 4, street: null }]).body, "Open for the latest. Call 117 if you need help.");
 assert.equal(pushText("en", "clear", [{ name: "Hanwella", level: 0, street: null }]).title, "Hanwella: back to normal");

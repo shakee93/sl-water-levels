@@ -11,6 +11,11 @@ import { BellRing, Check, SlidersHorizontal, X } from "lucide-react";
 import { rtFor, type RKey } from "@/lib/i18n/return";
 import { baseKey, DEFAULT_PREFS, MORNING_TIMES, QUIET_DEFAULT, type Prefs, type RiverMin } from "@/lib/pushPrefs";
 import { useI18n } from "./LocaleProvider";
+import { parseLowSpots, readLowSpotsRaw, writeLowSpot } from "@/lib/lowSpots";
+import { placeBySlug } from "@/lib/places";
+
+/** Only towns with the satellite rain rule (canal-backwater towns) can have a low spot. */
+const canalTown = (key: string) => key.startsWith("t:") && !!placeBySlug(key.slice(2))?.rainZone;
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const select = `min-h-11 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 text-sm text-slate-900 dark:text-slate-100 ${ring}`;
@@ -141,6 +146,13 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
         const j = (await res.json()) as { ok?: boolean; prefs?: Prefs; places?: string[] };
         if (!alive) return;
         if (!j.ok || !j.prefs) return setLoad("error");
+        // a low spot chosen on a town page before alerts were on is carried over now
+        const local = parseLowSpots(readLowSpotsRaw()).map((s) => `t:${s}`).filter((k) => !j.prefs!.lowSpots.includes(k));
+        if (local.length > 0) {
+          j.prefs = { ...j.prefs, lowSpots: [...j.prefs.lowSpots, ...local] };
+          dirty.current = true;
+          timer.current = setTimeout(() => void flush(), SAVE_DELAY_MS);
+        }
         latest.current = j.prefs;
         setPrefs(j.prefs);
         const keys = j.places ?? [];
@@ -251,6 +263,20 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
                   {places.map((p, i) => (
                     <li key={p.key}>
                       <Toggle id={`as-p${i}`} checked={!prefs.muted.includes(p.key)} title={p.name} onChange={(v) => change({ muted: v ? prefs.muted.filter((k) => k !== p.key) : [...prefs.muted, p.key] })} />
+                      {canalTown(p.key) && (
+                        <div className="ml-8">
+                          <Toggle
+                            id={`as-low${i}`}
+                            checked={prefs.lowSpots.includes(p.key)}
+                            title={rt("as.lowSpot")}
+                            help={rt("as.lowSpotHelp")}
+                            onChange={(v) => {
+                              writeLowSpot(p.key.slice(2), v, { sync: false });
+                              change({ lowSpots: v ? [...prefs.lowSpots.filter((k) => k !== p.key), p.key] : prefs.lowSpots.filter((k) => k !== p.key) });
+                            }}
+                          />
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -266,8 +292,6 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
                   <option value={4}>{rt("as.rv4")}</option>
                 </select>
               </div>
-              <Toggle id="as-sl" checked={prefs.streetLikely} onChange={(v) => change({ streetLikely: v })} title={rt("as.streetLikely")} help={rt("as.streetLikelyHelp")} />
-              <Toggle id="as-sp" checked={prefs.streetPossible} onChange={(v) => change({ streetPossible: v })} title={rt("as.streetPossible")} help={rt("as.streetPossibleHelp")} />
               <Toggle id="as-rs" checked={prefs.reservoir} onChange={(v) => change({ reservoir: v })} title={rt("as.reservoir")} help={rt("as.reservoirHelp")} />
               <Toggle id="as-ac" checked={prefs.allClear} onChange={(v) => change({ allClear: v })} title={rt("as.allClear")} />
 

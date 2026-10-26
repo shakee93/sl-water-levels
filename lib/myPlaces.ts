@@ -62,16 +62,14 @@ export type Glance = {
   /** Unprefixed site path of the place's page. */
   href: string;
   tone: GlanceTone;
-  /** Tone before the street-rain rule (towns); absent for gauges, where it is `tone`. Lets alerts treat river and street water apart. */
+  /** The river-and-warnings tone (towns); absent for gauges, where it is `tone`. Same as `tone` now that rain never changes it. */
   baseTone?: GlanceTone;
   /** A reservoir upstream of this place's gauge is releasing water (official figures or a news report), or null. */
   release?: { name: string; confirmed: boolean; etaHours: number | null } | null;
   /** Heavy rain (50 mm or more, or the heavier scenario 100 mm) is forecast over the hills above this place's gauge in the next 24 h (lib/rainRisk.ts). Only looked up for gauges that are not calm; null/absent = no or unknown. */
   rainRisk?: boolean | null;
-  /** Satellite street-rain rule level, towns in a rain zone only. */
+  /** Satellite heavy-rain level over the town ("low spot" rule, towns in a rain zone only). Never part of `tone`; the page shows it only to a visitor who marked their spot as low (lib/lowSpots.ts). */
   street: "possible" | "likely" | null;
-  /** True when the street rule is what sets the tone (the river alone would say less). */
-  streetDrives: boolean;
   trend: "up" | "down" | "steady" | "unknown";
   /** Level text as the site shows it ("2.7 ft"), or null. */
   levelText: string | null;
@@ -88,16 +86,13 @@ export type Glance = {
 const TONE_RANK: Record<GlanceTone, number> = { normal: 0, none: 0, stale: 0, watch: 1, alert: 2, minor: 3, major: 4 };
 
 /**
- * One number for "how worried should this place make us": 0 calm, 1 keep an eye (street water "possible" is only
- * this: a quiet heads-up that is often wrong, never a push), 2 get ready, 3 flooding likely (or street water likely),
- * 4 move to safety. null = we cannot say (no fresh data, or no flood levels published).
+ * One number for "how worried should this place make us": 0 calm, 1 keep an eye, 2 get ready, 3 flooding likely,
+ * 4 move to safety. From the river and official warnings only: heavy rain over a low spot is a personal note, not a
+ * level. null = we cannot say (no fresh data, or no flood levels published).
  */
-export function levelOf(g: Pick<Glance, "tone" | "street">): number | null {
-  if ((g.tone === "stale" || g.tone === "none") && !g.street) return null;
-  let l = TONE_RANK[g.tone];
-  if (g.street === "possible") l = Math.max(l, 1);
-  if (g.street === "likely") l = Math.max(l, 3);
-  return l;
+export function levelOf(g: Pick<Glance, "tone">): number | null {
+  if (g.tone === "stale" || g.tone === "none") return null;
+  return TONE_RANK[g.tone];
 }
 
 export type Overall =
@@ -138,7 +133,7 @@ export function overall(gs: Glance[]): Overall {
 export const PUSH_FLAP_MS = 3 * 3_600_000;
 /** An all-clear needs the place to read calm (level <= 1) on this many checks in a row (checks are ~30 min apart). */
 export const CLEAR_RUNS = 2;
-/** Levels at or above this are worth a ping (get ready and up; street water "likely" is level 3). A plain "keep an eye", which includes street water "possible", never is. */
+/** Levels at or above this are worth a ping (get ready and up; heavy rain over a marked low spot counts as level 3 only for the people who marked it, lib/pushPrefs.ts). A plain "keep an eye" never is. */
 export const PUSH_MIN_LEVEL = 2;
 
 export type PushState = {

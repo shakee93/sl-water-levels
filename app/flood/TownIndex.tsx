@@ -21,8 +21,6 @@ export type IndexState = {
   tone: Tone;
   station: string | null;
   basin: string | null;
-  street: "possible" | "likely" | null;
-  streetDrives: boolean;
 };
 
 type Status = "all" | "attention" | "normal" | "none";
@@ -62,7 +60,7 @@ export default function TownIndex({ states }: { states: Record<string, IndexStat
   const towns: Town[] = useMemo(
     () =>
       PLACES.map((place): Town => {
-        const state = states[place.slug] ?? { tone: "stale" as Tone, station: null, basin: null, street: null, streetDrives: false };
+        const state = states[place.slug] ?? { tone: "stale" as Tone, station: null, basin: null };
         const gauge = state.station ? stationDisplayName(state.station) : null;
         const basin = state.basin?.trim() ?? null;
         const river = basin ? (lang === "en" ? basin : riverName(basin, lang).split(" · ").pop()!) : null;
@@ -155,7 +153,7 @@ export default function TownIndex({ states }: { states: Record<string, IndexStat
 
   const statusWord = (x: Town): { text: string; cls: string } => {
     const s = x.state;
-    const key = (s.streetDrives && s.street ? (s.street === "likely" ? "tone.streetLikely" : "tone.streetPossible") : `tone.${x.state.tone}`) as TKey;
+    const key = `tone.${s.tone}` as TKey;
     return { text: tt(key), cls: x.rank >= 1 ? `${TIER_TEXT_CLASS[x.state.tone]} font-medium` : TIER_TEXT_CLASS.normal };
   };
 

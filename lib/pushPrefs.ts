@@ -2,7 +2,7 @@
 // settings sheet (app/AlertSettings.tsx), the sender (scripts/push-notify.mjs) and scripts/push.test.mts share it.
 // Stored next to the subscription in D1 (push_prefs, one JSON text per browser). A browser with no row, or a row
 // with a missing field, gets DEFAULT_PREFS, which equals what every subscriber had before settings existed:
-// river at Alert level ("Get ready") or worse, street water "likely", all-clear, no morning summary.
+// river at Alert level ("Get ready") or worse, all-clear, no morning summary, and no low-spot rain alerts.
 // No personal data: choices only (which place keys are muted, which kinds, a time of day).
 
 export const PREFS_VERSION = 1;
@@ -13,17 +13,16 @@ export type Prefs = {
   /** Place keys (without the "@level" suffix) that must stay silent; a newly pinned place is on by default. */
   muted: string[];
   riverMin: RiverMin;
-  /** Street water "likely" (canal towns). */
-  streetLikely: boolean;
-  /** Street water "possible": an early heads-up that is often wrong (about 8 times a year). */
-  streetPossible: boolean;
+  /** Place keys ("t:wellampitiya") whose owner said "my spot floods in heavy rain" (low ground by a canal): they get one push when
+   *  satellite rain there reaches the higher mark (100 mm in 24 h). Off for everyone unless chosen (lib/lowSpots.ts). */
+  lowSpots: string[];
   /** A reservoir upstream starts releasing water. */
   reservoir: boolean;
   allClear: boolean;
   morning: boolean;
   /** HH:MM Colombo, on a half hour. */
   morningAt: string;
-  /** Quiet hours in Colombo time; null = off. Major flood and street "likely" still come through. */
+  /** Quiet hours in Colombo time; null = off. Major flood still comes through. */
   quiet: { from: string; to: string } | null;
   /** Occasional announcements from the site (owner broadcasts). */
   announce: boolean;
@@ -33,8 +32,7 @@ export const DEFAULT_PREFS: Prefs = {
   v: 1,
   muted: [],
   riverMin: 2,
-  streetLikely: true,
-  streetPossible: false,
+  lowSpots: [],
   reservoir: false,
   allClear: true,
   morning: false,
@@ -60,14 +58,14 @@ export function parsePrefs(raw: unknown, legacyMorning = false): Prefs {
   const o = isObj(raw) ? raw : {};
   const quiet = isObj(o.quiet) && typeof o.quiet.from === "string" && typeof o.quiet.to === "string" && TIME.test(o.quiet.from) && TIME.test(o.quiet.to) && o.quiet.from !== o.quiet.to ? { from: o.quiet.from, to: o.quiet.to } : null;
   const muted = Array.isArray(o.muted) ? [...new Set(o.muted.filter((k): k is string => typeof k === "string" && k.length <= 90 && /^[ts]:/.test(k)).map(baseKey))].slice(0, MAX_MUTED) : [];
+  const lowSpots = Array.isArray(o.lowSpots) ? [...new Set(o.lowSpots.filter((k): k is string => typeof k === "string" && k.length <= 90 && /^t:/.test(k)).map(baseKey))].slice(0, MAX_MUTED) : [];
   const riverMin: RiverMin = o.riverMin === 3 || o.riverMin === 4 ? o.riverMin : 2;
   const at = typeof o.morningAt === "string" && MORNING_TIMES.includes(o.morningAt) ? o.morningAt : DEFAULT_PREFS.morningAt;
   return {
     v: 1,
     muted,
     riverMin,
-    streetLikely: bool(o.streetLikely, true),
-    streetPossible: bool(o.streetPossible, false),
+    lowSpots,
     reservoir: bool(o.reservoir, false),
     allClear: bool(o.allClear, true),
     morning: bool(o.morning, legacyMorning),
@@ -96,33 +94,36 @@ export function inQuiet(p: Prefs, ms: number): boolean {
 // ---- what a place says to this subscriber
 
 type Tone = "normal" | "watch" | "alert" | "minor" | "major" | "stale" | "none";
-/** The few Glance fields the rules read (lib/myPlaces.ts Glance). baseTone = the tone before the street-rain rule (towns). */
+/** The few Glance fields the rules read (lib/myPlaces.ts Glance). `street` = the low-spot rain level (never part of the tone). */
 export type GlanceLike = { tone: Tone; baseTone?: Tone | null; street: "possible" | "likely" | null; release?: { name: string; confirmed: boolean; etaHours: number | null } | null };
 
 const RANK: Record<Tone, number> = { normal: 0, none: 0, stale: 0, watch: 1, alert: 2, minor: 3, major: 4 };
 const riverTone = (g: GlanceLike): Tone => (g.baseTone === undefined ? g.tone : g.baseTone ?? "stale");
-/** 0 calm .. 4 move to safety, from the river (and rain, official warnings) alone: the street rule is not part of it. */
+/** 0 calm .. 4 move to safety, from the river (and rain, official warnings) alone: the low-spot rain level is not part of it. */
 export const riverRank = (g: GlanceLike): number => RANK[riverTone(g)];
 
+/** Did this subscriber switch on "my spot floods in heavy rain" for this place, and is the rain at the higher mark? `bk` = baseKey of the place. */
+export const lowSpotLikely = (p: Prefs, g: GlanceLike, bk: string): boolean => p.lowSpots.includes(bk) && g.street === "likely";
+
 /**
- * The level the state machine (lib/myPlaces.ts pushStep) follows for this subscriber: the river, plus street water
- * "likely" (level 3) when they want it. null = we cannot say (no fresh river data and no street answer): nothing changes.
+ * The level the state machine (lib/myPlaces.ts pushStep) follows for this subscriber: the river, plus level 3 while heavy rain
+ * is over a spot they marked as low. null = we cannot say (no fresh river data and no low-spot answer): nothing changes.
  */
-export function subLevel(p: Prefs, g: GlanceLike): number | null {
+export function subLevel(p: Prefs, g: GlanceLike, bk: string): number | null {
   const t = riverTone(g);
-  const street = p.streetLikely && g.street === "likely";
-  if ((t === "stale" || t === "none") && !street) return null;
-  return Math.max(RANK[t], street ? 3 : 0);
+  const low = lowSpotLikely(p, g, bk);
+  if ((t === "stale" || t === "none") && !low) return null;
+  return Math.max(RANK[t], low ? 3 : 0);
 }
 
 /** Does a rise at this moment match what the subscriber asked for? (Lower levels still advance the state silently.) */
-export function qualifies(p: Prefs, g: GlanceLike): boolean {
-  return riverRank(g) >= p.riverMin || (p.streetLikely && g.street === "likely");
+export function qualifies(p: Prefs, g: GlanceLike, bk: string): boolean {
+  return riverRank(g) >= p.riverMin || lowSpotLikely(p, g, bk);
 }
 
-/** Major flood, and street water "likely" for those who want it, always come through quiet hours. */
-export function bypassesQuiet(p: Prefs, g: GlanceLike): boolean {
-  return riverRank(g) >= 4 || (p.streetLikely && g.street === "likely");
+/** Major flood always comes through quiet hours; the low-spot rain note waits. */
+export function bypassesQuiet(_p: Prefs, g: GlanceLike, _bk?: string): boolean {
+  return riverRank(g) >= 4;
 }
 
 /** Is today's morning summary due for this subscriber? `lastDay` = the Colombo day it was last sent. Never after midday. */
