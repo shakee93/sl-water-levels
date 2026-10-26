@@ -16,6 +16,17 @@ import { getReleaseSources, parseSheetTab, type SheetRow } from "./releases";
 import { aiConfigured } from "./openai";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
 
+/** Hours since `fromMs`, not counting Saturdays and Sundays in Sri Lanka time. */
+function workingHoursSince(fromMs: number, now = Date.now()): number {
+  const LK = 5.5 * HOUR;
+  let h = 0;
+  for (let t = fromMs; t < now; t += HOUR) {
+    const day = new Date(t + LK).getUTCDay();
+    if (day !== 0 && day !== 6) h += Math.min(1, (now - t) / HOUR);
+  }
+  return h;
+}
+
 export type Severity = "critical" | "warn";
 
 export type HealthCheck = {
@@ -247,7 +258,9 @@ async function checkWms(deep: boolean): Promise<HealthCheck> {
       const problems: string[] = [];
       if (!w.ok) problems.push(`PDF could not be parsed: ${w.error}`);
       else if (w.data.rows.length < 30) problems.push(`${w.data.rows.length} rows parsed (need 30)`);
-      if (Number.isFinite(lmMs) && Date.now() - lmMs > 48 * HOUR) problems.push(`report last modified ${words(mins(Date.now() - lmMs))} ago (limit 48 h)`);
+      // The Mahaweli office does not publish at weekends or on public holidays: a Friday report is
+      // normally the latest until Monday ~noon. Allow 48 h of working days (Sat/Sun don't count).
+      if (Number.isFinite(lmMs) && workingHoursSince(lmMs) > 48) problems.push(`report last modified ${words(mins(Date.now() - lmMs))} ago (limit 48 working hours; weekends don't count)`);
       return {
         ok: problems.length === 0,
         detail: problems.length ? problems.join("; ") : `${w.ok ? w.data.rows.length : 0} reservoirs parsed${Number.isFinite(lmMs) ? `; report ${words(mins(Date.now() - lmMs))} old` : ""}`,
