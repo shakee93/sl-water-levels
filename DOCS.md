@@ -413,6 +413,35 @@ storm hours from measured rain at the gauge and upstream (3 h and 6 h), leaving 
 10.0 ft and 15.3 ft. At 10:06 (9.7 ft): 11.2 ft and 11.8 ft; actual 13.1 and 15.3 ft. The model cannot know a cloudburst is under way from level changes alone; 12 days is too short to fit rain features that do better.
 Revisit when a monsoon season of `rain_fall` is archived (the data branch keeps it: `.github/workflows/snapshot.yml`). GSMaP satellite rain (data branch `gsmap/`, since 23 Oct) is not used: too short to backtest.
 
+### "Get ready" from a forecast: one shared rule (`lib/verdictLift.ts`, 26 Oct 2026)
+
+*What happened.* 26 Oct, ~12:30: Nagalagam Street read 2.6 ft (alert 4.0, minor 5.0), tier normal, yet the station page and every town on it
+said "Get ready" ("River could reach alert level in about 9 h"). The forecast crossing was "possible" (45%, ETA ~9 h) and the old rule was "likely,
+or possible while the river is rising". The "rising" was the twice-daily TIDE (the gauge follows the sea at Mutwal with 0-2 h lag, +-0.6-0.8 ft),
+and the "possible" came from the wide storm band (rain p90) whose top touches alert; the central forecast peaked at 3.19 ft. The backtest had also
+found only ~35% of storm-mode alert flags followed by a real crossing.
+
+*The rule* (a crossing of alert or higher, gauge currently normal or watch; the gauge's own tier always wins, nothing here lifts into Flooding now):
+- **Get ready** when the crossing probability is 0.6 or more, OR it is 0.4 or more AND the central forecast (not the band) at some horizon up to 12 h
+  is within 15% of the gap to the mark AND the river is rising on a de-tided basis.
+- Otherwise a "possible" crossing gives the calm **Keep an eye on it** tone with "Small chance it reaches the alert level in about 9 hours (if the
+  heavier rain comes)" and no "Move valuables up" action (the town page says "Small chance the river reaches alert level in about 9 h").
+- **De-tided "rising"**: for gauges whose fitted model has a tide term (`TIDAL_STATIONS`: Nagalagam Street, Peradeniya, Putupaula, Thalgahagoda;
+  `scripts/verdict-lift.test.mts` fails if `lib/model/gauge-model.json` disagrees) the level is compared with the reading one tide cycle (12.4 h) earlier,
+  and counts as rising only if 0.2 ft (0.06 m) higher; no comparable reading means not rising. Other gauges keep the 3 h rate above 0.006 m/h. A
+  tide-only rise reads "Rising with the tide (about the same once the tide is allowed for)" in the next-hour line, and `/api/levels` `trend` says "steady".
+- Probabilities show as words in Details ("about 4 in 10", rounded down), never as percentages. (The one-line forecast headline in Details,
+  built in `lib/forecast.ts`, still quotes a percentage.)
+
+*Where it lives.* `liftVerdict()` / `riverRising()` are used by `app/Forecast.tsx` (station verdict, share text), `app/api/forecasts/route.ts`
+(`verdict`, which the hourly store job logs), `lib/townRisk.ts` (town pages, My places, push, share cards; via `lib/townData.ts`) and `lib/apiData.ts`
+(trend). The town's personal-level and canal-backwater rules keep the raw 3 h rate on purpose (a street floods from the tide's water too).
+X posts and answers read the API `trend`, so they inherit the de-tided word.
+
+*Thresholds are chosen, not fitted.* The D1 log (`forecast_crossings` joined to `observations`, alert mark, 26 Oct 2026) has only about 60 candidate
+rows in ~29 half-day episodes: p 0.2-0.4 hit 1 of 21 (rivers) and 0 of 9 (tidal gauges); p 0.4-0.6 hit 1 of 22; p 0.6 and over hit 1 of 7. Far too
+few to fit, so 0.6 / 0.4 / 15% / 12 h are set stricter than the old rule and must be re-checked when more storm events are archived.
+
 ### Rain words, rain sources and the rain audit (26 Oct 2026, `research/rain-audit.md`)
 
 **One vocabulary (`lib/rainWords.ts`).** The page, push, X and the API take rain words and numbers from here (si/ta are drafts). Two layers:

@@ -58,6 +58,8 @@
 //     data (input.streetRain === null) switches it off silently (no calm claim).
 // Constants below are the only tuning knobs.
 import type { Tier } from "./status";
+// @ts-ignore node strip-types needs explicit extensions
+import { isTidalStation, liftVerdict } from "./verdictLift.ts";
 import type { Unit } from "./units";
 
 export type Tone = "normal" | "watch" | "alert" | "minor" | "major" | "stale";
@@ -106,6 +108,8 @@ export type GaugeIn = {
   ts: number | null;
   /** Change in metres per hour (3 h window); null = unknown. */
   rate3hM: number | null;
+  /** River really rising, de-tided for tidal gauges (riverRising in lib/verdictLift.ts). Missing = from rate3hM, never true for a tidal gauge. */
+  rising?: boolean | null;
   km: number;
 };
 
@@ -119,7 +123,9 @@ export type ForecastIn = {
   currentLevel: number | null;
   /** Metres per gauge unit, to turn the 1 h change into metres. */
   metresPerUnit: number;
-  crossings: { threshold: "alert" | "minor" | "major"; wording: "likely" | "possible" | "unlikely" | "already"; etaTs: number | null }[];
+  crossings: { threshold: "alert" | "minor" | "major"; wording: "likely" | "possible" | "unlikely" | "already"; etaTs: number | null; level?: number; probability?: number }[];
+  /** Central forecast levels by hours ahead (not the band): the "close to the mark" test of lib/verdictLift.ts. */
+  horizons?: { h: number; level: number }[];
 };
 
 export type RainIn = {
@@ -241,6 +247,9 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   // ---- 1. river tone
   const rate = gauge?.rate3hM ?? null;
   const rising = rate != null && rate > RISING_M_PER_H;
+  // the forecast lift asks for the river rising with the tide taken out (Nagalagam Street's rate is mostly tide); the personal-level and
+  // canal rules above keep the raw rate on purpose: a street floods from the tide's water too
+  const liftRising = gauge ? (gauge.rising ?? (isTidalStation(gauge.station) ? false : rising)) : false;
   const trend: TownRisk["trend"] = rate == null ? "unknown" : Math.abs(rate) < RISING_M_PER_H ? "steady" : rate < 0 ? "down" : "up";
 
   let river: Tone | null = null;
@@ -250,20 +259,21 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     // a gauge with no published marks starts from "normal": only the street's own level can raise it
     river = tierTone(gauge.tier) ?? "normal";
     // forecast crossing of alert or above within 24 h
-    const cross = forecast && forecast.status !== "unavailable"
-      ? forecast.crossings
-          .filter((c) => c.wording === "likely" || c.wording === "possible")
-          .sort((a, b) => (a.etaTs ?? Infinity) - (b.etaTs ?? Infinity))[0]
-      : undefined;
-    if (cross) {
+    // forecast crossing of alert or above within 24 h: one shared rule (lib/verdictLift.ts)
+    const lift = forecast && forecast.status !== "unavailable"
+      ? liftVerdict({ tier: river ?? "normal", crossings: forecast.crossings, horizons: forecast.horizons, currentLevel: forecast.currentLevel, rising: liftRising, now: input.now })
+      : null;
+    const cross = lift?.crossing ?? undefined;
+    if (cross && lift) {
       const flood = cross.threshold !== "alert";
-      const h = cross.etaTs != null ? Math.max(1, Math.round((cross.etaTs - input.now) / 3_600_000)) : null;
-      const key = `r.forecast${flood ? "Flood" : "Alert"}${h == null ? "Day" : ""}`;
+      const h = lift.etaHours;
+      const small = lift.verdict === "watch";
+      const key = `r.forecast${small ? "Small" : ""}${flood ? "Flood" : "Alert"}${h == null ? "Day" : ""}`;
       forecastReason = { kind: "forecast", key, vars: h == null ? { gauge: gauge.name } : { gauge: gauge.name, h }, warn: false };
-      if ((river === "normal" || river === "watch") && (cross.wording === "likely" || rising)) {
+      if ((river === "normal" || river === "watch") && lift.verdict === "alert") {
         river = "alert";
         forecastReason.warn = true;
-      }
+      } else if (river === "normal" && small) river = "watch";
     }
     // confirmed release upstream, river rising and already near/at alert
     if (release?.confirmed && drainage !== "upland" && rising && rank(river) >= rank("watch") && rank(river) < rank("alert")) river = "alert";

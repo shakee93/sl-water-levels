@@ -165,9 +165,21 @@ assert.equal(assessTown(base({ drainage: "upland", primary: g({ tier: "normal" }
   const r = assessTown(base({ drainage: "riverbank", forecast: fc({ crossings: [cross()] }) }));
   assert.equal(r.tone, "alert");
   assert.equal(r.day.key, "n24.reachAlert");
-  // possible crossing only while rising
-  assert.equal(assessTown(base({ drainage: "riverbank", forecast: fc({ crossings: [cross({ wording: "possible" })] }) })).tone, "normal");
-  assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ rate3hM: 0.05 }), forecast: fc({ crossings: [cross({ wording: "possible" })] }) })).tone, "alert");
+  // a "possible" crossing no longer says Get ready on its own: calm "watch" with the small-chance line (lib/verdictLift.ts)
+  const poss = assessTown(base({ drainage: "riverbank", forecast: fc({ crossings: [cross({ wording: "possible" })] }) }));
+  assert.equal(poss.tone, "watch");
+  assert.equal(poss.day.key, "n24.reachSmallAlert");
+  // possible + p >= 0.4 + central forecast close to the mark + rising (not tidal) = alert; far from the mark = still watch
+  const near = { level: 4, probability: 0.45, wording: "possible" };
+  const closeFc = fc({ currentLevel: 3, crossings: [cross(near)], horizons: [{ h: 6, level: 3.9 }] });
+  assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ station: "Hanwella", rising: true }), forecast: closeFc })).tone, "alert");
+  assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ station: "Hanwella", rising: false }), forecast: closeFc })).tone, "watch");
+  assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ station: "Hanwella", rising: true }), forecast: fc({ currentLevel: 3, crossings: [cross(near)], horizons: [{ h: 6, level: 3.3 }] }) })).tone, "watch");
+  // a tidal gauge's raw 3 h rate is the tide: never counts as rising
+  assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ rate3hM: 0.05 }), forecast: closeFc })).tone, "watch");
+  // likely at p >= 0.6 lifts regardless of rising; 0.55 "likely" does not on its own
+  assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ station: "Hanwella" }), forecast: fc({ crossings: [cross({ probability: 0.65 })] }) })).tone, "alert");
+  assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ station: "Hanwella" }), forecast: fc({ crossings: [cross({ probability: 0.55 })] }) })).tone, "watch");
   // unlikely / already crossings change nothing
   assert.equal(assessTown(base({ drainage: "riverbank", forecast: fc({ crossings: [cross({ wording: "unlikely" })] }) })).tone, "normal");
   // flood-level crossing wording; unknown ETA uses the "within 24 hours" wording

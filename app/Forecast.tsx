@@ -23,6 +23,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
 import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareButton";
 import { CALL, STEADY_M_PER_H, VERDICT, directionFor } from "./verdict";
+import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
 
 const HOUR = 3_600_000;
 const mm = (v: number | null) => (v == null ? "—" : v < 10 ? v.toFixed(1) : String(Math.round(v)));
@@ -90,17 +91,27 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
   return { fact: null, target: -1 };
 }
 
-/**
- * Verdict tier: the real tier, upgraded to "alert" (Get ready) when a crossing is
- * forecast within 24h AND it's either "likely" (>=50%) or the river is rising now.
- * A merely "possible" crossing on a falling river (e.g. Ratnapura 1.5 m below alert,
- * falling, with forecast rain) stays Normal; the 24h tile still says "Could reach".
- * Never upgrades into "Flooding now" / "Move to safety": those describe what is
- * happening, so they only come from the measured level.
- */
-function upgrade(tier: VerdictTone, target: number, likely: boolean, rising: boolean): VerdictTone {
-  if ((tier === "normal" || tier === "watch") && target >= ORDER.indexOf("alert") && (likely || rising)) return "alert";
-  return tier;
+const TIDE_RISE: T3 = {
+  en: "Rising with the tide (about the same once the tide is allowed for)",
+  si: "වඩින මුහුදු රැළි සමඟ ඉහළ යයි (රැළි සලකා බැලූ විට පාහේ එලෙසමයි)",
+  ta: "அலையுடன் உயர்கிறது (அலையைக் கணக்கிட்டால் ஏறக்குறைய அதே அளவு)",
+};
+
+/** The calm "small chance" line for a crossing the verdict rule did not lift (lib/verdictLift.ts). */
+function smallChanceFact(c: { threshold: string }, hours: number | null, heavier: boolean): T3 {
+  const flood = c.threshold !== "alert";
+  const lvl = flood
+    ? { en: "flood level", si: "ගංවතුර මට්ටමට", ta: "வெள்ள மட்டத்தை" }
+    : { en: "alert level", si: "අනතුරු ඇඟවීමේ මට්ටමට", ta: "எச்சரிக்கை மட்டத்தை" };
+  const h = hours != null ? hoursPhrase(hours) : null;
+  const rain = heavier
+    ? { en: " (if the heavier rain comes)", si: " (වැසි වැඩි වුවහොත්)", ta: " (கனமழை வந்தால்)" }
+    : { en: "", si: "", ta: "" };
+  return {
+    en: `Small chance it reaches the ${lvl.en} ${h ? `in ${h.en}` : "within 24 hours"}${rain.en}`,
+    si: `${h ? `${h.si} ඇතුළත` : "පැය 24ක් ඇතුළත"} ${lvl.si} ළඟා වීමට ඇත්තේ සුළු ඉඩකි${rain.si}`,
+    ta: `${h ? `${h.ta}ில்` : "24 மணி நேரத்தில்"} ${lvl.ta} எட்டுவதற்கான வாய்ப்பு சிறியது${rain.ta}`,
+  };
 }
 
 export async function Forecast({ lang, basin, selectedStation }: { lang: Locale; basin: string; selectedStation: string }) {
@@ -125,11 +136,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
 
   const stale = realTier === "stale";
   const now = f.asOfTs ?? latest?.ts ?? 0;
-  const { fact: rawFact, target, likely = false } = stale ? { fact: null, target: -1 } : forecastFact(f, realTier, now);
-  // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
-  const fact: T3 | null = stale
-    ? null
-    : (rawFact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
+  const { fact: forecastLine } = stale ? { fact: null } : forecastFact(f, realTier, now);
 
   // "Next hour": the forecast's 1 h change when there is one (metres, unit-aware),
   // otherwise the recent 3 h rate as a persistence guess.
@@ -140,6 +147,11 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
     : h1 && f.currentLevel != null
       ? (h1.level - f.currentLevel) * mpu
       : (me?.rate3hM ?? null);
+  // "Rising" means the river is rising: on a tidal gauge (Nagalagam Street...) the twice-daily tide moves the level by
+  // 0.6-0.8 ft, so it is judged against the level one tide cycle ago (lib/verdictLift.ts), and a tide-only rise is said so.
+  const tidal = isTidalStation(selectedStation);
+  const rising = !stale && riverRising(selectedStation, me?.trend24h, mpu, me?.rate3hM ?? null);
+  const tideOnly = tidal && !stale && r != null && r > STEADY_M_PER_H && !rising;
   const direction: T3 | null = stale
     ? latest && me?.ageMin != null
       ? (() => {
@@ -149,8 +161,9 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
       : { en: "No recent reading", si: "මෑත කියවීමක් නැත", ta: "சமீபத்திய அளவீடு இல்லை" }
     : r == null
       ? null
-      : directionFor(r);
-  const rising = r != null && r > STEADY_M_PER_H;
+      : tideOnly
+        ? TIDE_RISE
+        : directionFor(r);
   // A confirmed reservoir release upstream counts as an expected crossing only when
   // the gauge is already close to alert (within 1 m, or 20% of the alert level) and
   // rising: a release far below alert, or on a falling river, stays informational
@@ -160,9 +173,24 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const gapM = alertLvl != null && lvlNow != null ? (alertLvl - lvlNow) * mpu : null;
   const nearAlert = gapM != null && gapM > 0 && (gapM <= 1 || gapM <= alertLvl! * mpu * 0.2);
   const releaseLift = !stale && rising && nearAlert && release.active && release.confirmed;
-  const tone = stale
+  // One rule for "Get ready" from a forecast crossing (lib/verdictLift.ts); real readings always win.
+  const lift = stale
+    ? null
+    : liftVerdict({ tier: realTier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
+  const tone: VerdictTone = stale
     ? "stale"
-    : upgrade(realTier, releaseLift ? Math.max(target, ORDER.indexOf("alert")) : target, likely || releaseLift, rising);
+    : (lift?.verdict === "alert" || releaseLift) && (realTier === "normal" || realTier === "watch")
+      ? "alert"
+      : lift?.verdict === "watch" && realTier === "normal"
+        ? "watch"
+        : realTier;
+  // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
+  const heavier = f.rainRisk != null || f.stormHorizons.length > 0;
+  const fact: T3 | null = stale
+    ? null
+    : lift?.verdict === "watch" && lift.crossing
+      ? smallChanceFact(lift.crossing, lift.etaHours, heavier)
+      : (forecastLine ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
 
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const dc = elevated ? contactsForDistrict(district) : null;
@@ -259,7 +287,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
           stale
             ? null
             : {
-                trend: r == null ? "unknown" : Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "down" : "up",
+                trend: r == null ? "unknown" : tideOnly || Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "down" : "up",
                 text: (
                   <AdvisoryText
                     en={advisory.en}
@@ -319,13 +347,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
               <ul className="mt-3 text-xs space-y-0.5">
                 {f.crossings.filter((c) => c.wording !== "already").map((c) => (
                   <li key={c.threshold}>
-                    {t("fc.crossing", {
-                      threshold: t(`mark.${c.threshold}` as "mark.alert"),
-                      level: formatLevel(c.level, f.unit),
-                      wording: t(`fc.w.${c.wording}` as "fc.w.likely"),
-                      p: Math.round(c.probability * 100),
-                      eta: c.etaTs ? t("fc.crossingEta", { time: fmtTime(c.etaTs) }) : "",
-                    })}
+                    {`${t(`mark.${c.threshold}` as "mark.alert")} (${formatLevel(c.level, f.unit)}): ${t(`fc.w.${c.wording}` as "fc.w.likely")}, ${chanceWords(c.probability)[lang]}${c.etaTs ? t("fc.crossingEta", { time: fmtTime(c.etaTs) }) : ""}`}
                   </li>
                 ))}
               </ul>

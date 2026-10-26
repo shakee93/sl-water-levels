@@ -1,5 +1,6 @@
 // Server-side loader for a town's flood estimate: gathers the live inputs for lib/townRisk.ts.
 // Everything fails soft; a missing source is passed as null and the estimate says what it lacks.
+import { riverRising } from "./verdictLift";
 import { fetchBasinSnapshot, getNational, type NationalStation } from "./arcgis";
 import { stationDisplayName } from "./displayName";
 import { loadForecast, measuredAt, type Forecast } from "./forecast";
@@ -55,6 +56,7 @@ const gaugeIn = (s: NationalStation | undefined, place: Place): GaugeIn | null =
         unit: s.unit,
         ts: s.latest?.ts ?? null,
         rate3hM: s.rate3hM,
+        rising: riverRising(s.station, s.trend24h, s.metresPerUnit, s.rate3hM),
         km: distanceKm({ lat: place.lat, lon: place.lon }, { lat: s.latitude, lon: s.longitude }),
       }
     : null;
@@ -71,7 +73,8 @@ function forecastIn(f: Forecast, mpu: number): ForecastIn {
     maxLevel: highs.length ? Math.max(...highs) : null,
     currentLevel: f.currentLevel,
     metresPerUnit: mpu,
-    crossings: f.crossings.map((c) => ({ threshold: c.threshold, wording: c.wording, etaTs: c.etaTs })),
+    crossings: f.crossings.map((c) => ({ threshold: c.threshold, wording: c.wording, etaTs: c.etaTs, level: c.level, probability: c.probability })),
+    horizons: f.horizons.map((x) => ({ h: x.h, level: x.level })),
   };
 }
 

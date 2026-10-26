@@ -9,13 +9,12 @@ import { loadForecast } from "@/lib/forecast";
 import coefficients from "@/lib/model/coefficients.json";
 import { getGsmap } from "@/lib/gsmap";
 import { getForecastRainAll, measuredAtGauge } from "@/lib/stationRain";
+import { liftVerdict, riverRising } from "@/lib/verdictLift";
 
 // Computed per request (no ISR): as an ISR route a failed background regeneration kept serving
 // one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
 // data calls are cached in lib/arcgis.ts; the CDN still absorbs repeat hits for 60 s.
 export const maxDuration = 60;
-
-const RANK = ["normal", "watch", "alert", "minor", "major"] as const;
 
 export async function GET() {
   await connection();
@@ -38,18 +37,23 @@ export async function GET() {
       if (!s.latest) continue;
       try {
         const f = await loadForecast(basin, snapshot, s.station);
-        // Same rule as the station card: a forecast crossing lifts normal/watch to alert
-        // when it's likely, or possible while the river is rising.
+        // Same rule as the station card (lib/verdictLift.ts): likely (>= 60%), or close and rising de-tided; a small chance stays calm.
         const key = `${basin.trim()}/${s.station}`;
         const fr = (fcRain as Record<string, import("@/lib/stationRain").ForecastRain>)[key];
         const g = sat?.stations[key] ?? null;
         const mAt = measuredAtGauge(s.station, s.trend24h);
-        const rising = (s.rate3hM ?? 0) > 0.006;
-        const crossing = f.crossings.some(
-          (c) => c.wording === "likely" || (c.wording === "possible" && rising),
-        );
-        const verdict =
-          s.tier !== "stale" && crossing && RANK.indexOf(s.tier as (typeof RANK)[number]) <= 1 ? "alert" : s.tier;
+        const lift =
+          s.tier === "stale"
+            ? null
+            : liftVerdict({
+                tier: s.tier,
+                crossings: f.crossings,
+                horizons: f.horizons,
+                currentLevel: f.currentLevel,
+                rising: riverRising(s.station, s.trend24h, s.metresPerUnit, s.rate3hM),
+                now: f.asOfTs ?? s.latest.ts,
+              });
+        const verdict = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
         runs.push({
           station: s.station,
           basin,
