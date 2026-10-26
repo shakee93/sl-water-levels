@@ -23,7 +23,7 @@ import { d1Query } from "../lib/d1.ts";
 import { gate, postTweet } from "../lib/xClient.ts";
 import {
   composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop,
-  composeWarning, composeSummary, composeStorm, composeRiversRising, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
+  composeWarning, composeSummary, composeStorm, stormTide, composeRiversRising, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
 } from "../lib/xCompose.ts";
 import { OPENAI_MODEL } from "../lib/openai.ts";
 import { evaluate, applyCaps, emptyState, summaryEvent, tierLevel } from "./x-engine.mjs";
@@ -449,7 +449,7 @@ export async function sample(o = {}) {
   if (top) {
     const all = us.filter((s) => s.river === top.river && tierLevel(s.status) >= 0).sort((a, b) => ratio(b) - ratio(a)).slice(0, 3);
     const fact = (s) => ({ station: s.station, river: s.river, tier: s.status, level: s.level, mark: s.marks?.[s.status] ?? null, alertMark: s.marks?.alert ?? null, trend: s.trend, nextHour: s.nextHour ? { level: s.nextHour.level_ft, low: s.nextHour.low_ft, high: s.nextHour.high_ft, direction: s.nextHour.direction, crossing: s.nextHour.crossing } : null, url: s.url, at: Date.parse(s.observedAt) });
-    evs.push({ type: "storm", kind: "storm", storm: { river: top.river, at: now, gauges: all.map(fact), url: all[0].url } });
+    evs.push({ type: "storm", kind: "storm", storm: { river: top.river, at: now, gauges: all.map(fact), url: all[0].url, tide: stormTide(top.river, now) } });
   }
   const res = (snap.reservoirs ?? []).filter((r) => (r.status === "spilling" || r.status === "releasing") && r.flow?.cusecs > 0).sort((a, b) => b.flow.cusecs - a.flow.cusecs)[0];
   if (res) evs.push({ type: "reservoir_start", kind: "reservoir", reservoirs: [{ name: res.name, river: res.river, status: res.status, cusecs: res.flow.cusecs, storagePercent: res.storagePercent, day: res.flow.day ?? res.readingDay, source: res.source, url: res.url }] });

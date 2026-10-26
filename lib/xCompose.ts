@@ -36,6 +36,9 @@ export function tweetLength(text: string): number {
 }
 
 /** Every number in a text, links removed, "1,200" read as 1200. */
+// @ts-ignore node strip-types needs explicit extensions
+import { tideEvents } from "./tide.ts";
+
 export function numbersIn(text: string): number[] {
   const out: number[] = [];
   for (const m of text.replace(URL_RE, " ").matchAll(/\d[\d,]*(?:\.\d+)?/g)) {
@@ -337,7 +340,14 @@ export function composeSummary(f: SummaryFact): Composed {
   return assemble([{ body, short, link: f.url, must, tags: ["#SriLanka"] }, ...(fell && fc && one ? [{ body: [hello, ...parts, one].join(" "), link: f.url, must, tags: ["#SriLanka"] }] : []), { body: [hello, ...parts].join(" "), link: f.url, must, tags: ["#SriLanka"] }]);
 }
 
-export type StormFact = { river: string; at: number; gauges: (GaugeFact & { tier: string })[]; url: string };
+export type StormFact = { river: string; at: number; gauges: (GaugeFact & { tier: string })[]; url: string; /** next high tides (ms) at the Kelani mouth; only set for the Kelani, where Colombo's canals drain into it */ tide?: number[] };
+
+/** The next two high tides after `at` for a Kelani storm post (lib/tide.ts); undefined for other rivers. */
+export function stormTide(river: string, at: number): number[] | undefined {
+  if (river !== "Kelani Ganga") return undefined;
+  const highs = tideEvents(at, 30).filter((e) => e.kind === "high" && e.t > at).slice(0, 2).map((e) => e.t);
+  return highs.length ? highs : undefined;
+}
 
 export function composeStorm(f: StormFact): Composed {
   const gs = f.gauges.slice(0, 2);
@@ -351,7 +361,12 @@ export function composeStorm(f: StormFact): Composed {
   const body = `${f.river} update, ${clock(f.at)}: ${gs.map(line).join(" ")}`;
   const short = `${f.river}, ${clock(f.at)}: ${line(gs[0])}`;
   const reply = f.gauges.map((g) => `${g.station}: ${ft(g.level)}${g.alertMark != null ? ` (alert ${ft(g.alertMark)})` : ""}${trendWord(g.trend)}`).join("\n");
-  return assemble({ body, short, link: f.url, must: [f.river, gs[0].station, "forecast"].filter((w, i) => i < 2 || gs[0].nextHour), tags: ["#SriLanka", riverTag(f.river)].filter(Boolean), reply: `${reply}\n${f.url}` }, isSerious(f.gauges));
+  const must = [f.river, gs[0].station, "forecast"].filter((w, i) => i < 2 || gs[0].nextHour);
+  const tags = ["#SriLanka", riverTag(f.river)].filter(Boolean);
+  // Kelani only: when Colombo's canals will drain slowest (they empty into the river, and the tide holds the water back)
+  const tideLine = f.tide?.length ? ` High tide around ${f.tide.map(clock).join(" and ")}: Colombo canals drain slowly then.` : "";
+  const base = { body, short, link: f.url, must, tags, reply: `${reply}\n${f.url}` };
+  return assemble(tideLine ? [{ ...base, body: body + tideLine, short: short + tideLine }, base] : base, isSerious(f.gauges));
 }
 
 export type RainWatchFact = { mm: number; place: string; windowH: number; atAlert: number; at: number; url: string };

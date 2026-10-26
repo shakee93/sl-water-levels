@@ -16,6 +16,9 @@ import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
 import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
 import { LowSpot } from "@/app/flood/LowSpot";
+import { ColomboBlock, basinCanalHigh } from "@/app/colombo/ColomboBlock";
+import { getCanals } from "@/lib/curw";
+import { basinOfTown } from "@/lib/colombo";
 import { d1Configured } from "@/lib/d1";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
@@ -63,7 +66,8 @@ export default async function TownPage({ params }: Params) {
 
   const { t, p } = getI18n(lang);
   const tt = ttFor(lang);
-  const data = await loadTown(place, undefined, { budgetMs: PAGE_BUDGET_MS });
+  // canal levels (our D1 archive of CUrW / SLLDC, time-boxed) only for canal-area towns; fails soft to nothing
+  const [data, canals] = await Promise.all([loadTown(place, undefined, { budgetMs: PAGE_BUDGET_MS }), basinOfTown(place.slug) ? getCanals() : Promise.resolve(null)]);
   const g = data.gauge;
   const canonical = p(`/flood/${place.slug}`);
   const serverNow = data.input.now;
@@ -147,7 +151,8 @@ export default async function TownPage({ params }: Params) {
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
 
         <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} />
-        {place.rainZone && data.input.streetRain !== undefined && <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} />}
+        {place.rainZone && data.input.streetRain !== undefined && <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} />}
+        <ColomboBlock lang={lang} slug={place.slug} now={serverNow} canals={canals} />
 
         {/* Hidden until the site can save answers (CLOUDFLARE_API_TOKEN set), so nobody sees an error. */}
         {d1Configured() && <FloodReport slug={place.slug} town={place.name} />}

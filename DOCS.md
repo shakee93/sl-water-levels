@@ -536,6 +536,28 @@ English advisory and no official warnings.
   alert or above, or is not in the right script; the deterministic template is the fallback. Cached per station, forecast hour, tier.
 - `lib/openai.ts`: plain-fetch client and the cost guard (`AI_MAX_CALLS_PER_HOUR`, default 60 per server instance; counts, never content, are logged).
 
+## Colombo canals (tide, CUrW canal levels, drainage basins)
+
+- **Tide** (`lib/tide.ts`): five harmonic constituents (M2 S2 N2 K1 O1) fitted by `scripts/fit-tide.mjs` to ~11 months of hourly
+  Nagalagam Street readings, using only dry, steady hours. Out of sample: 78% of the swing, high-tide time within 60 min for 80%
+  of tides. It is the tide at the gauge (already delayed from the open sea by about 45 min). Gives the next 48 h of highs and
+  lows for the plain line "High tide around 2:36 pm today and 3:06 am tomorrow. Canals drain slowly near high tide."
+- **Canal levels**: CUrW / SLLDC (Center for Urban Water, pub.curwsl.org) publish canal gauges as chart images. We digitise them
+  every 15 min into D1 (`curw_levels`), and the site shows them with the credit "Canal levels: CUrW / SLLDC (pub.curwsl.org)"
+  and a link to their homepage. Data (c) CUrW / SLLDC, shown with attribution; we wrote to them on 23 Oct 2026 and will change
+  this if they ask. The browser never calls their host: server components use `lib/curw.ts`, clients use `GET /api/canals`
+  (`?group=North Canal|Kolonnawa|Parliament Lake|Wellawatta Canal|...`; cached 5 min at the CDN; fields: `state`, `level_m`,
+  `observedAt`, `last24h`, `sea`, `predictedTide`). "Usual" is each gauge's own recent range (judged by low-tide floor for tidal
+  canals); states: offline, learning, normal, rising, higher, lower.
+- **Basins** (`lib/colombo.ts`): Kolonnawa canal basin, Parliament Lake and Kotte canals, North canals, Wellawatta and Dehiwala.
+  Each has a plain "how water drains here" note, its CUrW gauges, and its town pages. Wellawatta, Dehiwala and Kirulapone drain
+  to the sea: they have no river gauge (the page says so) and read official warnings only.
+- **What canal and tide data do and do not do**: context only. They add a reason line on canal-area town pages, a tide-timing note
+  and "the canal is already high" for visitors who opted in to the low-spot note, and the tide line on X storm posts for the
+  Kelani. They never set a town verdict and never make a town-wide flood claim.
+- Page: `/colombo-canals` (en/si/ta) with a schematic map, tide table, live canal levels per basin and the low spots that got
+  water first. Internal research: `research/colombo-canal-dynamics.md`.
+
 ## Monitoring (data-source health)
 
 Sources break silently (a sheet layout change, a moved endpoint, stale data, an exhausted quota), so

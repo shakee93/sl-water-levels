@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Info } from "lucide-react";
 import { writeLowSpot } from "@/lib/lowSpots";
 import { ttFor } from "@/lib/i18n/town";
+import { ccFor } from "@/lib/i18n/colombo";
+import { highTideWithin } from "@/lib/tide";
+import { clock } from "@/lib/i18n/format";
 import { useI18n } from "../LocaleProvider";
 import { useLowSpot } from "./useLowSpot";
 import { StreetResearchLink } from "./StreetResearchLink";
@@ -15,8 +19,9 @@ const btn = `inline-flex min-h-11 items-center rounded-md border border-slate-30
  * on the index, the social image, the APIs or X). Heavy rain is stated as a plain fact with how past events went; the
  * visitor whose own spot is low can switch on a personal, quiet note (lib/lowSpots.ts), off for everyone by default.
  */
-export function LowSpot({ slug, town, mm, level }: { slug: string; town: string; /** clipped 24 h satellite rain, null = no data */ mm: number | null; level: "possible" | "likely" | null }) {
-  const { lang } = useI18n();
+export function LowSpot({ slug, town, mm, level, canalHigh = false }: { slug: string; town: string; /** clipped 24 h satellite rain, null = no data */ mm: number | null; level: "possible" | "likely" | null; /** the basin's canal is higher than usual (CUrW / SLLDC levels); only spoken to people who opted in */ canalHigh?: boolean }) {
+  const { lang, t } = useI18n();
+  const cc = ccFor(lang);
   const tt = ttFor(lang);
   const on = useLowSpot(slug);
   const heavy = mm != null && level != null;
@@ -47,6 +52,8 @@ export function LowSpot({ slug, town, mm, level }: { slug: string; town: string;
           ) : (
             <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">{tt("low.none", { mm: Math.round(mm) })}</p>
           )}
+          <TideNote lang={lang} t={t} cc={cc} />
+          {canalHigh && <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">{cc("canal.highLow")}</p>}
           <button type="button" onClick={() => writeLowSpot(slug, false)} className={`mt-2 ${btn}`}>{tt("low.off")}</button>
         </div>
       ) : (
@@ -59,4 +66,14 @@ export function LowSpot({ slug, town, mm, level }: { slug: string; town: string;
       <div className="text-xs text-slate-600 dark:text-slate-400"><StreetResearchLink /></div>
     </section>
   );
+}
+
+/** Opt-in only: a high tide in the next 6 hours makes heavy rain more likely to leave water in low spots. Computed in the browser from the tide model. */
+function TideNote({ t, cc }: { lang: string; t: ReturnType<typeof useI18n>["t"]; cc: ReturnType<typeof ccFor> }) {
+  const [now, setNow] = useState<number | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only state (the clock), read after hydration
+  useEffect(() => setNow(Date.now()), []);
+  const h = now == null ? null : highTideWithin(now, 6);
+  if (!h) return null;
+  return <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">{cc("low.tideSoon", { time: clock(h.t, t) })}</p>;
 }

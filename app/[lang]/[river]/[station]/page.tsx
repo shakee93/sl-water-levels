@@ -33,6 +33,7 @@ import { InTheNews } from "@/app/InTheNews";
 import { Forecast } from "@/app/Forecast";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { Anomaly } from "@/app/Anomaly";
+import { TideLineClient } from "@/app/colombo/TideLineClient";
 import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
 import { d1Configured } from "@/lib/d1";
 import { ReleaseCard } from "@/app/ReleaseCard";
@@ -252,6 +253,8 @@ export default async function StationPage({
             <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
               <Forecast lang={lang} basin={basin} selectedStation={station} />
             </Suspense>
+
+            {station === "Nagalagam Street" && <TideLineClient />}
 
             {d1Configured() && nat && <AccuracyFeedback page="station" station={station} name={stationDisplayName(station)} tone={nat.tier} />}
 

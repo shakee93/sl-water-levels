@@ -102,6 +102,13 @@ export default async function DataPage({ params }: { params: Promise<{ lang: str
             <code className={`${code} mt-1`}>GET {SITE}/api/reservoirs?status=spilling</code>
           </section>
 
+          <section className={card} aria-labelledby="canals">
+            <h2 id="canals" className="text-lg font-semibold tracking-tight mb-2">Colombo canals</h2>
+            <p className="mb-2">Canal levels for Colombo (metres above sea level, every 15 minutes), a plain state per gauge (normal, rising, higher than usual, not reporting), the last 24 hours, the sea level at the Kelani mouth and the predicted tide for the next 48 hours. Data &copy; CUrW / SLLDC (<a href="http://pub.curwsl.org/" className="underline">pub.curwsl.org</a>), shown with attribution: please credit them if you use it. It is context, not a flood warning.</p>
+            <code className={code}>GET {SITE}/api/canals</code>
+            <code className={`${code} mt-1`}>GET {SITE}/api/canals?group=Kolonnawa</code>
+          </section>
+
           <section className={card} aria-labelledby="feed">
             <h2 id="feed" className="text-lg font-semibold tracking-tight mb-2">Alerts feed</h2>
             <p className="mb-2">Atom feed with one entry each time a gauge reaches alert level or above, or a reservoir starts releasing water.</p>

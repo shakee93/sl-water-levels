@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { gate, oauthHeader, postTweet } from "../lib/xClient.ts";
-import { composeGaugeRise, composeGaugeClear, composeSummary, composeStorm, composeWarning, composeReservoirStart, validatePost, validateText, polish, tweetLength, numbersIn, MAX_TWEET, DISCLAIMER } from "../lib/xCompose.ts";
+import { composeGaugeRise, composeGaugeClear, composeSummary, composeStorm, stormTide, composeWarning, composeReservoirStart, validatePost, validateText, polish, tweetLength, numbersIn, MAX_TWEET, DISCLAIMER } from "../lib/xCompose.ts";
 import { evaluate, applyCaps, emptyState } from "./x-engine.mjs";
 import { run, X_SCHEMA, prepare, linkWanted, isCritical, costOf } from "./x-post.mjs";
 
@@ -129,6 +129,14 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   const c = composeStorm(sf);
   assert.deepEqual(validatePost({ kind: "storm", facts: sf, ...c }), []);
   assert.ok(/Forecast next hour: about 8.4 ft \(8.3 ft to 8.6 ft\)/.test(c.text), c.text);
+  // Kelani storm posts carry the next high tides (Colombo canals drain slowly then); other rivers do not
+  const tide = stormTide("Kelani Ganga", NOW);
+  assert.equal(tide?.length, 2);
+  assert.equal(stormTide("Deduru Oya", NOW), undefined);
+  const kf = { ...sf, tide };
+  const kc = composeStorm(kf);
+  assert.deepEqual(validatePost({ kind: "storm", facts: kf, ...kc }), []);
+  assert.ok(/High tide around .*Colombo canals drain slowly/.test(kc.text) || tweetLength(kc.text) <= MAX_TWEET, kc.text);
   const nof = composeStorm({ ...sf, gauges: [gf({ nextHour: null })] });
   assert.ok(!/forecast/i.test(nof.text), "no forecast words without a forecast");
   const wf = { source: "Irrigation Department", severity: "minor flood", basins: ["Kelani Ganga"], issuedAt: NOW, releaseCusecs: 12000, bulletinUrl: "https://www.dmc.gov.lk/x.pdf", url: `${SITE}/kelani-ganga` };

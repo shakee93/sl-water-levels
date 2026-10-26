@@ -121,12 +121,23 @@ lib/
   changes shape, expect an issue titled "Data source down: ..."; see DOCS.md "Monitoring".
 
 - **CUrW Colombo canal gauges** (pub.curwsl.org/dyn/*.png, 7 chart pages, 33 gauges, m MSL, 15-min):
-  PRIVATE calibration archive, NEVER shown on the site or committed to the (public) repo/`data` branch until
-  CUrW gives permission. No JSON/CSV exists; `scripts/curw-snapshot.mjs` OCRs the chart titles (tesseract) and
+  PUBLIC with credit since 26 Oct 2026 (owner decision: the charts are published on a public site, we emailed
+  admin@curwsl.org cc mail@sllrdc.lk on 23 Oct, no reply; if CUrW/SLLDC object, remove it: make `getCanals()` in
+  `lib/curw.ts` return null (every caller then shows nothing) and delete the callers, `/api/canals` and `app/colombo/CanalLevels.tsx`). Rules: credit text
+  "Canal levels: CUrW / SLLDC (pub.curwsl.org)" with a plain link to their homepage wherever a level is shown; the
+  BROWSER NEVER CALLS their host (no hotlinked PNGs, no client fetches): pages read our D1 archive on the server via
+  `lib/curw.ts` (`getCanals()`, cached 5 min, time-boxed 1.5 s, fails soft) and client code uses our own `/api/canals`.
+  No JSON/CSV exists upstream; `scripts/curw-snapshot.mjs` OCRs the chart titles (tesseract) and
   digitises the plotted line, every 15 min via `.github/workflows/curw-snapshot.yml` (Cloudflare `*/15` cron),
-  into Cloudflare D1 tables `curw_levels` / `curw_status` / `curw_raw` (`d1/0002_curw.sql`). Only gauge counts
-  go to `data:curw/status.json` for the health check. Several gauges (Wellampitiya N, Gothatuwa DS, ...) are
-  offline at the source: that is not an alarm. Request volume: 7 requests per 15 min, User-Agent with the site URL and contact email.
+  into Cloudflare D1 tables `curw_levels` / `curw_status` / `curw_raw` (`d1/0002_curw.sql`). Still not committed to the
+  public repo or `data` branch (raw archive stays in D1). Only gauge counts go to `data:curw/status.json` for the
+  health check. Several gauges (Wellampitiya N, Gothatuwa DS, ...) are offline at the source: shown as "Not reporting".
+  "Usual" = the gauge's own recent range (`lib/curwStatus.ts`); tidal canals are judged by their low-tide floor. Canal state
+  is context only (reason line, opt-in low-spot note): it never sets a town verdict. Request volume: 7 requests per 15 min,
+  User-Agent with the site URL and contact email. Research on what drives the canals: `research/colombo-canal-dynamics.md`.
+- **Colombo tide** (`lib/tide.ts`, fitted by `scripts/fit-tide.mjs` to Nagalagam's own dry-period readings; no CUrW data):
+  predicted high/low times for 48 h, shown on Nagalagam Street, canal-area town pages and `/colombo-canals`. Times can be
+  off by up to an hour; heights are never a river level. Basins, towns and gauge groups: `lib/colombo.ts`.
 
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.

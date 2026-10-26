@@ -56,6 +56,7 @@ Where to get it:
 
 - [Home: all rivers, map and what needs attention now](${SITE}/): live status and next-hour forecast of every gauge
 - [Flood risk for towns](${SITE}/flood): 135+ towns, each page answers "is it flooding now?" and "will it flood in the next hour?" (pattern: ${SITE}/flood/<town>, e.g. ${SITE}/flood/wellampitiya)
+- [Colombo canals](${SITE}/colombo-canals): how Colombo's canals drain (Kolonnawa, Parliament Lake, Wellawatta, Dehiwala), predicted high-tide times, and live canal levels from CUrW / SLLDC (pub.curwsl.org; credit them). Canal levels and tide are context, not a flood warning. JSON: ${SITE}/api/canals
 - [Rivers](${SITE}/kelani-ganga): one page per river, one per gauge, each with the next-hour forecast (pattern: ${SITE}/<river>/<station>, e.g. ${SITE}/kelani-ganga/hanwella)
 - [Reservoirs](${SITE}/reservoirs): storage and spill/release for 170 reservoirs (pattern: ${SITE}/reservoirs/<name>)
 - [Past floods](${SITE}/history): how high past events reached at each gauge

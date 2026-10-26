@@ -69,6 +69,18 @@ const ROWS: Row[] = [
   ["Battaramulla", "Colombo", 6.9010, 79.9190, [NG], ["Battaramulle", "බත්තරමුල්ල"]],
   ["Kotte", "Colombo", 6.8900, 79.9180, [NG], ["Sri Jayawardenepura Kotte", "Jayawardenepura", "කෝට්ටේ"]],
   ["Rajagiriya", "Colombo", 6.9100, 79.8940, [NG], ["රාජගිරිය"]],
+  // ── Colombo canal areas (see lib/colombo.ts): Parliament Lake / Kotte, the north canals, and the Wellawatta-Dehiwala sea outfalls ──
+  ["Sedawatta", "Colombo", 6.9440, 79.8920, [NG], ["Sedawatte", "සේදවත්ත"]],
+  ["Pita Kotte", "Colombo", 6.8870, 79.9050, [NG], ["Pitakotte", "Pita-Kotte", "පිටකෝට්ටේ"]],
+  ["Ethul Kotte", "Colombo", 6.8910, 79.9100, [NG], ["Etul Kotte", "Ethulkotte", "ඇතුල් කෝට්ටේ"]],
+  ["Nawala", "Colombo", 6.8940, 79.8890, [NG], ["Nawale", "නාවල"]],
+  ["Koswatta", "Colombo", 6.9005, 79.9100, [NG], ["Koswatte", "කොස්වත්ත"]],
+  ["Borella", "Colombo", 6.9147, 79.8776, [NG], ["Borelle", "බොරැල්ල"]],
+  ["Maradana", "Colombo", 6.9275, 79.8670, [NG], ["Maradane", "මරදාන"]],
+  ["Bloemendhal", "Colombo", 6.9440, 79.8625, [NG], ["Bloemendal", "Blomendhal", "බ්ලූමැන්ඩල්"]],
+  ["Kirulapone", "Colombo", 6.8776, 79.8770, [], ["Kirulapana", "Kirulapone", "කිරුළපන"]],
+  ["Wellawatta", "Colombo", 6.8740, 79.8600, [], ["Wellawatte", "Bambalapitiya", "වැල්ලවත්ත"]],
+  ["Dehiwala", "Colombo", 6.8510, 79.8650, [], ["Dehiwela", "Mount Lavinia", "Dehiwala-Mount Lavinia", "දෙහිවල"]],
   ["Hokandara", "Colombo", 6.8800, 79.9650, [NG, HW], ["හොකන්දර"]],
   ["Athurugiriya", "Colombo", 6.8730, 79.9970, [HW, NG], ["Athurugiriye", "අතුරුගිරිය"]],
   ["Homagama", "Colombo", 6.8441, 80.0021, [HW, NG], ["Homagame", "හෝමාගම"]],
@@ -191,7 +203,7 @@ const ROWS: Row[] = [
 const CANAL_BACKWATER = new Set([
   "Colombo", "Kolonnawa", "Wellampitiya", "Orugodawatta", "Dematagoda", "Grandpass", "Kotahena", "Mattakkuliya", "Modara",
   "Meethotamulla", "Gothatuwa", "Peliyagoda", "Kelaniya", "Kiribathgoda", "Wattala", "Hendala", "Ragama", "Kandana", "Kotikawatta", "Angoda", "Mulleriyawa",
-  "Thalangama", "Rajagiriya", "Battaramulla", "Kotte", "Ja-Ela", "Ekala", "Seeduwa", "Katunayake", "Negombo",
+  "Thalangama", "Rajagiriya", "Battaramulla", "Kotte", "Sedawatta", "Pita Kotte", "Ethul Kotte", "Nawala", "Koswatta", "Borella", "Maradana", "Bloemendhal", "Ja-Ela", "Ekala", "Seeduwa", "Katunayake", "Negombo",
 ]);
 // A town with a river gauge inside it (under 1.5 km) is ON that river, whatever the terrain: never "upland".
 // (scripts/town-risk.test.mts checks this against the live station list.)
@@ -201,6 +213,7 @@ const UPLAND = new Set([
   "Kuliyapitiya", "Narammala", "Polgahawela", "Nikaweratiya", "Anamaduwa", "Maho", "Marawila", "Kandy", "Digana", "Kadugannawa",
   "Teldeniya", "Akurana", "Pelmadulla", "Balangoda", "Morawaka", "Deniyaya", "Ingiriya", "Horana", "Bandaragama",
   "Monaragala", "Buttala", "Thanamalwila", "Dehiattakandiya", "Ranala",
+  "Kirulapone", "Wellawatta", "Dehiwala",
   "Thambuttegama", "Kekirawa", "Anuradhapura", "Medawachchiya", "Ganemulla", "Elpitiya",
 ]);
 // Towns the street-rain rule (60 / 100 mm of satellite rain in 24 h) was backtested for. The evidence is the

@@ -255,7 +255,9 @@ for (const tier of ["normal", "watch", "alert", "minor", "major", "none", "stale
 // ---------------------------------------------------------------------------------------------
 // Gazetteer sanity
 for (const p of PLACES) {
-  assert.ok(p.stations.length >= 1, `${p.name} has a gauge`);
+  // Wellawatta, Dehiwala and Kirulapone drain to the sea, not the Kelani: no river gauge governs them (the page says so and
+  // reads only official warnings), instead of borrowing Nagalagam Street's river level.
+  assert.ok(p.stations.length >= 1 || ["Wellawatta", "Dehiwala", "Kirulapone"].includes(p.name), `${p.name} has a gauge`);
   assert.match(p.slug, /^[a-z0-9]+(-[a-z0-9]+)*$/, p.slug);
   assert.ok(p.lat > 5.8 && p.lat < 9.9 && p.lon > 79.5 && p.lon < 82, `${p.name} is inside Sri Lanka`);
 }

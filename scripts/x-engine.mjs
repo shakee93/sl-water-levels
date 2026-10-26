@@ -9,7 +9,7 @@
 //     for a place we actually posted about.
 // A source that could not be read (null) leaves its part of the memory untouched: unknown is never "calm".
 import { pushStep } from "../lib/myPlaces.ts";
-import { colomboDay } from "../lib/xCompose.ts";
+import { colomboDay, stormTide } from "../lib/xCompose.ts";
 
 export const DEFAULTS = {
   dailyMax: 15, // posts a day for routine items; urgent items may go up to urgentMax
@@ -220,7 +220,7 @@ export function evaluate(snap, prevState, cfgIn = {}) {
         st.last[grp.river] = { t: now, sig };
         events.push({
           type: "storm", kind: "storm", urgent: true,
-          storm: { river: grp.river, at: now, gauges: all.map(gaugeFact), url: all[0].url },
+          storm: { river: grp.river, at: now, gauges: all.map(gaugeFact), url: all[0].url, tide: stormTide(grp.river, now) },
           dedupe: `storm:${grp.river}:${b}`, priority: 25,
         });
       }
