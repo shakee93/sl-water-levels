@@ -133,8 +133,16 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
       const byBasin = key != null && w.basins.some((b) => normaliseBasin(b) === key);
       const byDistrict = (w.districts ?? []).some((d) => d.trim().toLowerCase() === place.district.toLowerCase());
       if (!byBasin && !byDistrict) continue;
-      if (!warning || SEV_RANK.indexOf(w.severity) > SEV_RANK.indexOf(warning.severity)) {
-        warning = { severity: w.severity, source: w.source, area: byBasin ? warnBasin! : place.district };
+      // A river warning covers named areas, not the whole river (26 Oct 2026: the Mahaweli warning named only Pasbage Korale in Kandy,
+      // yet Mahiyangana and Polonnaruwa, with their gauges far below alert, read "Get ready"). It sets its full floor only when it names
+      // the town's district, or names no district and the town's own gauge is already at watch or above. Anywhere else on the river it
+      // is a heads-up: "advisory" (Keep an eye on it), still shown as the reason.
+      const named = (w.districts ?? []).length > 0;
+      const gaugeHigh = !!eff && ["watch", "alert", "minor", "major"].includes(eff.tier);
+      const applies = byDistrict || (byBasin && !named && gaugeHigh);
+      const sev: typeof w.severity = applies || w.severity === "none" || w.severity === "advisory" ? w.severity : "advisory";
+      if (!warning || SEV_RANK.indexOf(sev) > SEV_RANK.indexOf(warning.severity)) {
+        warning = { severity: sev, source: w.source, area: byBasin ? warnBasin! : place.district };
       }
     }
   }
