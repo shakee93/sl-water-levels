@@ -7,6 +7,10 @@ import { loadForecast, type Forecast as ForecastT } from "@/lib/forecast";
 import { getAdvisory } from "@/lib/advisory";
 import { DISTRICT_BY_STATION } from "@/lib/districts";
 import { getGsmapForStation, GSMAP_CREDIT } from "@/lib/gsmap";
+import { heaviestUpstream, measuredAtGauge } from "@/lib/stationRain";
+import { noRainSensor } from "@/lib/rainSensors";
+import { forThisRiver, rainWord, reachesTrigger, satelliteCaveat } from "@/lib/rainWords";
+import { rainTriggersFor } from "@/lib/rainTriggers";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { contactsForDistrict } from "@/lib/help";
 import { statusFor } from "@/lib/status";
@@ -21,7 +25,7 @@ import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareBut
 import { CALL, STEADY_M_PER_H, VERDICT, directionFor } from "./verdict";
 
 const HOUR = 3_600_000;
-const fmtRain = (v: number | null, t: TFn) => (v == null ? t("common.na") : `${v.toFixed(1)} mm`);
+const mm = (v: number | null) => (v == null ? "—" : v < 10 ? v.toFixed(1) : String(Math.round(v)));
 
 const ACTION: Partial<Record<VerdictTone, T3>> = {
   alert: { en: "Move valuables up, charge your phone", si: "ඔබේ භාණ්ඩ ඉහළට ගෙන යන්න, දුරකථනය චාජ් කරන්න", ta: "உடைமைகளை உயரத்தில் வையுங்கள், தொலைபேசியை சார்ஜ் செய்யுங்கள்" },
@@ -197,7 +201,17 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         .map((k) => `${t(`mark.${k}` as "mark.alert").toLowerCase()} ${publishedAs(me.thresholds[k], unit, 1)}`)
         .join(", ")
     : "";
-  const hasRain = (f.signals.rainAtStation6h ?? 0) + (f.signals.rainUpstream6h ?? 0) > 1;
+  // Rain, three sources kept apart (lib/stationRain.ts): what THIS gauge's sensor measured, the satellite estimate, the weather-model forecast.
+  const nowMs = renderedAt();
+  const sensor = !noRainSensor(selectedStation);
+  const fell = me ? measuredAtGauge(selectedStation, me.trend24h, nowMs) : null;
+  const upRain = !sensor && me ? heaviestUpstream(snapshot, basin, selectedStation, nowMs) : null;
+  const trig = rainTriggersFor(selectedStation);
+  const localHeavy = fell ? forThisRiver(reachesTrigger("3h", fell.mm3h, trig) || reachesTrigger("24h", fell.mm24h, trig), trig, lang) : "";
+  const fellWord = fell?.mm24h != null && fell.mm24h >= 0.2 ? rainWord("24h", fell.mm24h, lang) : null;
+  const fcMm = f.rain?.next24hMm.det ?? null;
+  const fcWord = fcMm != null ? rainWord("24h", fcMm, lang) : null;
+  const hasRain = f.signals.rainContributors.length > 0;
 
   return (
     <section data-forecast-method={f.method}>
@@ -316,20 +330,37 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
                 ))}
               </ul>
             )}
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-2 text-xs">
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
               <Cell label={t("fc.localTrend")}>{f.signals.localRatePerH != null ? `${formatDelta(f.signals.localRatePerH, f.unit, { sign: true })}/h` : "—"}</Cell>
               <Cell label={t("fc.upstreamAvg")}>
                 {f.signals.upstreamRatePerH != null
                   ? `${formatDelta(f.signals.upstreamRatePerH, f.unit, { sign: true })}/h`
                   : f.signals.upstreamCount === 0 ? t("fc.upstreamTop") : "—"}
               </Cell>
-              <Cell label={t("fc.rainHere")}>{fmtRain(f.signals.rainAtStation6h, t)}</Cell>
-              <Cell label={f.rain ? t("fc.rainUpArea") : t("fc.rainUp")}>{fmtRain(f.signals.rainUpstream6h, t)}</Cell>
-              {f.rain && <Cell label={t("fc.rainNext")}>{fmtRain(f.rain.next24hMm.det, t)}</Cell>}
             </div>
+            <dl data-rain-rows className="mt-3 space-y-2 text-xs">
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">{t("fc.rainFell")}</dt>
+                <dd className="font-medium text-slate-800 dark:text-slate-200">
+                  {!sensor
+                    ? t("fc.rainNoSensor")
+                    : fell
+                      ? t("fc.rainFellGauge", { h3: mm(fell.mm3h), h24: mm(fell.mm24h), word: `${fellWord ? ` (${fellWord})` : ""}${localHeavy}` })
+                      : t("fc.rainNoReading")}
+                  {upRain && <span className="block font-normal text-slate-600 dark:text-slate-400">{t("fc.rainFellUp", { gauge: stationDisplayName(upRain.gauge), h3: mm(upRain.mm3h), h24: mm(upRain.mm24h) })}</span>}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500 dark:text-slate-400">{t("fc.rainForecast")}</dt>
+                <dd className="font-medium text-slate-800 dark:text-slate-200">
+                  {fcMm != null ? t("fc.rainForecastVal", { mm: mm(fcMm), word: fcWord ?? "" }) : <span className="font-normal">{t("fc.rainForecastNone")}</span>}
+                </dd>
+              </div>
+            </dl>
             {sat && sat.mm6h != null && sat.mm24h != null && (
               <p data-satellite-rain className="mt-2 text-xs text-slate-600 dark:text-slate-400">
                 {t("fc.satRain", { h6: sat.mm6h.toFixed(1), h24: sat.mm24h.toFixed(1), time: clock(sat.endsAt, t) })}{" "}
+                {satelliteCaveat(basin, lang)}{" "}
                 <span className="text-slate-500 dark:text-slate-500">{GSMAP_CREDIT}</span>
               </p>
             )}

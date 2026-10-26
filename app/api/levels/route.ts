@@ -13,6 +13,8 @@ import { orderStations } from "@/lib/basinOrder";
 import { API_META, CORS, levelRecord } from "@/lib/apiData";
 import { placeBySlug } from "@/lib/places";
 import { getNextHourForBasins, timeBox } from "@/lib/nextHour";
+import { getGsmap } from "@/lib/gsmap";
+import { getForecastRainAll, rainBlock } from "@/lib/stationRain";
 import { basinSlug, stationSlug } from "@/lib/slug";
 
 // Per request, not prerendered (a build must not depend on the data sources). Not `dynamic = "force-dynamic"`:
@@ -48,8 +50,8 @@ export async function GET(req: Request) {
   if ((river || station || town) && list.length === 0) {
     return Response.json({ error: "Not found", hint: "Use slugs as in the page URLs, e.g. river=kelani-ganga, station=hanwella" }, { status: 404, headers: CORS });
   }
-  const nh = await timeBox(getNextHourForBasins(list.map((s) => s.basin)));
-  const stations = list.map((s) => ({ ...levelRecord(s, now), nextHour: nh?.[s.station] ?? null }));
+  const [nh, sat, fc] = await Promise.all([timeBox(getNextHourForBasins(list.map((s) => s.basin))), timeBox(getGsmap()), timeBox(getForecastRainAll())]);
+  const stations = list.map((s) => ({ ...levelRecord(s, now), rain: rainBlock(s, sat, fc, now), nextHour: nh?.[s.station] ?? null }));
   const newest = stations.reduce<string | null>((m, s) => (s.observedAt && (!m || s.observedAt > m) ? s.observedAt : m), null);
   return Response.json(
     {
@@ -58,6 +60,9 @@ export async function GET(req: Request) {
       count: stations.length,
       nextHourReady: nh != null,
       ...API_META,
+      rainNote:
+        "rain keeps three sources apart. fallen_*_mm is what the gauge's own sensor recorded (null when it has no sensor, for example Nagalagam Street, or no reading in 2 hours; never 0 for 'not measured'). satellite_*_mm is the JAXA GSMaP estimate over the catchment above the gauge: an estimate that can read far higher than gauges in the dry zone. forecast_*_mm is the weather model's rain over the same catchment for the next 6 / 24 hours, forecast_24h_heavier_mm the heavier ensemble scenario. The *_word fields use the shared bands (light / moderate / heavy / very heavy) documented at /data. rainReady is false when a source was slow; its fields are then null.",
+      rainReady: sat != null && fc != null,
       nextHourNote:
         "nextHour is a forecast, not an official warning: level_ft is the expected level in about an hour from issuedAt, low_ft to high_ft the range it is expected to stay in (80%; null for a simple trend estimate), direction is rising / falling / steady, crossing names a flood mark the range reaches (else null) and method is model (upstream gauges and rain) or trend, and rainRisk is set when 50 mm or more of rain is forecast over the hills above the gauge in the next 24 hours (kind forecast; level heavy / very-heavy / possible, mm_24h) or when the gauges themselves measured very heavy rain, 25 mm in 1 hour or 40 mm in 3 hours, at this gauge or one upstream (kind measured, or both; measured: {gauge, upstream, hours, mm}; level and mm_24h are null when only measured), meaning the river may rise faster than the forecast shows. rainRisk.line is the plain sentence. null when the gauge is not reporting or has no forecast.",
       stations,
