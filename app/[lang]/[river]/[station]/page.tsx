@@ -33,6 +33,8 @@ import { InTheNews } from "@/app/InTheNews";
 import { Forecast } from "@/app/Forecast";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { Anomaly } from "@/app/Anomaly";
+import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
+import { d1Configured } from "@/lib/d1";
 import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { RiverMap } from "@/app/RiverMap";
@@ -250,6 +252,8 @@ export default async function StationPage({
             <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
               <Forecast lang={lang} basin={basin} selectedStation={station} />
             </Suspense>
+
+            {d1Configured() && nat && <AccuracyFeedback page="station" station={station} name={stationDisplayName(station)} tone={nat.tier} />}
 
             <StationNearby
               current={station}

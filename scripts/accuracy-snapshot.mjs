@@ -16,6 +16,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { feedbackRows, feedbackSql, publicFeedback } from "../lib/feedbackLearn.mjs";
 
 export const GM_SINCE = 1792841552000; // 2026-10-24, commit 717de26 (gauge-only model live)
 // Storm-aware version (v3): gauge-only model at all of 1/3/6/12/24 h plus the rain correction on storm hours. Replaced the 8-day rain ridge at 12/24 h.
@@ -95,6 +96,14 @@ function build(rs) {
     }
   }
   return o;
+}
+// "Is this right?" answers (forecast_feedback), aggregates only and only where 3 or more people answered: a gauge with
+// fewer is simply missing. Notes, places and distances are private (scripts/feedback-digest.mjs). The table may not exist yet.
+let feedback = null;
+try {
+  feedback = publicFeedback(feedbackRows(d1(feedbackSql(now - 30 * DAY))));
+} catch (e) {
+  console.log(`feedback: skipped (${String(e.message).split("\n")[0].slice(0, 80)})`);
 }
 const stations = {};
 for (const s of [...new Set(usable.map((r) => r.station))].sort()) stations[s] = build(usable.filter((r) => r.station === s));

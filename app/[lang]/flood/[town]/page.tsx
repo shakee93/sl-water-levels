@@ -14,6 +14,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { formatKm } from "@/lib/nearby";
 import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
+import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
 import { LowSpot } from "@/app/flood/LowSpot";
 import { d1Configured } from "@/lib/d1";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
@@ -131,6 +132,8 @@ export default async function TownPage({ params }: Params) {
           serverNow={serverNow}
           href={canonical}
         />
+
+        {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} />}
 
         {g && (
           <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">

@@ -26,7 +26,10 @@ export type AccuracyFile = {
   /** Fitted-model forecasts split by storm (a heavy-rain warning showing or a storm-horizon step in use) and calm hours. Absent in older files. */
   rainSplit?: { d30?: Partial<Record<"storm" | "calm", Record<string, Stat>>>; all?: Partial<Record<"storm" | "calm", Record<string, Stat>>> };
   stations: Record<string, { d30?: BySeg; all?: BySeg }>;
+  /** "Is this right?" answers of the last 30 days (aggregates only, gauges with fewer than 3 answers are absent). */
+  feedback?: { window: string; overall: FeedbackStat | null; stations: Record<string, FeedbackStat> };
 };
+export type FeedbackStat = { n: number; agreePct: number | null; worsePct: number | null; betterPct: number | null };
 export type Win = "d30" | "all";
 
 export async function getAccuracy(ms = 1500): Promise<AccuracyFile | null> {

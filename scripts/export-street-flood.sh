@@ -2,7 +2,7 @@
 # Export one month of the street-flood validation data from Cloudflare D1 to JSON for the monthly review.
 # Usage: scripts/export-street-flood.sh YYYY-MM <outDir>      (month boundaries are Asia/Colombo, UTC+05:30)
 # Needs wrangler to be logged in (npx wrangler login) or CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (D1 read).
-# Writes rain_log.json, changes.json, shadow_changes.json, reports.json, reports_by_day.json, shadow_by_day.json. Keep the output PRIVATE: do not commit it
+# Writes feedback.json, feedback_summary.json (Is this right? answers), rain_log.json, changes.json, shadow_changes.json, reports.json, reports_by_day.json, shadow_by_day.json. Keep the output PRIVATE: do not commit it
 # to the public data branch (resident reports are not shown publicly yet).
 set -euo pipefail
 month="$1"; out="$2"; mkdir -p "$out"
@@ -63,5 +63,22 @@ q "SELECT d.day, d.runs, d.max_mm24h_clipped, d.max_live, d.max_shadow, d.shadow
                 SUM(shadow_state IS NULL AND data_end_ms >= $SHADOW_FROM) AS shadow_unknown_runs,
                 MAX(api_gauge_mm) AS api_gauge_mm, MAX(gauge_source) AS gauge_source
          FROM street_rain_log WHERE zone = 'colombo-east' AND data_end_ms >= $start AND data_end_ms < $end GROUP BY 1) d ORDER BY d.day" > "$out/shadow_by_day.json"
+
+# "Is this right?" feedback (PRIVATE: notes are free text and rounded locations are kept; never commit this to the public data branch).
+# Each answer with what the page showed, and the 1 h forecast point it was shown with (forecast_runs / forecast_verification, joined on
+# station + issued_at; p1/a1/low1/high1 are in the log's own unit u). feedback_summary.json is the same aggregate the owner digest uses.
+q "SELECT datetime((f.created_ms + 19800000) / 1000, 'unixepoch') AS colombo_time, f.page, f.station, f.town, f.answer, f.river_obs, f.rain_obs, f.note, f.note_tags,
+          f.lat_r, f.lon_r, f.dist_km, f.shown_tier, f.shown_level, f.shown_next_ft, f.shown_low_ft, f.shown_high_ft, f.shown_dir, f.shown_method, f.shown_rain, f.lang, f.device,
+          r.model_version, v.unit AS u, v.predicted AS p1, v.actual AS a1, v.low AS low1, v.high AS high1
+   FROM forecast_feedback f
+   LEFT JOIN forecast_runs r ON r.station = f.station AND r.issued_at = f.shown_issued_at
+   LEFT JOIN forecast_verification v ON v.station = f.station AND v.issued_at = f.shown_issued_at AND v.horizon_h = 1
+   WHERE f.created_ms >= $start AND f.created_ms < $end ORDER BY f.created_ms" > "$out/feedback.json" || echo "[]" > "$out/feedback.json"
+node -e "
+import('$(pwd)/lib/feedbackLearn.mjs').then(({feedbackRows, summary, perStation}) => {
+  const rows = feedbackRows(JSON.parse(require('fs').readFileSync('$out/feedback.json','utf8')).map(r => ({...r, unit: r.u})));
+  const out = { overall: summary(rows), stations: Object.fromEntries(Object.entries(perStation(rows)).map(([k, v]) => [k, summary(v)])) };
+  require('fs').writeFileSync('$out/feedback_summary.json', JSON.stringify(out, null, 1));
+});" || true
 
 echo "exported $month to $out"
