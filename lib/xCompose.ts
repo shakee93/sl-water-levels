@@ -133,6 +133,8 @@ export function riverTag(river: string): string {
 }
 
 /** Joins "A, B and C". */
+const listMore = (xs: string[], more: number) => (more > 0 ? `${xs.join(", ")} and ${more} more` : list(xs));
+const dayOf = (d: string) => (/^\d{4}-\d\d-\d\d$/.test(d) ? dayText(Date.parse(`${d}T12:00:00+05:30`)) : d);
 const list = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 
 // ---- facts shapes -----------------------------------------------------------------------------------------------
@@ -221,7 +223,7 @@ export function composeGaugeRise(gs: GaugeFact[]): Composed {
   const mk = (k: number) => {
     const names = shown.slice(0, k).map((g) => `${g.station} ${ft(g.level)}`);
     const more = shown.length - k;
-    return `${river}: ${gs.length} gauges are at Alert level or higher (${list(names)}${more > 0 ? ` and ${more} more` : ""}) at ${time}.`;
+    return `${river}: ${gs.length} gauges are at Alert level or higher (${listMore(names, more)}) at ${time}.`;
   };
   const variants: Parts[] = [3, 2, 1].filter((k) => k <= shown.length || k === 1).map((k) => ({ body: mk(Math.min(k, shown.length)), link, must: [river, ...shown.slice(0, Math.min(k, 3)).map((g) => g.station)], tags }));
   const reply = shown.map((g) => `${g.station}: ${ft(g.level)}, ${g.tier === "normal" || g.tier === "watch" ? "below alert" : TIER_MARK[g.tier]}${trendWord(g.trend)}`).slice(0, 6).join("\n");
@@ -242,7 +244,7 @@ export function composeGaugeClear(gs: GaugeFact[]): Composed {
     return assemble({ body, short, link, must: [g.station, "clear"], tags });
   }
   const names = (k: number) => list(gs.slice(0, k).map((g) => `${g.station} ${ft(g.level)}`));
-  const mk = (k: number) => `All clear on the ${river} at ${time}: ${names(k)}${gs.length > k ? ` and ${gs.length - k} more` : ""} no longer at Alert level.`;
+  const mk = (k: number) => `All clear on the ${river} at ${time}: ${listMore(gs.slice(0, k).map((g) => `${g.station} ${ft(g.level)}`), gs.length - k)} no longer at Alert level.`;
   return assemble([3, 2, 1].map((k) => ({ body: mk(Math.min(k, gs.length)), link, must: [river, "clear"], tags })));
 }
 
@@ -254,18 +256,18 @@ export function composeReservoirStart(rs: ReservoirFact[]): Composed {
     const r = rs[0];
     const verb = r.status === "spilling" ? "is spilling water over its spillway" : "is releasing water through its gates";
     const stor = r.storagePercent != null ? ` Storage ${int(r.storagePercent)}%.` : "";
-    const body = `${r.name} reservoir ${verb}: about ${int(r.cusecs)} cusecs (${r.day}).${stor}${r.river ? ` Water may reach the ${r.river} in the next hours.` : ""}`;
-    const short = `${r.name} reservoir ${r.status === "spilling" ? "is spilling" : "is releasing water"}: about ${int(r.cusecs)} cusecs (${r.day}).`;
-    const reply = `${r.name}: ${r.status}, about ${int(r.cusecs)} cusecs on ${r.day}${r.source ? ` (${r.source})` : ""}. The figure is the agency's daily reading, not live.${r.river ? ` Watch the ${r.river} gauges downstream.` : ""}`;
+    const body = `${r.name} reservoir ${verb}: about ${int(r.cusecs)} cusecs (${dayOf(r.day)}).${stor}${r.river ? ` Water may reach the ${r.river} in the next hours.` : ""}`;
+    const short = `${r.name} reservoir ${r.status === "spilling" ? "is spilling" : "is releasing water"}: about ${int(r.cusecs)} cusecs (${dayOf(r.day)}).`;
+    const reply = `${r.name}: ${r.status}, about ${int(r.cusecs)} cusecs on ${dayOf(r.day)}${r.source ? ` (${r.source})` : ""}. The figure is the agency's daily reading, not live.${r.river ? ` Watch the ${r.river} gauges downstream.` : ""}`;
     return assemble({ body, short, link: r.url, must: [r.name], tags, reply: `${reply}\n${r.url}` });
   }
-  const mk = (k: number) => `${rs.length} reservoirs are letting water out: ${list(rs.slice(0, k).map((r) => `${r.name} ${int(r.cusecs)} cusecs`))}${rs.length > k ? ` and ${rs.length - k} more` : ""} (${rs[0].day}).`;
+  const mk = (k: number) => `${rs.length} reservoirs are letting water out: ${listMore(rs.slice(0, k).map((r) => `${r.name} ${int(r.cusecs)} cusecs`), rs.length - k)} (${dayOf(rs[0].day)}).`;
   return assemble([3, 2, 1].map((k) => ({ body: mk(Math.min(k, rs.length)), link: rs[0].url, must: [rs[0].name], tags })));
 }
 
 export function composeReservoirStop(rs: { name: string; river: string | null; day: string; url: string }[]): Composed {
   const tags = ["#SriLanka"];
-  const mk = (k: number) => (rs.length === 1 ? `${rs[0].name} reservoir has stopped letting water out (${rs[0].day}).` : `${list(rs.slice(0, k).map((r) => r.name))}${rs.length > k ? ` and ${rs.length - k} more` : ""}: reservoirs have stopped letting water out (${rs[0].day}).`);
+  const mk = (k: number) => (rs.length === 1 ? `${rs[0].name} reservoir has stopped letting water out (${dayOf(rs[0].day)}).` : `${listMore(rs.slice(0, k).map((r) => r.name), rs.length - k)}: reservoirs have stopped letting water out (${dayOf(rs[0].day)}).`);
   return assemble([3, 2, 1].map((k) => ({ body: mk(Math.min(k, rs.length)), link: rs[0].url, must: [rs[0].name], tags })));
 }
 
@@ -322,8 +324,8 @@ export function composeSummary(f: SummaryFact): Composed {
   const parts: string[] = [];
   if (f.atAlert.length === 0) parts.push(`All ${f.assessed} river gauges with flood levels are below Alert level.`);
   else {
-    const names = list(f.atAlert.slice(0, 3).map((a) => a.station));
-    parts.push(`${f.atAlert.length} of ${f.assessed} river gauges are at Alert level or higher: ${names}${f.atAlert.length > 3 ? ` and ${f.atAlert.length - 3} more` : ""}.`);
+    const names = listMore(f.atAlert.slice(0, 3).map((a) => a.station), f.atAlert.length - 3);
+    parts.push(`${f.atAlert.length} of ${f.assessed} river gauges are at Alert level or higher: ${names}.`);
   }
   if (f.nearAlert > 0) parts.push(`${f.nearAlert} more ${f.nearAlert === 1 ? "is" : "are"} close to Alert level.`);
   const rain = f.rain && f.rain.mm >= 5 ? `Rain forecast, next ${f.rainWindowH} hours: up to ${int(f.rain.mm)} mm near ${f.rain.place}.` : f.rain ? `Little rain forecast for the next ${f.rainWindowH} hours.` : null;
@@ -345,7 +347,7 @@ export function composeStorm(f: StormFact): Composed {
     return `${g.station} ${ft(g.level)}, ${lab}${trendWord(g.trend)}.${fc}`;
   };
   const body = `${f.river} update, ${clock(f.at)}: ${gs.map(line).join(" ")}`;
-  const short = `${f.river}, ${clock(f.at)}: ${gs.map((g) => `${g.station} ${ft(g.level)}${trendWord(g.trend)}`).join("; ")}.`;
+  const short = `${f.river}, ${clock(f.at)}: ${line(gs[0])}`;
   const reply = f.gauges.map((g) => `${g.station}: ${ft(g.level)}${g.alertMark != null ? ` (alert ${ft(g.alertMark)})` : ""}${trendWord(g.trend)}`).join("\n");
   return assemble({ body, short, link: f.url, must: [f.river, gs[0].station, "forecast"].filter((w, i) => i < 2 || gs[0].nextHour), tags: ["#SriLanka", riverTag(f.river)].filter(Boolean), reply: `${reply}\n${f.url}` });
 }
