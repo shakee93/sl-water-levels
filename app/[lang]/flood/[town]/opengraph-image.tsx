@@ -10,7 +10,7 @@ export const revalidate = 600;
 const PILL: Record<string, { bg: string; fg: string; text: string }> = {
   normal: { bg: "#d1fae5", fg: "#065f46", text: "Normal" },
   watch: { bg: "#e2e8f0", fg: "#1e293b", text: "Keep an eye on it" },
-  alert: { bg: "#fcd34d", fg: "#451a03", text: "Get ready" },
+  alert: { bg: "#fcd34d", fg: "#451a03", text: "Alert" },
   minor: { bg: "#fb923c", fg: "#431407", text: "Flooding likely" },
   major: { bg: "#ef4444", fg: "#ffffff", text: "Move to safety" },
   stale: { bg: "#e2e8f0", fg: "#475569", text: "Open for the estimate" },
