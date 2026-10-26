@@ -21,6 +21,7 @@ import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
+import { RiverFloodMap } from "@/app/flood/OfficialFloodMap";
 import { AnswerLine, JsonLd } from "@/app/Answer";
 import { NextHourFaq } from "@/app/NextHour";
 import { riverAnswer, riverFaq } from "@/lib/answers";
@@ -273,6 +274,8 @@ export default async function BasinPage({
         <Suspense key={`history-${basin}`} fallback={null}>
           <FloodHistoryCard basin={basin} lang={lang} />
         </Suspense>
+
+        <RiverFloodMap lang={lang} basin={basin} />
 
         <Suspense key={`reservoirs-${basin}`} fallback={null}><RiverReservoirs lang={lang} basin={basin} /></Suspense>
 

@@ -84,6 +84,7 @@ Where to get it:
 - Department of Irrigation, Sri Lanka: river-gauge readings (hourly) and the Reservoir Water Level sheet (daily). https://www.irrigation.gov.lk
 - Mahaweli Authority of Sri Lanka: daily water-management report for the Mahaweli and CEB reservoirs. https://mahaweli.gov.lk
 - Disaster Management Centre and Irrigation Department flood-warning bulletins. https://www.dmc.gov.lk
+- Department of Irrigation official flood maps (ArcGIS Flood_Map, maps of 17 past floods such as the Kelani 2016 and Kalu 2017 floods, with the Grama Niladhari divisions each reached). Town pages name the divisions around the town that were under water in a past flood and river pages list each mapped flood; this is where a past flood reached, not a flood now.
 - Public Utilities Commission of Sri Lanka: day-ahead hydropower dispatch (archive only, about 2.5 days late, never shown as live).
 - Rain: satellite (JAXA GSMaP) and Open-Meteo forecasts.
 `;

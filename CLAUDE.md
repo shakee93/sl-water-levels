@@ -73,6 +73,11 @@ lib/
   gauges_2_view retains only ~7 days (~6.5k rows). The source of truth for
   level data; `lib/arcgis.ts` `getNational()` is the one consolidated fetch.
 
+- **ArcGIS Flood_Map** (same org): the Irrigation Dept's official maps of 17 past floods (Kelani 1989/2012/2016,
+  Kalu 2017, ...) with the GN/DSD divisions each extent touches. Static (Dec 2025): read once by
+  `scripts/build-flood-map.mjs` into `lib/model/flood-map.json` (names + centroids, no polygons); `lib/floodMap.ts` ->
+  "Official flood map" card on town and river pages. Past extent, never a live flood or a verdict input.
+
 - **ArcGIS Reservoir_Data_2024**: static infrastructure — irrigation tanks
   only, NO CEB hydropower. Useful for context only.
 

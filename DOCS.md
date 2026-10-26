@@ -21,9 +21,20 @@ but the endpoints are fully open and CORS-enabled, which is enough.
 | `hydrostations/FeatureServer/0`         | Station catalogue: `station`, `basin`, `latitude`, `longitude`. |
 | `gauges_2_view/FeatureServer/0`         | Every reading from every gauge: `gauge`, `basin`, `water_level`, `rain_fall`, `CreationDate`, `alertpull`, `minorpull`, `majorpull`. |
 
+| `Flood_Map/FeatureServer` (build time only) | Official maps of 17 past floods, one layer group per event (`Flooding_area` = "Kelani Ganga Flood 2016 Major", "Kalu Ganga Flood 2017" ...): River_Basin, Flood Inundation Area, Flood_Inundation_DSD, Flood_Inundation_GND (`gnd_name`, `dsd_name`, `district_n`). SR 5234, query with `outSR=4326`. |
+
+**Official flood map (`Flood_Map`).** Static (last edited Dec 2025), so it is read once by
+`node scripts/build-flood-map.mjs` into `lib/model/flood-map.json` (170 KB: event list with DSD names and mapped km²,
+plus every GN division any event's extent touches, as name / DSD / district / centroid / equal-area radius; no polygons).
+The script finds layers by their `Flooding_area` value, not by id (layer 85 is a combined DSD layer for all events, and
+names a "Kelani Ganag Flood 2016 Minor" with no extent: dropped). Kelani has three events: 1989 critical, 2012 minor,
+2016 major. `lib/floodMap.ts` serves it to `app/flood/OfficialFloodMap.tsx`: town pages list the GN divisions around the
+town (centroid within 2 km, or within the division's own radius + 0.5 km) with the flood years; river pages list each
+event with its DSD areas. Wording: "where a past flood reached, not a flood now", credited "Flood maps: Irrigation
+Department of Sri Lanka". It never sets a verdict. Re-run the script only if the service changes.
+
 A bunch of *other* layers exist on the same server (`24hr_rainfall`,
-`river_basins`, `Flood_Map`, event-specific flood inundation layers,
-reservoirs, sluices, canals, soil maps, admin boundaries) — we don't
+`river_basins`, reservoirs, sluices, canals, soil maps, admin boundaries) — we don't
 use them yet but they're available under the same query pattern.
 
 ### How a query looks

@@ -31,6 +31,7 @@ import { assessTown } from "@/lib/townRisk";
 import { breadcrumbLd, placeLd, webPageLd } from "@/lib/seo";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
+import { TownFloodMap } from "@/app/flood/OfficialFloodMap";
 
 // Town pages are rendered per request and CDN-cached for 60 s (proxy.ts), never at build time: a build that had
 // to fetch rain, gauges and warnings for 135 towns would depend on every upstream being up, and an ISR render
@@ -172,6 +173,8 @@ export default async function TownPage({ params }: Params) {
             <RiverReservoirs lang={lang} basin={g.basin} station={g.station} />
           </Suspense>
         )}
+
+        <TownFloodMap lang={lang} town={place.name} lat={place.lat} lon={place.lon} basin={g?.basin ?? null} />
 
         <p className="mt-8 text-center">
           <Link
