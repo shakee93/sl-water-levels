@@ -428,7 +428,7 @@ found only ~35% of storm-mode alert flags followed by a real crossing.
   heavier rain comes)" and no "Move valuables up" action (the town page says "Small chance the river reaches alert level in about 9 h").
 - **De-tided "rising"**: for gauges whose fitted model has a tide term (`TIDAL_STATIONS`: Nagalagam Street, Peradeniya, Putupaula, Thalgahagoda;
   `scripts/verdict-lift.test.mts` fails if `lib/model/gauge-model.json` disagrees) the level is compared with the reading one tide cycle (12.4 h) earlier,
-  and counts as rising only if 0.2 ft (0.06 m) higher; no comparable reading means not rising. Other gauges keep the 3 h rate above 0.006 m/h. A
+  and counts as rising only if 0.3 ft (0.09 m) higher; no comparable reading means not rising. Nagalagam Street instead subtracts the predicted tide (`lib/tide.ts`) from both readings and compares now with 6 h earlier (same 0.3 ft). Other gauges keep the 3 h rate above 0.006 m/h. A
   tide-only rise reads "Rising with the tide (about the same once the tide is allowed for)" in the next-hour line, and `/api/levels` `trend` says "steady".
 - Probabilities show as words in Details ("about 4 in 10", rounded down), never as percentages. (The one-line forecast headline in Details,
   built in `lib/forecast.ts`, still quotes a percentage.)

@@ -28,13 +28,17 @@ export const RISING_M_PER_H = 0.006;
 /** Tide repeats every 12.42 h (M2): comparing with the level this long ago compares the same tide phase. */
 export const TIDE_PERIOD_H = 12.4;
 /** Tidal gauges: a real rise = at least this much (metres, ~0.2 ft) above the level one tide cycle ago. */
-export const TIDAL_RISE_M = 0.06;
+export const TIDAL_RISE_M = 0.0914; // 0.3 ft
+/** Gauges with a predicted tide (lib/tide.ts): the tide is subtracted and the last 6 h compared, instead of the 12.4 h same-phase compare. */
+export const TIDE_FIT_WINDOW_H = 6;
 
 /**
  * Gauges whose fitted model has a tide term on (lib/model/gauge-model.json, any horizon). Kept inline so the pure rule needs no
  * JSON import; scripts/verdict-lift.test.mts fails if this list and the model ever differ.
  */
 export const TIDAL_STATIONS: ReadonlySet<string> = new Set(["Nagalagam Street", "Peradeniya", "Putupaula", "Thalgahagoda"]);
+// @ts-ignore node strip-types needs explicit extensions
+import { tideFt } from "./tide.ts";
 export const isTidalStation = (station: string): boolean => TIDAL_STATIONS.has(station);
 
 type Reading = { ts: number; water_level: number | null };
@@ -49,6 +53,17 @@ export function riverRising(station: string, trend24h: readonly Reading[] | null
   const pts = (trend24h ?? []).filter((r) => r.water_level != null);
   if (pts.length < 2) return false;
   const now = pts[pts.length - 1];
+  if (station === "Nagalagam Street") {
+    // predicted tide (fitted to this gauge) removed from both readings: what is left is the river
+    const t0 = now.ts - TIDE_FIT_WINDOW_H * 3_600_000;
+    let prev: Reading | null = null;
+    for (const p of pts) if (Math.abs(p.ts - t0) <= 45 * 60_000 && (prev == null || Math.abs(p.ts - t0) < Math.abs(prev.ts - t0))) prev = p;
+    if (prev) {
+      const unitsFt = mpu > 0 ? 0.3048 / mpu : 1; // station units per ft
+      const rise = now.water_level! - prev.water_level! - (tideFt(now.ts) - tideFt(prev.ts)) * unitsFt;
+      return rise * mpu >= TIDAL_RISE_M;
+    }
+  }
   const target = now.ts - TIDE_PERIOD_H * 3_600_000;
   let best: Reading | null = null;
   for (const p of pts) if (Math.abs(p.ts - target) <= 45 * 60_000 && (best == null || Math.abs(p.ts - target) < Math.abs(best.ts - target))) best = p;

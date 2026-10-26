@@ -2,6 +2,7 @@
 // node --experimental-strip-types scripts/verdict-lift.test.mts
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { tideFt } from "../lib/tide.ts";
 import { liftVerdict, riverRising, isTidalStation, TIDAL_STATIONS, chanceWords } from "../lib/verdictLift.ts";
 
 const H = 3_600_000;
@@ -37,11 +38,18 @@ for (let k = 0; k <= 24; k++) {
   series.push({ ts, water_level: 2.6 + 0.7 * Math.sin((2 * Math.PI * (ts - NOW)) / (12.42 * H)) });
 }
 const MPU = 0.3048;
-assert.equal(riverRising("Nagalagam Street", series, MPU, 0.05), false); // tide: not rising
+assert.equal(riverRising("Putupaula", series, MPU, 0.05), false); // tide: not rising
 // a real 0.5 ft rise on top of the same tide is rising
 const real = series.map((p, i) => ({ ...p, water_level: p.water_level + (i >= 12 ? (i - 12) * 0.05 : 0) }));
-assert.equal(riverRising("Nagalagam Street", real, MPU, 0.05), true);
-assert.equal(riverRising("Nagalagam Street", [], MPU, 0.05), false); // no comparable reading: never guess
+assert.equal(riverRising("Putupaula", real, MPU, 0.05), true);
+assert.equal(riverRising("Putupaula", [], MPU, 0.05), false); // no comparable reading: never guess
+// 26 Oct 2026 midday, Nagalagam 2.6 ft at high tide: raw 3 h rate +0.24 ft/h, yet only the tide moved
+const tideOnly = [];
+for (let k = 0; k <= 24; k++) { const ts = NOW - (24 - k) * H; tideOnly.push({ ts, water_level: 2.2 + 0.9 * 0 + (tideFt(ts) - tideFt(NOW - 24 * H)) * 1 }); }
+assert.equal(riverRising("Nagalagam Street", tideOnly, MPU, 0.0732), false);
+// the same tide plus a real 0.5 ft river rise over the last 6 h
+const realRise = tideOnly.map((p) => ({ ...p, water_level: p.water_level + Math.max(0, (p.ts - (NOW - 6 * H)) / H) * 0.1 }));
+assert.equal(riverRising("Nagalagam Street", realRise, MPU, 0.0732), true);
 // non-tidal gauge: the 3 h rate decides
 assert.equal(isTidalStation("Hanwella"), false);
 assert.equal(riverRising("Hanwella", [], MPU, 0.02), true);
