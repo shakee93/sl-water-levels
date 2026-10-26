@@ -64,6 +64,8 @@ if (NOW - dataEnd > MAX_DATA_AGE_MS) {
 // zone -> the town slugs the rule covers (lib/places.ts rainZone), the town the Slack link points at first
 const townsOf = (zone) => PLACES.filter((p) => p.rainZone === zone).map((p) => p.slug);
 const LEAD_TOWN = "wellampitiya";
+const leadOf = (zone) => (zone === "colombo-east" ? LEAD_TOWN : townsOf(zone)[0] ?? LEAD_TOWN);
+const areaOf = (zone) => (zone === "colombo-east" ? "Wellampitiya and nearby" : PLACES.filter((p) => p.rainZone === zone).map((p) => p.name).join(", ") || zone);
 
 // ---- wrangler ---------------------------------------------------------------------------------
 function wrangler(wargs) {
@@ -116,8 +118,10 @@ const notices = []; // {zone, changedMs, from, to, mm1h, mm6h, mm24h, kind}
 for (const [zone, z] of Object.entries(latest.zones ?? {})) {
   // the rule's number is the clipped 24 h sum; a file from before the clip has none (rule off for the rain part)
   const clipped = typeof z.mm24hClipped === "number" ? z.mm24hClipped : null;
-  let state = streetState(clipped, riverOn);
-  const riverCol = river ? (river.on ? 1 : 0) : null;
+  // the Kelani river trigger (Nagalagam / Hanwella) belongs to the Colombo zone only
+  const zoneRiverOn = zone === "colombo-east" && riverOn;
+  let state = streetState(clipped, zoneRiverOn);
+  const riverCol = river && zone === "colombo-east" ? (river.on ? 1 : 0) : null;
   // what D1 already knows about this zone
   let newestLogged = 0, lastKnown = null, lastShadow = null, lastRiseNoticeMs = null, pending = [];
   if (DRY) {
@@ -133,10 +137,10 @@ for (const [zone, z] of Object.entries(latest.zones ?? {})) {
     }));
   }
   // gauges unreadable this run: do not let "river unknown" read as "river fell" and clear a likely that the river caused
-  if (!river && lastKnown === "likely" && state !== "likely") state = null;
+  if (!river && zone === "colombo-east" && lastKnown === "likely" && state !== "likely") state = null;
   // the candidate rule, with the same river-unknown guard as the live one
-  let shadow = shadowStreetState(clipped, riverOn, wet.apiMm);
-  if (!river && lastShadow === "likely" && shadow !== "likely") shadow = null;
+  let shadow = shadowStreetState(clipped, zoneRiverOn, wet.apiMm);
+  if (!river && zone === "colombo-east" && lastShadow === "likely" && shadow !== "likely") shadow = null;
   const fresh = dataEnd > newestLogged;
   if (fresh) {
     sql.push(`INSERT OR IGNORE INTO street_rain_log (zone, data_end_ms, run_ms, rate_mm_h, mm1h, mm3h, mm6h, mm24h, mm24h_clipped, river_trigger, state, api_gauge_mm, gauge_source, shadow_state, api_ogimet_mm, api_arcgis_mm) VALUES (${[zone, dataEnd, NOW, z.rateMmPerHour, z.mm1h, z.mm3h, z.mm6h, z.mm24h, clipped, riverCol, state, wet.apiMm, wet.source, shadow, wet.ogimetMm, wet.arcgisMm].map(q).join(", ")});`);
@@ -179,16 +183,17 @@ function text(n) {
   return n.shadow ? `${t} (Shadow rule: ${n.shadow}.)` : t;
 }
 function textLive(n) {
-  const link = `${SITE}/flood/${LEAD_TOWN}`;
+  const link = `${SITE}/flood/${leadOf(n.zone)}`;
+  const area = areaOf(n.zone);
   const counted = n.clipped ?? n.mm24h;
   const nums = `24 h ${mm(counted)} mm counted (each hour capped at ${STREET_HOURLY_CAP_MM} mm${n.mm24h != null && n.clipped != null && n.mm24h - n.clipped >= 1 ? `; ${mm(n.mm24h)} mm uncapped` : ""}), 6 h ${mm(n.mm6h)} mm, 1 h ${mm(n.mm1h)} mm`;
   if (n.kind === "clear")
-    return `Low-spot rain heads-up has cleared for Wellampitiya and nearby (satellite rain: ${nums}; below ${STREET_POSSIBLE_MM_24H} mm, Kelani below minor level). Did your street flood today? ${link}`;
+    return `Low-spot rain heads-up has cleared for ${area} (satellite rain: ${nums}; below ${STREET_POSSIBLE_MM_24H} mm${n.zone === "colombo-east" ? ", Kelani below minor level" : ""}). Did your street flood today? ${link}`;
   if (n.to === "likely") {
     const why = n.river ? `the Kelani is at its minor flood level${n.riverStation ? ` (${n.riverStation}${n.riverFt != null ? ` ${n.riverFt.toFixed(1)} ft` : ""})` : ""}${(counted ?? 0) >= STREET_LIKELY_MM_24H ? ` and 24 h rain is at or above ${STREET_LIKELY_MM_24H} mm` : ""}` : `24 h rain at or above ${STREET_LIKELY_MM_24H} mm`;
-    return `Low-spot rain heads-up *(higher level)* for Wellampitiya and nearby (${why}). Satellite rain: ${nums}. Only people who marked their own spot as low ground are told; the site shows no town warning. Did your street flood? ${link}`;
+    return `Low-spot rain heads-up *(higher level)* for ${area} (${why}). Satellite rain: ${nums}. Only people who marked their own spot as low ground are told; the site shows no town warning. Did your street flood? ${link}`;
   }
-  return `Low-spot rain heads-up *(early)* for Wellampitiya and nearby (24 h rain at or above ${STREET_POSSIBLE_MM_24H} mm; often wrong, about 8 times a year with no recorded flood; nobody is alerted, and the site shows no town warning). Satellite rain: ${nums}. Did your street flood? ${link}`;
+  return `Low-spot rain heads-up *(early)* for ${area} (24 h rain at or above ${STREET_POSSIBLE_MM_24H} mm; often wrong${n.zone === "colombo-east" ? ", about 8 times a year with no recorded flood" : "; not backtested here yet"}; nobody is alerted, and the site shows no town warning). Satellite rain: ${nums}. Did your street flood? ${link}`;
 }
 async function slack(msg) {
   if (DRY) return console.log(`[dry-run] Slack: ${msg}`), true;

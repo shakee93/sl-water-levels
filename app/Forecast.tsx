@@ -1,4 +1,5 @@
 import { releaseAffecting } from "@/lib/releases";
+import { officialReleaseAlert, releaseAlertLine } from "@/lib/releaseAlert";
 import { TimeAgo } from "./TimeAgo";
 import { ClampedText } from "./ClampedText";
 import { CloudRain, TriangleAlert } from "lucide-react";
@@ -130,7 +131,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const [advisory, warnings, release, sat] = await Promise.all([
     getAdvisory({ station: selectedStation, river: basin.trim(), district, tier: realTier, forecast: f }),
     warningsP.then((w) => warningsForBasin(w, basin, [selectedStation])),
-    releaseAffecting(selectedStation).catch(() => ({ active: false, confirmed: false }) as const),
+    releaseAffecting(selectedStation).catch(() => ({ active: false, confirmed: false, cusecs: null, reservoir: null }) as const),
     getGsmapForStation(basin, selectedStation),
   ]);
 
@@ -177,9 +178,14 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const lift = stale
     ? null
     : liftVerdict({ tier: realTier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
+  // A confirmed release of 5,000+ cusecs by the Irrigation Department's own figures, directly above this gauge, is at least Alert
+  // (lib/releaseAlert.ts; 26 Oct 2026: Moragaswewa read Normal at 14.9 ft while Deduru Oya spilled 10,400 cusecs through 8 gates).
+  const releaseAlert = !stale && (realTier === "normal" || realTier === "watch") ? officialReleaseAlert(release) : null;
   const tone: VerdictTone = stale
     ? "stale"
-    : lift?.verdict === "alert" && (realTier === "normal" || realTier === "watch")
+    : releaseAlert
+      ? "alert"
+      : lift?.verdict === "alert" && (realTier === "normal" || realTier === "watch")
       ? "alert"
       : // a forecast crossing or a confirmed release upstream: "Keep an eye on it" at most; Get ready is the alert level itself (26 Oct 2026)
         (lift?.verdict === "watch" || releaseLift) && realTier === "normal"
@@ -211,8 +217,9 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const rn = riverName(basin, lang);
   // A near-alert gauge, or a calm one the forecast or a release points at, still reads "Normal": the reason is the small note
   // under it (owner, 26 Oct 2026: the verdict ladder is the Department's four steps only).
-  const nearNote: string | null =
-    tone !== "watch" || !me
+  const nearNote: string | null = releaseAlert
+    ? releaseAlertLine(releaseAlert, lang)
+    : tone !== "watch" || !me
       ? null
       : realTier === "watch" && alertLvl != null && lvlNow != null
         ? t("needs.nearNote", { amount: formatDelta(alertLvl - lvlNow, unit) }) + (rising ? `, ${t("trend.rising").toLowerCase()}` : "")

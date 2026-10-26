@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LifeBuoy } from "lucide-react";
-import { placeBySlug } from "@/lib/places";
+import { placeBySlug, streetCardKind } from "@/lib/places";
 import { loadTown, PAGE_BUDGET_MS } from "@/lib/townData";
 import { ttFor } from "@/lib/i18n/town";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
@@ -111,7 +111,7 @@ export default async function TownPage({ params }: Params) {
     }),
   ];
 
-  const lowSpotCard = <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} />;
+  const lowSpotCard = <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} kind={streetCardKind(place)} />;
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">

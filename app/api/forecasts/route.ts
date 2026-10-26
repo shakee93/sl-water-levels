@@ -10,6 +10,8 @@ import coefficients from "@/lib/model/coefficients.json";
 import { getGsmap } from "@/lib/gsmap";
 import { getForecastRainAll, measuredAtGauge } from "@/lib/stationRain";
 import { liftVerdict, riverRising } from "@/lib/verdictLift";
+import { getReleases, releaseAffectingFrom, type ReleasesResult } from "@/lib/releases";
+import { officialReleaseAlert } from "@/lib/releaseAlert";
 
 // Computed per request (no ISR): as an ISR route a failed background regeneration kept serving
 // one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
@@ -22,6 +24,7 @@ export async function GET() {
   const basins = [...new Set(national.map((s) => s.basin))];
   // Rain logged with each run (d1/0009_forecast_rain.sql): the 6 h figures and p90 from the cached weather fetch, the satellite file, the gauge itself.
   const [fcRain, sat] = await Promise.all([getForecastRainAll().catch(() => ({})), getGsmap().catch(() => null)]);
+  const releases: ReleasesResult | null = await getReleases().catch(() => null); // fails soft: no answer = no release claimed
   const runs: unknown[] = [];
   const errors: { basin: string; station?: string; error: string }[] = [];
 
@@ -53,7 +56,10 @@ export async function GET() {
                 rising: riverRising(s.station, s.trend24h, s.metresPerUnit, s.rate3hM),
                 now: f.asOfTs ?? s.latest.ts,
               });
-        const verdict = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
+        const forecastVerdict = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
+        // a confirmed 5,000+ cusec release from the Irrigation Department directly above the gauge is at least Alert (lib/releaseAlert.ts)
+        const relAlert = releases && (forecastVerdict === "normal" || forecastVerdict === "watch") ? officialReleaseAlert(releaseAffectingFrom(releases, s.station)) : null;
+        const verdict = relAlert ? "alert" : forecastVerdict;
         runs.push({
           station: s.station,
           basin,
@@ -64,6 +70,7 @@ export async function GET() {
           currentLevel: f.currentLevel,
           tier: s.tier,
           verdict,
+          releaseAlert: relAlert,
           headline: f.headline,
           rainPast6hMm: f.rain?.past6hMm ?? null,
           rainNext24hMm: f.rain?.next24hMm.det ?? null,

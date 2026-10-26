@@ -21,7 +21,7 @@ const btn = `inline-flex min-h-11 items-center gap-2 rounded-md border border-sl
  * first, then has ONE switch: "Notify me when my street may get water" (app/flood/useStreetAlert.ts), which is the
  * server push pref plus the device note, so what it shows is what will actually happen.
  */
-export function LowSpot({ slug, town, mm, level, canalHigh = false }: { slug: string; town: string; /** clipped 24 h satellite rain, null = no data */ mm: number | null; level: "possible" | "likely" | null; /** the basin's canal is higher than usual (CUrW / SLLDC levels); only spoken to people who opted in */ canalHigh?: boolean }) {
+export function LowSpot({ slug, town, mm, level, canalHigh = false, kind = "canal" }: { slug: string; town: string; /** "canal" = Colombo canal towns, "coast" = the Puttalam / Maha Oya coast (no canal wording) */ kind?: "canal" | "coast"; /** clipped 24 h satellite rain, null = no data */ mm: number | null; level: "possible" | "likely" | null; /** the basin's canal is higher than usual (CUrW / SLLDC levels); only spoken to people who opted in */ canalHigh?: boolean }) {
   const { lang, t } = useI18n();
   const rt = rtFor(lang);
   const cc = ccFor(lang);
@@ -37,7 +37,8 @@ export function LowSpot({ slug, town, mm, level, canalHigh = false }: { slug: st
       ? "border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30"
       : "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60";
   const iconTone = likely ? "text-amber-600 dark:text-amber-400" : heavy ? "text-sky-600 dark:text-sky-400" : "text-slate-500 dark:text-slate-400";
-  const headline = likely ? tt("low.hLikely") : heavy ? tt("low.hPossible") : mm == null ? tt("low.hNoData") : tt("low.hNone");
+  const coast = kind === "coast";
+  const headline = likely ? tt(coast ? "low.hLikelyCoast" : "low.hLikely") : heavy ? tt(coast ? "low.hPossibleCoast" : "low.hPossible") : mm == null ? tt("low.hNoData") : tt("low.hNone");
 
   // iPhone and iPad only deliver notifications to a site on the Home Screen: show the install step, not a switch that cannot work
   const needInstall = iosNeedsInstall && !a.on && (a.state === "local" && a.why === "unsupported");
@@ -54,16 +55,16 @@ export function LowSpot({ slug, town, mm, level, canalHigh = false }: { slug: st
             : "";
 
   return (
-    <section aria-label={tt("low.title")} className={`mt-4 rounded-xl border p-4 sm:p-5 ${tone}`} lang={lang}>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{tt("low.title")}</p>
+    <section aria-label={tt(coast ? "low.titleCoast" : "low.title")} className={`mt-4 rounded-xl border p-4 sm:p-5 ${tone}`} lang={lang}>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{tt(coast ? "low.titleCoast" : "low.title")}</p>
       <h2 className={`mt-1 flex items-start gap-2 ${heavy ? "text-lg font-semibold tracking-tight" : "text-base font-medium"} text-slate-900 dark:text-slate-100`}>
         <CloudRain className={`mt-0.5 size-5 shrink-0 ${iconTone}`} aria-hidden /> <span>{headline}</span>
       </h2>
       {mm != null && (heavy || a.on) && <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-200">{tt("low.rain", { mm: Math.round(mm) })}</p>}
-      {likely && <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{tt("low.lanes")}</p>}
+      {likely && <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{tt(coast ? "low.lanesCoast" : "low.lanes")}</p>}
       {mm != null && !heavy && !a.on && <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{tt("low.rain", { mm: Math.round(mm) })}</p>}
-      {a.on && <TideNote t={t} cc={cc} />}
-      {a.on && canalHigh && <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">{cc("canal.highLow")}</p>}
+      {a.on && !coast && <TideNote t={t} cc={cc} />}
+      {a.on && !coast && canalHigh && <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">{cc("canal.highLow")}</p>}
 
       <div className="mt-3 border-t border-slate-200/80 dark:border-slate-700/70 pt-2">
         {needInstall ? (
@@ -97,7 +98,7 @@ export function LowSpot({ slug, town, mm, level, canalHigh = false }: { slug: st
       </div>
 
       <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{tt("low.honest")}</p>
-      <div className="text-xs text-slate-600 dark:text-slate-400"><StreetResearchLink /></div>
+      {!coast && <div className="text-xs text-slate-600 dark:text-slate-400"><StreetResearchLink /></div>}
       {lang !== "en" && <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
     </section>
   );

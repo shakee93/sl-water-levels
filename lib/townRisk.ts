@@ -61,6 +61,8 @@ import type { Tier } from "./status";
 // @ts-ignore node strip-types needs explicit extensions
 import { isTidalStation, liftVerdict } from "./verdictLift.ts";
 import type { Unit } from "./units";
+// @ts-ignore node strip-types needs explicit extensions
+import { officialReleaseAlert } from "./releaseAlert.ts";
 
 /** Owner decision 26 Oct 2026: "Get ready" is the gauge's official alert level. Releases and rising canals no longer lift a town to it early. */
 const PRE_ALERT_LIFTS = false;
@@ -151,7 +153,17 @@ export type RainIn = {
   next6hP90Mm: number | null;
 };
 
-export type ReleaseIn = { confirmed: boolean; reservoir: string; cusecs: number | null; etaHours: number | null };
+export type ReleaseIn = {
+  confirmed: boolean;
+  reservoir: string;
+  cusecs: number | null;
+  etaHours: number | null;
+  /** "Irrigation Department" etc. Only the Department's own figure can set the release floor (lib/releaseAlert.ts). */
+  source?: string | null;
+  gatesOpen?: number | null;
+  /** The reservoir is linked directly above the gauge (lib/reservoirs.ts). Missing = yes. */
+  direct?: boolean;
+};
 export type WarningIn = { severity: "none" | "advisory" | "alert" | "minor flood" | "major flood" | "evacuation"; source: string; area: string };
 
 export type StreetRainIn = {
@@ -361,6 +373,12 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   const warnRaised = floor != null && (tone == null || rank(floor) > rank(tone));
   if (floor) tone = maxTone(tone, floor);
 
+  // ---- 4b. a big CONFIRMED release directly upstream is at least Alert (lib/releaseAlert.ts: the Irrigation Department's own
+  // figure >= 5,000 cusecs; 26 Oct 2026 Moragaswewa read Normal at 14.9 ft while Deduru Oya spilled 10,400 cusecs and homes downstream
+  // took water). Not for upland towns (their streets are not fed by the river), never for a news-only release, never above Alert.
+  const relAlert = drainage !== "upland" ? officialReleaseAlert(release) : null;
+  if (relAlert) tone = maxTone(tone, "alert");
+
   // ---- 6. the Kelani at its minor flood level (a river reading), then the low-spot rain level (kept apart from the tone)
   const sr = input.streetRain;
   const sriver = input.streetRiver?.triggered ? input.streetRiver : null;
@@ -442,7 +460,14 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     reasons.push({ kind: "canal", key: "r.canal", vars: {}, warn: false });
   }
   if (release && drainage !== "upland") {
-    if (release.confirmed && release.cusecs == null) {
+    if (relAlert) {
+      reasons.splice(Math.min(reasons.length, warning && floor ? 1 : 0), 0, {
+        kind: "release",
+        key: relAlert.gates ? (relAlert.gates === 1 ? "r.releaseAlertGate" : "r.releaseAlertGates") : "r.releaseAlert",
+        vars: { res: relAlert.reservoir, cusecs: Math.round(relAlert.cusecs).toLocaleString("en-US"), ...(relAlert.gates ? { n: relAlert.gates } : {}) },
+        warn: true,
+      });
+    } else if (release.confirmed && release.cusecs == null) {
       reasons.push({ kind: "release", key: "r.releaseNoFigure", vars: { res: release.reservoir }, warn: rising });
     } else if (release.confirmed && release.cusecs != null) {
       const withEta = release.etaHours != null && gauge;

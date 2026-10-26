@@ -656,6 +656,10 @@ export type ReleaseAffecting = {
   /** Midpoint of the measured travel time to this gauge in hours; null when not measured. */
   etaHours: number | null;
   etaRange: [number, number] | null;
+  /** Gates open per the Irrigation Department sheet, when it says. */
+  gatesOpen?: number | null;
+  /** The reservoir is linked to this gauge by hand (lib/reservoirs.ts), not just further down the same river. */
+  direct?: boolean;
 };
 
 const NONE: ReleaseAffecting = { active: false, confirmed: false, reservoir: null, cusecs: null, source: null, url: null, observedAt: null, etaHours: null, etaRange: null };
@@ -663,12 +667,14 @@ const NONE: ReleaseAffecting = { active: false, confirmed: false, reservoir: nul
 /** The strongest active release upstream of this gauge, from an already fetched result. */
 export function releaseAffectingFrom(result: ReleasesResult, station: string): ReleaseAffecting {
   const links = reservoirsForStation(station);
-  let best: { rel: Release; eta: [number, number] | null } | null = null;
+  let best: { rel: Release; eta: [number, number] | null; direct: boolean } | null = null;
   for (const { res, link } of links) {
     const rel = result.releases.find((r) => r.reservoirId === res.id);
     if (!rel) continue;
-    const score = (x: Release) => (x.kind === "confirmed" ? 1_000_000 : 0) + (x.cusecs ?? 0);
-    if (!best || score(rel) > score(best.rel)) best = { rel, eta: link.eta };
+    // confirmed first, then a reservoir linked directly above this gauge, then the bigger release
+    const score = (x: Release, direct: boolean) => (x.kind === "confirmed" ? 2e9 : 0) + (direct ? 1e9 : 0) + (x.cusecs ?? 0);
+    const direct = !link.indirect;
+    if (!best || score(rel, direct) > score(best.rel, best.direct)) best = { rel, eta: link.eta, direct };
   }
   if (!best) return NONE;
   const { rel, eta } = best;
@@ -682,6 +688,8 @@ export function releaseAffectingFrom(result: ReleasesResult, station: string): R
     observedAt: rel.observedAt,
     etaHours: eta ? (eta[0] + eta[1]) / 2 : null,
     etaRange: eta,
+    gatesOpen: rel.gatesOpen,
+    direct: best.direct,
   };
 }
 
