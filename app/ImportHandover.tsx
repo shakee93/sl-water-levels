@@ -14,7 +14,8 @@ export function ImportHandover() {
     if (!h.startsWith("#sl-import=")) return;
     try {
       const data = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(h.slice("#sl-import=".length)))))) as Record<string, unknown>;
-      for (const k of CARRY_KEYS) {
+      // sl_push_old: the old address's push endpoint, sent as `replaces` when alerts are turned on here (app/AlertsToggle.tsx)
+      for (const k of [...CARRY_KEYS, "sl_push_old"]) {
         const v = data[k];
         if (typeof v === "string" && v.length < 20_000 && localStorage.getItem(k) == null) localStorage.setItem(k, v);
       }

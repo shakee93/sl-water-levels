@@ -21,12 +21,21 @@ export function GET(req: Request) {
 (function(){
   var keys=${JSON.stringify(CARRY_KEYS)}, data={};
   try{ keys.forEach(function(k){ var v=localStorage.getItem(k); if(v!=null) data[k]=v; }); }catch(e){}
-  document.cookie="sl_has_data=; max-age=0; path=/; SameSite=Lax; Secure";
-  var url=${JSON.stringify(SITE)}+${JSON.stringify(to)};
-  var n=Object.keys(data).length;
-  if(n){ try{ url+= "#sl-import="+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(data))))); }catch(e){} }
-  document.getElementById("go").href=url;
-  location.replace(url);
+  function go(){
+    document.cookie="sl_has_data=; max-age=0; path=/; SameSite=Lax; Secure";
+    var url=${JSON.stringify(SITE)}+${JSON.stringify(to)};
+    if(Object.keys(data).length){ try{ url+= "#sl-import="+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(data))))); }catch(e){} }
+    document.getElementById("go").href=url;
+    location.replace(url);
+  }
+  // this address's push subscription (alerts keep arriving through it until the phone turns alerts on at the new address,
+  // which then replaces it server-side: no double alerts). At most 1.5 s, then go anyway.
+  var done=false, finish=function(){ if(!done){ done=true; go(); } };
+  setTimeout(finish,1500);
+  try{
+    navigator.serviceWorker.getRegistration().then(function(r){ return r && r.pushManager.getSubscription(); })
+      .then(function(s){ if(s && s.endpoint) data.sl_push_old=s.endpoint; finish(); }, finish);
+  }catch(e){ finish(); }
 })();
 </script></body></html>`;
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
