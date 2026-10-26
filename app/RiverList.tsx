@@ -1,3 +1,4 @@
+import { VERDICT } from "./verdict";
 import Link from "next/link";
 import { ArrowDown, ArrowRight, ArrowUp, Minus } from "lucide-react";
 import type { Tier } from "@/lib/arcgis";
@@ -77,6 +78,10 @@ function Row({
             <span className={`${TIER_TEXT_CLASS[s.tier]} ${flagged ? "font-semibold" : ""}`}>
               {statusText(t, lang, s.tier)}
             </span>
+            {/* the gauge page's forecast verdict when it is stronger than the level band (e.g. Normal now, likely alert in ~11 h) */}
+            {s.verdict === "alert" && (s.tier === "normal" || s.tier === "watch") && (
+              <span className="font-semibold text-amber-700 dark:text-amber-400"> · {VERDICT.alert[lang]}</span>
+            )}
             {showRiver && (
               <span className="text-slate-500 dark:text-slate-400"> · {river}</span>
             )}

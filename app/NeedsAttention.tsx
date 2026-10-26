@@ -11,6 +11,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import type { NationalStation } from "@/lib/arcgis";
+import type { StationVerdict } from "@/lib/stationVerdict";
 import {
   buildAttention,
   RISING_M_PER_H,
@@ -261,10 +262,13 @@ export function NeedsAttention({
   lang,
   snapshot,
   serverNow,
+  verdicts = {},
 }: {
   lang: Locale;
   snapshot: NationalStation[] | null;
   serverNow: number;
+  /** Gauge-page verdicts (lib/stationVerdict.ts): calm gauges the forecast lifts to "Get ready" are listed under the cards. */
+  verdicts?: Record<string, StationVerdict>;
 }) {
   const { t, p } = getI18n(lang);
   if (!snapshot) {
@@ -288,6 +292,8 @@ export function NeedsAttention({
   const { basins, flagged, reporting } = buildAttention(snapshot);
   const rateByHref = new Map(snapshot.map((s) => [s.href, s.rate3hM] as const));
 
+  const soon = <ForecastSoon lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />;
+
   if (basins.length === 0) {
     return (
       <section className="mb-6">
@@ -300,6 +306,7 @@ export function NeedsAttention({
             </span>
           </div>
         </div>
+        {soon}
       </section>
     );
   }
@@ -332,6 +339,49 @@ export function NeedsAttention({
           />
         ))}
       </ul>
+      {soon}
     </section>
+  );
+}
+
+// "Get ready" from the forecast, for gauges whose level is still below alert: the same rule and words as their own pages
+// (lib/verdictLift.ts), so the home page never says nothing about a gauge whose page says "Get ready". si/ta are drafts.
+const SOON = {
+  en: { title: "Get ready: forecast to rise", alert: "alert level", minor: "minor flood level", major: "major flood level", line: "Likely to reach {mark} in about {h} h", day: "Likely to reach {mark} within 24 hours" },
+  si: { title: "සූදානම් වන්න: ඉහළ යාමට පුරෝකථනය", alert: "අනතුරු ඇඟවීමේ මට්ටම", minor: "සුළු ගංවතුර මට්ටම", major: "ප්‍රධාන ගංවතුර මට්ටම", line: "පැය {h} කින් පමණ {mark} කරා ළඟා විය හැක", day: "පැය 24 ක් තුළ {mark} කරා ළඟා විය හැක" },
+  ta: { title: "தயாராகுங்கள்: உயரும் என முன்னறிவிப்பு", alert: "எச்சரிக்கை மட்டம்", minor: "சிறு வெள்ள மட்டம்", major: "பெரு வெள்ள மட்டம்", line: "சுமார் {h} மணி நேரத்தில் {mark} அடையலாம்", day: "24 மணி நேரத்திற்குள் {mark} அடையலாம்" },
+} as const;
+
+function ForecastSoon({ lang, p, snapshot, verdicts }: { lang: Locale; p: (path: string) => string; snapshot: NationalStation[]; verdicts: Record<string, StationVerdict> }) {
+  const c = SOON[lang];
+  const rows = snapshot
+    .filter((s) => (s.tier === "normal" || s.tier === "watch") && verdicts[s.station]?.v === "alert" && verdicts[s.station]?.th)
+    .map((s) => ({ s, v: verdicts[s.station] }))
+    .sort((a, b) => ["major", "minor", "alert"].indexOf(a.v.th!) - ["major", "minor", "alert"].indexOf(b.v.th!) || (a.v.h ?? 99) - (b.v.h ?? 99));
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 px-4 py-3" lang={lang}>
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-amber-900 dark:text-amber-200">
+        <TriangleAlert className="size-4" aria-hidden /> {c.title}
+      </h3>
+      <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+        {rows.map(({ s, v }) => {
+          const mark = c[v.th!];
+          const line = v.h != null ? c.line.replace("{mark}", mark).replace("{h}", String(Math.max(1, Math.round(v.h)))) : c.day.replace("{mark}", mark);
+          return (
+            <li key={s.href}>
+              <Link href={p(s.href)} className="group flex items-baseline justify-between gap-3 text-sm hover:underline underline-offset-2">
+                <span className="min-w-0">
+                  <span className="font-medium text-slate-900 dark:text-slate-100">{stationDisplayName(s.station)}</span>
+                  <span className="text-slate-500 dark:text-slate-400"> · {riverName(s.basin, lang)}</span>
+                  <span className="block text-xs text-amber-900/90 dark:text-amber-200/90">{line}</span>
+                </span>
+                {s.latest?.water_level != null && <span className="shrink-0 tabular-nums text-xs text-slate-600 dark:text-slate-300">{formatLevel(s.latest.water_level, s.unit)}</span>}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

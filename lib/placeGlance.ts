@@ -76,7 +76,7 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
         if (k.kind === "s") {
           const s = byName.get(k.name);
           // the gauge page's verdict (forecast lift), so My places and push say what the page says; 2.5 s cap, else the raw tier
-          const v = s ? await soft(getStationVerdicts().then((m) => m[s.station]).catch(() => undefined), 2500, undefined) : undefined;
+          const v = s ? await soft(getStationVerdicts().then((m) => m[s.station]?.v).catch(() => undefined), 2500, undefined) : undefined;
           return s ? stationGlance(s, v) : null;
         }
         return await townGlance(k, lv);

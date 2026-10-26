@@ -52,7 +52,8 @@ export function MapClient({
 function SidePanel({ stations, lakes, hover, setHover }: { stations: HomeStation[]; lakes: HomeLake[]; hover: string | null; setHover: (id: string | null) => void }) {
   const { t, p, lang } = useI18n();
   const rt = rtFor(lang);
-  const hot = stations.filter(isHot).sort((a, b) => tierRank(b.tier) - tierRank(a.tier) || (b.level ?? 0) - (a.level ?? 0));
+  // most severe first (TIER_ORDER starts at "major", so a lower rank is worse); every gauge listed, the panel scrolls
+  const hot = stations.filter(isHot).sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || (b.level ?? 0) - (a.level ?? 0));
   const row = (id: string, href: string, children: React.ReactNode) => (
     <li key={id}>
       <Link
@@ -78,7 +79,7 @@ function SidePanel({ stations, lakes, hover, setHover }: { stations: HomeStation
         <>
           <h3 className={h}>{t("needs.heading")}</h3>
           <ul className="mb-4">
-            {hot.slice(0, 8).map((s) =>
+            {hot.map((s) =>
               row(`g:${s.basin}|${s.station}`, s.href, (
                 <>
                   <span className="size-2.5 shrink-0 rounded-full" style={{ background: TIER_HEX[s.tier] }} aria-hidden />

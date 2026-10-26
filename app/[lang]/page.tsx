@@ -1,4 +1,4 @@
-import { getStationVerdicts } from "@/lib/stationVerdict";
+import { getStationVerdicts, type StationVerdict } from "@/lib/stationVerdict";
 import { soft } from "@/lib/soft";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -85,8 +85,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
   }
 
   // the gauge page's own verdict (forecast lift) for the Near you card; 2.5 s cap, falls back to the raw tier
-  const verdicts = national ? await soft(getStationVerdicts().catch(() => ({}) as Record<string, string>), 2500, {} as Record<string, string>) : {};
-  const home = national ? national.map((s) => ({ ...compact(s), verdict: (verdicts[s.station] as HomeStation["tier"] | undefined) ?? s.tier })) : [];
+  const verdicts: Record<string, StationVerdict> = national ? await soft(getStationVerdicts().catch(() => ({})), 2500, {}) : {};
+  const home = national ? national.map((s) => ({ ...compact(s), verdict: verdicts[s.station]?.v ?? s.tier })) : [];
 
   const hrefByStation = Object.fromEntries(home.map((s) => [s.station, s.href]));
 
@@ -136,7 +136,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
             <NearYou stations={home} />
 
-            <NeedsAttention lang={lang} snapshot={national} serverNow={serverNow} />
+            <NeedsAttention lang={lang} snapshot={national} serverNow={serverNow} verdicts={verdicts} />
             <Suspense fallback={null}><ReleaseLines lang={lang} /></Suspense>
             <Suspense fallback={null}><SpillWatchLine lang={lang} /></Suspense>
             {/* latest flood-related news reports; nothing when there are none in the last day or two */}
