@@ -38,7 +38,8 @@ export function mappedNear(lat: number, lon: number): MappedGn[] {
   for (const g of GN) {
     const d = km(lat, lon, g[3], g[4]);
     if (d > Math.max(2, g[5] + 0.5)) continue;
-    out.push({ name: g[0], dsd: g[1], district: g[2], km: d, inside: d <= g[5], events: g[6].map((i) => EVENTS[i]).sort((a, z) => z.year - a.year) });
+    // "Dahampura1" -> "Dahampura 1" (the source glues numbered divisions to the name)
+    out.push({ name: g[0].replace(/(\p{L})(\d+[A-Z]?)$/u, "$1 $2"), dsd: g[1], district: g[2], km: d, inside: d <= g[5], events: g[6].map((i) => EVENTS[i]).sort((a, z) => z.year - a.year) });
   }
   return out.sort((a, b) => a.km - b.km);
 }

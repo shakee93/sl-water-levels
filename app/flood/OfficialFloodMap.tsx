@@ -9,10 +9,18 @@ const MAX_GN = 8;
 /** Most divisional-secretariat areas named per event on a river page. */
 const MAX_DSD = 8;
 
-function eventLabel(e: FloodEvent, ft: FT, lang: Locale, withRiver: boolean) {
-  const base = withRiver ? ft("ev.river", { river: riverName(e.basin, lang), year: e.year }) : ft("ev", { year: e.year });
+/** "2016 major flood" (the grade only where the map names one). */
+function eventLabel(e: FloodEvent, ft: FT) {
+  const year = ft("ev", { year: e.year });
   const g = e.grade ? ft(`grade.${e.grade}` as Parameters<FT>[0]) : null;
-  return g && !g.startsWith("grade.") ? `${base} (${g})` : base;
+  return g && !g.startsWith("grade.") ? `${year} ${g}` : year;
+}
+
+/** "Kelani Ganga 2016 major flood, 1989 critical flood" (newest first, one river name per river). */
+function eventsLabel(events: FloodEvent[], ft: FT, lang: Locale) {
+  const byRiver = new Map<string, FloodEvent[]>();
+  for (const e of events) byRiver.set(e.basin, [...(byRiver.get(e.basin) ?? []), e]);
+  return [...byRiver].map(([b, evs]) => ft("ev.river", { river: riverName(b, lang), year: evs.map((e) => eventLabel(e, ft)).join(", ") })).join("; ");
 }
 
 function Card({ ft, children }: { ft: FT; children: React.ReactNode }) {
@@ -44,7 +52,7 @@ export function TownFloodMap({ lang, town, lat, lon, basin }: { lang: Locale; to
     return (
       <Card ft={ft}>
         <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-          {ft("town.none", { town, river: riverName(basin, lang), events: evs.map((e) => eventLabel(e, ft, lang, false)).join(", ") })}
+          {ft("town.none", { town, river: riverName(basin, lang), events: evs.map((e) => eventLabel(e, ft)).join(", ") })}
         </p>
       </Card>
     );
@@ -55,7 +63,7 @@ export function TownFloodMap({ lang, town, lat, lon, basin }: { lang: Locale; to
   return (
     <Card ft={ft}>
       <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-        {ft("town.lead", { town, events: events.map((e) => eventLabel(e, ft, lang, true)).join(", ") })}
+        {ft("town.lead", { town, events: eventsLabel(events, ft, lang) })}
       </p>
       <ul className="mt-2 flex flex-wrap gap-2">
         {shown.map((g) => (
@@ -89,7 +97,7 @@ export function RiverFloodMap({ lang, basin }: { lang: Locale; basin: string }) 
           const dsds = names.join(", ") + (more > 0 ? `, ${ft("river.more", { n: more })}` : "");
           return (
             <li key={e.id} className="text-sm">
-              <span className="font-medium">{eventLabel(e, ft, lang, false)}</span>
+              <span className="font-medium">{eventLabel(e, ft)}</span>
               <span className="text-slate-600 dark:text-slate-400">: {ft("river.event", { n: gnCount(e), m: e.dsds.length, dsds })}</span>
             </li>
           );
