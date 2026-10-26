@@ -300,7 +300,7 @@ export const en = {
   "fc.localTrend": "Local trend",
   "fc.upstreamAvg": "Upstream avg",
   "fc.upstreamTop": "n/a (top)",
-  "needs.rain": "Heavy rain measured",
+  "needs.rain": "Very heavy rain measured",
   "needs.rainLocal": "Heavy for this river",
   "needs.rainTitle": "{mm} mm measured at {gauge} in the last {h} h",
   "rv.rainNear": "Rain forecast near the dam: about {mm} mm in the next 24 hours ({word}). Forecast model estimate, not a measurement.",

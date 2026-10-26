@@ -112,17 +112,17 @@ export const isDryZoneBasin = (basin: string | null | undefined): boolean => DRY
 
 const SAT: Record<Locale, { base: string; dry: string }> = {
   en: {
-    base: "Satellite estimate over the catchment; it can differ from the gauges.",
-    dry: "Satellite estimate over the catchment. In this dry-zone area it often reads much higher than the gauges, so treat it as an upper figure.",
+    base: "It can differ from the gauges.",
+    dry: "In this dry-zone area it often reads much higher than the gauges, so treat it as an upper figure.",
   },
   // si / ta: DRAFT translations, not yet reviewed by a native speaker.
   si: {
-    base: "ජලධාර ප්‍රදේශය මත චන්ද්‍රිකා ඇස්තමේන්තුවකි; මානයන්ට වඩා වෙනස් විය හැක.",
-    dry: "ජලධාර ප්‍රදේශය මත චන්ද්‍රිකා ඇස්තමේන්තුවකි. මෙම වියළි කලාපයේ එය මානයන්ට වඩා බොහෝ වැඩියෙන් පෙන්විය හැක, එබැවින් ඉහළ අගයක් ලෙස සලකන්න.",
+    base: "එය මානයන්ට වඩා වෙනස් විය හැක.",
+    dry: "මෙම වියළි කලාපයේ එය මානයන්ට වඩා බොහෝ වැඩියෙන් පෙන්විය හැක, එබැවින් ඉහළ අගයක් ලෙස සලකන්න.",
   },
   ta: {
-    base: "நீர்பிடிப்புப் பகுதிக்கான செயற்கைக்கோள் மதிப்பீடு; அளவீடுகளிலிருந்து வேறுபடலாம்.",
-    dry: "நீர்பிடிப்புப் பகுதிக்கான செயற்கைக்கோள் மதிப்பீடு. இந்த வறண்ட வலயத்தில் இது அளவீடுகளை விட மிக அதிகமாகக் காட்டலாம், எனவே உச்ச மதிப்பாகக் கருதுங்கள்.",
+    base: "இது அளவீடுகளிலிருந்து வேறுபடலாம்.",
+    dry: "இந்த வறண்ட வலயத்தில் இது அளவீடுகளை விட மிக அதிகமாகக் காட்டலாம், எனவே உச்ச மதிப்பாகக் கருதுங்கள்.",
   },
 };
 export const satelliteCaveat = (basin: string | null | undefined, lang: Locale = "en"): string => {
