@@ -67,7 +67,8 @@ export type Glance = {
   /** A reservoir upstream of this place's gauge is releasing water (official figures or a news report), or null. */
   release?: { name: string; confirmed: boolean; etaHours: number | null } | null;
   /** Heavy rain (50 mm or more, or the heavier scenario 100 mm) is forecast over the hills above this place's gauge in the next 24 h (lib/rainRisk.ts). Only looked up for gauges that are not calm; null/absent = no or unknown. */
-  rainRisk?: boolean | null;
+  /** "measured" = the gauges themselves measured very heavy rain at or above this place's gauge (lib/measuredRain.ts); it also covers the forecast case (the sentence then names the measured rain). */
+  rainRisk?: boolean | "measured" | null;
   /** Satellite heavy-rain level over the town ("low spot" rule, towns in a rain zone only). Never part of `tone`; the page shows it only to a visitor who marked their spot as low (lib/lowSpots.ts). */
   street: "possible" | "likely" | null;
   trend: "up" | "down" | "steady" | "unknown";

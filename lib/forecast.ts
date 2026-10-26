@@ -26,14 +26,16 @@
 
 import { cache } from "react";
 import type { BasinStation } from "./arcgis";
-import { normaliseBasin, orderStations } from "./basinOrder";
+import { BASIN_ORDER, normaliseBasin, orderStations } from "./basinOrder";
+import { gaugeRainNow, measuredRainFor, type GaugeRain, type MeasuredRain } from "./measuredRain";
+import { stationDisplayName } from "./displayName";
 import { ageMinutes, HOUR_MS, isStale, rainTotal, rate, STALE_MINUTES } from "./readings";
 import { formatDelta, formatLevel, type Unit } from "./units";
 import { getBasinWeather, getGlofas, hasCatchment, type BasinWeather, type Fetched, type Glofas, type RainSeries } from "./weather";
 import coefficientsJson from "./model/coefficients.json";
 import gaugeModelJson from "./model/gauge-model.json";
 import stormModelJson from "./model/storm-model.json";
-import { rainRiskOf, type RainRisk } from "./rainRisk";
+import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { rainTotals, stormFeatures } from "./model/stormModel.mjs";
 import {
@@ -237,9 +239,33 @@ export function makeForecast(input: ForecastInput): Forecast {
     return emptyResult(station, unit, `No forecast: the latest reading is ${hrs} hours old.`, [`Latest reading is ${hrs}h old (limit ${STALE_MINUTES / 60}h), too stale to forecast.`], trend, L0, anchor);
   }
 
+  // Rain the gauges measured (this one and the ones upstream): a second storm warning that does not wait for the forecast,
+  // and a second way to switch the storm model on. Own readings only, so it works when the weather fetch failed.
+  const measured = measuredAt(snapshot, basin, station, now);
   const coef = COEFFS[station];
-  if (!coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)) return fromTrend(station, me, trend, L0, anchor, input.weather, gaugeSteps(snapshot, station, anchor, now));
-  return fromModel(input, me, coef, trend, L0, anchor, now);
+  const f = !coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)
+    ? fromTrend(station, me, trend, L0, anchor, input.weather, gaugeSteps(snapshot, station, anchor, now, null, !!measured))
+    : fromModel(input, me, coef, trend, L0, anchor, now, !!measured);
+  return measured ? { ...f, rainRisk: withMeasured(f.rainRisk, measured) } : f;
+}
+
+/**
+ * Measured heavy rain (lib/measuredRain.ts) at `station` or a gauge upstream of it on the same river (BASIN_ORDER; a river that
+ * is not listed there only has its own gauge). null = nothing tripped, or no gauge had fresh rain data.
+ */
+export function measuredAt(snapshot: Pick<BasinStation, "station" | "trend24h">[], basin: string, station: string, now: number): (MeasuredRain & { gaugeName: string }) | null {
+  const order = BASIN_ORDER[normaliseBasin(basin)] ?? [];
+  const i = order.indexOf(station);
+  const chain = i >= 0 ? order.slice(0, i + 1) : [station];
+  const gauges: GaugeRain[] = [];
+  for (const g of chain) {
+    const s = snapshot.find((x) => x.station === g);
+    if (!s) continue;
+    const r = gaugeRainNow(g, s.trend24h, now);
+    if (r) gauges.push(r);
+  }
+  const m = measuredRainFor(station, gauges);
+  return m ? { ...m, gaugeName: stationDisplayName(m.gauge) } : null;
 }
 
 /** Why this gauge has no fitted model, in words that name what is missing (never a vague "inputs missing"). */
@@ -297,7 +323,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
 
 function fromModel(
   input: ForecastInput, me: BasinStation, coef: StationCoef, trend: TrendResult,
-  L0: number, anchor: number, now: number,
+  L0: number, anchor: number, now: number, measuredHeavy = false,
 ): Forecast {
   const { snapshot, station } = input;
   const mpu = me.metresPerUnit;
@@ -391,7 +417,7 @@ function fromModel(
   // misses were larger than "level stays put" (0.99 vs 0.72 ft, 1.43 vs 1.13 ft), so a horizon that is not skilled ships
   // persistence with an empirical range. On storm hours the pooled rain correction is added (gauges/horizons where the
   // leave-one-storm-out backtest said it helps) and the upper end of the range allows for the heavier ensemble rain.
-  const gsteps = gaugeSteps(snapshot, station, anchor, now, w ? { det: w.rain, p90: w.scenarios?.p90 ?? null } : null);
+  const gsteps = gaugeSteps(snapshot, station, anchor, now, w ? { det: w.rain, p90: w.scenarios?.p90 ?? null } : null, measuredHeavy);
   const v2h = new Set<number>();
   const stormH = new Set<number>();
   for (const st of gsteps ?? []) {
@@ -586,7 +612,7 @@ type StormRain = { det: RainSeries; p90: RainSeries | null };
  * Returns null when the gauge has no entry in the model files. When the gauge's own history is too short for the features
  * the range comes from the middle volatility bin and `missing` names it.
  */
-function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number, rain: StormRain | null = null): GaugeStep[] | null {
+function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number, rain: StormRain | null = null, measuredHeavy = false): GaugeStep[] | null {
   const gm = GAUGE_MODEL.stations[station];
   const sm = STORM.stations[station];
   if (!gm) return null;
@@ -603,7 +629,9 @@ function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, n
   const rAt = (R: RainSeries) => (k: number) => R[origin + k * HOUR_MS];
   const tot = rain ? rainTotals(rAt(rain.det)) : null;
   const heaviest = tot ? Math.max(tot.past24 ?? 0, tot.next24 ?? 0) : 0;
-  const stormOn = !!sm && heaviest >= STORM.gate;
+  // Storm hours: forecast or catchment-analysis rain reaches the gate, OR the gauges themselves measured heavy rain
+  // (lib/measuredRain.ts). The correction still reads the catchment rain series, so it needs that series (rain != null).
+  const stormOn = !!sm && (heaviest >= STORM.gate || (measuredHeavy && !!rain));
   const out: GaugeStep[] = [];
   const keys = new Set([...Object.keys(gm.horizons), ...Object.keys(sm?.horizons ?? {}).filter((k) => sm?.horizons[k].base)]);
   for (const key of keys) {

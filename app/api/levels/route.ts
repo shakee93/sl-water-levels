@@ -59,7 +59,7 @@ export async function GET(req: Request) {
       nextHourReady: nh != null,
       ...API_META,
       nextHourNote:
-        "nextHour is a forecast, not an official warning: level_ft is the expected level in about an hour from issuedAt, low_ft to high_ft the range it is expected to stay in (80%; null for a simple trend estimate), direction is rising / falling / steady, crossing names a flood mark the range reaches (else null) and method is model (upstream gauges and rain) or trend, and rainRisk is set (level heavy / very-heavy / possible, mm_24h) when 50 mm or more of rain is forecast over the hills above the gauge in the next 24 hours, meaning the river may rise faster than the forecast shows. null when the gauge is not reporting or has no forecast.",
+        "nextHour is a forecast, not an official warning: level_ft is the expected level in about an hour from issuedAt, low_ft to high_ft the range it is expected to stay in (80%; null for a simple trend estimate), direction is rising / falling / steady, crossing names a flood mark the range reaches (else null) and method is model (upstream gauges and rain) or trend, and rainRisk is set when 50 mm or more of rain is forecast over the hills above the gauge in the next 24 hours (kind forecast; level heavy / very-heavy / possible, mm_24h) or when the gauges themselves measured very heavy rain, 25 mm in 1 hour or 40 mm in 3 hours, at this gauge or one upstream (kind measured, or both; measured: {gauge, upstream, hours, mm}; level and mm_24h are null when only measured), meaning the river may rise faster than the forecast shows. rainRisk.line is the plain sentence. null when the gauge is not reporting or has no forecast.",
       stations,
     },
     { headers: CORS },

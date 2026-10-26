@@ -387,6 +387,32 @@ GSMaP satellite rain was not backfilled (no need: Open-Meteo observed rain was a
 it is weaker at gauges with their own quirks (dam releases, tides); storm ranges are very wide (24 h about 14 ft on average) because that is what the errors were.
 Live accuracy for this version is its own segment (`model-v3` in `accuracy/latest.json`, `stormModelSince`); compare it with `model` (gauge-only, 24 Oct to 26 Oct) as checks accumulate.
 
+**Measured heavy rain (added 26 Oct 2026, `lib/measuredRain.ts`).** The line above only reads FORECAST rain. On 26 Oct 2026 Holombuwa's own rain sensor read 31.9 mm (08:03 to 09:10)
+and 34.7 mm (09:10 to 10:06) and the river went 4.4 ft to 15.3 ft in 5 hours, past minor flood (13.1 ft), while `nextHour.rainRisk` stayed null: the forecast missed a local cloudburst.
+So the gauges' own rain now trips the same warning. `gauges_2_view.rain_fall` is mm since the gauge's PREVIOUS reading (blank = not measured, never zero), so a window sum prorates each
+reading over the interval it covers (previous reading to this one); exact duplicate timestamps count once, blanks add nothing, an interval over 3 h is not attributed to any hour,
+and a gauge whose newest reading is over 2 h old says nothing. Windows end at the gauge's newest reading. Gauges used: the station itself and every gauge before it in
+`BASIN_ORDER` (lib/basinOrder.ts) for its river; a river not listed there only has its own gauge; one gauge with data is enough. **Trips at 25 mm in 1 h or 40 mm in 3 h** at any of them.
+Line: "Very heavy rain was measured at {gauge} in the last {N} hours ({mm} mm). The river may rise fast." (with both: that sentence, then the forecast sentence, one closing).
+`rainRisk.kind` is `forecast`, `measured` or `both` (`/api/levels` `nextHour.rainRisk`: `kind`, `level` and `mm_24h` are null for `measured`, `measured: {gauge, upstream, hours, mm}`, `line`).
+Shown in the same places as the forecast warning: under the chart, next-hour sentence, API, MCP, llms.txt, push text (`pn.rainMeasured`, `Glance.rainRisk = "measured"`, no network call),
+and X storm mode (a gauge off the calm tier with measured rain starts storm mode; the storm post names the rain; `GaugeFact.measuredRain`). si/ta wording is a DRAFT.
+
+*Backtest (`node scripts/measured-rain-backtest.mts <data-branch export> --live`).* The rain archive only exists from 15 Oct 2026 (the 11-month level history has no `rain_fall`), so this is
+14 days and a handful of storms, NOT 11 months: 6,594 station-hours on the gauges in `BASIN_ORDER`, base rate of a rise of 1 ft or more in the next 6 h = 6.6%. Rain at the gauge or upstream of it:
+15 mm/1 h or 25 mm/3 h: 306 hours fired, 23% followed by a 1 ft rise (3.5 times the base rate), 16% of all such rises caught; **25 / 40 (shipped): 116 hours, 18% (2.7x), 5% caught, 6 rises of 3 ft or more**;
+25 / 50: 23%; 30 / 50: 18%; 40 / 60: 28%, 3% caught. Precision is modest because big downstream rivers (Hanwella, Nagalagam Street, Putupaula) often get less than 1 ft from the same rain
+that lifts a small tributary 8 ft (Holombuwa: 3 of 3 firing hours, rise up to 7.7 ft; Glencourse 6 of 10); it is a "check the river" flag, like the forecast one. 25 / 40 was kept as the starting
+point; revisit when more events are archived. Holombuwa on the day: the warning is ON at 09:10 (40 mm in 3 h; level 5.9 ft) and at 10:06 (67 mm; 9.7 ft), while the river reached 13.1 ft about an hour later and 15.3 ft by 13:00.
+
+*Storm model.* The storm gate (`gaugeSteps`) also switches on when measured heavy rain trips (for gauges that have a storm entry and a catchment rain series): the storm range replaces the calm one.
+The correction itself still reads the catchment rain series, and for Holombuwa only the 6, 12 and 24 h steps have a storm model, so the 1 and 3 h steps are unchanged.
+*Refit with measured-rain features: tried, not shipped.* `node scripts/measured-rain-experiment.mts <export> --live` fits a non-negative correction on the shipped gauge-only model's residuals on
+storm hours from measured rain at the gauge and upstream (3 h and 6 h), leaving one day out: error as a share of the gauge's typical swing, 1 h: shipped 0.158, with measured rain 0.158; 3 h 0.304 vs 0.307; 6 h 0.308 vs 0.313
+(93 to 105 held-out storm hours each). No gain, so no model change, no "v4", and no change to calm hours. What the shipped model said at Holombuwa: at 09:10 (5.9 ft) it said 6.4 ft in 1 h and 6.7 ft in 3 h; the river read
+10.0 ft and 15.3 ft. At 10:06 (9.7 ft): 11.2 ft and 11.8 ft; actual 13.1 and 15.3 ft. The model cannot know a cloudburst is under way from level changes alone; 12 days is too short to fit rain features that do better.
+Revisit when a monsoon season of `rain_fall` is archived (the data branch keeps it: `.github/workflows/snapshot.yml`). GSMaP satellite rain (data branch `gsmap/`, since 23 Oct) is not used: too short to backtest.
+
 ### MCP server at `/mcp`
 
 `app/mcp/route.ts` mounts an MCP Streamable-HTTP server using

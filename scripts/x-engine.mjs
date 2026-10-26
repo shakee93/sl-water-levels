@@ -53,6 +53,8 @@ const gaugeFact = (s) => ({
   nextHour: s.nextHour
     ? { level: s.nextHour.level_ft, low: s.nextHour.low_ft, high: s.nextHour.high_ft, direction: s.nextHour.direction, crossing: s.nextHour.crossing }
     : null,
+  // rain the gauges themselves measured at or above this one (lib/measuredRain.ts via nextHour.rainRisk.measured)
+  measuredRain: s.nextHour?.rainRisk?.measured ? { gauge: s.nextHour.rainRisk.measured.gauge, hours: s.nextHour.rainRisk.measured.hours, mm: s.nextHour.rainRisk.measured.mm } : null,
   url: s.url,
   at: s.observedAt ? Date.parse(s.observedAt) : null,
 });
@@ -191,7 +193,10 @@ export function evaluate(snap, prevState, cfgIn = {}) {
     const lv = (s) => tierLevel(s.status);
     const high = us.filter((s) => lv(s) >= 2);
     const rising = us.filter((s) => lv(s) >= 1 && /rising/.test(s.trend ?? "") && s.nextHour?.crossing);
-    const trigger = high.length >= cfg.stormGauges || high.some((s) => lv(s) >= 3) || rising.length >= 3;
+    // very heavy rain measured by the gauges (Holombuwa, 26 Oct 2026: 66 mm in 2 h, river 4 ft to 15 ft in 5 h) starts storm mode
+    // for that river as soon as its gauge is off the calm tier, without waiting for the rain forecast or the river to reach Alert
+    const measuredHeavy = us.filter((s) => lv(s) >= 1 && s.nextHour?.rainRisk?.measured);
+    const trigger = high.length >= cfg.stormGauges || high.some((s) => lv(s) >= 3) || rising.length >= 3 || measuredHeavy.length >= 1;
     const rainHeavy = !!snap.rain && snap.rain.mm >= cfg.heavyRainMm;
     const st = state.storm;
     if (trigger || rainHeavy) {
@@ -202,7 +207,7 @@ export function evaluate(snap, prevState, cfgIn = {}) {
       if (st.off >= 2) st.on = false;
     }
     if (st.on) {
-      const affected = byRiver(us.filter((s) => lv(s) >= 2 || (lv(s) >= 1 && /rising/.test(s.trend ?? "") && s.nextHour?.crossing)), "storm")
+      const affected = byRiver(us.filter((s) => lv(s) >= 2 || (lv(s) >= 1 && (s.nextHour?.rainRisk?.measured || (/rising/.test(s.trend ?? "") && s.nextHour?.crossing)))), "storm")
         .sort((a, b) => Math.max(...b.items.map(lv)) - Math.max(...a.items.map(lv)) || b.items.length - a.items.length)
         .slice(0, cfg.maxStormRivers);
       for (const grp of affected) {

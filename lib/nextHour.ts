@@ -8,7 +8,7 @@ import { unstable_cache } from "next/cache";
 import { after } from "next/server";
 import { fetchBasinSnapshot, getNational } from "./arcgis";
 import { loadForecast, type Forecast } from "./forecast";
-import type { RainRisk } from "./rainRisk";
+import { rainRiskLine, type RainRisk } from "./rainRisk";
 import { FT_IN_M, toShown, type Unit } from "./units";
 
 const STEADY_M_PER_H = 0.006; // same as app/verdict.ts
@@ -39,7 +39,18 @@ export type NextHour = {
    * rise faster than the forecast line: level "heavy" = 50 mm or more forecast, "very-heavy" = 100 mm or more, "possible" = only the
    * heavier ensemble scenario reaches 100 mm.
    */
-  rainRisk: { level: RainRisk["level"]; mm_24h: number; forecast_mm_24h: number | null; heavier_scenario_mm_24h: number | null } | null;
+  rainRisk: {
+    /** What fired: the rain forecast, rain the gauges measured, or both. */
+    kind: "forecast" | "measured" | "both";
+    level: RainRisk["level"] | null;
+    mm_24h: number | null;
+    forecast_mm_24h: number | null;
+    heavier_scenario_mm_24h: number | null;
+    /** Rain the gauges measured (this gauge or one upstream): mm in the last `hours` hours at `gauge`. null when only the forecast fired. */
+    measured: { gauge: string; upstream: boolean; hours: 1 | 3; mm: number } | null;
+    /** The plain sentence shown beside the chart (English). */
+    line: string;
+  } | null;
 };
 
 const MARK: Record<string, string> = { alert: "alert level", minor: "minor flood level", major: "major flood level" };
@@ -74,10 +85,13 @@ export function nextHourOf(f: Forecast): NextHour | null {
     experimental: f.experimental,
     rainRisk: f.rainRisk
       ? {
-          level: f.rainRisk.level,
-          mm_24h: f.rainRisk.mm,
+          kind: f.rainRisk.kind ?? "forecast",
+          level: f.rainRisk.kind === "measured" ? null : f.rainRisk.level,
+          mm_24h: f.rainRisk.kind === "measured" ? null : f.rainRisk.mm,
           forecast_mm_24h: f.rainRisk.detMm == null ? null : Math.round(f.rainRisk.detMm),
           heavier_scenario_mm_24h: f.rainRisk.p90Mm == null ? null : Math.round(f.rainRisk.p90Mm),
+          measured: f.rainRisk.measured ? { gauge: f.rainRisk.measured.gaugeName, upstream: f.rainRisk.measured.upstream, hours: f.rainRisk.measured.hours, mm: f.rainRisk.measured.mm } : null,
+          line: rainRiskLine(f.rainRisk, "en"),
         }
       : null,
   };

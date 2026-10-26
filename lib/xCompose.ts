@@ -155,6 +155,8 @@ export type GaugeFact = {
   alertMark: number | null;
   trend: string | null;
   nextHour: { level: number; low: number | null; high: number | null; direction: string; crossing: string | null } | null;
+  /** Very heavy rain the gauges measured at or above this one (mm in the last `hours` hours at `gauge`). */
+  measuredRain?: { gauge: string; hours: number; mm: number } | null;
   url: string;
   at: number;
 };
@@ -332,7 +334,8 @@ export function composeStorm(f: StormFact): Composed {
     const nh = g.nextHour;
     const fc = nh ? ` Forecast next hour: about ${ft(nh.level)}${nh.low != null && nh.high != null ? ` (${ft(nh.low)} to ${ft(nh.high)})` : ""}.` : "";
     const lab = g.tier === "normal" || g.tier === "watch" ? "below alert" : TIER_MARK[g.tier];
-    return `${g.station} ${ft(g.level)}, ${lab}${trendWord(g.trend)}.${fc}`;
+    const mr = g.measuredRain ? ` Very heavy rain measured at ${g.measuredRain.gauge}: ${g.measuredRain.mm} mm in the last ${g.measuredRain.hours === 1 ? "hour" : `${g.measuredRain.hours} hours`}.` : "";
+    return `${g.station} ${ft(g.level)}, ${lab}${trendWord(g.trend)}.${mr}${fc}`;
   };
   const body = `${f.river} update, ${clock(f.at)}: ${gs.map(line).join(" ")}`;
   const short = `${f.river}, ${clock(f.at)}: ${line(gs[0])}`;
@@ -403,6 +406,7 @@ const gaugeLuna = (g: GaugeFact) => ({
   next_hour_forecast: g.nextHour
     ? { level_ft: r1(g.nextHour.level), likely_low_ft: g.nextHour.low != null ? r1(g.nextHour.low) : undefined, likely_high_ft: g.nextHour.high != null ? r1(g.nextHour.high) : undefined, direction: g.nextHour.direction, may_cross: g.nextHour.crossing ? g.nextHour.crossing.replace(/^(expected to|may|will) reach/i, "could reach") : undefined }
     : undefined,
+  rain_measured_by_gauges: g.measuredRain ? { at_gauge: g.measuredRain.gauge, mm: g.measuredRain.mm, in_last_hours: g.measuredRain.hours } : undefined,
   time_sri_lanka: clock(g.at),
 });
 

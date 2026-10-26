@@ -12,6 +12,7 @@ import { STEADY_M_PER_H } from "../app/verdict";
 import { getReleases, releaseAffectingFrom } from "./releases";
 import { getBasinWeather, hasCatchment } from "./weather";
 import { rainRiskOf } from "./rainRisk";
+import { measuredAt } from "./forecast";
 import type { Glance, ParsedKey } from "./myPlaces";
 
 const trendOf = (rateM: number | null): Glance["trend"] => (rateM == null ? "unknown" : Math.abs(rateM) < STEADY_M_PER_H ? "steady" : rateM > 0 ? "up" : "down");
@@ -98,7 +99,13 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
   await Promise.all(
     glances.map(async (g) => {
       const s = g.gaugeStation ? byName.get(g.gaugeStation) : null;
-      if (!s || !["watch", "alert", "minor", "major"].includes(g.tone) || !hasCatchment(s.basin, s.station)) return;
+      if (!s || !["watch", "alert", "minor", "major"].includes(g.tone)) return;
+      // rain the gauges measured: no network call, and it works for gauges with no catchment grid too
+      if (measuredAt(national, s.basin, s.station, Date.now())) {
+        g.rainRisk = "measured";
+        return;
+      }
+      if (!hasCatchment(s.basin, s.station)) return;
       try {
         const w = await Promise.race([getBasinWeather(s.basin, s.station), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
         if (w && w.ok) g.rainRisk = rainRiskOf({ det: w.data.next24hMm.det, p90: w.data.next24hMm.p90 }) != null;

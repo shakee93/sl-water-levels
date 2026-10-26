@@ -130,7 +130,10 @@ export function nextHourSentence(lang: Locale, nh: NextHour | null, subject?: st
     out += W(k, lang, { how: W(nh.crossing.startsWith("expected") ? NH.expected : NH.may, lang) });
   }
   // Storm warning: heavy rain forecast above the gauge (lib/rainRisk.ts). Same words as the line beside the chart.
-  if (nh.rainRisk) out += " " + rainRiskLine({ level: nh.rainRisk.level, mm: nh.rainRisk.mm_24h }, lang);
+  if (nh.rainRisk) out += " " + rainRiskLine(
+    { kind: nh.rainRisk.kind, level: nh.rainRisk.level ?? "heavy", mm: nh.rainRisk.mm_24h ?? 0, measured: nh.rainRisk.measured ? { ...nh.rainRisk.measured, gaugeName: nh.rainRisk.measured.gauge, mm1h: null, mm3h: null } : null },
+    lang,
+  );
   return out;
 }
 
