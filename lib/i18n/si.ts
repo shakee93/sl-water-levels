@@ -25,6 +25,10 @@ export const si: Dict = {
   "lang.suggest.dismiss": "වසන්න",
   "crumb.allBasins": "සියලු ගංගා",
   "crumb.home": "මුල් පිටුව",
+  "sticky.back": "ඉහළට යන්න",
+  "sticky.label": "මෙම පිටුව එක බැල්මකින්",
+  "sticky.street": "වීදියේ ජලය ඇතිවිය හැක",
+  "sticky.gauges": "මාන {m}න් {n}ක් අනතුරු මට්ටමේ හෝ ඉහළ",
   "footer.blurb": "ශ්‍රී ලංකාව පුරා සජීවී ගංගා සහ ජලාශ මට්ටම්, ගංවතුර පුරෝකථන සමඟ.",
   "footer.basins": "ගංගා", // needs native review
   "footer.site": "ගවේෂණය", // needs native review

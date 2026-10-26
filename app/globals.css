@@ -81,6 +81,11 @@ html .leaflet-container {
   z-index: 0;
 }
 
+/* Pages with the context bar (app/StickyContext.tsx, 36 px under the header) keep anchors clear of it too. */
+html:has([data-sticky-context]) {
+  scroll-padding-top: 7rem;
+}
+
 /* Anchors (#rivers, #map...) land below the 56px sticky header. */
 html {
   scroll-padding-top: 4.5rem;

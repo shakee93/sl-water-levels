@@ -15,7 +15,8 @@ import { RiverGauges } from "@/app/RiverGauges";
 import { RiverRain } from "@/app/RiverRain";
 import { RainMapLink } from "@/app/rain/RainMapLink";
 import { TimeAgo } from "@/app/TimeAgo";
-import { colomboTime } from "@/app/tierUi";
+import { colomboTime, tierLabel, tierRank } from "@/app/tierUi";
+import { StickyContext } from "@/app/StickyContext";
 import { BasinDams } from "@/app/BasinDams";
 import { InTheNews } from "@/app/InTheNews";
 import { ReleaseCard } from "@/app/ReleaseCard";
@@ -181,6 +182,7 @@ export default async function BasinPage({
   const reporting = snap.filter((s) => s.tier !== "stale" && s.latest);
   // near alert (tier "watch") is Normal: only Alert and above are flagged (owner, 26 Oct 2026)
   const flagged = reporting.filter((s) => ["major", "minor", "alert"].includes(s.tier));
+  const worst = reporting.length ? reporting.reduce((a, s) => (tierRank(s.tier) < tierRank(a) ? s.tier : a), reporting[0].tier) : null;
   const newest = snap.reduce<number | null>((m, s) => (s.latest && (m == null || s.latest.ts > m) ? s.latest.ts : m), null);
 
   let status: React.ReactNode;
@@ -238,6 +240,15 @@ export default async function BasinPage({
             ),
           ]}
         />
+        {worst && (
+          <StickyContext
+            label={t("sticky.label")}
+            backLabel={t("sticky.back")}
+            crumbs={[{ label: t("crumb.allBasins"), href: p("/") }, { label: riverName(basin, lang) }]}
+            pill={{ label: tierLabel(t, worst === "watch" ? "normal" : worst), tier: worst === "watch" ? "normal" : worst }}
+            bits={[flagged.length > 0 ? t("sticky.gauges", { n: flagged.length, m: reporting.length }) : t("river.allNormal", { n: reporting.length })]}
+          />
+        )}
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
             {t("crumb.allBasins")}

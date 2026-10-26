@@ -6,6 +6,8 @@ import type { Locale } from "./config";
 const en = {
   "nav": "Reservoirs",
   "crumb": "Reservoirs",
+  "sticky.full": "{n}% full",
+  "sticky.releasing": "Releasing {n} cusecs",
   "idx.title": "Sri Lanka Reservoirs: Water Level & Spill Today",
   "idx.desc": "Live storage and spill for {n} reservoirs: which are releasing water now, how full they are, and the rivers below them.",
   "idx.h1": "Reservoirs",
@@ -167,6 +169,8 @@ type RDict = Record<RKey, string>;
 const si: RDict = {
   "nav": "ජලාශ",
   "crumb": "ජලාශ",
+  "sticky.full": "{n}% පිරී ඇත",
+  "sticky.releasing": "කියුසෙක් {n} මුදා හරියි", // needs native review
   "idx.title": "ශ්‍රී ලංකාවේ ජලාශ: අද ජල මට්ටම සහ ජලය පිටවීම",
   "idx.desc": "ජලාශ {n}ක සජීවී ගබඩාව සහ ජලය පිටවීම: දැන් ජලය මුදාහරින්නේ කුමන ඒවාද, කොපමණ පිරී ඇත්ද, පහළ ගංගා මොනවාද.",
   "idx.h1": "ජලාශ",
@@ -326,6 +330,8 @@ const si: RDict = {
 const ta: RDict = {
   "nav": "நீர்த்தேக்கங்கள்",
   "crumb": "நீர்த்தேக்கங்கள்",
+  "sticky.full": "{n}% நிரம்பியுள்ளது",
+  "sticky.releasing": "{n} கியூசெக் வெளியேற்றம்", // needs native review
   "idx.title": "இலங்கை நீர்த்தேக்கங்கள்: இன்றைய நீர்மட்டமும் வெளியேற்றமும்",
   "idx.desc": "{n} நீர்த்தேக்கங்களின் நேரடி சேமிப்பு மற்றும் வெளியேற்றம்: இப்போது நீர் திறக்கப்படுபவை, எவ்வளவு நிரம்பியுள்ளன, கீழ்ப்பகுதி ஆறுகள்.",
   "idx.h1": "நீர்த்தேக்கங்கள்",

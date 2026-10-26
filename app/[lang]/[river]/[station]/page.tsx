@@ -42,6 +42,8 @@ import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { RiverMap } from "@/app/RiverMap";
 import { StationNearby } from "@/app/StationNearby";
+import { StickyContext } from "@/app/StickyContext";
+import { colomboTime, tierLabel } from "@/app/tierUi";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
 import { SITE } from "@/lib/seo";
@@ -217,6 +219,17 @@ export default async function StationPage({
             dangerouslySetInnerHTML={{
               __html: JSON.stringify(datasetLd(resolved.station, basin, stations, canonical, lang, nat?.latest?.ts)),
             }}
+          />
+        )}
+
+        {resolved && nat && (
+          <StickyContext
+            label={t("sticky.label")}
+            backLabel={t("sticky.back")}
+            crumbs={[{ label: riverName(basin, lang), href: p(basinPath(basin)) }, { label: stationDisplayName(station) }]}
+            // official steps only: near alert is Normal, and the forecast lift is not an official step
+            pill={{ label: tierLabel(t, nat.tier === "watch" ? "normal" : nat.tier), tier: nat.tier === "watch" ? "normal" : nat.tier }}
+            bits={nat.latest ? [formatLevel(nat.latest.water_level, nat.unit), colomboTime(nat.latest.ts, t)] : []}
           />
         )}
 

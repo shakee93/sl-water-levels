@@ -20,6 +20,7 @@ import { litresPerSecond, releaseSize } from "@/lib/releaseUi";
 import { TimeAgo } from "@/app/TimeAgo";
 import { Basin, SizeMeter, fmt, levelOf } from "@/app/reservoirs/bits";
 import { withDownstreamGauges } from "@/lib/reservoirs";
+import { StickyContext } from "@/app/StickyContext";
 import { FlowDiagram } from "@/app/reservoirs/FlowDiagram";
 import { orderStations } from "@/lib/basinOrder";
 import { shapeFor } from "@/lib/riverTopology";
@@ -262,6 +263,12 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <StickyContext
+          label={t("sticky.label")}
+          backLabel={t("sticky.back")}
+          crumbs={[{ label: rt("crumb"), href: p("/reservoirs") }, { label: name }]}
+          bits={[[stor && stor.fresh ? rt("sticky.full", { n: Math.round(stor.pct) }) : "", releasing && flow ? rt("sticky.releasing", { n: fmt(flow.cusecs) }) : ""].filter(Boolean).join(" · ")].filter(Boolean)}
+        />
         <nav className={`text-xs ${muted} mb-3`} aria-label={rt("crumb")}>
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.home")}</Link> <span aria-hidden>›</span>{" "}
           <Link href={p("/reservoirs")} className="hover:underline inline-block py-3 -my-3">{rt("crumb")}</Link> <span aria-hidden>›</span>{" "}

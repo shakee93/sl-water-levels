@@ -25,6 +25,10 @@ export const ta: Dict = {
   "lang.suggest.dismiss": "மூடு",
   "crumb.allBasins": "எல்லா ஆறுகளும்",
   "crumb.home": "முகப்பு",
+  "sticky.back": "மேலே செல்ல",
+  "sticky.label": "இந்தப் பக்கம் ஒரு பார்வையில்",
+  "sticky.street": "தெருவில் நீர் வர வாய்ப்பு",
+  "sticky.gauges": "{m} நிலையங்களில் {n} எச்சரிக்கை மட்டத்தில் அல்லது அதற்கு மேல்",
   "footer.blurb": "இலங்கை முழுவதும் நேரடி ஆறு மற்றும் நீர்த்தேக்க மட்டங்கள், வெள்ள முன்னறிவிப்புகளுடன்.",
   "footer.basins": "ஆறுகள்", // needs native review
   "footer.site": "ஆராய்க", // needs native review

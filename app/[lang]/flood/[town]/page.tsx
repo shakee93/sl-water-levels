@@ -12,6 +12,10 @@ import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import { stationDisplayName } from "@/lib/displayName";
 import { formatKm } from "@/lib/nearby";
+import { StickyContext } from "@/app/StickyContext";
+import { colomboTime, tierLabel } from "@/app/tierUi";
+import { statusFor } from "@/lib/arcgis";
+import { formatLevel } from "@/lib/units";
 import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
 import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
@@ -111,11 +115,23 @@ export default async function TownPage({ params }: Params) {
     }),
   ];
 
+  // the bar speaks about the official gauge step (Normal / Alert / Minor / Major), never the town estimate
+  const gTier = g ? statusFor(g.level, g.thresholds, g.ts).tier : null;
+  const streetLikely = !!place.rainZone && data.input.streetRain != null && risk.lowSpot?.level === "likely";
   const lowSpotCard = <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} kind={streetCardKind(place)} />;
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
         <JsonLd graph={ld} />
+
+        <StickyContext
+          label={t("sticky.label")}
+          backLabel={t("sticky.back")}
+          crumbs={[{ label: tt("crumb"), href: p("/flood") }, { label: place.name }]}
+          pill={gTier ? { label: tierLabel(t, gTier === "watch" ? "normal" : gTier), tier: gTier === "watch" ? "normal" : gTier } : undefined}
+          bits={g && g.level != null ? [formatLevel(g.level, g.unit), ...(g.ts ? [colomboTime(g.ts, t)] : [])] : []}
+          chip={streetLikely ? t("sticky.street") : undefined}
+        />
 
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.home")}</Link>{" "}
