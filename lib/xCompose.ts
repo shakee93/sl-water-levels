@@ -18,7 +18,7 @@ export const DISCLAIMER = "Not an official warning. Emergency: 117.";
 /** Appended to a post that relays an official bulletin. */
 /** Routine posts carry no closing (the bio and the pinned post say "Not official · 117"); serious ones carry this short one. */
 export const DISCLAIMER_SHORT = "Emergency: 117.";
-export const DISCLAIMER_RELAY = "Relayed, we are not the source. Emergency: 117.";
+export const DISCLAIMER_RELAY = "Emergency: 117.";
 /** The only number allowed without being in the facts. */
 export const ALWAYS_OK_NUMBERS = [117];
 
@@ -415,7 +415,7 @@ export function lunaFacts(type: string, f: any): Record<string, unknown> {
     case "storm": return { post: "storm-time river update", river: f.river, time_sri_lanka: clock(f.at), gauges: f.gauges.slice(0, 3).map(gaugeLuna) };
     case "reservoir_start": return { post: "reservoir started letting water out", reservoirs: f.slice(0, 3).map((r: ReservoirFact) => ({ name: r.name, river: r.river ?? undefined, status: r.status, cusecs: Math.round(r.cusecs), storage_percent: r.storagePercent != null ? Math.round(r.storagePercent) : undefined, reading_date: dayOf(r.day), source: r.source ?? undefined, note: "the agency's daily reading, not live" })) };
     case "reservoir_stop": return { post: "reservoir stopped letting water out", reservoirs: f.slice(0, 3).map((r: { name: string; river: string | null; day: string }) => ({ name: r.name, river: r.river ?? undefined, reading_date: dayOf(r.day) })) };
-    case "warning": return { post: "relay of a new official flood bulletin (we are not its source)", source: f.source, severity: SEVERITY_TEXT[f.severity] ?? "flood warning", basins: f.basins.slice(0, 3), issued_sri_lanka_time: clock(f.issuedAt), release_cusecs: f.releaseCusecs != null ? Math.round(f.releaseCusecs) : undefined };
+    case "warning": return { post: "relay of a new official flood bulletin (name who issued it)", source: f.source, severity: SEVERITY_TEXT[f.severity] ?? "flood warning", basins: f.basins.slice(0, 3), issued_sri_lanka_time: clock(f.issuedAt), release_cusecs: f.releaseCusecs != null ? Math.round(f.releaseCusecs) : undefined };
     case "summary": {
       const s = f as SummaryFact;
       return {
@@ -451,7 +451,7 @@ VARIETY (this account posts many times a day; the posts must not read like copie
 CLOSING (the input field "closing" tells you which)
 - none (most posts: summaries, alert-level rises, all-clears, reservoirs, calm storm updates): end the post with your last useful sentence. No "Not an official warning", no "Emergency: 117", no 117 at all. The bio and the pinned post already say it.
 - short (only when flood risk is serious: Minor or Major flood level, or a forecast that the river could reach one): end with a very short line, "Emergency: 117." or "Unofficial · 117." (use either, varying it naturally). Nothing longer, never "Not an official warning".
-- relay (passing on an official bulletin): say we are only passing it on and are not the source, plus 117, e.g. "We're only passing this on, not the source. Emergency: 117."
+- relay (passing on an official bulletin): name who issued it (e.g. "The Irrigation Department has issued…") and end with "Emergency: 117." Do not add "we are only passing this on" or "not the source": naming the issuer is enough.
 
 FACTS ARE THE LAW
 - Use only the facts in the JSON. Every number, time, place and river you write must come from it. Copy numbers as given (ft, cusecs, mm, %). Write times exactly as given in time_sri_lanka (e.g. "4:10 pm"). Do not add numbers of your own, no dates other than the ones given, no causes.
@@ -483,7 +483,7 @@ reservoir (closing none):
 - Deduru Oya reservoir is spilling, about 1,250 cusecs in the 25 Oct reading. That water goes into the Deduru Oya, so people along it may want to check in today.
 - Castlereagh has stopped letting water out (24 Oct reading).
 warning (closing relay):
-- The Irrigation Department has put out a flood alert for the Kalu Ganga basin, issued at 3:20 pm, and mentions a release of about 9,000 cusecs. Please follow their instructions. We're only passing it on, not the source. Emergency: 117.
+- The Irrigation Department has put out a flood alert for the Kalu Ganga basin, issued at 3:20 pm, and mentions a release of about 9,000 cusecs. Please follow their instructions. Emergency: 117.
 morning (closing none):
 - Morning! All 38 gauges are below their alert marks today, and not much rain is forecast. Have a good one.
 - Morning. 2 of 38 gauges are at alert level or higher (Hanwella and Glencourse), 1 more is close, and up to 60 mm of rain is forecast near Ratnapura.
@@ -560,7 +560,6 @@ export function validateLlmText(text: string, c: LunaCtx): string[] {
   for (const w of new Set(body.toLowerCase().match(/\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g) ?? [])) if (!ok.has(WORDS[w])) problems.push(`number "${w}" is not in the facts`);
   if (c.relay) {
     if (!/\b117\b/.test(text)) problems.push("emergency number 117 missing");
-    if (!/not the (original )?source/i.test(text)) problems.push('closing must say we are "not the source"');
   } else if (c.serious) {
     if (!/\b117\b/.test(text)) problems.push('serious flood risk: end with the short closing "Emergency: 117." (or "Unofficial · 117.")');
     if (/\bofficial/i.test(text)) problems.push('do not write "official" / "not an official warning": the short closing is only "Emergency: 117." or "Unofficial · 117."');
@@ -614,7 +613,7 @@ export async function lunaWrite(post: Post, o: { type: string; facts: unknown; r
     must: (relay ? post.must.slice(1) : post.must).filter((w) => w && !GENERIC_MUST.has(w.toLowerCase())).slice(0, 2),
   };
   const max = MODEL_TARGET - (o.withLink ? TCO_LENGTH + 1 : 0); // told to the model; the checker's hard limit stays 280
-  const input = { kind: post.kind, closing: relay ? "relay: say we are only passing it on, not the source, plus 117" : post.serious ? 'short: end with "Emergency: 117." or "Unofficial · 117." (no other disclaimer)' : "none: do not add any disclaimer, emergency line or 117", max_characters: max, allowed_hashtags: ctx.hashtags, facts: compact, recent_posts: recent.map((r) => r.replace(URL_RE, "").trim()) };
+  const input = { kind: post.kind, closing: relay ? 'relay: name the issuer in the post and end with "Emergency: 117." (no "not the source" line)' : post.serious ? 'short: end with "Emergency: 117." or "Unofficial · 117." (no other disclaimer)' : "none: do not add any disclaimer, emergency line or 117", max_characters: max, allowed_hashtags: ctx.hashtags, facts: compact, recent_posts: recent.map((r) => r.replace(URL_RE, "").trim()) };
   let last = "";
   let problems: string[] = [];
   const seen = new Set<string>(); // every problem found so far, so the 3rd try also avoids what the 1st one did

@@ -69,12 +69,12 @@ bad("Rivers are calm across the island.", /calm/, ctxOf("summary", { period: "mo
 bad("Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm (mark 21 ft). Hanwella 31.2 ft.", /number 31\.2/);
 assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("Unofficial · 117."));
 
-// a relayed bulletin says we are not the source (and may say "official")
+// a relayed bulletin names the issuer and ends with 117 (no "not the source" line needed)
 {
   const wf = { source: "Irrigation Department", severity: "alert", basins: ["Kalu Ganga"], issuedAt: NOW, releaseCusecs: 9000, bulletinUrl: `${SITE}/b`, url: `${SITE}/kalu-ganga` };
   const cx = ctxOf("warning", wf, { relay: true, must: ["Kalu Ganga"] });
   assert.deepEqual(validateLlmText("The Irrigation Department has put out an official flood alert for the Kalu Ganga basin, issued at 4:10 pm, with a release of about 9,000 cusecs. We're only passing it on, not the source. Emergency: 117.", cx), []);
-  bad("The Irrigation Department has put out a flood alert for the Kalu Ganga basin at 4:10 pm. Emergency: 117.", /not the source/, cx);
+  assert.deepEqual(validateLlmText("The Irrigation Department has put out a flood alert for the Kalu Ganga basin at 4:10 pm. Emergency: 117.", cx), []);
 }
 
 // ---- lunaWrite: accepted, retry with the problems fed back, then the template

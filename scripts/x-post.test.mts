@@ -87,7 +87,7 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   assert.ok(validateText(minor.text.replace("Emergency: 117.", ""), { kind: "alert", facts: [gf({ tier: "minor", mark: 10, level: 10.3 })], ...minor }).some((p) => /disclaimer/.test(p)));
   assert.ok(composeGaugeRise([gf({ nextHour: { level: 9.8, low: 9.6, high: 10.1, direction: "rising", crossing: "may reach minor flood level" } })]).text.includes("Emergency: 117."));
   assert.ok(!composeGaugeClear([gf({ tier: "normal" })]).text.includes("117"));
-  assert.ok(composeWarning({ source: "Irrigation Department", severity: "alert", basins: ["Kalu Ganga"], issuedAt: NOW, releaseCusecs: null, bulletinUrl: `${SITE}/b`, url: `${SITE}/kalu-ganga` }).text.includes("not the source"));
+  assert.ok(composeWarning({ source: "Irrigation Department", severity: "alert", basins: ["Kalu Ganga"], issuedAt: NOW, releaseCusecs: null, bulletinUrl: `${SITE}/b`, url: `${SITE}/kalu-ganga` }).text.includes("Irrigation Department"));
   assert.ok(validateText(one.text.replace(post.link, ""), post).some((p) => /link/.test(p)));
   assert.ok(validateText(one.text + " #scam", post).some((p) => /hashtag/.test(p)));
   assert.ok(one.reply.includes("Forecast for the next hour (not official): about 8.4 ft") && one.reply.includes("8.3 ft") && one.reply.includes("8.6 ft"));
@@ -125,7 +125,7 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   const wf = { source: "Irrigation Department", severity: "minor flood", basins: ["Kelani Ganga"], issuedAt: NOW, releaseCusecs: 12000, bulletinUrl: "https://www.dmc.gov.lk/x.pdf", url: `${SITE}/kelani-ganga` };
   const w = composeWarning(wf);
   assert.deepEqual(validatePost({ kind: "warning", facts: wf, ...w }), []);
-  assert.ok(w.text.includes("we are not the source") && /12,000 cusecs/.test(w.text));
+  assert.ok(!w.text.includes("not the source") && /117/.test(w.text) && /12,000 cusecs/.test(w.text));
   const rf = [{ name: "Deduru Oya", river: "Deduru Oya", status: "spilling", cusecs: 1234.6, storagePercent: 101.2, day: "2026-10-25", source: "Irrigation Department", url: `${SITE}/reservoirs/deduru-oya` }];
   const r = composeReservoirStart(rf);
   assert.deepEqual(validatePost({ kind: "reservoir", facts: rf, ...r }), []);
