@@ -33,6 +33,7 @@ export function levelRecord(s: NationalStation, now = Date.now()) {
     marks: { alert: shown(s.thresholds.alert), minor: shown(s.thresholds.minor), major: shown(s.thresholds.major) },
     status: st.tier,
     statusLabel: st.label,
+    statusNote: st.note ?? null,
     trend,
     changePerHour3h: rate == null ? null : r2(rate / FT_IN_M),
     observedAt: s.latest ? new Date(s.latest.ts).toISOString() : null,
@@ -48,7 +49,7 @@ export const API_META = {
   license: `${SITE}/about#data-sources`,
   notes: [
     "level and marks are in feet (metre gauges are converted); published.level is the figure as the agency released it, in published.unit.",
-    "status is one of normal, watch, alert, minor, major, none (no flood levels published) or stale (no reading in 3 hours).",
+    "status is one of normal, watch, alert, minor, major, none (no flood levels published) or stale (no reading in 3 hours). The official steps are Normal, Alert, Minor flood and Major flood: \"watch\" is a machine value for a Normal gauge close to its alert mark (statusLabel says \"Normal\", statusNote says \"Near alert\").",
     "null means unknown, never zero.",
     "Not an official warning service. In an emergency call 117 (Disaster Management Centre).",
   ],

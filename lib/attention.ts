@@ -34,7 +34,7 @@ export const TIER_LABEL: Record<AttentionTier, string> = {
   major: "Major flood",
   minor: "Minor flood",
   alert: "Alert",
-  watch: "Approaching alert",
+  watch: "Normal", // internal tier only; the page says "Near alert" as a note
 };
 
 // A gauge enters the watch tier at 85% of its alert threshold (shared with

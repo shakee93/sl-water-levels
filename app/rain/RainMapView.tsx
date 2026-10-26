@@ -18,7 +18,7 @@ import { RAIN_BANDS, rainBand, rainWordOf, satelliteCaveat, type RainBand, type 
 import { rmFor } from "@/lib/i18n/rainMap";
 import { clock } from "@/lib/i18n/format";
 import { basinPath } from "@/lib/slug";
-import { TIER_HEX, tierLabel, tierRank } from "../tierUi";
+import { TIER_HEX, tierLabel, tierLine, tierRank } from "../tierUi";
 import { VERDICT } from "../verdict";
 import { useI18n } from "../LocaleProvider";
 import type { TFn } from "@/lib/i18n/translate";
@@ -117,7 +117,7 @@ function paint(canvas: HTMLCanvasElement | null, sample: Sampler | null, win: Ra
 }
 
 /** Level colours for the key, in the order a river rises. */
-const KEY_TIERS = ["normal", "watch", "alert", "minor", "major"] as const;
+const KEY_TIERS = ["normal", "alert", "minor", "major"] as const;
 
 export type RainMapStrings = { rivers: Record<string, string> };
 
@@ -590,7 +590,7 @@ function RiverCard({ name, basin, dryZone, gauges, fell, next, next6, onClose }:
                     <span className="font-medium">{g.name}</span>
                     <span className="block text-xs text-slate-500 dark:text-slate-400">
                       {[
-                        tierLabel(t, g.tier) + (g.getReady ? ` · ${VERDICT.alert[lang]}` : ""),
+                        tierLine(t, g.tier) + (g.getReady ? ` · ${VERDICT.alert[lang]}` : ""),
                         g.above24h != null ? rm("card.above", { mm: Math.round(g.above24h) }) : null,
                         g.measured?.mm24h != null ? rm("card.atGauge", { mm: Math.round(g.measured.mm24h) }) : null,
                       ].filter(Boolean).join(" · ")}

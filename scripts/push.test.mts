@@ -148,7 +148,7 @@ const setB = (prefs) => d1Query(prefs == null ? "DELETE FROM push_prefs WHERE en
 await setB(JSON.stringify({ ...(bPrefs ? JSON.parse(bPrefs) : {}), lowSpots: ["t:wellampitiya"] }));
 await run({}, (t += H / 2));
 assert.deepEqual(sent.map((m) => m.to), ["b"], "only the person who marked a low spot");
-assert.ok(!/Flooding likely|Water on the streets/i.test(sent[0].title), "no town-wide claim in the title");
+assert.ok(!/Minor flood|Water on the streets/i.test(sent[0].title), "no town-wide claim in the title");
 assert.ok(sent[0].title.includes("Wellampitiya"), "names the place");
 sent.length = 0;
 world["t:wellampitiya"] = glance("t:wellampitiya", "Wellampitiya");

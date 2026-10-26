@@ -62,6 +62,11 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
               <Icon className="size-5 shrink-0" aria-hidden />
               {VERDICT[tone][lang]}
             </span>
+            {tone === "watch" && (
+              <span data-verdict-note className="mt-0.5 block text-sm text-slate-600 dark:text-slate-400">
+                {me.verdict === "watch" && me.tier === "normal" ? t("tier.forecastNote") : t("tier.nearLabel")}
+              </span>
+            )}
             {next && (
               <span className="mt-1 block text-sm text-slate-700 dark:text-slate-300">
                 <span className="text-slate-500 dark:text-slate-400">{NEXT_HOUR[lang]} </span>

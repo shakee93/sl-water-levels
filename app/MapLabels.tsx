@@ -58,7 +58,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
     // the dots and icons are obstacles
     for (const s of stations) {
       const p = P(s.latitude, s.longitude);
-      const r = (s.tier === "watch" || s.tier === "alert" || s.tier === "minor" || s.tier === "major" ? 8 : 6) + 2;
+      const r = (s.tier === "alert" || s.tier === "minor" || s.tier === "major" ? 8 : 6) + 2;
       const bx = { x0: p.x - r, y0: p.y - r, x1: p.x + r, y1: p.y + r };
       placed.push(bx);
       if (r > 9) solid.push(bx);
@@ -112,7 +112,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
       }
     };
 
-    const hot = (s: HomeStation) => s.tier === "watch" || s.tier === "alert" || s.tier === "minor" || s.tier === "major";
+    const hot = (s: HomeStation) => s.tier === "alert" || s.tier === "minor" || s.tier === "major";
     const gaugeLabel = (s: HomeStation) => {
       const p = P(s.latitude, s.longitude);
       const lvl = s.level != null && s.tier !== "stale" && s.tier !== "none" ? formatLevel(s.level, s.unit) : null;
@@ -123,7 +123,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
       }
       beside(key, p.x, p.y, stationDisplayName(s.station), "font-semibold text-slate-800 dark:text-slate-100", {
         bold: true,
-        level: lvl ? { text: lvl, color: TIER_HEX[s.tier], dark: s.tier === "watch" || s.tier === "alert" } : undefined,
+        level: lvl ? { text: lvl, color: TIER_HEX[s.tier], dark: s.tier === "alert" } : undefined,
         gap: 13,
         force: true,
       });

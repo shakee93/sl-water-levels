@@ -4,10 +4,10 @@ import type { T3, VerdictTone } from "./ShareButton";
 
 export const VERDICT: Record<VerdictTone, T3> = {
   normal: { en: "Normal", si: "සාමාන්‍යයි", ta: "இயல்பு" },
-  watch: { en: "Keep an eye on it", si: "සැලකිලිමත් වන්න", ta: "கவனமாக இருங்கள்" },
+  watch: { en: "Normal", si: "සාමාන්‍යයි", ta: "இயல்பு" }, // internal tone only: shown as Normal, the reason goes in a note (owner, 26 Oct 2026)
   alert: { en: "Alert", si: "අනතුරු ඇඟවීම", ta: "எச்சரிக்கை" }, // the official Alert level's own word (owner, 26 Oct 2026; was "Get ready")
-  minor: { en: "Flooding now", si: "දැන් ගංවතුර තත්ත්වයක්", ta: "இப்போது வெள்ளம்" },
-  major: { en: "Move to safety", si: "ආරක්ෂිත ස්ථානයකට යන්න", ta: "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள்" },
+  minor: { en: "Minor flood", si: "සුළු ගංවතුර", ta: "சிறு வெள்ளம்" },
+  major: { en: "Major flood", si: "ප්‍රධාන ගංවතුර", ta: "பெரு வெள்ளம்" },
   none: { en: "No flood levels published", si: "ගංවතුර මට්ටම් පළ කර නැත", ta: "வெள்ள மட்டங்கள் வெளியிடப்படவில்லை" },
   stale: { en: "Data delayed", si: "දත්ත ප්‍රමාදයි", ta: "தரவு தாமதம்" },
 };

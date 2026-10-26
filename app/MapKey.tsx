@@ -6,7 +6,7 @@ import type { Tier } from "@/lib/arcgis";
 import { TIER_HEX, tierLabel } from "./tierUi";
 import { useI18n } from "./LocaleProvider";
 
-const TIERS: Tier[] = ["normal", "watch", "alert", "minor", "major", "stale"];
+const TIERS: Tier[] = ["normal", "alert", "minor", "major", "stale"];
 
 export function KeyList({ hasLakes, hasUser, cols = "grid-cols-2" }: { hasLakes: boolean; hasUser: boolean; cols?: string }) {
   const { t } = useI18n();

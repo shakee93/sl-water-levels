@@ -29,7 +29,8 @@ import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
 
-const tierText = (t: TFn, tier: AttentionTier) => t(tier === "watch" ? "tier.watchLong" : (`tier.${tier}` as "tier.major"));
+// A near-alert gauge reads "Normal" (tier.watch); the near-alert reason is the note under it (owner, 26 Oct 2026).
+const tierText = (t: TFn, tier: AttentionTier) => t(`tier.${tier}` as "tier.major");
 const markText = (t: TFn, k: "major flood" | "minor flood" | "alert") => t(`gap.${k.split(" ")[0]}` as "gap.alert");
 
 type TierStyle = {
@@ -42,7 +43,7 @@ type TierStyle = {
 
 // One row per tier so the colour story is consistent with the status dots used
 // in BasinFlow and StationCard: red = major, orange = minor, amber = alert.
-// `watch` is yellow: visible, but clearly milder than a crossed threshold.
+// `watch` (near alert) is the Normal look: it is not a step of the Department's ladder.
 // Pills use dark text on the light fills (amber/yellow) for AA contrast.
 const TIER_STYLE: Record<AttentionTier, TierStyle> = {
   major: {
@@ -67,11 +68,11 @@ const TIER_STYLE: Record<AttentionTier, TierStyle> = {
     dot: "bg-amber-500",
   },
   watch: {
-    card: "border-yellow-300 dark:border-yellow-900 bg-yellow-50/60 dark:bg-yellow-950/20 hover:border-yellow-500 dark:hover:border-yellow-700",
-    pill: "bg-yellow-300 text-yellow-950",
-    bar: "bg-yellow-400",
-    gap: "text-yellow-700 dark:text-yellow-300",
-    dot: "bg-yellow-400",
+    card: "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-600",
+    pill: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100",
+    bar: "bg-sky-500",
+    gap: "text-slate-600 dark:text-slate-300",
+    dot: "bg-slate-400 dark:bg-slate-500",
   },
 };
 
@@ -203,8 +204,10 @@ function BasinCard({
         </div>
 
         {b.lead.gap && (
-          <div className={`mt-0.5 text-xs tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
-            {b.lead.gap.crossed
+          <div data-verdict-note={b.tier === "watch" ? "" : undefined} className={`mt-0.5 text-xs tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
+            {b.tier === "watch" && !b.lead.gap.crossed
+              ? t("needs.nearNote", { amount: formatDelta(b.lead.gap.amount, unit) })
+              : b.lead.gap.crossed
               ? t("gap.above", { amount: formatDelta(b.lead.gap.amount, unit), mark: markText(t, b.lead.gap.label) })
               : t("gap.below", { amount: formatDelta(b.lead.gap.amount, unit), mark: markText(t, b.lead.gap.label) })}
           </div>
@@ -290,6 +293,10 @@ export function NeedsAttention({
   }
 
   const { basins, flagged, reporting } = buildAttention(snapshot);
+  // Near-alert gauges read Normal: only the gauges at Alert or above are counted as such, the rest are "near alert".
+  const aboveN = flagged.filter((f) => f.tier !== "watch").length;
+  const nearN = flagged.length - aboveN;
+  const countText = [aboveN > 0 ? t("needs.count", { n: aboveN, m: reporting }) : null, nearN > 0 ? t("needs.countNear", { n: nearN }) : null].filter(Boolean).join(" · ");
   const rateByHref = new Map(snapshot.map((s) => [s.href, s.rate3hM] as const));
 
   const soon = <ForecastSoon lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />;
@@ -321,7 +328,7 @@ export function NeedsAttention({
           {t("needs.heading")}
         </h2>
         <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
-          {t("needs.count", { n: flagged.length, m: reporting })}
+          {countText}
         </span>
       </div>
 

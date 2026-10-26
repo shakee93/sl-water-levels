@@ -12,7 +12,7 @@ const LABEL: Record<Tier, string> = {
   major: "Major flood",
   minor: "Minor flood",
   alert: "Alert",
-  watch: "Approaching alert",
+  watch: "Normal", // near alert reads Normal
   normal: "Normal",
   none: "No flood levels set",
   stale: "Not reporting",
@@ -21,7 +21,7 @@ const COLOR: Record<Tier, string> = {
   major: "#dc2626",
   minor: "#ea580c",
   alert: "#ca8a04",
-  watch: "#ca8a04",
+  watch: "#16a34a",
   normal: "#16a34a",
   none: "#64748b",
   stale: "#64748b",

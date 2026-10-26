@@ -20,7 +20,8 @@ export type Tier = "normal" | "watch" | "alert" | "minor" | "major" | "none" | "
 
 export type StatusTone = "green" | "yellow" | "orange" | "red" | "neutral" | "stale";
 
-export type Status = { label: string; tone: StatusTone; tier: Tier };
+/** `note` is only set for the internal "watch" tier: its `label` is "Normal" (the Department's ladder is Normal, Alert, Minor flood, Major flood) and the reason is the note. */
+export type Status = { label: string; tone: StatusTone; tier: Tier; note?: string };
 
 /** A gauge enters the watch tier at this fraction of its alert threshold. */
 export const WATCH_RATIO = 0.85;
@@ -37,11 +38,11 @@ export function levelTier(level: number | null, t: Thresholds): Tier {
   return "normal";
 }
 
-const STATUS_BY_TIER: Record<Tier, { label: string; tone: StatusTone }> = {
+const STATUS_BY_TIER: Record<Tier, { label: string; tone: StatusTone; note?: string }> = {
   major: { label: "Major flood", tone: "red" },
   minor: { label: "Minor flood", tone: "orange" },
   alert: { label: "Alert", tone: "yellow" },
-  watch: { label: "Approaching alert", tone: "yellow" },
+  watch: { label: "Normal", tone: "green", note: "Near alert" }, // not a step: owner decision 26 Oct 2026
   normal: { label: "Normal", tone: "green" },
   none: { label: "No flood levels set", tone: "neutral" },
   stale: { label: "Not reporting", tone: "stale" },

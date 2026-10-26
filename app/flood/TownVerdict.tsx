@@ -78,6 +78,9 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
 
   const note = (stale && !g ? tt("note.none", { town: townName }) : g ? (g.km < ON_GAUGE_KM ? tt("note.onGauge", { gauge: g.name }) : tt("note.experimental", { town: townName, gauge: g.name, km: formatKm(g.km, t) })) : tt("note.experimentalGeneric", { town: townName })) + (lang !== "en" ? ` (${t("common.machineTranslated")})` : "");
 
+  // a town the rules mark "watch" still reads Normal; the strongest reason is the small note under it (owner, 26 Oct 2026)
+  const lead = tone === "watch" ? (r.reasons.find((x) => x.warn) ?? r.reasons[0]) : undefined;
+  const nearNote = lead ? tt(lead.key as TKey, fill(lead.vars)) : null;
   const dayVars = r.day.vars;
   return (
     <>
@@ -91,6 +94,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
         // The arrow follows the same next-hour call as the words beside it ("River rising slowly"
         // with a down arrow happened when the past 3 h fell but the forecast turned up).
         outlook={{ trend: HOUR_ARROW[r.hourKey] ?? r.trend, text: <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{note}</p> }}
+        note={nearNote}
         call={elevated ? CALL : null}
         office={elevated && office ? { label: t("common.callDmcOffice", { district: office.district }), tel: office.tel } : null}
         footer={
