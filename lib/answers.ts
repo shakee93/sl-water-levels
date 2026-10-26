@@ -92,17 +92,17 @@ const NH = {
   subjAt: { en: "the {river} at {name}", si: "{river} හි {name} හි ජල මට්ටම", ta: "{river} ஆற்றின் {name} இல் நீர்மட்டம்" },
   subjAtNoRiver: { en: "the water level at {name}", si: "{name} හි ජල මට්ටම", ta: "{name} இல் நீர்மட்டம்" },
   steady: {
-    en: "In the next hour {subj} is expected to stay about the same{rng}.",
+    en: "In the next hour {subj} should stay about the same{rng}.",
     si: "ඊළඟ පැය තුළ {subj} පාහේ වෙනස් නොවී පවතිනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
     ta: "அடுத்த மணி நேரத்தில் {subj} ஏறக்குறைய மாறாமல் இருக்கும் என எதிர்பார்க்கப்படுகிறது{rng}.",
   },
   rise: {
-    en: "In the next hour {subj} is expected to rise to about {lv} ft{rng}.",
+    en: "In the next hour {subj} could rise to about {lv} ft{rng}.",
     si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් අඩි {lv} දක්වා ඉහළ යනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
     ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} அடிக்கு உயரும் என எதிர்பார்க்கப்படுகிறது{rng}.",
   },
   fall: {
-    en: "In the next hour {subj} is expected to fall to about {lv} ft{rng}.",
+    en: "In the next hour {subj} could fall to about {lv} ft{rng}.",
     si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් අඩි {lv} දක්වා පහළ යනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
     ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} அடிக்குக் குறையும் என எதிர்பார்க்கப்படுகிறது{rng}.",
   },
@@ -110,7 +110,7 @@ const NH = {
   reachMinor: { en: " It {how} reach the minor flood level.", si: " එය සුළු ගංවතුර මට්ටමට {how}.", ta: " அது சிறிய வெள்ள மட்டத்தை {how}." },
   reachMajor: { en: " It {how} reach the major flood level.", si: " එය මහා ගංවතුර මට්ටමට {how}.", ta: " அது பெரிய வெள்ள மட்டத்தை {how}." },
   may: { en: "may", si: "ළඟා විය හැක", ta: "எட்டலாம்" },
-  expected: { en: "is expected to", si: "ළඟා වනු ඇතැයි අපේක්ෂා කෙරේ", ta: "எட்டும் என எதிர்பார்க்கப்படுகிறது" },
+  expected: { en: "will likely", si: "ළඟා වනු ඇතැයි අපේක්ෂා කෙරේ", ta: "எட்டும் என எதிர்பார்க்கப்படுகிறது" },
 } satisfies Record<string, L3>;
 
 /** The next hour in one sentence, or null when there is no forecast. `subject` names what is forecast (default "it"). */
