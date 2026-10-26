@@ -258,7 +258,7 @@ export default async function BasinPage({
         </Suspense>
 
         <Suspense key={`release-${basin}`} fallback={null}><ReleaseCard lang={lang} basin={basin} /></Suspense>
-        <Suspense key={`warn-${basin}`} fallback={null}><SpillWarningNote lang={lang} basin={basin} /></Suspense>
+        <Suspense key={`spillwarn-${basin}`} fallback={null}><SpillWarningNote lang={lang} basin={basin} /></Suspense>
 
         <Suspense key={`map-${basin}`} fallback={null}><RiverMap lang={lang} basin={basin} jsonLd /></Suspense>
 

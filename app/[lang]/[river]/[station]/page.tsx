@@ -251,7 +251,7 @@ export default async function StationPage({
         ) : (
           <>
             <Suspense key={`release-${station}`} fallback={null}><ReleaseCard lang={lang} station={station} basin={basin} /></Suspense>
-            <Suspense key={`warn-${station}`} fallback={null}><SpillWarningNote lang={lang} station={station} basin={basin} /></Suspense>
+            <Suspense key={`spillwarn-${station}`} fallback={null}><SpillWarningNote lang={lang} station={station} basin={basin} /></Suspense>
 
             <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
               <Forecast lang={lang} basin={basin} selectedStation={station} />
