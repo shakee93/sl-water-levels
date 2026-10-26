@@ -117,7 +117,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       },
     },
     verification: {
-      google: "QGIc3xJp0rurObFPoY3591l9lNYqpQxKzPeKE_ekPwY",
+      // first: the old sl-water-levels.vercel.app property; second: https://waterlevels.lk/ (added 26 Oct 2026). Keep both.
+      google: ["QGIc3xJp0rurObFPoY3591l9lNYqpQxKzPeKE_ekPwY", "8T_RfWQAEatD4vt0cc5nl8R6OoSDqnwmUcg2gUncHdQ"],
     },
   };
 }
