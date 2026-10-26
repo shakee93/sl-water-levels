@@ -413,6 +413,53 @@ storm hours from measured rain at the gauge and upstream (3 h and 6 h), leaving 
 10.0 ft and 15.3 ft. At 10:06 (9.7 ft): 11.2 ft and 11.8 ft; actual 13.1 and 15.3 ft. The model cannot know a cloudburst is under way from level changes alone; 12 days is too short to fit rain features that do better.
 Revisit when a monsoon season of `rain_fall` is archived (the data branch keeps it: `.github/workflows/snapshot.yml`). GSMaP satellite rain (data branch `gsmap/`, since 23 Oct) is not used: too short to backtest.
 
+### Rain words, rain sources and the rain audit (26 Oct 2026, `research/rain-audit.md`)
+
+**One vocabulary (`lib/rainWords.ts`).** The page, push, X and the API take rain words and numbers from here (si/ta are drafts). Two layers:
+the WORDS are national and simple; the flood TRIGGERS can be per gauge.
+
+| Window | light | moderate | heavy | very heavy | where the edge comes from |
+|---|---|---|---|---|---|
+| 1 h (measured) | trace to 2.5 mm | 2.5 | 10 | **25** | 25 = `MEASURED_1H_MM`, the measured heavy-rain warning |
+| 3 h (measured) | trace to 7.5 | 7.5 | 20 | **40** | 40 = `MEASURED_3H_MM` |
+| 24 h (fallen or forecast, catchment mean) | trace to 10 | 10 | **50** | **100** | 50 / 100 = `RAIN_RISK_MM` / `RAIN_RISK_VERY_MM`, the "heavy rain forecast" line |
+
+`scripts/rain-words.test.mts` fails if these drift from `measuredRain.ts` and `rainRisk.ts`. Other thresholds still around, deliberately: the **town verdict** step (50 mm in 6 h or 100 mm in 24 h
+at the town's point; one step, capped, `lib/townRisk.ts`), the **low-spot** panel (60 / 100 mm clipped satellite, opt-in, never public), and the **public X rain-watch** (`heavyRainMm: 100`, a
+bar for posting to everyone, not a statement of what "heavy" means; the X summaries say "Heavy rain" only from 50 mm). **Per-gauge triggers:** `lib/model/rain-thresholds.json`
+(`{gauges: {"<gauge>": {mm1h?, mm3h?, mm24h?}}}`, produced by the forecast-model work; empty = national numbers) is read by `lib/rainTriggers.ts`. A gauge with its own number trips the measured
+warning at that number and its sentence says "Rain that is heavy for this river" (`MeasuredRain.local`); "heavy for this river" is never said on the national numbers. Needs attention and the station card
+use the same lookup. **Satellite caveat is regional:** GSMaP over-reads in the dry zone (24 h satellite 76-112 mm against 3-12 mm at the gauge in Siyambalanduwa, Nakkala, Thanthirimale, Katharagama on 26 Oct), so
+`satelliteCaveat(basin)` says "treat it as an upper figure" for the dry-zone basins (`DRY_ZONE_BASINS`: Heda, Kumbukkan, Malwathu, Menik measured; Gal, Kala, Kirindi, Maduru, Yan by geography) and the
+plain "estimate" elsewhere.
+
+**Three sources, never mixed (`lib/stationRain.ts`).** *Measured* = the gauge's own sensor (and gauges upstream); *satellite* = JAXA GSMaP over the catchment above the gauge; *forecast* = Open-Meteo over the
+same catchment, whose "past" hours are a model estimate (about 0.4x of what was measured on 26 Oct) and are never shown as what fell (notes in `lib/forecast.ts` say "modelled"). Station card: one
+"Rain that fell" row (the gauge's 3 h and 24 h with the shared word; "no rain sensor" and the nearest upstream gauge when it has none), the satellite line with its caveat, and one "Rain forecast" row
+("forecast model estimate"). River pages: a compact table per gauge (`app/RiverRain.tsx`, hidden under 10 mm). Needs attention: a "Heavy rain measured" badge on a flagged river. Reservoir pages: forecast rain at the
+dam from 10 mm (`app/ReservoirRain.tsx`). Towns: measured heavy rain at the town's gauge adds a reason line and the "keep an eye" tone at most (`TownRiskInput.measured`). `/api/levels` gets a `rain` block per
+station (`fallen_1h/3h/24h_mm`, `satellite_6h/24h_mm`, `forecast_6h/24h_mm`, `forecast_24h_heavier_mm`, `*_word`, `sources`, documented at `/data`). The "Today" line counts pinned gauges.
+
+**Dead rain sensors (`lib/rainSensors.ts`).** `NO_RAIN_SENSOR` (Nagalagam Street: 0 mm in all 243 readings of 12 days while neighbours measured 50-270 mm) is turned into `rain_fall: null` once, in `lib/arcgis.ts`
+`toReading`, so the station card, the release detector, the forecast's rain features, the measured trigger, the API and the D1 log all see "not measured" rather than "dry". The archive scripts keep the raw
+feed. `/status` ("Rain sensors on the river gauges", read at most every 6 h) flags any gauge whose 7-day rain is under 0.5 mm while the median of its nearest three reporting gauges within 60 km is 50 mm or more;
+add it to `NO_RAIN_SENSOR` if it is not a dry spell. Katharagama was reviewed and left alone (16.3 mm in 7 days, like Wellawaya 37 and Thanamalwila 63: a dry catchment, not a dead sensor).
+
+**Rain archive (so a backtest can use it).** `scripts/gsmap-snapshot.mjs` also writes `gsmap/hourly/YYYY/YYYY-MM-DD.jsonl` on the data branch ({t: hour start, end, mm: {"Basin/Station" or "zone:id": catchment-mean mm in that
+hour | null}}). `scripts/rain-forecast-snapshot.mjs` (a best-effort step of `gsmap-snapshot.yml`, reading the site's `/api/rain`) appends `rain-forecast/YYYY/YYYY-MM-DD.jsonl` once per forecast hour:
+`{t: issuedAt, at, s: {"Basin/Station": {f: [next6h, next6h_p90, next24h, next24h_p90, modelPast6h, modelPast24h] | null, m: [measured mm1h, mm3h, mm24h] | null}}}`. p90 is the heavier ECMWF
+ensemble scenario (members ranked by their next-24 h total, so its 6 h figure is that member's 6 h).
+**D1 `forecast_runs`** (`d1/0009_forecast_rain.sql`, applied once by `scripts/d1-ensure-forecast-rain.mjs` in `store-forecasts.yml`, since SQLite has no ADD COLUMN IF NOT EXISTS): `rain_next6h_mm`,
+`rain_next6h_p90_mm`, `rain_next24h_p90_mm`, `rain_risk_kind`, `rain_risk_level`, `storm_horizons`, `storm` (1 = a heavy-rain warning showing or a storm-horizon step in use), `measured_mm1h/3h/24h`, `sat_mm6h/24h`
+(all NULL = unknown on older rows). `accuracy/latest.json` gains `rainSplit` (storm vs calm, fitted-model forecasts, per horizon); `lib/accuracy.ts` quotes it in the accuracy line once both sides have 10 checks.
+
+**Official bulletins.** Met "Advisory for Heavy Rain" has no basin, only districts: `warningsForBasin(result, basin, stations?)` also matches it on the districts of the river's gauges
+(`DISTRICT_BY_STATION`), for river and station pages; Irrigation/DMC flood warnings stay basin-only (their district lists overlap between rivers). `SKIP_TITLE` no longer drops "rainfall" / "forecast" titles
+that carry a warning word (`wantTitle`); `/api/warnings` lists `districts`.
+
+**Not done on purpose.** A "heavy rain measured upstream" push to followers of a gauge (the owner decides); satellite in any warning or in the storm model's inputs; the rain strip under the chart; a Slack ping
+when a measured trip happens; extra health checks for OGIMET freshness.
+
 ### MCP server at `/mcp`
 
 `app/mcp/route.ts` mounts an MCP Streamable-HTTP server using
@@ -659,6 +706,77 @@ rain" (G1 to G5): floods follow wetter weeks when wetness is measured by rain ga
      Do not change the live rule on fewer than about 5 heavy-rain days with residents' answers; leave "likely" alone either way.
 
 ---
+
+## User feedback ("Is this right?")
+
+Added 26 Oct 2026 so the models can learn from the people who look at the ground. A small block under the verdict on every
+station page and every town page (`app/feedback/AccuracyFeedback.tsx`, inserted by one line in each page; hidden when
+`CLOUDFLARE_API_TOKEN` is not set, like the flood report).
+
+**What people see.** Question "Is this right?" and the line "Each answer helps us improve the forecast for your area." One tap:
+Yes, matches what I see / No, it's worse / No, it's better / Not sure. Then the thank-you ("Thank you. Your feedback helps improve the
+forecast for thousands of people across Sri Lanka."; owner's wording) and, if the week has 3 or more answers for that gauge or town,
+"12 people near Hanwella told us this week; 9 said it matched." Below it an optional second step, always open after the first tap:
+what the river or canal near them is doing (normal / high / over its banks / flooding roads or homes), rain now (none / light /
+heavy), a free-text box (up to 500 characters, any language, placeholder "What do you see? e.g. water on the road near the junction"),
+and "Share my location to help improve the forecast" with the line "Your rough location (about 1 km) helps us see where the gauge reading
+doesn't match the ground." Every part can be skipped; the location is only requested when the button is tapped.
+
+**Storage.** Cloudflare D1 table `forecast_feedback` (`d1/0008_feedback.sql`; the route also creates it when missing, so no manual
+migration; all statements idempotent). One row per answer: page type, gauge and/or town, the answer, observations, note (+ rule tags),
+rounded location and distance to the gauge, language, device (mobile/desktop only), and what was shown:
+verdict tier, gauge level (ft), next-hour forecast with its range and direction, forecast method, rain-risk kind, and
+`shown_issued_at` = the reading time the forecast started from. `(station, shown_issued_at)` is the same key as
+`forecast_runs (station, issued_at)`, so a feedback row joins to the run id, `model_version`, and the stored points and their
+verification (`forecast_verification`, horizon 1). What was shown is **read on the server** (gauge snapshot and the 5-minute next-hour
+cache), not taken from the browser; only the town page's verdict tone comes from the page (a fixed list of words).
+Not merged with `street_flood_reports` on purpose: that table asks "did water reach the street" (ground truth, one canal zone, three
+answers); this one asks "was our verdict right" for any gauge. They answer different questions, the old rows stay untouched, and the
+learning report can read both by town and day.
+
+**Privacy.** The phone's position is rounded to 0.01 degree (about 1 km) in the browser before it is sent and again on the server; only
+the rounded point and its distance to the gauge are stored (points outside Sri Lanka are dropped). The IP address is never stored: a
+per-day salted hash (`FLOOD_REPORT_SALT`, same as the flood report) is used for rate limits. Notes: URLs, e-mails and phone numbers
+are stripped before saving, rude words and obvious spam (one letter repeated, one word repeated) reject the note only (the answer is
+kept and the page says so). Notes are private: read by the owner, in the Slack digest and in the export, never shown on the site. The
+About page (`app/feedback/FeedbackPrivacy.tsx`) and the form say this in plain words.
+Decision on free text: the owner asked for it ("allow them to type, so we can collect"), so it is always visible after the first tap
+instead of behind a toggle. Tags (water, rain, road_home, place, complaint, praise) come from a small keyword rule
+(`noteTags` in `lib/feedback.ts`, English + common Sinhala/Tamil words), not from a model call: free, offline, no note leaves our servers.
+A gpt-6-luna classifier (capped, `lib/openai.ts`) is a possible later step if the rules miss too much.
+
+**Abuse limits** (same shape as the flood report): one answer per browser per page per day (cookie `sl_fb_<s|t>_<name>`), per-day
+IP-hash caps (6 per page, 40 a day, 12 in 10 minutes; a 429 shows "That is enough for now"), a hidden honeypot field and a minimum of
+1.2 s on the page (bots get a quiet "thanks", nothing stored). The details step needs the random token the first step returned, works
+once, and only within two hours.
+
+**API.** `POST /api/feedback`: `{op:"answer", page, station?, town?, answer, tone, lang, hp, ms}` returns `{token, impact}`;
+`{op:"details", token, river?, rain?, note?, lat?, lon?, hp}` adds the second step. Nothing is public and there is no GET.
+
+**Learning loop** (`lib/feedbackLearn.mjs`, pure; used by the scripts and `scripts/feedback.test.mts`):
+- `scripts/accuracy-snapshot.mjs` (every 3 h) adds `feedback` to `accuracy/latest.json`: the last 30 days, overall and per gauge,
+  `{n, agreePct, worsePct, betterPct}`, **only where 3 or more people answered** (a gauge with fewer is absent). No notes, places or
+  distances in the public file. `lib/accuracy.ts` has the type; nothing on the site reads it yet.
+- `summary()` per gauge or area (monthly export and digest): agreement rate; "worse than shown" rate; observation vs verdict (people
+  saw more / the same / less than our tier said); agreement by distance from the gauge (under 1 km, 1-3, 3-10, over 10; a gauge whose
+  distant answers disagree does not represent that area, e.g. low canal spots); and the forecast error of the 1 h point that was shown
+  (actual minus predicted, feet), so "worse" can be checked against "the river ended above our forecast".
+- Monthly export: `scripts/export-street-flood.sh YYYY-MM <dir>` also writes `feedback.json` (each answer with its forecast point, model
+  version, note and rounded location: PRIVATE, do not commit) and `feedback_summary.json`.
+- Slack: `.github/workflows/feedback-digest.yml` runs `scripts/feedback-digest.mjs` twice an hour: the daily digest from 08:00 Sri
+  Lanka time (yesterday's counts, gauges with the most "worse", agreement by distance, the notes; a day with no answers says nothing),
+  and a catch-up for urgent rows. The **immediate ping** for "No, it's worse" + "flooding roads or homes" is sent by the route itself
+  when `SLACK_WEBHOOK_URL` is set in Vercel; if it is not, the row is marked `notified = 2` and the digest job sends it within 30 minutes
+  (`1` = sent). `--dry-run` and `--rows file.json` print the message without sending.
+- Umami events: `feedback_answer` (page, answer, tone, target), `feedback_details` (river, rain, location yes/no, note yes/no),
+  `feedback_location` (granted / denied). No coordinates or text.
+
+**Languages.** `lib/i18n/feedback.ts` (en, si, ta). Sinhala and Tamil are drafts for native review; the pages already carry the site's
+"machine-translated" note. A test checks that all three have the same keys.
+
+**Testing without production.** Point `CF_API_BASE` at a fake D1 over HTTP and set `CLOUDFLARE_API_TOKEN=test` (the 26 Oct run used a
+20-line node:sqlite server) and run `next dev`; nothing reaches Cloudflare or Slack. `node --experimental-strip-types
+scripts/feedback.test.mts` covers validation, rounding, note cleaning, caps, the table definition and the join / aggregate maths.
 
 ## Reasons to come back (return-visit features)
 
