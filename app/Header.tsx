@@ -93,30 +93,12 @@ export async function Header({ lang }: { lang: Locale }) {
           </Link>
 
           <Link
-            href={p("/about")}
-            data-umami-event="about_nav_click"
-            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            {t("nav.about")}
-          </Link>
-
-          <Link
             href={p("/help")}
             data-umami-event="help_nav_click"
             className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             {t("nav.help")}
           </Link>
-
-          <a
-            href="https://github.com/shakee93/sl-water-levels"
-            target="_blank"
-            rel="noreferrer"
-            data-umami-event="github_click"
-            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition"
-          >
-            {t("nav.github")}
-          </a>
 
           {X_HANDLE && (
             <a
