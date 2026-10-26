@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Pause, Play, X } from "lucide-react";
 import { HOME_COAST, HOME_RIVERS } from "@/lib/geo/homeRivers";
+import { RAIN_BASINS, inBasin } from "@/lib/geo/rainBasins";
 import { basinForecast, basinSatellite, decodeFrame, forecastTotal, satelliteTotal, type RainMapData, type RainMapGauge } from "@/lib/rainMapCalc";
 import { RAIN_BANDS, rainBand, rainWordOf, satelliteCaveat, type RainBand, type RainWindow } from "@/lib/rainWords";
 import { rmFor } from "@/lib/i18n/rainMap";
@@ -164,31 +165,19 @@ export function RainMapView({ rivers }: RainMapStrings) {
   const gaugeBy = useMemo(() => new Map((data?.gauges ?? []).map((g) => [g.station, g])), [data]);
   const basinIdx = useMemo(() => new Map((data?.basins ?? []).map((b, i) => [b.basin, i])), [data]);
 
+  // the chosen river's official outline
   const outline = useMemo(() => {
-    if (!data || sel == null) return "";
-    const { nx, ny } = data.grid;
-    const inB = (r: number, c: number) => r >= 0 && r < ny && c >= 0 && c < nx && data.basinOf[r * nx + c] === sel;
-    const cw = W / nx, ch = H / ny;
-    let d = "";
-    for (let r = 0; r < ny; r++)
-      for (let c = 0; c < nx; c++) {
-        if (!inB(r, c)) continue;
-        const x = r1(c * cw), y = r1(r * ch), x2 = r1((c + 1) * cw), y2 = r1((r + 1) * ch);
-        if (!inB(r - 1, c)) d += `M${x} ${y}H${x2}`;
-        if (!inB(r + 1, c)) d += `M${x} ${y2}H${x2}`;
-        if (!inB(r, c - 1)) d += `M${x} ${y}V${y2}`;
-        if (!inB(r, c + 1)) d += `M${x2} ${y}V${y2}`;
-      }
-    return d;
+    const b = sel != null ? data?.basins[sel]?.basin : null;
+    const rings = b ? RAIN_BASINS[b] : null;
+    return rings ? rings.map((r) => `${line(r.map(([lon, lat]) => [lat, lon] as [number, number]))}Z`).join("") : "";
   }, [data, sel]);
 
   function tapMap(e: React.MouseEvent<SVGSVGElement>) {
     if (!data) return;
     const box = e.currentTarget.getBoundingClientRect();
-    const c = Math.floor(((e.clientX - box.left) / box.width) * data.grid.nx);
-    const r = Math.floor(((e.clientY - box.top) / box.height) * data.grid.ny);
-    if (r < 0 || r >= data.grid.ny || c < 0 || c >= data.grid.nx) return;
-    const b = data.basinOf[r * data.grid.nx + c];
+    const lon = LON0 + ((e.clientX - box.left) / box.width) * (LON1 - LON0);
+    const lat = LAT0 - ((e.clientY - box.top) / box.height) * (LAT0 - LAT1);
+    const b = data.basins.findIndex((x) => RAIN_BASINS[x.basin] && inBasin(RAIN_BASINS[x.basin], lon, lat));
     setSel(b >= 0 ? b : null);
   }
 
@@ -272,8 +261,8 @@ export function RainMapView({ rivers }: RainMapStrings) {
           <path d={RIVER_MAIN_D} fill="none" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-500 dark:stroke-sky-400" />
           {outline && (
             <>
-              <path d={outline} fill="none" strokeWidth={5} strokeLinecap="round" className="stroke-white/90 dark:stroke-slate-950/90" />
-              <path d={outline} fill="none" strokeWidth={2.2} strokeLinecap="round" className="stroke-slate-900 dark:stroke-amber-300" />
+              <path d={outline} fill="none" strokeWidth={5} strokeLinejoin="round" className="stroke-white/90 dark:stroke-slate-950/90" />
+              <path d={outline} strokeWidth={2.2} strokeLinejoin="round" className="fill-slate-900/5 stroke-slate-900 dark:fill-amber-300/5 dark:stroke-amber-300" />
             </>
           )}
           {(data?.gauges ?? []).map((g) => (

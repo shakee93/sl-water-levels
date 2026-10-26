@@ -5,14 +5,14 @@
 // Satellite grid: gsmap/grid.json on the `data` branch, written by scripts/gsmap-snapshot.mjs from the files it already downloads.
 // Each step's value is the rain RATE (mm/h) over the hour starting at that step, so the map only uses whole-hour (:00) steps: one
 // per clock hour, and summing them never double counts. Forecast: one Open-Meteo request for every grid point on or near land,
-// cached 1 h. River areas: each 0.1 degree pixel goes to the nearest cell of a basin's rain grid (lib/model/catchments.json), so
-// "rain on this river" is the mean over the same area the forecast model uses. Approximate edges, never a legal boundary.
+// cached 1 h. River basins: the Irrigation Department's own outlines (lib/geo/rainBasins.ts); "rain on this river" is the mean
+// over the 0.1 degree pixels whose centre lies in the basin (the 18 basins with a rain model, scripts/build-rain-basins.mjs).
 //
 // Fails soft: a missing source leaves its layer empty (null) and the rest of the map still works.
 
 import { unstable_cache } from "next/cache";
-import catchments from "./model/catchments.json";
 import { COAST } from "./geo/geo";
+import { RAIN_BASINS, inBasin } from "./geo/rainBasins";
 import { getNational } from "./arcgis";
 import { getGsmap } from "./gsmap";
 import { getJson } from "./weather";
@@ -31,21 +31,12 @@ const SAT_MAX_AGE_MS = 6 * HOUR;
 
 const cellCentre = (i: number): [lat: number, lon: number] => [GRID.lat0 - Math.floor(i / GRID.nx) * GRID.step, GRID.lon0 + (i % GRID.nx) * GRID.step];
 
-type BasinCfg = { grid: [number, number][] };
-const BASIN_CFG = (catchments as unknown as { basins: Record<string, BasinCfg> }).basins;
-export const MAP_BASINS = Object.keys(BASIN_CFG).sort();
+export const MAP_BASINS = Object.keys(RAIN_BASINS).sort();
 
-/** Basin index (into MAP_BASINS) for every grid pixel, -1 = none: the nearest basin rain cell within 0.11 degree. */
+/** Basin index (into MAP_BASINS) for every grid pixel, -1 = none: the official basin outline its centre falls in. */
 const BASIN_OF: number[] = Array.from({ length: GRID.nx * GRID.ny }, (_, i) => {
   const [lat, lon] = cellCentre(i);
-  let best = -1, bestD = 0.11 * 0.11;
-  MAP_BASINS.forEach((b, bi) => {
-    for (const [la, lo] of BASIN_CFG[b].grid) {
-      const d = (la - lat) ** 2 + (lo - lon) ** 2;
-      if (d < bestD) { bestD = d; best = bi; }
-    }
-  });
-  return best;
+  return MAP_BASINS.findIndex((b) => !!RAIN_BASINS[b] && inBasin(RAIN_BASINS[b], lon, lat));
 });
 
 // ---- forecast points: a 0.25 degree grid, only on or within ~15 km of land --------------------------------------------------
@@ -162,4 +153,4 @@ async function build(): Promise<RainMapData> {
 }
 
 /** The whole map payload, cached 5 minutes (the sources underneath have their own caches). */
-export const getRainMap = unstable_cache(build, ["rain-map-v1"], { revalidate: 300 });
+export const getRainMap = unstable_cache(build, ["rain-map-v2"], { revalidate: 300 });
