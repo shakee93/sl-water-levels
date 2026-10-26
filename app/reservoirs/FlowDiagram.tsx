@@ -25,7 +25,7 @@ const CARD = "relative flex min-h-[84px] w-[152px] shrink-0 snap-center flex-col
 /** The line between two cards. The dashes move from the card on the reservoir side towards the sea. */
 function Connector({ children, flowing, west }: { children?: React.ReactNode; flowing: boolean; west: boolean }) {
   return (
-    <div className="flex min-w-[76px] shrink-0 flex-col items-center justify-center gap-1 px-1 sm:min-w-[84px] sm:flex-[0.7] sm:shrink" aria-hidden={children ? undefined : true}>
+    <div className="flex min-w-[76px] shrink-0 flex-col items-center justify-center gap-1 px-1 sm:min-w-[84px] sm:flex-[0.7]" aria-hidden={children ? undefined : true}>
       {children}
       <div className={`flex w-full items-center ${west ? "-scale-x-100" : ""}`} aria-hidden>
         <svg className="h-2 w-0 min-w-0 flex-1 overflow-visible" height="8">
@@ -55,7 +55,7 @@ export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea, flowsWest }: {
         aria-label={rt("down.listLabel")}
         className={`flex items-stretch overflow-x-auto snap-x snap-proximity pb-1 [scrollbar-width:thin] max-w-full max-sm:[mask-image:linear-gradient(to_right,transparent,#000_14px,#000_calc(100%-14px),transparent)] ${flowsWest ? "flex-row-reverse" : "flex-row"}`}
       >
-        <li className="flex max-sm:shrink-0 items-stretch sm:flex-1">
+        <li className="flex shrink-0 items-stretch sm:flex-1">
           <div className={`${CARD} border-sky-600 dark:border-sky-400`}>
             <div className="flex items-center gap-1.5">
               <span className="grid size-6 shrink-0 place-items-center rounded-full" style={{ background: STATUS_HEX[rv.status] }} aria-hidden><Waves className="size-3.5 text-white" /></span>
@@ -77,7 +77,7 @@ export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea, flowsWest }: {
           const eta = g.eta ? t("release.eta", { a: g.eta[0], b: g.eta[1] }) : null;
           const etaFull = eta ? `${rt("down.arrives")} ${eta}` : g.indirect ? rt("down.far") : rt("down.etaUnknown");
           return (
-            <li key={g.station} className={`flex max-sm:shrink-0 items-stretch sm:flex-[1.6] ${dir}`}>
+            <li key={g.station} className={`flex shrink-0 items-stretch sm:flex-[1.6] ${dir}`}>
               <Connector flowing={releasing} west={flowsWest}>
                 <span
                   title={etaFull}
@@ -107,7 +107,7 @@ export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea, flowsWest }: {
         })}
 
         {sea && (
-          <li className={`flex max-sm:shrink-0 items-stretch sm:flex-none ${dir}`}>
+          <li className={`flex shrink-0 items-stretch sm:flex-none ${dir}`}>
             <Connector flowing={releasing} west={flowsWest} />
             <div className="flex min-h-[84px] w-[84px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-[1.5px] border-sky-200 bg-sky-50 px-2 dark:border-sky-800 dark:bg-sky-950/60 sm:w-[110px]">
               <Waves className="size-6 text-sky-600 dark:text-sky-400" aria-hidden />
