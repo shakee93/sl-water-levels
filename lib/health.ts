@@ -11,7 +11,8 @@
 
 import { unstable_cache } from "next/cache";
 import { getNational } from "./arcgis";
-import { sanitizeLevel } from "./readings";
+import { sanitizeLevel, sanitizeRain } from "./readings";
+import { NO_RAIN_SENSOR, suspectDeadSensors, norm as normGauge, type RainWindowStat } from "./rainSensors";
 import { getReleaseSources, parseSheetTab, type SheetRow } from "./releases";
 import { aiConfigured } from "./openai";
 import { NEWSWIRE_UA } from "./newsFeeds";
@@ -374,6 +375,65 @@ async function checkWeather(deep: boolean): Promise<HealthCheck[]> {
   ]);
 }
 
+// ---------------------------------------------------------------- rain sensors
+
+// Seven days of every gauge's raw rain_fall (the feed keeps about that much), read at most every 6 hours: one paged
+// query of ~6.5k rows. A gauge that read ~0 for the whole week while the nearest gauges measured 50 mm or more is
+// flagged (lib/rainSensors.ts). Gauges already on NO_RAIN_SENSOR are known: the page treats them as "not measured".
+const rainWeek = unstable_cache(
+  async (): Promise<RainWindowStat[]> => {
+    const stations = await getNational();
+    const where = `CreationDate >= TIMESTAMP '${new Date(Date.now() - 7.5 * 24 * HOUR).toISOString().slice(0, 19).replace("T", " ")}'`;
+    const rows: { gauge: string; rain: number | null; ts: number }[] = [];
+    for (let off = 0; off < 12_000; off += 1000) {
+      const j = await arcgisDirect("gauges_2_view/FeatureServer/0/query", {
+        where, outFields: "gauge,rain_fall,CreationDate", orderByFields: "CreationDate DESC, objectid DESC", returnGeometry: "false",
+        resultOffset: String(off), resultRecordCount: "1000",
+      });
+      const f = j.features ?? [];
+      for (const x of f) rows.push({ gauge: normGauge(x.attributes.gauge as string), rain: sanitizeRain(x.attributes.rain_fall as number | null), ts: Number(x.attributes.CreationDate) });
+      if (f.length < 1000) break;
+      await new Promise((r) => setTimeout(r, 1100)); // ArcGIS rate-limits repeated queries
+    }
+    const by = new Map<string, { n: number; sum: number; lo: number; hi: number }>();
+    for (const r of rows) {
+      if (r.rain == null || !Number.isFinite(r.ts)) continue;
+      const o = by.get(r.gauge) ?? { n: 0, sum: 0, lo: Infinity, hi: -Infinity };
+      o.n++; o.sum += r.rain; o.lo = Math.min(o.lo, r.ts); o.hi = Math.max(o.hi, r.ts);
+      by.set(r.gauge, o);
+    }
+    const out: RainWindowStat[] = [];
+    for (const s of stations) {
+      const o = by.get(normGauge(s.station));
+      if (o) out.push({ station: s.station, lat: s.latitude, lon: s.longitude, readings: o.n, totalMm: o.sum, spanDays: (o.hi - o.lo) / (24 * HOUR) });
+    }
+    return out;
+  },
+  ["rain-week-v1"],
+  { revalidate: 6 * 3600 },
+);
+
+async function checkRainSensors(): Promise<HealthCheck> {
+  return run("rain-sensors", "Rain sensors on the river gauges", "A gauge whose rain sensor died would read 'no rain' while it pours; its rain is shown as not measured once it is on the list.", async () => {
+    let stats: RainWindowStat[];
+    try {
+      stats = await rainWeek();
+    } catch (e) {
+      return unchecked(`the 7-day rain read failed: ${errText(e)}`); // a source hiccup is the gauges check's business, not a dead sensor
+    }
+    const suspects = suspectDeadSensors(stats);
+    const unknown = suspects.filter((x) => !NO_RAIN_SENSOR.has(normGauge(x.station)));
+    const known = suspects.filter((x) => NO_RAIN_SENSOR.has(normGauge(x.station)));
+    const knownTxt = known.length ? `known dead, shown as not measured: ${known.map((x) => x.station).join(", ")}` : "";
+    if (unknown.length)
+      return {
+        ok: false,
+        detail: `${unknown.map((x) => `${x.station} read ${x.totalMm.toFixed(1)} mm in 7 days while ${x.neighbours.join(", ")} measured about ${x.neighbourMedianMm} mm`).join("; ")}; add to NO_RAIN_SENSOR in lib/rainSensors.ts if it is not a dry spell${knownTxt ? `; ${knownTxt}` : ""}`,
+      };
+    return { ok: true, detail: `${stats.length} gauges checked over 7 days${knownTxt ? `; ${knownTxt}` : "; no dead rain sensor found"}` };
+  });
+}
+
 // ---------------------------------------------------------------- news feeds
 
 async function checkFeeds(deep: boolean): Promise<HealthCheck[]> {
@@ -573,7 +633,7 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
 // ---------------------------------------------------------------- entry point
 
 export async function runHealthChecks(deep = false): Promise<HealthReport> {
-  const [gauges, sheet, wms, wmsWeekly, dmc, openai, weather, feeds, pipes] = await Promise.all([
+  const [gauges, sheet, wms, wmsWeekly, dmc, openai, weather, feeds, pipes, rainSensors] = await Promise.all([
     checkGauges(deep),
     checkSheet(deep),
     checkWms(deep),
@@ -583,8 +643,9 @@ export async function runHealthChecks(deep = false): Promise<HealthReport> {
     checkWeather(deep),
     checkFeeds(deep),
     checkPipelines(deep),
+    checkRainSensors(),
   ]);
-  const checks = [gauges, sheet, wms, wmsWeekly, dmc, openai, ...weather, ...feeds, ...pipes];
+  const checks = [gauges, sheet, wms, wmsWeekly, dmc, openai, ...weather, rainSensors, ...feeds, ...pipes];
   return { ok: checks.every((c) => c.ok), checkedAt: new Date().toISOString(), deep, checks };
 }
 

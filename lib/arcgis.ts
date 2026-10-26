@@ -12,6 +12,7 @@ import {
   type Reading,
   type Thresholds,
 } from "./readings";
+import { noRainSensor } from "./rainSensors";
 import { levelTier, statusFor, type Tier } from "./status";
 import { basinPath, basinSlug, stationPath } from "./slug";
 import { detectUnit, type Unit } from "./units";
@@ -161,7 +162,8 @@ function toReading(a: RawGauge): Reading {
   return {
     ts: Number(a.CreationDate),
     water_level: sanitizeLevel(a.water_level),
-    rain_fall: sanitizeRain(a.rain_fall),
+    // A gauge with a dead rain sensor reports a real 0 (lib/rainSensors.ts): that is "not measured", never "dry".
+    rain_fall: noRainSensor(a.gauge) ? null : sanitizeRain(a.rain_fall),
   };
 }
 

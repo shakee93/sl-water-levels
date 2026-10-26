@@ -24,7 +24,7 @@ const GROUPS: { key: StatusKey; ids: (id: string) => boolean }[] = [
   { key: "g.wms", ids: (id) => id === "wms" },
   { key: "g.dmc", ids: (id) => id === "dmc" },
   { key: "g.openai", ids: (id) => id === "openai" },
-  { key: "g.weather", ids: (id) => ["rain", "ensemble", "glofas"].includes(id) },
+  { key: "g.weather", ids: (id) => ["rain", "ensemble", "glofas", "rain-sensors"].includes(id) },
   { key: "g.news", ids: (id) => id.startsWith("feed-") },
   { key: "g.archive", ids: (id) => id.startsWith("pipe-") },
 ];
