@@ -50,19 +50,27 @@ type ArcgisPage = {
 // full revalidate window, so the request is made INSIDE unstable_cache and
 // validated before returning: a throw is never cached, and a previously cached
 // good value keeps being served while a refresh fails.
+// Back-off for this server instance: after a quota answer (429) no request goes to ArcGIS for a minute (their quota is per
+// minute and shared by everyone using the Irrigation Department's data); pages keep the last good copy meanwhile.
+let quotaUntil = 0;
+// Who is asking, so the data owner can reach us if our requests ever bother them.
+const UA = "sl-water-levels (+https://sl-water-levels.vercel.app; shakee.zats@gmail.com)";
+
 const fetchPageCached = unstable_cache(
   async (url: string): Promise<ArcgisPage> => {
+    if (Date.now() < quotaUntil) throw new Error("ArcGIS error 429: backing off after a quota answer");
     let lastErr: Error | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt > 0) await new Promise((r) => setTimeout(r, 600));
       try {
-        const r = await fetch(url);
+        const r = await fetch(url, { headers: { "User-Agent": UA } });
         if (!r.ok) throw new Error(`ArcGIS -> HTTP ${r.status}`);
         const json = (await r.json()) as ArcgisPage & { error?: { code?: number; message?: string } };
         if (json.error) {
           const err = new Error(`ArcGIS error ${json.error.code ?? ""}: ${json.error.message ?? "unknown"}`.trim());
           // quota: retrying at once only spends more of the shared per-minute units (see revalidate below)
           if (json.error.code === 429) {
+            quotaUntil = Date.now() + 60_000;
             lastErr = err;
             break;
           }

@@ -34,6 +34,9 @@ const nextConfig: NextConfig = {
       { source: `${l}/flood/:town`, headers },
       { source: `${l}/reservoirs/:slug`, headers },
       { source: `${l}/news`, headers },
+    ]).concat([
+      // sitemap renders on request (app/sitemap.ts): one copy an hour from the CDN
+      { source: "/sitemap.xml", headers: [{ key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }, { key: "CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }] },
     ]);
   },
 };

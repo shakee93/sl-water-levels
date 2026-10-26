@@ -71,7 +71,10 @@ async function ogimet() {
 
 // ---- Irrigation Dept ArcGIS rain_fall
 async function arcgisRows() {
-  const where = `gauge IN (${ARCGIS_GAUGES.map((g) => `'${g.replace(/'/g, "''")}'`).join(",")})`;
+  // Only the last 2 days: older days are already in the archive and do not change. Until 26 Oct 2026 this pulled all ~7 days
+  // (up to 5 pages) every half hour from the Irrigation Department's ArcGIS, whose per-minute quota is shared by everyone.
+  const since = new Date(Date.now() - 50 * 3_600_000).toISOString().slice(0, 19).replace("T", " ");
+  const where = `gauge IN (${ARCGIS_GAUGES.map((g) => `'${g.replace(/'/g, "''")}'`).join(",")}) AND CreationDate >= TIMESTAMP '${since}'`;
   const rows = [];
   for (let offset = 0; offset < 5000; offset += 1000) {
     let data;
@@ -84,7 +87,8 @@ async function arcgisRows() {
         data = j;
         break;
       }
-      if (attempt >= 4) throw new Error(`ArcGIS: ${res.status} ${JSON.stringify(j.error)}`);
+      // over quota (429): stop, the next run in 30 min tries again; anything else: up to 3 retries
+      if (attempt >= 4 || j?.error?.code === 429) throw new Error(`ArcGIS: ${res.status} ${JSON.stringify(j.error)}`);
       await sleep(2000 * attempt);
     }
     rows.push(...data.features.map((f) => ({ gauge: String(f.attributes.gauge ?? "").trim(), ts: f.attributes.CreationDate, rain: f.attributes.rain_fall })));

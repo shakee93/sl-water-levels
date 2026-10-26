@@ -9,7 +9,9 @@ import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
 const SITE = "https://sl-water-levels.vercel.app";
 
-export const revalidate = 3600;
+// Rendered on request (cached by the CDN for an hour, next.config.ts), not at build: building it during every deploy, while
+// all pages prerender at once, ran into the Irrigation Department ArcGIS quota (26 Oct 2026).
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // No fallback on purpose: if the feed is down this throws, so an empty sitemap is never cached for an hour and the last
