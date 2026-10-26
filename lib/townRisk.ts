@@ -348,6 +348,13 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   const lowSpot: TownRisk["lowSpot"] = sr && sr.mm24h >= STREET_POSSIBLE_MM_24H ? { level: sr.mm24h >= STREET_LIKELY_MM_24H ? "likely" : "possible", mm: r1(sr.mm24h) } : null;
   const riverStreetDrives = !!sriver && (tone == null || rank("minor") > rank(tone));
   if (sriver) tone = maxTone(tone, "minor");
+  // Street-flood "likely" (24 h satellite rain, clipped at 15 mm/h, >= 100 mm) raises a canal-flood town to "Get ready".
+  // Owner decision 26 Oct 2026, after water stood in Wellampitiya's streets at ~131 mm with Nagalagam Street at 3.0 ft (below
+  // alert) while the town read "Keep an eye on it". Backtest of the rule: "likely" caught 11 of 16 recorded floods with ~1.3
+  // unmatched alarms a year. Only towns with a satellite rain zone have streetRain, so river towns are unaffected.
+  const streetLikely = lowSpot?.level === "likely";
+  const streetRaised = streetLikely && (tone == null || rank("alert") > rank(tone));
+  if (streetLikely) tone = maxTone(tone, "alert");
   const baseTone: Tone = tone ?? "stale";
 
   // ---- reasons (most important first)
@@ -357,6 +364,9 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   if (personalReason) reasons.push(personalReason);
   if (sriver) {
     reasons.push({ kind: "river", key: "r.streetRiver", vars: { gauge: sriver.gauge, level: sriver.level }, warn: true });
+  }
+  if (streetLikely && lowSpot) {
+    reasons.push({ kind: "rain", key: "r.streetLikely", vars: { mm: lowSpot.mm }, warn: streetRaised });
   }
   if (gauge) {
     const tt = tierTone(gauge.tier);

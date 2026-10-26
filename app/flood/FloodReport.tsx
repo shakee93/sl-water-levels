@@ -35,11 +35,12 @@ const sincePageOpen = () => Math.round(performance.now());
 type Phase = "idle" | "sending" | "done" | "error" | "limit";
 
 /** "Did the streets near you get water today?" Anonymous: town slug, one of three answers, optional now/earlier. Nothing is shown publicly. */
-export function FloodReport({ slug, town }: { slug: string; town: string }) {
+export function FloodReport({ slug, town, urgent = false }: { slug: string; town: string; urgent?: boolean }) {
   const { lang } = useI18n();
   const tt = ttFor(lang);
   const already = useSyncExternalStore(subscribe, answeredToday(slug), () => false);
-  const [when, setWhen] = useState<"now" | "earlier" | null>(null);
+  // during heavy rain the question is about right now, so "now" starts selected
+  const [when, setWhen] = useState<"now" | "earlier" | null>(urgent ? "now" : null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [hp, setHp] = useState(""); // honeypot: invisible to people
   // what the answer joined (counts of 3 or more only, decided on the server)
@@ -76,9 +77,12 @@ export function FloodReport({ slug, town }: { slug: string; town: string }) {
     }`;
 
   return (
-    <section aria-label={tt("fr.title")} className="mt-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5">
-      <h2 className="flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-        <Droplets className="size-4" aria-hidden /> {tt("fr.title")}
+    <section
+      aria-label={tt(urgent ? "fr.urgentTitle" : "fr.title")}
+      className={`mt-4 rounded-xl border p-4 sm:p-5 ${urgent ? "border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/40" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"}`}
+    >
+      <h2 className={`flex items-center gap-1.5 ${urgent ? "text-base font-semibold text-sky-950 dark:text-sky-100" : "text-sm font-medium text-slate-600 dark:text-slate-300"}`}>
+        <Droplets className="size-4" aria-hidden /> {tt(urgent ? "fr.urgentTitle" : "fr.title", { town })}
       </h2>
       {done ? (
         <div className="mt-2 text-sm text-slate-800 dark:text-slate-200" role="status" lang={lang}>

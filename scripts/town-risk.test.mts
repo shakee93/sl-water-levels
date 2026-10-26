@@ -291,35 +291,41 @@ assert.equal(PLACES.find((p) => p.name === "Nuwara Eliya").drainage, "upland");
 }
 
 // ---------------------------------------------------------------------------------------------
-// Low-spot rain level: satellite 24 h rain 60 mm = "possible", 100 mm = "likely". It is a personal opt-in note (lib/lowSpots.ts):
-// it NEVER changes the verdict, the reasons or the next-24-hours line. The Kelani at its minor flood level is a river reading
-// and does lift the tone. mm24h in StreetRainIn is the CLIPPED sum (each hour capped at 15 mm); mm24hRaw is display only.
+// Low-spot rain level: satellite 24 h rain 60 mm = "possible", 100 mm = "likely". "Possible" is a personal opt-in note only
+// (lib/lowSpots.ts) and never changes the verdict. "Likely" raises a canal-flood town to "Get ready" (alert) with a Why line
+// (owner decision 26 Oct 2026, after Wellampitiya's streets flooded at ~131 mm with the river below alert). The Kelani at its
+// minor flood level is a river reading and lifts the tone to minor. mm24h in StreetRainIn is the CLIPPED sum (each hour capped at 15 mm); mm24hRaw is display only.
 {
   const sr = (mm24h: number, mm24hRaw: number | null = mm24h) => ({ mm24h, mm24hRaw, mm6h: 10, mm1h: 1, endsAt: 0 });
   const t = (o = {}) => assessTown(base({ streetRain: sr(0), ...o }));
   // thresholds, edge by edge; the tone never moves
   for (const [mm, level] of [[0, null], [59, null], [59.9, null], [60, "possible"], [99, "possible"], [99.9, "possible"], [100, "likely"], [250, "likely"]] as const) {
     const r = t({ streetRain: sr(mm) });
-    assert.equal(r.tone, "normal", `${mm} mm: rain alone leaves the verdict to the river`);
     assert.equal(r.lowSpot?.level ?? null, level, `${mm} mm level`);
-    assert.equal(r.actionKey, null);
-    assert.ok(!keys(r).some((k) => k.startsWith("r.street")), "no street line in Why");
     assert.notEqual(r.day.key, "n24.street");
+    if (level === "likely") {
+      assert.equal(r.tone, "alert", `${mm} mm: street flooding likely -> Get ready`);
+      assert.ok(keys(r).includes("r.streetLikely"), "street line in Why");
+    } else {
+      assert.equal(r.tone, "normal", `${mm} mm: below "likely" the verdict stays with the river`);
+      assert.equal(r.actionKey, null);
+      assert.ok(!keys(r).some((k) => k.startsWith("r.street")), "no street line in Why");
+    }
   }
   assert.equal(t({ streetRain: sr(112) }).lowSpot?.mm, 112);
   // missing / stale data (null) or a town without the rule (undefined): no level, no calm claim
   for (const streetRain of [null, undefined]) assert.equal(t({ streetRain }).lowSpot, null);
   assert.equal(t({ streetRain: null, primary: g({ tier: "stale" }) }).tone, "stale"); // no data and no gauge: still "no estimate"
-  // heavy satellite rain does not turn "no estimate" or any river tier into something else
+  // "possible" never changes "no estimate"; "likely" is evidence on its own (Get ready) and never lowers a higher river tier
   assert.equal(t({ streetRain: sr(70), primary: g({ tier: "stale" }) }).tone, "stale");
-  assert.equal(t({ streetRain: sr(250), primary: null }).tone, "stale");
-  for (const tier of ["watch", "alert", "major"] as const) assert.equal(t({ streetRain: sr(250), primary: g({ tier }) }).tone, tier);
-  assert.equal(t({ streetRain: sr(250), primary: g({ tier: "watch" }) }).baseTone, "watch");
+  assert.equal(t({ streetRain: sr(250), primary: null }).tone, "alert");
+  for (const [tier, want] of [["watch", "alert"], ["alert", "alert"], ["minor", "minor"], ["major", "major"]] as const) assert.equal(t({ streetRain: sr(250), primary: g({ tier }) }).tone, want);
+  assert.equal(t({ streetRain: sr(250), primary: g({ tier: "watch" }) }).baseTone, "alert");
   // the Open-Meteo model is not part of this rule: model rain alone never sets the level, and its own step is unchanged
   const om = t({ streetRain: sr(10), rain: rain({ past24hMm: 300 }) });
   assert.equal(om.lowSpot, null);
   assert.equal(om.tone, "watch");
-  assert.equal(t({ streetRain: sr(110), rain: rain({ past24hMm: 300 }) }).tone, "watch"); // satellite adds nothing on top
+  assert.equal(t({ streetRain: sr(110), rain: rain({ past24hMm: 300 }) }).tone, "alert"); // satellite "likely" lifts to Get ready, no further
   // official warning: unchanged by the rule
   assert.equal(t({ streetRain: sr(70), warning: { severity: "alert", source: "DMC", area: "Kelani Ganga" } }).tone, "alert");
   // the rule reads the clipped sum, not the raw one: raw 140 mm with a 59 mm clipped sum is nothing, raw 80 / clipped 100 is "likely"

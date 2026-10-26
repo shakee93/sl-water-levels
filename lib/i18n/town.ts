@@ -182,6 +182,7 @@ const en = {
   "details.3": "Your own street level, if you set one, and official warnings can raise it further.",
   "details.4": "It never says flooding is happening: only a measurement can show that.",
   // Street-rain rule (satellite rain, lib/townRisk.ts step 6)
+  "r.streetLikely": "Very heavy rain here: {mm} mm in 24 hours. At this much rain, low streets and canal banks in this area often get water",
   "r.streetRiver": "{gauge} is {level}, at the Kelani's minor flood level: water backs up into the canals and onto low streets",
   "n24.street": "Water can stay on low ground near the canals for hours after the river backs them up.",
   "low.title": "Low ground near the canals",
@@ -198,6 +199,7 @@ const en = {
   "low.none": "No heavy-rain heads-up right now ({mm} mm of rain in 24 hours).",
   "low.noData": "Satellite rain is not available right now, so there is no heads-up. That does not mean it is dry.",
   // Street-flood reports ("Did your street flood?", app/flood/FloodReport.tsx)
+  "fr.urgentTitle": "Is there water in your street in {town} right now?",
   "fr.title": "Did the streets near you get water today?",
   "fr.intro": "Your answer helps us check our warnings. It is anonymous: we save only the town and your answer. Nobody sees single answers; we show only totals of 3 or more.",
   "fr.when": "When? (optional)",
@@ -396,6 +398,7 @@ const si: D = {
   "details.3": "ඔබ සැකසූ ඔබේ වීදියේ මට්ටම සහ නිල අනතුරු ඇඟවීම් එය තවත් ඉහළ නැංවිය හැක.",
   "details.4": "ගංවතුර සිදුවෙමින් පවතින බව එය කිසිවිටෙක නොකියයි: එය පෙන්විය හැක්කේ මිනුමකට පමණි.",
   // Street-rain rule (draft, needs native review)
+  "r.streetLikely": "මෙහි ඉතා අධික වැසි: පැය 24 තුළ මි.මී. {mm}. මෙතරම් වැස්සකදී මෙම ප්‍රදේශයේ පහත් වීදිවලට සහ ඇළ ඉවුරුවලට බොහෝ විට වතුර එයි",
   "r.streetRiver": "{gauge} මට්ටම {level}: කැලණි ගඟේ සුළු ගංවතුර මට්ටමේ සිටී. ඇළවල්වලට සහ පහත් වීදිවලට වතුර ඒමට ඉඩ ඇත",
   "n24.street": "ගඟ ඇළවල් පිරවූ පසු ඇළ අසල පහත් බිම්වල ජලය පැය ගණනක් රැඳී තිබිය හැක.",
   "low.title": "ඇළ අසල පහත් බිම",
@@ -412,6 +415,7 @@ const si: D = {
   "low.none": "දැනට තද වැසි ඉඟියක් නැත (පැය 24 තුළ මි.මී. {mm}).",
   "low.noData": "චන්ද්‍රිකා වැසි දත්ත දැනට නොමැති බැවින් ඉඟියක් නැත. එයින් වියළි බව අදහස් නොවේ.",
   // Street-flood reports (draft, needs native review)
+  "fr.urgentTitle": "දැන් {town} හි ඔබේ වීදියේ වතුර තිබේද?",
   "fr.title": "අද ඔබ අවට වීදිවලට වතුර ආවාද?",
   "fr.intro": "ඔබේ පිළිතුර අපගේ අනතුරු ඇඟවීම් පරීක්ෂා කිරීමට උපකාර වේ. එය නිර්නාමික ය: අපි සුරකින්නේ නගරය සහ ඔබේ පිළිතුර පමණි. තනි පිළිතුරු කිසිවෙකුට නොපෙන්වයි; පෙන්වන්නේ 3ක් හෝ ඊට වැඩි එකතුවක් පමණි.",
   "fr.when": "කවදාද? (අත්‍යවශ්‍ය නොවේ)",
@@ -607,6 +611,7 @@ const ta: D = {
   "details.3": "நீங்கள் அமைத்த உங்கள் தெருவின் மட்டம் மற்றும் அதிகாரப்பூர்வ எச்சரிக்கைகள் அதை மேலும் உயர்த்தலாம்.",
   "details.4": "வெள்ளம் நடந்துகொண்டிருக்கிறது என்று இது ஒருபோதும் கூறாது: அதை அளவீடு மட்டுமே காட்ட முடியும்.",
   // Street-rain rule (draft, needs native review)
+  "r.streetLikely": "இங்கு மிகக் கனமழை: 24 மணி நேரத்தில் {mm} மி.மீ. இவ்வளவு மழையில் இப்பகுதியின் தாழ்வான தெருக்களிலும் கால்வாய்க் கரைகளிலும் அடிக்கடி நீர் தேங்கும்",
   "r.streetRiver": "{gauge} மட்டம் {level}: களனி ஆற்றின் சிறு வெள்ள மட்டத்தில் உள்ளது; கால்வாய்களிலும் தாழ்வான தெருக்களிலும் நீர் புகலாம்",
   "n24.street": "ஆறு கால்வாய்களை நிரப்பிய பின் கால்வாய் அருகிலுள்ள தாழ்வான நிலத்தில் நீர் பல மணி நேரம் தங்கலாம்.",
   "low.title": "கால்வாய் அருகிலுள்ள தாழ்வான நிலம்",
@@ -623,6 +628,7 @@ const ta: D = {
   "low.none": "இப்போது கனமழைக் குறிப்பு இல்லை (24 மணி நேரத்தில் {mm} மி.மீ).",
   "low.noData": "செயற்கைக்கோள் மழைத் தரவு தற்போது இல்லை, எனவே குறிப்பு இல்லை. அதற்காக மழை இல்லை என்று அர்த்தமல்ல.",
   // Street-flood reports (draft, needs native review)
+  "fr.urgentTitle": "இப்போது {town} இல் உங்கள் தெருவில் நீர் உள்ளதா?",
   "fr.title": "இன்று உங்கள் அருகிலுள்ள தெருக்களில் நீர் வந்ததா?",
   "fr.intro": "உங்கள் பதில் எங்கள் எச்சரிக்கைகளைச் சரிபார்க்க உதவும். இது பெயரில்லாதது: நகரத்தையும் உங்கள் பதிலையும் மட்டுமே சேமிக்கிறோம். தனிப்பட்ட பதில்கள் யாருக்கும் காட்டப்படுவதில்லை; 3 அல்லது அதற்கு மேற்பட்ட மொத்தங்களை மட்டுமே காட்டுகிறோம்.",
   "fr.when": "எப்போது? (விருப்பம்)",

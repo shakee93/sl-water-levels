@@ -139,6 +139,9 @@ export default async function TownPage({ params }: Params) {
           href={canonical}
         />
 
+        {/* heavy rain on a canal-flood town: ask about the street first, while people are looking (answers tune the street rule) */}
+        {d1Configured() && risk.lowSpot && <FloodReport slug={place.slug} town={place.name} urgent />}
+
         {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} />}
 
         {g && (
@@ -158,7 +161,7 @@ export default async function TownPage({ params }: Params) {
         <ColomboBlock lang={lang} slug={place.slug} now={serverNow} canals={canals} />
 
         {/* Hidden until the site can save answers (CLOUDFLARE_API_TOKEN set), so nobody sees an error. */}
-        {d1Configured() && <FloodReport slug={place.slug} town={place.name} />}
+        {d1Configured() && !risk.lowSpot && <FloodReport slug={place.slug} town={place.name} />}
 
         {g && (
           <div className="mt-4">
