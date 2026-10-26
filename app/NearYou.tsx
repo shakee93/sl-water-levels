@@ -34,7 +34,8 @@ export function NearYou({ stations }: { stations: HomeStation[] }) {
 
   const me = byStation.get(near.primary.station);
   if (!me) return null;
-  const tone = me.tier;
+  // same verdict as the gauge page (forecast lift), not only the raw level band
+  const tone = me.verdict ?? me.tier;
   const { icon: Icon, text, bar } = TONE[tone];
   const live = tone !== "stale" && tone !== "none";
   const elevated = tone === "alert" || tone === "minor" || tone === "major";

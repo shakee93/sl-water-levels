@@ -53,6 +53,8 @@ export type HomeStation = {
   unit: "ft" | "m" | null;
   ts: number | null;
   rate3hM: number | null;
+  /** The gauge page's verdict (tier lifted by the forecast rule, lib/stationVerdict.ts); absent = same as tier. */
+  verdict?: Tier;
 };
 
 // Same threshold as lib/attention RISING_M_PER_H: below this a gauge is "steady".

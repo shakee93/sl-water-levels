@@ -4,6 +4,8 @@
 // place we cannot read comes back with tone "stale" (never "normal").
 import { getNational, type NationalStation } from "./arcgis";
 import { assessTown } from "./townRisk";
+import { getStationVerdicts } from "./stationVerdict";
+import { soft } from "./soft";
 import { loadTown } from "./townData";
 import { placeBySlug } from "./places";
 import { stationDisplayName } from "./displayName";
@@ -18,13 +20,13 @@ import type { Glance, ParsedKey } from "./myPlaces";
 
 const trendOf = (rateM: number | null): Glance["trend"] => (rateM == null ? "unknown" : Math.abs(rateM) < STEADY_M_PER_H ? "steady" : rateM > 0 ? "up" : "down");
 
-function stationGlance(s: NationalStation): Glance {
+function stationGlance(s: NationalStation, verdict?: NationalStation["tier"]): Glance {
   return {
     key: `s:${s.station}`,
     kind: "s",
     name: stationDisplayName(s.station),
     href: s.href,
-    tone: s.tier,
+    tone: verdict ?? s.tier,
     street: null,
     trend: s.tier === "stale" ? "unknown" : trendOf(s.rate3hM),
     levelText: s.latest?.water_level != null && s.tier !== "stale" ? formatLevel(s.latest.water_level, s.unit) : null,
@@ -73,7 +75,9 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
       try {
         if (k.kind === "s") {
           const s = byName.get(k.name);
-          return s ? stationGlance(s) : null;
+          // the gauge page's verdict (forecast lift), so My places and push say what the page says; 2.5 s cap, else the raw tier
+          const v = s ? await soft(getStationVerdicts().then((m) => m[s.station]).catch(() => undefined), 2500, undefined) : undefined;
+          return s ? stationGlance(s, v) : null;
         }
         return await townGlance(k, lv);
       } catch {

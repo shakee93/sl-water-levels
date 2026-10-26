@@ -1,3 +1,5 @@
+import { getStationVerdicts } from "@/lib/stationVerdict";
+import { soft } from "@/lib/soft";
 import Link from "next/link";
 import { Suspense } from "react";
 import type { Metadata } from "next";
@@ -82,7 +84,9 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
     }
   }
 
-  const home = national ? national.map(compact) : [];
+  // the gauge page's own verdict (forecast lift) for the Near you card; 2.5 s cap, falls back to the raw tier
+  const verdicts = national ? await soft(getStationVerdicts().catch(() => ({}) as Record<string, string>), 2500, {} as Record<string, string>) : {};
+  const home = national ? national.map((s) => ({ ...compact(s), verdict: (verdicts[s.station] as HomeStation["tier"] | undefined) ?? s.tier })) : [];
 
   const hrefByStation = Object.fromEntries(home.map((s) => [s.station, s.href]));
 
