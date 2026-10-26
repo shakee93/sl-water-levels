@@ -48,8 +48,11 @@ export const websiteLd = (lang: Locale, description: string) => ({
   "@type": "WebSite",
   "@id": WEBSITE_ID,
   ...(X_HANDLE ? { sameAs: [`https://x.com/${X_HANDLE}`] } : {}),
+  // Google's site name (the line above the result title) comes from this. It showed "Vercel" for our vercel.app address
+  // (26 Oct 2026): Google asks for the home page URL exactly, with its trailing slash, and an alternateName helps it pick ours.
   name: SITE_NAME,
-  url: SITE,
+  alternateName: ["SL Water Levels", "Sri Lanka River Levels"],
+  url: `${SITE}/`,
   inLanguage: ["en", "si", "ta"],
   description,
   publisher: { "@id": PUBLISHER_ID },
