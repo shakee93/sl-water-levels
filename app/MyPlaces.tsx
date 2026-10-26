@@ -210,15 +210,20 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
   const summaryClass = sum.kind === "calm" ? "text-emerald-700 dark:text-emerald-400" : attention ? TIER_TEXT_CLASS[displayTone(sum.worst)] : "text-slate-600 dark:text-slate-300";
 
   // Today: rain expected, then the season, in one calm line each
-  const townsWithRain = ready.filter((g) => g.kind === "t" && g.rainNext24 != null);
-  const wettest = townsWithRain.reduce<Glance | null>((m, g) => (m == null || g.rainNext24! > m.rainNext24! ? g : m), null);
-  const todayLine = wettest
-    ? wettest.rainNext24! >= 50
-      ? rt("mp.todayRain", { mm: Math.round(wettest.rainNext24! / 5) * 5, name: wettest.name })
-      : wettest.rainNext24! >= 10
-        ? rt("mp.todayLight")
-        : rt("mp.todayDry")
-    : null;
+  // Pinned gauges count too (their rain is the forecast over the hills above them, and what their own sensor measured); a gauge's
+  // 24 h rain is only ever a sensor reading here, never a town's model or satellite figure.
+  const withRain = ready.filter((g) => g.rainNext24 != null);
+  const wettest = withRain.reduce<Glance | null>((m, g) => (m == null || g.rainNext24! > m.rainNext24! ? g : m), null);
+  const fell = ready.filter((g) => g.kind === "s" && g.rain24 != null && g.rain24 >= 50).reduce<Glance | null>((m, g) => (m == null || g.rain24! > m.rain24! ? g : m), null);
+  const todayLine = fell && !(wettest && wettest.rainNext24! >= 50)
+    ? rt("mp.todayFell", { mm: Math.round(fell.rain24! / 5) * 5, name: fell.name })
+    : wettest
+      ? wettest.rainNext24! >= 50
+        ? rt(wettest.kind === "s" ? "mp.todayRainGauge" : "mp.todayRain", { mm: Math.round(wettest.rainNext24! / 5) * 5, name: wettest.name })
+        : wettest.rainNext24! >= 10
+          ? rt("mp.todayLight")
+          : rt("mp.todayDry")
+      : null;
   const month = Number(new Date(nowMs + 5.5 * 3_600_000).toISOString().slice(5, 7));
   const seasonLine = attention ? null : rt(seasonKey(month) as RKey);
 

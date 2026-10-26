@@ -12,6 +12,7 @@ import { STEADY_M_PER_H } from "../app/verdict";
 import { getReleases, releaseAffectingFrom } from "./releases";
 import { getBasinWeather, hasCatchment } from "./weather";
 import { rainRiskOf } from "./rainRisk";
+import { forecastRainFor, measuredAtGauge } from "./stationRain";
 import { measuredAt } from "./forecast";
 import type { Glance, ParsedKey } from "./myPlaces";
 
@@ -95,6 +96,21 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
       g.release = a.active && a.reservoir ? { name: a.reservoir, confirmed: a.confirmed, etaHours: a.etaHours } : null;
     }
   }
+  // Rain at pinned gauges for the "Today" line: what the gauge's sensor measured in 24 h (null without a sensor) and the forecast model's rain over
+  // the hills above it for the next 24 h. Towns keep their own point figures. Cached weather call, 3 s cap, fails soft (null = unknown).
+  await Promise.all(
+    glances.map(async (g) => {
+      const s = g.kind === "s" && g.gaugeStation ? byName.get(g.gaugeStation) : null;
+      if (!s) return;
+      g.rain24 = measuredAtGauge(s.station, s.trend24h, Date.now())?.mm24h ?? null;
+      try {
+        const f = await Promise.race([forecastRainFor(s.basin, s.station), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+        g.rainNext24 = f?.next24h ?? null;
+      } catch {
+        /* unknown */
+      }
+    }),
+  );
   // heavy rain forecast above the gauge: only for places that are not calm (the weather call is cached 30 min), fails soft
   await Promise.all(
     glances.map(async (g) => {
