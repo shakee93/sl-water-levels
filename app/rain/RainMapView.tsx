@@ -269,7 +269,7 @@ export function RainMapView({ rivers }: RainMapStrings) {
         { x: x0 + dotR + 2 * u, y: y0 },
         { x: x0 - dotR - 2 * u - w, y: y0 },
         { x: x0 - w / 2, y: y0 - h / 2 - dotR - 2 * u - h / 2 },
-        { x: x0 - w / 2, y: y0 + h / 2 + dotR + 2 * u - h / 2 },
+        { x: x0 - w / 2, y: y0 + h / 2 + dotR + 2 * u },
       ];
       for (const { x, y } of spots) {
         const r = { x, y, w, h };
