@@ -5,8 +5,9 @@
 //
 // Reads forecast_verification (each stored forecast point matched to the gauge reading closest to its target time,
 // within 40 minutes) joined to forecast_runs.current_level (the "no change" baseline). Everything is converted to feet.
-// Segments: "model" forecasts issued from GM_SINCE on (the gauge-only 1/3/6 h model went live; 12/24 h are still the
-// older model inside it), "model-early" before that, and "trend" (simple estimate for gauges without a fitted model).
+// Segments: "model-v3" forecasts issued from STORM_SINCE on (storm-aware: gauge-only model at every horizon + rain correction on
+// storm hours), "model" from GM_SINCE to then (gauge-only 1/3/6 h; 12/24 h still the older rain ridge), "model-early" before that,
+// and "trend" (simple estimate for gauges without a fitted model).
 // Windows: last 30 days and since launch. Scopes: all gauges and each gauge.
 // The site reads the file (lib/accuracy.ts); a missing or old file just hides the figures. Run by .github/workflows/accuracy-snapshot.yml.
 import { execFileSync } from "node:child_process";
@@ -14,6 +15,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export const GM_SINCE = 1792841552000; // 2026-10-24, commit 717de26 (gauge-only model live)
+// Storm-aware version (v3): gauge-only model at all of 1/3/6/12/24 h plus the rain correction on storm hours. Replaced the 8-day rain ridge at 12/24 h.
+export const STORM_SINCE = 1793000000000; // placeholder, set to the real deploy time right after the push
 const FT = 0.3048, STEADY_FT = 0.02, DAY = 864e5;
 const HORIZONS = [1, 3, 6, 12, 24];
 const out = process.argv[2];
@@ -59,7 +62,7 @@ const usable = rows
   .map((r) => {
     const k = r.unit === "m" ? 1 / FT : 1;
     return { ...r, p: r.p * k, y: r.y * k, c: r.c * k, low: r.low == null ? null : r.low * k, high: r.high == null ? null : r.high * k,
-      seg: r.method === "trend" ? "trend" : r.method === "model" ? (r.issued_at >= GM_SINCE ? "model" : "model-early") : null };
+      seg: r.method === "trend" ? "trend" : r.method === "model" ? (r.issued_at >= STORM_SINCE ? "model-v3" : r.issued_at >= GM_SINCE ? "model" : "model-early") : null };
   })
   .filter((r) => r.seg && HORIZONS.includes(r.h));
 
@@ -67,7 +70,7 @@ const WINDOWS = { d30: now - 30 * DAY, all: 0 };
 function build(rs) {
   const o = {};
   for (const [w, from] of Object.entries(WINDOWS)) {
-    for (const seg of ["model", "model-early", "trend"]) {
+    for (const seg of ["model", "model-early", "model-v3", "trend"]) {
       for (const h of HORIZONS) {
         const sub = rs.filter((r) => r.issued_at >= from && r.seg === seg && r.h === h);
         if (sub.length) ((o[w] ??= {})[seg] ??= {})[h] = stats(sub);
@@ -84,6 +87,7 @@ const json = {
   asOf: new Date(now + 5.5 * 3600e3).toISOString().slice(0, 10), // Sri Lanka date
   firstForecast: new Date(first + 5.5 * 3600e3).toISOString().slice(0, 10),
   gaugeModelSince: new Date(GM_SINCE + 5.5 * 3600e3).toISOString().slice(0, 10),
+  stormModelSince: new Date(STORM_SINCE + 5.5 * 3600e3).toISOString().slice(0, 10),
   overall: build(usable),
   stations,
 };

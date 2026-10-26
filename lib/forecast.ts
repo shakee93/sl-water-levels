@@ -32,7 +32,10 @@ import { formatDelta, formatLevel, type Unit } from "./units";
 import { getBasinWeather, getGlofas, hasCatchment, type BasinWeather, type Fetched, type Glofas, type RainSeries } from "./weather";
 import coefficientsJson from "./model/coefficients.json";
 import gaugeModelJson from "./model/gauge-model.json";
+import stormModelJson from "./model/storm-model.json";
+import { rainRiskOf, type RainRisk } from "./rainRisk";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
+import { rainTotals, stormFeatures } from "./model/stormModel.mjs";
 import {
   evalStation,
   floorSigmaM,
@@ -57,6 +60,20 @@ const COEFFS = COEF_FILE.stations;
 const GM_WIDEN = 1.15;
 const GAUGE_MODEL = gaugeModelJson as unknown as { stations: Record<string, GaugeStationModel> };
 const UNFITTED = COEF_FILE.unfitted ?? {};
+/**
+ * Storm-aware model (lib/model/storm-model.json, scripts/fit-storm-model.mjs): gauge-only 12 / 24 h bases and a pooled rain
+ * correction that is added ONLY on storm hours (rain over the last 24 h, or forecast for the next 24 h, reaches `gate` mm) and
+ * only for the gauge/horizons where the leave-one-storm-out backtest showed it beat the gauge-only model.
+ */
+const STORM = stormModelJson as unknown as {
+  gate: number;
+  pooled: Record<string, { b0: number; w: number[]; q10: number[]; q90: number[] }>;
+  /** Per horizon: factor the held-out residual quantiles were stretched by so that storm-hour coverage reaches ~78%. */
+  bandFactor: Record<string, number>;
+  stations: Record<string, { up: string[]; win: { from: number; to: number }; scale: number; horizons: Record<string, { base: GaugeStationModel["horizons"][string] | null; use: boolean; band?: { q10: number[]; q90: number[] } }> }>;
+};
+/** The storm correction is never allowed to move a forecast by more than this many "typical 24 h swings" of the gauge. */
+const STORM_MAX_CORR = 2;
 
 /** One monsoon season of archive before we drop the "experimental" label. */
 export const MIN_TRAIN_DAYS = 150;
@@ -126,6 +143,10 @@ export type Forecast = {
     past24hMm: number | null;
     next24hMm: { det: number | null; p10: number | null; p50: number | null; p90: number | null };
   } | null;
+  /** "Heavy rain upstream" warning (lib/rainRisk.ts); null when no heavy rain is forecast or the rain forecast failed. */
+  rainRisk: RainRisk | null;
+  /** Horizons (hours) whose level and range include the storm rain adjustment; empty on calm hours. */
+  stormHorizons: number[];
 };
 
 export type ForecastInput = {
@@ -180,7 +201,7 @@ function emptyResult(station: string, unit: Unit, headline: string, notes: strin
     station, unit, currentLevel: level, asOfTs,
     method: "none", status: "unavailable", direction: "unknown", experimental: true,
     basis: [], horizons: [], crossings: [], outlook: null, headline, notes,
-    signals: signalsOf(trend), rain: null,
+    signals: signalsOf(trend), rain: null, rainRisk: null, stormHorizons: [],
   };
 }
 
@@ -270,7 +291,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
     horizons: [{ h: 1, ts: anchor + HOUR_MS, level: pred, low, high }],
     crossings: [], outlook: null, headline,
     notes,
-    signals: signalsOf(t, w?.past6hMm ?? null), rain,
+    signals: signalsOf(t, w?.past6hMm ?? null), rain, rainRisk: rainRiskOf(rain ? { det: rain.next24hMm.det, p90: rain.next24hMm.p90 } : null), stormHorizons: [],
   };
 }
 
@@ -365,19 +386,24 @@ function fromModel(
       level: mixQuantile(0.5, mix), low: mixQuantile(0.1, mix), high: mixQuantile(0.9, mix),
     };
   });
-  // Gauge-only model for 1/3/6 h (backtest on 11 months, last 60 days held out): where it beat "level stays put" it replaces
-  // the rain-ridge point and range; where the rain-ridge horizon was only persistence it supplies the honest empirical range.
-  const gsteps = gaugeSteps(snapshot, station, anchor, now);
+  // v3 (backtest on 11 months, scripts/fit-gauge-model.mjs + scripts/fit-storm-model.mjs): the gauge-only model for 1 / 3 / 6 h and
+  // the gauge-only 12 / 24 h bases replace the old 8-day rain-ridge at every horizon they cover. Live, the old ridge's 12 h / 24 h
+  // misses were larger than "level stays put" (0.99 vs 0.72 ft, 1.43 vs 1.13 ft), so a horizon that is not skilled ships
+  // persistence with an empirical range. On storm hours the pooled rain correction is added (gauges/horizons where the
+  // leave-one-storm-out backtest said it helps) and the upper end of the range allows for the heavier ensemble rain.
+  const gsteps = gaugeSteps(snapshot, station, anchor, now, w ? { det: w.rain, p90: w.scenarios?.p90 ?? null } : null);
   const v2h = new Set<number>();
+  const stormH = new Set<number>();
   for (const st of gsteps ?? []) {
     const j = hs.findIndex((x) => x.h === st.h);
-    if (j < 0 || !(st.skilled || hs[j].persistence)) continue;
-    const gi = GM_WIDEN * (st.missing.length ? 1.3 : 1);
+    if (j < 0) continue;
+    const gi = (st.storm ? 1 : GM_WIDEN) * (st.missing.length ? 1.3 : 1);
     const mu = L0 + st.delta;
     const tiny = 0.003 / mpu;
     const mix: Comp[] = [{ w: 1, mu, sd: Math.max(-st.q10 * gi, tiny) / Z80, su: Math.max(st.q90 * gi, tiny) / Z80 }];
-    hs[j] = { h: st.h, mix, persistence: !st.skilled, level: mu, low: mu + st.q10 * gi, high: mu + st.q90 * gi };
+    hs[j] = { h: st.h, mix, persistence: !st.skilled && !st.storm, level: mu, low: mu + st.q10 * gi, high: mu + st.q90 * gi };
     v2h.add(st.h);
+    if (st.storm) stormH.add(st.h);
   }
   // A persistence horizon says "stays where it is", which is wrong right after a rain-driven
   // rise: a river that peaks at 12h is rarely back to normal by 24h. Blend 40% of the previous
@@ -391,7 +417,9 @@ function fromModel(
 
   // ---- threshold crossings
   const th: Record<ThresholdName, number | null> = { alert: me.thresholds.alert, minor: me.thresholds.minor, major: me.thresholds.major };
-  const capP = (p: number) => r5(experimental ? Math.min(MAX_PROB_EXPERIMENTAL, p) : p);
+  // Every horizon from the 11-month v3 fit: no longer "experimental" (that label was about the 8-day rain fit).
+  const experimentalNow = experimental && hs.some((x) => !v2h.has(x.h));
+  const capP = (p: number) => r5(experimentalNow ? Math.min(MAX_PROB_EXPERIMENTAL, p) : p);
   const crossings: Forecast["crossings"] = [];
   for (const name of SEVERITY) {
     const T = th[name];
@@ -443,7 +471,7 @@ function fromModel(
   }
 
   // ---- notes
-  if (experimental) {
+  if (experimentalNow) {
     notes.push(
       `Experimental: fitted to ${Math.round(trainSpanDays)} days of gauge data, less than one monsoon season (${MIN_TRAIN_DAYS} days), with no major flood in it. Probabilities are capped at ${Math.round(MAX_PROB_EXPERIMENTAL * 100)}% and ranges are widened.`,
     );
@@ -453,6 +481,8 @@ function fromModel(
   }
   const noSkill = hs.filter((x) => x.persistence && !v2h.has(x.h)).map((x) => `${x.h} h`);
   if (noSkill.length) notes.push(`In testing the model was no better than 'level stays the same' at ${noSkill.join(", ")}, so those hours blend that with the earlier outlook and carry a wide range.`);
+  const persV3 = hs.filter((x) => x.persistence && v2h.has(x.h)).map((x) => `${x.h} h`);
+  if (persV3.length) notes.push(`At ${persV3.join(", ")} nothing we tested beat 'level stays the same' for this gauge, so that is the line, with a range taken from how much the gauge has really changed over that time.`);
   if (w) {
     const n = w.next24hMm;
     const fmt = (v: number | null) => (v == null ? "n/a" : v.toFixed(0));
@@ -492,20 +522,26 @@ function fromModel(
     const past = w.past24hMm;
     basis.push(`Catchment rain from Open-Meteo (area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm in the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
   }
-  if (v2h.size) basis.push(`The ${[...v2h].sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings); in a backtest on the last 60 days they missed by less than 'level stays the same'.`);
-  const skilled = hs.filter((x) => !x.persistence).map((x) => `${x.h} h`);
-  const m6 = coef.horizons["6"];
-  if (m6?.mae != null && !m6.persistence) basis.push(`Fitted to ${coef.trainDays} days of readings; out-of-sample 6-hour error about ${formatDelta(m6.mae, unit)} (a 'no change' guess: ${m6.maePersistence.toFixed(2)}).`);
-  else basis.push(`Fitted to ${coef.trainDays} days of readings; it beat a 'no change' guess out-of-sample only at ${skilled.join(", ") || "no horizon"}.`);
+  if (v2h.size) basis.push(`The ${[...v2h].sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings, including the November 2025 Ditwah floods); where this was tested against 'level stays the same' it missed by less.`);
+  if (stormH.size) basis.push(`Heavy rain upstream is part of the ${[...stormH].sort((a, b) => a - b).join(", ")} hour steps: rain that has fallen or is forecast over the catchment above ${station} raises the level, and the top of the range allows for the heavier forecast rain. Tested storm by storm (leaving each storm out, Ditwah included) it was closer than the river's own trend alone.`);
+  const old = hs.filter((x) => !v2h.has(x.h));
+  if (old.length) {
+    const skilled = old.filter((x) => !x.persistence).map((x) => `${x.h} h`);
+    const m6 = coef.horizons["6"];
+    if (m6?.mae != null && !m6.persistence) basis.push(`The ${old.map((x) => x.h).join(", ")} hour steps are from a rain model fitted to ${coef.trainDays} days of readings; out-of-sample 6-hour error about ${formatDelta(m6.mae, unit)} (a 'no change' guess: ${m6.maePersistence.toFixed(2)}).`);
+    else basis.push(`The ${old.map((x) => x.h).join(", ")} hour steps are from a rain model fitted to ${coef.trainDays} days of readings; it beat a 'no change' guess out-of-sample only at ${skilled.join(", ") || "no horizon"}.`);
+  }
 
   return {
     station, unit, currentLevel: L0, asOfTs: anchor,
-    method: "model", status: degraded ? "degraded" : "ok", direction, experimental,
+    method: "model", status: degraded ? "degraded" : "ok", direction, experimental: experimentalNow,
     basis,
     horizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })),
     crossings, outlook, headline, notes,
     signals: signalsOf(trend, w?.past6hMm ?? null),
     rain: w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null,
+    rainRisk: w ? rainRiskOf({ det: w.next24hMm.det, p90: w.next24hMm.p90 }) : null,
+    stormHorizons: [...stormH].sort((a, b) => a - b),
   };
 }
 
@@ -527,32 +563,81 @@ function interpSeries(a: { ts: number; wl: number }[], t: number): number | null
 
 
 /** One horizon of the gauge-only model: the predicted CHANGE and the signed 10% / 90% residuals (native units). */
-type GaugeStep = { h: number; delta: number; q10: number; q90: number; skilled: boolean; missing: string[] };
+type GaugeStep = {
+  h: number;
+  delta: number;
+  q10: number;
+  q90: number;
+  skilled: boolean;
+  missing: string[];
+  /** True when the pooled storm rain correction is in `delta` and the range is the storm range (q10 / q90 already final, no widening). */
+  storm: boolean;
+};
+
+/** Hourly catchment rain: the deterministic series (past analysis + forecast) and the heavier ensemble scenario (p90), keyed by hour-end ms. */
+type StormRain = { det: RainSeries; p90: RainSeries | null };
 
 /**
- * Gauge-only forecast steps for 1/3/6 h from the gauge's own recent changes, the other gauges on the river and (tidal
- * gauges) a tide term. Horizons without a clear out-of-sample win over "level stays put" come back with delta 0 and the
- * empirical range of the hourly change. Returns null when the gauge has no entry in the model file. When the gauge's
- * own history is too short for the features the range comes from the middle volatility bin and `missing` names it.
+ * Forecast steps for 1/3/6 h (lib/model/gauge-model.json) and 12/24 h (lib/model/storm-model.json bases) from the gauge's own
+ * recent changes, the other gauges on the river and (tidal gauges) a tide term. Horizons without a clear out-of-sample win over
+ * "level stays put" come back with delta 0 and the empirical range of the change. On storm hours (rain over the last 24 h or
+ * forecast for the next 24 h >= STORM.gate mm) the pooled rain correction is added for the gauge/horizons that earned it in
+ * the leave-one-storm-out backtest; the upper end of the range is then at least the answer under the heavier (p90) rain.
+ * Returns null when the gauge has no entry in the model files. When the gauge's own history is too short for the features
+ * the range comes from the middle volatility bin and `missing` names it.
  */
-function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number): GaugeStep[] | null {
+function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number, rain: StormRain | null = null): GaugeStep[] | null {
   const gm = GAUGE_MODEL.stations[station];
+  const sm = STORM.stations[station];
   if (!gm) return null;
+  const upAll = [...new Set([...gm.up, ...(sm?.up ?? [])])];
   const series = new Map<string, { ts: number; wl: number }[]>();
-  for (const g of [station, ...gm.up]) {
+  for (const g of [station, ...upAll]) {
     const s = snapshot.find((x) => x.station === g);
     if (!s || !s.latest || isStale(s.latest, now)) continue;
     series.set(g, s.trend24h.filter((r) => r.water_level != null).map((r) => ({ ts: r.ts, wl: r.water_level as number })));
   }
   const ctx = { level: (g: string, t: number) => { const a = series.get(g); return a ? interpSeries(a, t) : null; } };
+  // rain as r(k): mm in the hour ending k hours after the hour the forecast starts from (k <= 0 fell already)
+  const origin = Math.floor(anchor / HOUR_MS) * HOUR_MS;
+  const rAt = (R: RainSeries) => (k: number) => R[origin + k * HOUR_MS];
+  const tot = rain ? rainTotals(rAt(rain.det)) : null;
+  const heaviest = tot ? Math.max(tot.past24 ?? 0, tot.next24 ?? 0) : 0;
+  const stormOn = !!sm && heaviest >= STORM.gate;
   const out: GaugeStep[] = [];
-  for (const key of Object.keys(gm.horizons)) {
+  const keys = new Set([...Object.keys(gm.horizons), ...Object.keys(sm?.horizons ?? {}).filter((k) => sm?.horizons[k].base)]);
+  for (const key of keys) {
     const h = +key;
-    const hm = gm.horizons[key];
-    const f = gaugeFeatures(station, gm.up, hm.tide, ctx, anchor, h);
+    const own = gm.horizons[key];
+    const hm = own ?? sm.horizons[key].base!;
+    const up = own ? gm.up : sm.up;
+    const f = gaugeFeatures(station, up, hm.tide, ctx, anchor, h);
     const skilled = hm.skilled && !!f;
     const band = bandFor(hm, f ? f.vol : hm.edges[0] ?? 0);
-    out.push({ h, delta: skilled && f ? predictGauge(hm, f.x) : 0, q10: band.q10, q90: band.q90, skilled, missing: f ? f.missing : [station] });
+    const base = skilled && f ? predictGauge(hm, f.x) : 0;
+    const step: GaugeStep = { h, delta: base, q10: band.q10, q90: band.q90, skilled, missing: f ? f.missing : [station], storm: false };
+    const sh = sm?.horizons[key];
+    const pooled = STORM.pooled[key];
+    if (stormOn && sh?.use && pooled && rain && f) {
+      const x = stormFeatures(rAt(rain.det), h, sm.win);
+      if (x) {
+        const cap = STORM_MAX_CORR * sm.scale;
+        const corrOf = (xs: number[]) => Math.max(-cap, Math.min(cap, sm.scale * (pooled.b0 + pooled.w.reduce((a, w, j) => a + w * xs[j], 0))));
+        const corr = corrOf(x);
+        const xH = rain.p90 ? stormFeatures(rAt(rain.p90), h, sm.win) : null;
+        const corrH = xH ? Math.max(corr, corrOf(xH)) : corr;
+        const bin = heaviest >= 100 ? 1 : 0;
+        // the gauge's own held-out storm residuals (native units); the pooled scale-free ones only if the gauge had too few
+        const bf = STORM.bandFactor[key] ?? 1;
+        const q10 = sh.band ? sh.band.q10[bin] : sm.scale * pooled.q10[bin] * bf;
+        const q90 = sh.band ? sh.band.q90[bin] : sm.scale * pooled.q90[bin] * bf;
+        step.delta = base + corr;
+        step.q10 = Math.min(q10, 0);
+        step.q90 = Math.max(q90, 0, corrH - corr); // never below the answer under the heavier rain scenario
+        step.storm = true;
+      }
+    }
+    out.push(step);
   }
   return out.sort((a, b) => a.h - b.h);
 }

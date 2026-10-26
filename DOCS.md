@@ -292,7 +292,7 @@ CV: Nagalagam Street, Peradeniya, Putupaula, Thalgahagoda) a harmonic tide term 
 movement), widened 15% in `lib/forecast.ts` (`GM_WIDEN`). Horizons that do not beat "level stays put" by 3% in BOTH the
 blocked CV and the holdout ship as persistence with the empirical range (never an extrapolated trend). Trend-only gauges
 now use it too (1 h, with a range). It replaces the rain-ridge point and range at 1/3/6 h where it is skilled (or where
-the rain-ridge horizon was already persistence); 12/24 h are unchanged.
+the rain-ridge horizon was already persistence). Since 2026-10-26 the storm-aware version (below) also replaces the rain-ridge at 12/24 h.
 *Backtest, not live results (the last 60 days held out, never used to fit or choose; mean over gauges of MAE in each
 gauge's own unit, 36 gauges, 30 of them the previously fitted ones):* next hour error 0.027 vs 0.040 for "no change" (-32%;
 the old model structure re-scored the same way: -10%), 3 h -25%, 6 h -21%; 80% range covers 79% (83% with the 15% widening)
@@ -305,9 +305,87 @@ feature: it changed the 1 h error by < 1% and 6 h by ~1%, so it is not in this m
 D1 prediction log (per horizon 1/3/6/12/24 h, all gauges and per gauge, last 30 days and since launch, split into `model` = issued since the
 gauge-only model went live 24 Oct, `model-early` and `trend`, with the "no change" baseline) into `accuracy/latest.json` on the `data` branch.
 `lib/accuracy.ts` reads it (1 h cache, 1.5 s time box, fails soft) for About #next-hour, /data, llms.txt, llms-full.txt, the MCP
-`get_next_hour_forecast` and the small line under each gauge chart (hidden below 10 checks). The 12 h / 24 h model was NOT changed. Refit: `git fetch origin data`, then the script (about a minute), commit the JSON.
+`get_next_hour_forecast` and the small line under each gauge chart (hidden below 10 checks). Refit: `git fetch origin data`, then the script (about a minute), commit the JSON.
 `snapshot.mjs` also archives hourly catchment rain and daily GloFAS discharge to `rain/` and `glofas/` on
 the `data` branch so later refits can use real history.
+
+#### Storm-aware forecast (v3, added 2026-10-26)
+
+*Owner's question: "weather is the most important factor. A storm like Ditwah forms more rain. Does the prediction take that into
+account?"* Honest state before this: the 1/3/6 h model did not use rain (it added < 1% on average, because most hours are calm) and the
+12/24 h model (8-day rain ridge, one rain event) was worse than "no change" live (12 h 0.99 vs 0.72 ft, 24 h 1.43 vs 1.13 ft).
+
+**What changed.** (1) `lib/model/storm-model.json` (fitted by `node scripts/fit-storm-model.mjs --rain rain-history.json`, rain from
+`node scripts/fetch-rain-history.mjs`, tests `node --experimental-strip-types scripts/storm-model.test.mts`) gives every gauge with a rain grid a
+gauge-only 12 h and 24 h model (same recipe as 1/3/6 h) that replaces the old ridge at all horizons it covers. (2) On **storm hours only**
+(catchment rain over the last 24 h or forecast for the next 24 h reaches 50 mm) a rain correction is added to the gauge-only answer,
+for the gauge/horizons where the leave-one-storm-out test said it helps (7 of 36 gauges at 1 h, 7 at 3 h, 12 at 6 h, 13 at 12 h, 17 at 24 h). It is
+one non-negative linear model per horizon shared by all gauges (each gauge's size set by its own typical 24 h swing), on four numbers: rain in the
+gauge's routing window (lag from `scripts/station-configs.json`), the same on wet ground (72 h antecedent rain), rain forecast before the horizon,
+and the same on wet ground. Calm hours are the gauge-only answer exactly, so they cannot get worse. (3) The storm range is the gauge's own
+held-out storm residuals, stretched by one factor per horizon (1.55 / 1.60 / 1.75 / 1.90 / 2.00) until coverage over all storm hours reached 78%, and
+its upper end is at least the answer under the heavier ECMWF ensemble rain (p90). (4) The "Heavy rain forecast upstream" warning (below).
+Rain for the past 72 h now comes from the same Open-Meteo call (`past_days=4`).
+
+**Backtest (not live results).** 11 months of hourly gauge history (36 gauges with a rain grid, 23 Nov 2025 - 25 Oct 2026). Rain: Open-Meteo Previous
+Runs API, observed hourly rain and the forecast made ONE DAY EARLIER for future hours (no hindsight, and a little older than what the site sees live,
+so skill is on the cautious side). Gauge-only baseline: blocked 7-fold CV. Storm correction: **leave one storm out** (15 storms at 50 mm: Ditwah 26-29 Nov
+2025, 9 Dec, 17 Dec, 5 Jan, 31 Jan, 20 Feb, 7 May, 11 May, 22 May, 27 Jun, 30 Jul (9 days), 20 Sep (5 days), 3 Oct, 12 Oct, 20 Oct), 48 h purged around
+the held-out storm. Bands are nested (computed only from the other storms). Mean miss in feet over all gauge-hours (gauges kept in their own unit, then
+converted), storm hours = rain over the last or next 24 h >= 50 mm:
+
+| Storm hours, all 36 gauges | 1 h | 3 h | 6 h | 12 h | 24 h |
+|---|---|---|---|---|---|
+| "No change" miss (ft) | 0.31 | 0.84 | 1.46 | 2.31 | 3.51 |
+| Gauge-only model | 0.21 | 0.66 | 1.24 | 2.14 | 3.40 |
+| + rain on every gauge (no selection, honest) | 0.21 | 0.66 | 1.25 | 2.03 | 2.93 |
+| Shipped (rain only where it won; slightly flattered by that choice) | 0.20 | 0.65 | 1.18 | 1.94 | 2.85 |
+| Old 80% range covered (gauge-only, storms) | 68% | 64% | 59% | 52% | 46% |
+| Storm range covered (nested) | 79% | 78% | 79% | 78% | 78% |
+| Storm range width (ft) vs old | 0.64 vs 0.32 | 2.2 vs 0.9 | 4.9 vs 1.6 | 9.6 vs 2.6 | 14 vs 3.6 |
+
+| **Ditwah only** (26-29 Nov 2025, held out), 36 gauges | 1 h | 3 h | 6 h | 12 h | 24 h |
+|---|---|---|---|---|---|
+| "No change" miss (ft) | 0.40 | 1.12 | 1.99 | 3.26 | 5.50 |
+| Gauge-only | 0.26 | 0.89 | 1.75 | 3.14 | 5.34 |
+| + rain everywhere | 0.26 | 0.88 | 1.80 | 2.92 | 4.31 |
+| Shipped | 0.26 | 0.85 | 1.61 | 2.65 | 4.04 |
+| Shipped gauges only (7 / 7 / 12 / 13 / 17 gauges): gauge-only -> shipped | 0.17 -> 0.14 | 0.78 -> 0.59 | 2.08 -> 1.68 | 4.24 -> 2.96 | 7.14 -> 4.80 |
+| Storm range covered (old range) | 66% (59%) | 66% (53%) | 63% (46%) | 65% (37%) | 60% (32%) |
+
+By how heavy the rain is (all 36 gauges, shipped, 24 h): 50-100 mm hours miss 2.45 ft vs 2.60 gauge-only (-6%); 100 mm or more 4.12 vs 5.91 (-30%);
+the gain is almost all in the biggest storms. Calm hours (279,000 gauge-hours, rain < 50 mm either way): unchanged by construction, gauge-only vs "no change"
+0.072 vs 0.096 ft at 1 h, 0.33 vs 0.39 at 6 h, 0.67 vs 0.69 at 24 h. At 24 h the old ridge did not exist in this backtest (it was fitted on 8 days),
+so "replaces where the new one beats it" rests on the live miss of the ridge being worse than "no change" and the new model being at least "no change" everywhere
+(unskilled horizons ship persistence with an empirical range).
+
+**Peaks and flood-mark crossings (the weak spot).** At storm hours when the river was about to rise 0.5 ft or more within 24 h (2,681 cases), the forecast's
+highest point over the five horizons saw 19% of the coming rise with the gauge-only model and 40% with the storm correction (peak height miss 4.4 -> 3.7 ft,
+peak timing miss 10.4 -> 6.8 h, forecast peaks still too low by a median 1.7 ft). Flood marks reached from below in storm hours (47 alert, 29 minor, 18 major crossings at
+gauges with published marks), point forecast crossing the mark by at least N hours before it happened:
+
+| Alert crossings (47) | >= 1 h | >= 3 h | >= 6 h | >= 12 h |
+|---|---|---|---|---|
+| Gauge-only, line | 28 | 9 | 3 | 1 |
+| Storm-aware, line | 34 | 18 | 12 | 8 |
+| Gauge-only, top of range | 36 | 24 | 16 | 4 |
+| Storm-aware, top of range | 43 | 29 | 24 | 15 |
+
+(minor: 20 / 11 / 6 / 5 of 29 by the line, 23 / 16 / 13 / 11 by the top of the range; major: 11 / 6 / 5 / 5 of 18 by the line, 14 / 8 / 7 / 7 by the top of the range.)
+The price is false alarms: of storm hours within 3 ft below a mark where the top of the range reached it, the river really got there within 24 h 35% of the time
+(alert; 49% for the gauge-only range), 41% minor, 52% major. Median lead time (top of range, alert) 6 h, was 3 h. In plain words: a big storm is still
+hard to forecast; the model sees more of it, earlier, with a wide honest range, and the rain warning exists because the line alone still under-reads.
+
+**Rain warning thresholds** (`lib/rainRisk.ts`, from the same data: forecast catchment rain for the next 24 h against how far the river rose in those 24 h,
+all gauges, hours): under 10 mm 13% rose 1 ft or more (mean rise 0.4 ft); 10-25 mm 34% (1.2 ft); 25-50 mm 50% (2.2 ft); **50-100 mm 65% (3.7 ft; 31% rose 4 ft or more)**;
+**100 mm or more 85% (6.6 ft; 61% rose 4 ft or more)**. So the line "Heavy rain forecast upstream in the next 24 hours (about N mm). The river may rise faster than the
+line shows." shows at >= 50 mm forecast (deterministic, area average above the gauge), or when the heavier ensemble member (p90) reaches 100 mm ("Very heavy rain is possible ...").
+Shown under the chart (`app/StationCard.tsx`), appended to the next-hour sentence (`lib/answers.ts`), in `/api/levels` `nextHour.rainRisk`, MCP, llms.txt (How it is made) and the push text when
+a river alert fires (`pn.rainRisk`; `Glance.rainRisk`, looked up only for places that are not calm). si/ta wording is a DRAFT, flagged on the page.
+**Not done / limits:** no archived ensemble exists, so the p90 widening could only be checked with a stand-in (forecast rain x1.6, which changed nothing: the storm range was already wider);
+GSMaP satellite rain was not backfilled (no need: Open-Meteo observed rain was available for the whole period; GSMaP stays a live display only); the correction is pooled across gauges, so
+it is weaker at gauges with their own quirks (dam releases, tides); storm ranges are very wide (24 h about 14 ft on average) because that is what the errors were.
+Live accuracy for this version is its own segment (`model-v3` in `accuracy/latest.json`, `stormModelSince`); compare it with `model` (gauge-only, 24 Oct to 26 Oct) as checks accumulate.
 
 ### MCP server at `/mcp`
 

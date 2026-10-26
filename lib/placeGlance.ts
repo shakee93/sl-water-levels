@@ -10,6 +10,8 @@ import { stationDisplayName } from "./displayName";
 import { formatLevel } from "./units";
 import { STEADY_M_PER_H } from "../app/verdict";
 import { getReleases, releaseAffectingFrom } from "./releases";
+import { getBasinWeather, hasCatchment } from "./weather";
+import { rainRiskOf } from "./rainRisk";
 import type { Glance, ParsedKey } from "./myPlaces";
 
 const trendOf = (rateM: number | null): Glance["trend"] => (rateM == null ? "unknown" : Math.abs(rateM) < STEADY_M_PER_H ? "steady" : rateM > 0 ? "up" : "down");
@@ -94,5 +96,18 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
       g.release = a.active && a.reservoir ? { name: a.reservoir, confirmed: a.confirmed, etaHours: a.etaHours } : null;
     }
   }
+  // heavy rain forecast above the gauge: only for places that are not calm (the weather call is cached 30 min), fails soft
+  await Promise.all(
+    glances.map(async (g) => {
+      const s = g.gaugeStation ? byName.get(g.gaugeStation) : null;
+      if (!s || !["watch", "alert", "minor", "major"].includes(g.tone) || !hasCatchment(s.basin, s.station)) return;
+      try {
+        const w = await Promise.race([getBasinWeather(s.basin, s.station), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+        if (w && w.ok) g.rainRisk = rainRiskOf({ det: w.data.next24hMm.det, p90: w.data.next24hMm.p90 }) != null;
+      } catch {
+        /* unknown: no claim */
+      }
+    }),
+  );
   return glances;
 }

@@ -13,6 +13,7 @@ import type { Locale } from "./i18n/config";
 import type { TFn } from "./i18n/translate";
 import { shownNumber, type Unit } from "./units";
 import type { NextHour } from "./nextHour";
+import { rainRiskLine } from "./rainRisk";
 
 type L3 = Record<Locale, string>;
 type Vars = Record<string, string | number>;
@@ -128,6 +129,8 @@ export function nextHourSentence(lang: Locale, nh: NextHour | null, subject?: st
     const k = nh.crossing.includes("major") ? NH.reachMajor : nh.crossing.includes("minor") ? NH.reachMinor : NH.reachAlert;
     out += W(k, lang, { how: W(nh.crossing.startsWith("expected") ? NH.expected : NH.may, lang) });
   }
+  // Storm warning: heavy rain forecast above the gauge (lib/rainRisk.ts). Same words as the line beside the chart.
+  if (nh.rainRisk) out += " " + rainRiskLine({ level: nh.rainRisk.level, mm: nh.rainRisk.mm_24h }, lang);
   return out;
 }
 

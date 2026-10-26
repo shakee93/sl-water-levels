@@ -8,6 +8,7 @@ import { unstable_cache } from "next/cache";
 import { after } from "next/server";
 import { fetchBasinSnapshot, getNational } from "./arcgis";
 import { loadForecast, type Forecast } from "./forecast";
+import type { RainRisk } from "./rainRisk";
 import { FT_IN_M, toShown, type Unit } from "./units";
 
 const STEADY_M_PER_H = 0.006; // same as app/verdict.ts
@@ -33,6 +34,12 @@ export type NextHour = {
   method: "model" | "trend";
   /** True while the forecast is still new and its ranges are widened. */
   experimental: boolean;
+  /**
+   * Heavy rain forecast over the hills above the gauge in the next 24 hours (lib/rainRisk.ts), else null. When set, the river may
+   * rise faster than the forecast line: level "heavy" = 50 mm or more forecast, "very-heavy" = 100 mm or more, "possible" = only the
+   * heavier ensemble scenario reaches 100 mm.
+   */
+  rainRisk: { level: RainRisk["level"]; mm_24h: number; forecast_mm_24h: number | null; heavier_scenario_mm_24h: number | null } | null;
 };
 
 const MARK: Record<string, string> = { alert: "alert level", minor: "minor flood level", major: "major flood level" };
@@ -65,6 +72,14 @@ export function nextHourOf(f: Forecast): NextHour | null {
     issuedAt: new Date(f.asOfTs).toISOString(),
     method: f.method,
     experimental: f.experimental,
+    rainRisk: f.rainRisk
+      ? {
+          level: f.rainRisk.level,
+          mm_24h: f.rainRisk.mm,
+          forecast_mm_24h: f.rainRisk.detMm == null ? null : Math.round(f.rainRisk.detMm),
+          heavier_scenario_mm_24h: f.rainRisk.p90Mm == null ? null : Math.round(f.rainRisk.p90Mm),
+        }
+      : null,
   };
 }
 
@@ -84,7 +99,7 @@ const cachedBasin = unstable_cache(
     );
     return out;
   },
-  ["next-hour-basin-v1"],
+  ["next-hour-basin-v2"],
   { revalidate: 300 },
 );
 

@@ -163,6 +163,7 @@ const en = {
   "pn.relTitle": "{place}: water released upstream",
   "pn.relBody": "{name} has opened its gates. Levels near you may rise over the next hours. Open to check.",
   "pn.relBodyReported": "{name} is reported to have opened its gates (a news report, not official). Levels near you may rise. Open to check.",
+  "pn.rainRisk": "Heavy rain is forecast upstream, so it may rise faster than expected.",
 } as const;
 
 export type RKey = keyof typeof en;
@@ -319,6 +320,8 @@ const si: Dict = {
   "pn.relTitle": "{place}: ඉහළින් ජලය මුදා හරී",
   "pn.relBody": "{name} එහි දොරටු විවෘත කර ඇත. ඔබ අසල මට්ටම් ඉදිරි පැය කිහිපයේ ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
   "pn.relBodyReported": "{name} එහි දොරටු විවෘත කළ බව වාර්තා වේ (පුවත් වාර්තාවකි, නිල නොවේ). ඔබ අසල මට්ටම් ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
+  // draft translation, not yet reviewed by a native speaker
+  "pn.rainRisk": "ඉහළ ප්‍රදේශවල තද වැසි අපේක්ෂිතයි, එබැවින් අපේක්ෂාවට වඩා වේගයෙන් ඉහළ යා හැක.",
 };
 
 // ---- Tamil (DRAFT, needs native review)
@@ -472,6 +475,8 @@ const ta: Dict = {
   "pn.relTitle": "{place}: மேலே நீர் திறக்கப்பட்டது",
   "pn.relBody": "{name} தனது மதகுகளைத் திறந்துள்ளது. உங்கள் அருகில் மட்டங்கள் சில மணி நேரத்தில் உயரலாம். பார்க்கத் திறக்கவும்.",
   "pn.relBodyReported": "{name} தனது மதகுகளைத் திறந்ததாகத் தெரிவிக்கப்படுகிறது (செய்தி, அதிகாரப்பூர்வமற்றது). உங்கள் அருகில் மட்டங்கள் உயரலாம். பார்க்கத் திறக்கவும்.",
+  // draft translation, not yet reviewed by a native speaker
+  "pn.rainRisk": "மேல்பகுதியில் கனமழை எதிர்பார்க்கப்படுகிறது, எனவே எதிர்பார்த்ததை விட வேகமாக உயரலாம்.",
 };
 
 const DICTS: Record<Locale, Dict> = { en: en as unknown as Dict, si, ta };
@@ -497,7 +502,7 @@ export type PushPlace = { name: string; level: number; street: "possible" | "lik
 export type PushMessage = { title: string; body: string };
 
 /** The wording of a rise ping, an all-clear and the morning summary, in the subscriber's language. */
-export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "heads" | "release", places: PushPlace[], extra?: { reservoir?: string; confirmed?: boolean }): PushMessage {
+export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "heads" | "release", places: PushPlace[], extra?: { reservoir?: string; confirmed?: boolean; rainRisk?: boolean | null }): PushMessage {
   const rt = rtFor(lang);
   if (kind === "test") return { title: rt("pn.testTitle"), body: rt("pn.testBody") };
   if (kind === "heads") {
@@ -514,7 +519,9 @@ export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "tes
     const p = places[0];
     // street "possible" is a quiet heads-up that never pings; if such a place is at level 2 anyway, the river is why ("Get ready")
     const verdict = p.street === "likely" && p.level <= 3 ? rt("pn.s3") : rt(`pn.l${Math.min(4, Math.max(2, p.level))}` as RKey);
-    return { title: rt("pn.riseTitle", { place: p.name, verdict }), body: p.level >= 4 ? rt("pn.riseBody4") : rt("pn.riseBody") };
+    // heavy rain forecast above the gauge (lib/rainRisk.ts): one more plain sentence, so the person knows it may get worse faster
+    const more = extra?.rainRisk ? ` ${rt("pn.rainRisk")}` : "";
+    return { title: rt("pn.riseTitle", { place: p.name, verdict }), body: (p.level >= 4 ? rt("pn.riseBody4") : rt("pn.riseBody")) + more };
   }
   if (kind === "clear") return { title: rt("pn.clearTitle", { place: places[0].name }), body: rt("pn.clearBody") };
   // morning: the worst place first, otherwise "all calm"

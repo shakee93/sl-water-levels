@@ -240,7 +240,7 @@ export async function main({ mode = "check", dry = false, test = null, now = Dat
       const street = sub.prefs.streetLikely || m.kind === "heads" ? g.street : null;
       const text = m.kind === "release"
         ? pushText(sub.lang, "release", [{ name: g.name, level: 0, street: null }], { reservoir: g.release?.name, confirmed: g.release?.confirmed })
-        : pushText(sub.lang, m.kind, [{ name: g.name, level: m.level, street }]);
+        : pushText(sub.lang, m.kind, [{ name: g.name, level: m.level, street }], { rainRisk: m.kind === "rise" ? g.rainRisk : null });
       jobs.push({ sub, kind: m.kind, place: m.key, payload: { title: text.title, body: text.body, url: urlFor(sub, g.href), tag: m.kind === "rise" || m.kind === "clear" ? m.key : `${m.key}:${m.kind}`, lang: sub.lang } });
     }
   }

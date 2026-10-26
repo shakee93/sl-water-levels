@@ -14,7 +14,8 @@
 // lib/model/catchments.json, built by scripts/build-catchments.mjs), keyed by the END of each
 // hour in epoch ms (Open-Meteo reports the sum over the preceding hour), the same convention
 // the fitting script uses. One deterministic request (<= ~30 locations) plus one ensemble request
-// per gauge, each cached 30 minutes by Next's fetch cache.
+// per gauge, each cached 30 minutes by Next's fetch cache. The deterministic call reads 4 past days: the storm correction
+// (lib/model/stormModel.mjs) needs the last 72 h as its wet-ground signal.
 
 import catchments from "./model/catchments.json";
 import { normaliseBasin } from "./basinOrder";
@@ -140,7 +141,7 @@ export async function getBasinWeather(basin: string, station: string, now = Date
 
   const [detR, ens] = await Promise.all([
     getJson(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation&past_days=2&forecast_days=3&timezone=UTC`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation&past_days=4&forecast_days=3&timezone=UTC`,
       RAIN_REVALIDATE_S,
     ),
     getJson(

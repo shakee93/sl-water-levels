@@ -1,0 +1,65 @@
+// "Heavy rain upstream" warning, shown beside the chart, in the next-hour answers, the JSON API, llms.txt and the push text.
+//
+// Thresholds come from the 11-month backtest (DOCS.md "Storm backtest", scripts/fit-storm-model.mjs `warn`): for every hour, the
+// catchment rain forecast for the next 24 h against how far the river rose in those 24 h.
+//   under 10 mm: 13% of hours saw a rise of 1 ft or more     25-50 mm: 50%
+//   50-100 mm:   65% (mean rise 3.7 ft; 31% saw 4 ft or more)  100 mm or more: 85% (mean 6.6 ft; 61% saw 4 ft or more)
+// So the line appears at 50 mm forecast (deterministic, area average over the catchment above the gauge), or when the heavier
+// ensemble member (p90) reaches 100 mm, and is stronger from 100 mm. It is a "rain is coming" flag, never a level.
+import type { Locale } from "./i18n/config";
+
+export const RAIN_RISK_MM = 50;
+export const RAIN_RISK_P90_MM = 100;
+export const RAIN_RISK_VERY_MM = 100;
+
+export type RainRisk = {
+  /** "heavy" = 50 mm or more forecast; "very-heavy" = 100 mm or more; "possible" = only the heavier ensemble member reaches 100 mm. */
+  level: "heavy" | "very-heavy" | "possible";
+  /** The number the sentence quotes (mm, rounded to 5): the deterministic forecast, or the p90 for "possible". */
+  mm: number;
+  /** Deterministic forecast and heavier-scenario (p90) totals for the next 24 h, mm, unrounded. */
+  detMm: number | null;
+  p90Mm: number | null;
+};
+
+const r5 = (v: number) => Math.round(v / 5) * 5;
+
+export function rainRiskOf(n: { det: number | null; p90: number | null } | null | undefined): RainRisk | null {
+  if (!n) return null;
+  const { det, p90 } = n;
+  if (det != null && det >= RAIN_RISK_MM) {
+    return { level: det >= RAIN_RISK_VERY_MM ? "very-heavy" : "heavy", mm: r5(det), detMm: det, p90Mm: p90 };
+  }
+  if (p90 != null && p90 >= RAIN_RISK_P90_MM) return { level: "possible", mm: r5(p90), detMm: det, p90Mm: p90 };
+  return null;
+}
+
+const LINES: Record<Locale, { heavy: string; possible: string }> = {
+  en: {
+    heavy: "Heavy rain forecast upstream in the next 24 hours (about {mm} mm). The river may rise faster than the line shows.",
+    possible: "Very heavy rain is possible upstream in the next 24 hours (up to about {mm} mm if the heavier forecast comes true). The river may rise faster than the line shows.",
+  },
+  // si / ta: DRAFT translations, not yet reviewed by a native speaker.
+  si: {
+    heavy: "ඉදිරි පැය 24 තුළ ඉහළ ප්‍රදේශවල තද වැසි අපේක්ෂිතයි (මි.මී. {mm} පමණ). ගඟ රේඛාවෙන් පෙන්වනවාට වඩා වේගයෙන් ඉහළ යා හැක.",
+    possible: "ඉදිරි පැය 24 තුළ ඉහළ ප්‍රදේශවල ඉතා තද වැසි ඇතිවිය හැක (වැඩි අපේක්ෂාව සැබෑ වුවහොත් මි.මී. {mm} දක්වා). ගඟ රේඛාවෙන් පෙන්වනවාට වඩා වේගයෙන් ඉහළ යා හැක.",
+  },
+  ta: {
+    heavy: "அடுத்த 24 மணி நேரத்தில் மேல்பகுதியில் கனமழை எதிர்பார்க்கப்படுகிறது (சுமார் {mm} மி.மீ). ஆறு கோட்டில் காட்டுவதை விட வேகமாக உயரலாம்.",
+    possible: "அடுத்த 24 மணி நேரத்தில் மேல்பகுதியில் மிகக் கனமழை பெய்ய வாய்ப்புள்ளது (கனமான முன்னறிவிப்பு நிஜமானால் சுமார் {mm} மி.மீ வரை). ஆறு கோட்டில் காட்டுவதை விட வேகமாக உயரலாம்.",
+  },
+};
+
+/** The plain sentence for a warning, in the reader's language (si/ta are drafts). */
+export function rainRiskLine(risk: Pick<RainRisk, "level" | "mm">, lang: Locale = "en"): string {
+  const l = LINES[lang] ?? LINES.en;
+  return (risk.level === "possible" ? l.possible : l.heavy).replace("{mm}", String(risk.mm));
+}
+
+/** Short clause for push messages, e.g. "Heavy rain upstream: it may rise faster." */
+const PUSH: Record<Locale, string> = {
+  en: "Heavy rain is forecast upstream, so it may rise faster than expected.",
+  si: "ඉහළ ප්‍රදේශවල තද වැසි අපේක්ෂිතයි, එබැවින් අපේක්ෂාවට වඩා වේගයෙන් ඉහළ යා හැක.",
+  ta: "மேல்பகுதியில் கனமழை எதிர்பார்க்கப்படுகிறது, எனவே எதிர்பார்த்ததை விட வேகமாக உயரலாம்.",
+};
+export const rainRiskPush = (lang: Locale = "en") => PUSH[lang] ?? PUSH.en;

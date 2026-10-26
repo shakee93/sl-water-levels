@@ -5,20 +5,23 @@
 //
 // Each forecast point is checked against the gauge reading closest to its target time (within 40 minutes).
 // Levels are in feet. "No change" is the level at the time of the forecast. Segments:
-//   model        issued since the gauge-only 1/3/6 h model went live (24 Oct 2026; 12 / 24 h are still the older model)
+//   model-v3     issued since the storm-aware version went live (gauge-only model at 1/3/6/12/24 h + rain correction on storm hours)
+//   model        issued from 24 Oct 2026 (gauge-only 1/3/6 h model live; 12 / 24 h were still the older rain model) until then
 //   model-early  fitted-model forecasts before that
 //   trend        gauges without a fitted model (simple trend estimate)
 
 const URL_ = process.env.ACCURACY_URL ?? "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/accuracy/latest.json";
 
 export type Stat = { n: number; gauges: number; maeFt: number | null; baseMaeFt: number | null; inBandPct: number | null; bandFt: number | null; dirPct: number | null; dirSteadyPct: number | null };
-type BySeg = Partial<Record<"model" | "model-early" | "trend", Record<string, Stat>>>;
+type BySeg = Partial<Record<"model" | "model-early" | "model-v3" | "trend", Record<string, Stat>>>;
 export type AccuracyFile = {
   version: number;
   generatedAt: string;
   asOf: string; // Sri Lanka date
   firstForecast: string;
   gaugeModelSince: string;
+  /** Sri Lanka date the storm-aware version went live; absent in files written before it. */
+  stormModelSince?: string;
   overall: { d30?: BySeg; all?: BySeg };
   stations: Record<string, { d30?: BySeg; all?: BySeg }>;
 };
@@ -57,11 +60,13 @@ type Scope = { d30?: BySeg; all?: BySeg };
 export function figure(scope: Scope | undefined, h: number, win: Win, withTrend = false): Stat | null {
   const w = scope?.[win];
   if (!w) return null;
-  const m = pool([w.model?.[h], w["model-early"]?.[h]]);
+  const m = pool([w.model?.[h], w["model-early"]?.[h], w["model-v3"]?.[h]]);
   return m ?? (withTrend ? (w.trend?.[h] ?? null) : null);
 }
 /** Only the gauge-only model's own record (issued since it went live). */
-export const newModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => scope?.[win]?.model?.[h] ?? null;
+export const newModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => pool([scope?.[win]?.model?.[h], scope?.[win]?.["model-v3"]?.[h]]);
+/** Only the storm-aware version's own record (issued since it went live): its 12 / 24 h steps are the new gauge-only + rain model, not the old rain ridge. */
+export const stormModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => scope?.[win]?.["model-v3"]?.[h] ?? null;
 
 /** 30 days, unless that holds fewer than `min` one-hour checks (then everything since launch). */
 export function bestWindow(a: AccuracyFile, min = 30): Win {
@@ -87,7 +92,9 @@ export function accuracyLine(a: AccuracyFile | null): string {
   const hs = parts.map(({ h, f }) => `${h} h: ${f!.n} checks, average miss ${ftx(f!.maeFt)} ft vs ${ftx(f!.baseMaeFt)} ft for "no change", real level inside the range ${f!.inBandPct}% of the time (range about ${ftx(f!.bandFt)} ft wide), direction right ${f!.dirPct}% vs ${f!.dirSteadyPct}% for always "steady"`);
   const nm = newModelFigure(a.overall, 1, win);
   const nmText = nm && nm.n >= MIN_CHECKS ? ` The gauge-only model that has run since ${day(a.gaugeModelSince)} (next hour, 3 h and 6 h) has its own record: ${nm.n} next-hour checks, average miss ${ftx(nm.maeFt)} ft vs ${ftx(nm.baseMaeFt)} ft for "no change".` : ` The newer gauge-only model (live since ${day(a.gaugeModelSince)}) has only ${nm?.n ?? 0} next-hour checks so far, too few to report on its own.`;
-  return `Measured live from our prediction log, as of ${day(a.asOf)}, over ${spanText(a, win)} (average miss in feet; each forecast checked against the gauge reading closest to its target time): ${hs.join("; ")}. Longer horizons are much less certain.${nmText} Do not quote these as a guarantee.`;
+  const sv = a.stormModelSince ? [3, 6, 12, 24].map((h) => ({ h, f: stormModelFigure(a.overall, h, win) })).filter((x) => x.f && x.f.n >= MIN_CHECKS) : [];
+  const svText = sv.length ? ` The storm-aware version (live since ${day(a.stormModelSince as string)}; 12 and 24 h now come from the gauge-only model with a rain correction on storm hours) has its own record: ${sv.map(({ h, f }) => `${h} h: ${f!.n} checks, average miss ${ftx(f!.maeFt)} ft vs ${ftx(f!.baseMaeFt)} ft for "no change"`).join("; ")}.` : "";
+  return `Measured live from our prediction log, as of ${day(a.asOf)}, over ${spanText(a, win)} (average miss in feet; each forecast checked against the gauge reading closest to its target time): ${hs.join("; ")}. Longer horizons are much less certain.${nmText}${svText} Do not quote these as a guarantee.`;
 }
 
 /** The small line under a gauge's chart, or null when that gauge has too few checks. */

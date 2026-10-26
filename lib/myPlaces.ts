@@ -66,6 +66,8 @@ export type Glance = {
   baseTone?: GlanceTone;
   /** A reservoir upstream of this place's gauge is releasing water (official figures or a news report), or null. */
   release?: { name: string; confirmed: boolean; etaHours: number | null } | null;
+  /** Heavy rain (50 mm or more, or the heavier scenario 100 mm) is forecast over the hills above this place's gauge in the next 24 h (lib/rainRisk.ts). Only looked up for gauges that are not calm; null/absent = no or unknown. */
+  rainRisk?: boolean | null;
   /** Satellite street-rain rule level, towns in a rain zone only. */
   street: "possible" | "likely" | null;
   /** True when the street rule is what sets the tone (the river alone would say less). */

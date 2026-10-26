@@ -1,5 +1,7 @@
 import { fetchBasinSnapshot, fetchStationData } from "@/lib/arcgis";
 import { loadForecast } from "@/lib/forecast";
+import { rainRiskLine, type RainRisk } from "@/lib/rainRisk";
+import { CloudRain } from "lucide-react";
 import { getAccuracy, stationSummary } from "@/lib/accuracy";
 import { isStale } from "@/lib/readings";
 import { detectUnit } from "@/lib/units";
@@ -16,7 +18,9 @@ export async function StationCard({ lang, stationName, basin }: { lang: Locale; 
   const unit = detectUnit(data.thresholds, stationName);
   const th = data.thresholds;
   const hasT = th.alert != null || th.minor != null || th.major != null;
-  const [forecast, acc] = await Promise.all([basin && !isStale(data.latest) ? chartForecast(basin, stationName) : null, getAccuracy()]);
+  const [fc, acc] = await Promise.all([basin && !isStale(data.latest) ? chartForecast(basin, stationName) : null, getAccuracy()]);
+  const forecast = fc?.chart ?? null;
+  const risk = fc?.rainRisk ?? null;
   // One honest line about how this gauge's own forecasts have done (hidden below ~10 checks).
   const sum = stationSummary(acc, stationName);
   const fmt = (v: number) => (v < 0.095 ? v.toFixed(2) : v.toFixed(1));
@@ -37,6 +41,15 @@ export async function StationCard({ lang, stationName, basin }: { lang: Locale; 
       </div>
       <div className="px-2 sm:px-6 pb-4 sm:pb-6">
         <LevelChartLazy station={stationName} readings={data.readings} thresholds={th} unit={unit} forecast={forecast} />
+        {risk && (
+          <p className="mt-2 mx-2 sm:mx-0 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100" data-testid="rain-risk">
+            <CloudRain className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <span>
+              {rainRiskLine(risk, lang)}
+              {lang !== "en" ? <span className="ml-1 text-xs opacity-70">{lang === "si" ? "(කෙටුම්පත් පරිවර්තනය)" : "(வரைவு மொழிபெயர்ப்பு)"}</span> : null}
+            </span>
+          </p>
+        )}
         {accLine && <p className="mt-2 px-2 sm:px-0 text-xs text-slate-500 dark:text-slate-400">{accLine}</p>}
         {!hasT && (
           <p className="mt-3 px-2 sm:px-0 text-sm text-slate-600 dark:text-slate-400">
@@ -48,14 +61,20 @@ export async function StationCard({ lang, stationName, basin }: { lang: Locale; 
   );
 }
 
-/** The model forecast as chart points; null (nothing drawn) unless a fitted model produced one. Never throws. */
-async function chartForecast(basin: string, station: string): Promise<ChartForecast | null> {
+/**
+ * The model forecast as chart points (null = nothing drawn unless a fitted model produced one) and the heavy-rain warning
+ * (shown for every gauge with a rain forecast, model or trend). Never throws.
+ */
+async function chartForecast(basin: string, station: string): Promise<{ chart: ChartForecast | null; rainRisk: RainRisk | null } | null> {
   try {
     const snapshot = await fetchBasinSnapshot(basin);
     if (!snapshot.length) return null;
     const f = await loadForecast(basin, snapshot, station);
-    if (f.method !== "model" || f.status === "unavailable" || !f.horizons.length) return null;
-    return { points: f.horizons.map((h) => ({ ts: h.ts, level: h.level, low: h.low, high: h.high })) };
+    const ok = f.method === "model" && f.status !== "unavailable" && f.horizons.length > 0;
+    return {
+      chart: ok ? { points: f.horizons.map((h) => ({ ts: h.ts, level: h.level, low: h.low, high: h.high })) } : null,
+      rainRisk: f.status === "unavailable" ? null : f.rainRisk,
+    };
   } catch {
     return null;
   }
