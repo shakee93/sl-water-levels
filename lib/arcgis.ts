@@ -60,7 +60,13 @@ const fetchPageCached = unstable_cache(
         if (!r.ok) throw new Error(`ArcGIS -> HTTP ${r.status}`);
         const json = (await r.json()) as ArcgisPage & { error?: { code?: number; message?: string } };
         if (json.error) {
-          throw new Error(`ArcGIS error ${json.error.code ?? ""}: ${json.error.message ?? "unknown"}`.trim());
+          const err = new Error(`ArcGIS error ${json.error.code ?? ""}: ${json.error.message ?? "unknown"}`.trim());
+          // quota: retrying at once only spends more of the shared per-minute units (see revalidate below)
+          if (json.error.code === 429) {
+            lastErr = err;
+            break;
+          }
+          throw err;
         }
         if (!Array.isArray(json.features)) throw new Error("ArcGIS response had no features");
         return { features: json.features, exceededTransferLimit: json.exceededTransferLimit };
@@ -71,7 +77,11 @@ const fetchPageCached = unstable_cache(
     throw lastErr ?? new Error("ArcGIS request failed");
   },
   ["arcgis-page"],
-  { revalidate: 60 },
+  // 5 minutes (was 60 s until 26 Oct 2026). The Irrigation Department's ArcGIS org allows 3,000 request units a minute for
+  // EVERYONE using its data (their own dashboard included) and ran out on a flood afternoon, answering 429 "Too many
+  // requests" for half an hour. Gauges report once an hour, so 5 min costs freshness little; the background checker
+  // (workers/scheduler, every 5 min) still notices a new reading for X and push.
+  { revalidate: 300 },
 );
 
 // generateMetadata, the page and its Suspense children ask for the same URL at the same moment; on a
