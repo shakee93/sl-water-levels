@@ -16,7 +16,7 @@ import path from "node:path";
 
 export const GM_SINCE = 1792841552000; // 2026-10-24, commit 717de26 (gauge-only model live)
 // Storm-aware version (v3): gauge-only model at all of 1/3/6/12/24 h plus the rain correction on storm hours. Replaced the 8-day rain ridge at 12/24 h.
-export const STORM_SINCE = 1793000000000; // placeholder, set to the real deploy time right after the push
+export const STORM_SINCE = 1792991600000; // 2026-10-26, commit 2242440 deployed (Vercel status success 1792991585)
 const FT = 0.3048, STEADY_FT = 0.02, DAY = 864e5;
 const HORIZONS = [1, 3, 6, 12, 24];
 const out = process.argv[2];
