@@ -422,7 +422,7 @@ The correction itself still reads the catchment rain series, and for Holombuwa o
 storm hours from measured rain at the gauge and upstream (3 h and 6 h), leaving one day out: error as a share of the gauge's typical swing, 1 h: shipped 0.158, with measured rain 0.158; 3 h 0.304 vs 0.307; 6 h 0.308 vs 0.313
 (93 to 105 held-out storm hours each). No gain, so no model change, no "v4", and no change to calm hours. What the shipped model said at Holombuwa: at 09:10 (5.9 ft) it said 6.4 ft in 1 h and 6.7 ft in 3 h; the river read
 10.0 ft and 15.3 ft. At 10:06 (9.7 ft): 11.2 ft and 11.8 ft; actual 13.1 and 15.3 ft. The model cannot know a cloudburst is under way from level changes alone; 12 days is too short to fit rain features that do better.
-Revisit when a monsoon season of `rain_fall` is archived (the data branch keeps it: `.github/workflows/snapshot.yml`). GSMaP satellite rain (data branch `gsmap/`, since 23 Oct) is not used: too short to backtest.
+Revisit when a monsoon season of `rain_fall` is archived (the data branch keeps it: `.github/workflows/snapshot.yml`). GSMaP satellite rain was not used here (too short to backtest); the 11-month GSMaP history was built afterwards and is used by v4, the next section.
 
 ### "Get ready" from a forecast: one shared rule (`lib/verdictLift.ts`, 26 Oct 2026)
 
@@ -499,6 +499,59 @@ that carry a warning word (`wantTitle`); `/api/warnings` lists `districts`.
 
 **Not done on purpose.** A "heavy rain measured upstream" push to followers of a gauge (the owner decides); satellite in any warning or in the storm model's inputs; the rain strip under the chart; a Slack ping
 when a measured trip happens; extra health checks for OGIMET freshness.
+
+**Measured-rain storm model (v4, added 26 Oct 2026; `lib/model/storm-model-v4.json`, `scripts/fit-storm-model-v4.mjs`).** v3 reads Open-Meteo's own estimate of rain that already fell, which the rain audit
+(`research/rain-audit.md`) found far from the rain gauges and the satellite in a storm (about 0.4 times in the 26 Oct event) and, over 11 months, 2.2 times the satellite in total but only 0.43 correlated with it hour by hour (6 h sums).
+v4 reads rain that was MEASURED instead, for the past. All numbers below are BACKTEST numbers, not live results.
+
+*Measured rain history.* JAXA GSMaP hourly rain per catchment for 1 Nov 2025 to 26 Oct 2026 (8,640 hours; 0.2% of hours missing, all of them today's not-yet-published ones), the same cells as the forecast
+(each `lib/model/catchments.json` cell to its nearest 0.1 degree pixel, plain mean), for three products: GSMaP_NRT, Gauge_NRT (gauge-calibrated) and GSMaP_NOW (the :00 file, hour started at the file stamp).
+`scripts/gsmap-history/` has the downloader (`fetch_gsmap.py`, streams, crops to Sri Lanka, deletes the raw file; run on the Mac mini) and `aggregate.py` (per-catchment series, plus the "near" and "up" parts below).
+Against NRT, over 23 Nov to 20 Oct and the 39 catchments: **NOW totals 1.08 times NRT (median; 0.87 to 1.49)**, hourly (6 h sums) correlation 0.78; Gauge_NRT 1.19 times (1.13 to 1.31), correlation 0.97 (it is NRT rescaled by gauges, same timing);
+Open-Meteo's own past hours 2.19 times NRT (1.3 to 3.0), correlation 0.43. ERA5-Land from the Open-Meteo archive returned no values for these cells, so it was not used.
+A pixel is not a point: the satellite catchment mean read 13.8 mm in 3 h at Holombuwa at 09:30 on 26 Oct while the gauge itself read 67 mm. Small cloudbursts are under-read, which no model can fix from the satellite.
+
+*Bias and clip.* One factor per catchment, gauge rain divided by satellite rain over 15 to 26 Oct (gauge readings spread over the hours they cover; satellite hours capped at 40 mm/h for the sum), shrunk to the zone value
+(wet zone 0.92, dry zone 0.81) with 60 mm of prior, limited to 0.25 to 1.5. Every hour of a catchment mean is then capped at 15 mm/h (the street-flood clip; 30 mm/h scored slightly better, 24 h storm miss 2.18 against 2.21 ft, within noise).
+Nagalagam Street's rain sensor (always 0) is left out of the factors. The factors are in `stations.<gauge>.bias` of the model file; the app applies them to the raw satellite hours.
+
+*Up-channels.* `lib/model/subcatchments.json` (`scripts/build-subcatchments.mjs`) splits each gauge's catchment into **near** (cells in no upstream gauge's catchment) and **up** (the cells of the gauges above it). The model gets rain beside the gauge
+and rain on the up-channels as separate inputs, each timed by a travel time learned per gauge (the lag, 0 to 36 h, at which hourly rain best matches the next rise; a correlation under 0.15 is not trusted), e.g. Hanwella 7 h from beside it and 7 h from the Glencourse / Holombuwa side.
+Features per horizon (10): near rain and up-channel rain arriving in the 7 hours around the travel time, those times wet ground (72 h of measured rain), forecast rain before the horizon (Open-Meteo, as v3) and that times wet ground, and measured rain of the last 1, 3, 6, 12, 24 hours.
+Same fit as v3: non-negative L1 ridge pooled over gauges (scaled per gauge), storm hours only, leave one storm out with 48 h purged, nested bands. Storm hour = measured rain of the last 24 h or forecast of the next 24 h reaches 40 mm, or 25 mm fell in 3 h
+(23 storm events in the 11 months). One forecast-time rule to keep it live-consistent: the newest satellite hour is not out yet at the forecast time, so measured rain is used up to the hour ending an hour earlier and the weather model's own hour fills the gap.
+
+*Where it ships.* A gauge/horizon uses v4 only if, over the storm hours of EITHER rule, "v4 where its gate is on, else v3" beat v3 by 3% or more, over 60 hours or more and 3 events or more, winning in at least half the events: **29 of 180 gauge/horizons**
+(Dunamale 6/12/24 h, Ellagawa 24, Hanwella 12/24, Horowpothana all five, Kalawellawa 24, Magura 6/12/24, Manampitiya all five, Moragaswewa 6/12/24, Nagalagam Street 12/24, Nawalapitiya 24, Peradeniya 12, Putupaula 6/24 h). Everywhere else v3 or the gauge-only model runs unchanged,
+so **calm hours are identical to before by construction** (the 275,000 calm gauge-hours are untouched; v4's gate adds 4,300 storm hours per horizon where v3 was calm, and there v4 is 0.1 to 3% better, never worse).
+It runs live only when the satellite file is under 3 h old and the hour ending an hour before the forecast time is in it; otherwise v3. `Forecast.stormHorizonsMeasured` lists the steps that used it.
+
+Mean miss in feet, storm hours (either rule), all 36 gauges, leave one storm out; "v4 shipped" is flattered a little by choosing where it ships, "v4 everywhere" is not:
+
+| | 1 h | 3 h | 6 h | 12 h | 24 h |
+|---|---|---|---|---|---|
+| "No change" | 0.244 | 0.660 | 1.145 | 1.807 | 2.644 |
+| Gauge-only | 0.166 | 0.512 | 0.955 | 1.658 | 2.576 |
+| v3 (shipped before) | 0.164 | 0.503 | 0.926 | 1.559 | 2.305 |
+| v4 shipped | 0.164 | 0.503 | 0.917 | 1.532 | 2.213 |
+| v4 on every gauge | 0.165 | 0.505 | 0.927 | 1.552 | 2.287 |
+| 80% range covered, v3 / v4 | 73 / 73% | 71 / 71% | 70 / 72% | 67 / 70% | 68 / 72% |
+| Range width ft, v3 / v4 | 0.31 / 0.31 | 0.95 / 0.96 | 2.2 / 2.4 | 4.1 / 4.6 | 7.1 / 7.9 |
+
+Ditwah (24 Nov to 4 Dec, held out): v3 / v4 shipped / v4 everywhere, 6 h 1.63 / 1.60 / 1.63 ft, 12 h 2.69 / 2.57 / 2.71, 24 h 4.04 / 3.72 / 4.29 (range covered 56% to 61% at 24 h). Hours with 100 mm or more: 24 h 3.81 / 3.34 ft (v3 / v4), 12 h 2.57 / 2.40.
+Wet-zone gauges 24 h 2.39 / 2.28; dry-zone gauges 1.86 / 1.86 (no gain, and their ranges cover only 52% to 56%: the satellite over-reads there, see the rain audit). Alert crossings seen by the top of the range at least 1 / 3 / 6 / 12 h ahead (43 crossings): v3 42 / 29 / 24 / 17, v4 42 / 30 / 24 / 17;
+minor (30): v3 24 / 17 / 15 / 12, v4 25 / 18 / 16 / 13; major (17): both 14 / 8 / 7 / 7. Honest summary: the satellite's measured rain gives a modest, real gain at 12 and 24 h on big, slow rivers in big storms (about 4% overall, 8% in Ditwah) and nothing at 1 to 3 h.
+**The 26 Oct Holombuwa cloudburst is not helped**: at 09:30 (7.3 ft) both v3 and v4 say 8.0 ft in 1 h, 8.2 ft in 3 h (it read 11.1 and 15.3 ft), because the catchment-mean satellite saw 14 mm in 3 h; v4 does not ship at Holombuwa. The rain gauge warning (`lib/measuredRain.ts`) remains the signal for that kind of storm.
+Rows for 26 Oct are held out (the fit left that event out); the 14 days of gauge `rain_fall` are too few to fit with, as before. Variants tried (24 h storm miss v3 / v4 shipped): NRT 2.29 / 2.21, Gauge_NRT 2.15 / 2.09, no bias correction 2.26 / 2.18, clip 30 2.27 / 2.18, gate 60 mm 2.58 / 2.64 (worse: fewer storms); the shipped file is NOW, the product the site reads.
+
+*Live.* `scripts/gsmap-snapshot.mjs` (every 30 min) now also writes, for every gauge, `hourly`, `hourlyNear`, `hourlyUp`: the last 96 whole hours of raw satellite rain from the :00 files (and `hourlyEnd`); `latest.json` is written compact. JAXA's "latest" directory holds only 24 h, so a fresh data branch
+has 24 h of hours until the series fills (about 3 days for the 72 h wet-ground input, which counts as dry until then). `lib/forecast.ts` reads it through `loadForecast` (`getGsmap`, cached 10 min, one extra fetch) and the live path was replayed against the Ditwah hours: v4 used at 12 and 24 h at Hanwella, v3 identical when the file is stale.
+`lib/weather.ts` also returns the near and up series (`nearRain`, `upRain`) from the same Open-Meteo response, and retries the rain request once. Accuracy: forecasts issued from `V4_SINCE` (`scripts/accuracy-snapshot.mjs`) form the `model-v4` segment.
+
+*Per-gauge rain thresholds and how each river reacts* (`scripts/river-rain-response.mjs`, `lib/model/rain-thresholds.json`, `lib/model/river-response.json`, `research/river-rain-response.md`). For each gauge: the catchment rain over 1 / 3 / 6 / 12 / 24 h that was followed, at least half the time and at least 3 times the gauge's own base rate, by a rise of 1 ft or more within 24 h (and by crossing the alert mark),
+the window that separated rise from no rise best (shortest within 0.03 of the best AUC), the lag, the rise per 10 mm and time to peak. The relationship is weaker than hoped (AUC 0.4 to 0.8): published only where confident (medium or high: at least 3 separate events and AUC 0.6 or more), 10 of 36 gauges, e.g. Hanwella 35 mm in 24 h (alert 40), Moragaswewa 35 (50), Badalgama 30, Giriulla 30, Dunamale 50, Horowpothana 20, Manampitiya 30, Magura 40, Moraketiya 35, Padiyathalawa 70.
+They are AREA averages (a point gauge in a cloudburst reads more) and the other gauges keep the national numbers (`lib/rainWords.ts`). The station page shows "How this river reacts to rain" only for those gauges (`app/RiverReaction.tsx`, si/ta drafts).
+*Not done:* the Mutwal Inlet observed sea level for Nagalagam Street (only about 4 days of history exist to validate a surge term; the tide term of the gauge model is unchanged).
 
 ### MCP server at `/mcp`
 

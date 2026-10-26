@@ -35,10 +35,12 @@ import { getBasinWeather, getGlofas, hasCatchment, type BasinWeather, type Fetch
 import coefficientsJson from "./model/coefficients.json";
 import gaugeModelJson from "./model/gauge-model.json";
 import stormModelJson from "./model/storm-model.json";
+import stormV4Json from "./model/storm-model-v4.json";
+import type { GsmapFile, GsmapGauge } from "./gsmap";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
 import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
-import { rainTotals, stormFeatures } from "./model/stormModel.mjs";
+import { isStormHour4, rainTotals, stormFeatures, stormFeatures4, tier4Bin, v4Rain } from "./model/stormModel.mjs";
 import {
   evalStation,
   floorSigmaM,
@@ -74,6 +76,20 @@ const STORM = stormModelJson as unknown as {
   /** Per horizon: factor the held-out residual quantiles were stretched by so that storm-hour coverage reaches ~78%. */
   bandFactor: Record<string, number>;
   stations: Record<string, { up: string[]; win: { from: number; to: number }; scale: number; horizons: Record<string, { base: GaugeStationModel["horizons"][string] | null; use: boolean; band?: { q10: number[]; q90: number[] } }> }>;
+};
+/**
+ * v4 (lib/model/storm-model-v4.json, scripts/fit-storm-model-v4.mjs): the same idea read from MEASURED rain. The past comes from the
+ * satellite (JAXA GSMaP_NOW per catchment, bias-corrected per catchment, hourly cap), split into rain beside the gauge and rain on the
+ * up-channels, each with its own travel time. Used only per gauge/horizon where the leave-one-storm-out backtest beat v3 on storm hours,
+ * and only when the satellite hours it needs are there (file under 3 h old, hour ending at the forecast time present); otherwise v3.
+ */
+const STORM4 = stormV4Json as unknown as {
+  gate: number;
+  burstMm3h: number;
+  clipMmPerHour: number;
+  pooled: Record<string, { b0: number; w: number[]; q10: number[]; q90: number[] }>;
+  bandFactor: Record<string, number>;
+  stations: Record<string, { scale: number; lags: { near: number; up: number }; bias: { k: number }; horizons: Record<string, { use: boolean; band?: { q10: number[]; q90: number[] } }> }>;
 };
 /** The storm correction is never allowed to move a forecast by more than this many "typical 24 h swings" of the gauge. */
 const STORM_MAX_CORR = 2;
@@ -150,6 +166,8 @@ export type Forecast = {
   rainRisk: RainRisk | null;
   /** Horizons (hours) whose level and range include the storm rain adjustment; empty on calm hours. */
   stormHorizons: number[];
+  /** Of `stormHorizons`, the steps that read MEASURED (satellite) rain with up-channel timing (model v4); the rest read the weather model's rain (v3). */
+  stormHorizonsMeasured: number[];
 };
 
 export type ForecastInput = {
@@ -161,6 +179,8 @@ export type ForecastInput = {
   weather: Fetched<BasinWeather> | null | undefined;
   /** Result of getGlofas; null = basin has no cell. */
   glofas?: Fetched<Glofas> | null;
+  /** gsmap/latest.json (lib/gsmap.ts getGsmap: null when missing or older than 3 h); feeds the measured-rain storm model (v4). */
+  gsmap?: GsmapFile | null;
   now?: number;
 };
 
@@ -170,10 +190,10 @@ export const loadForecast = cache(async function loadForecast(basin: string, sna
   const key = normaliseBasin(basin);
   const covered = COEFFS[station] && normaliseBasin(COEFFS[station].basin) === key;
   // Rain is fetched for every gauge that has a grid (trend-only gauges show it too); GloFAS only matters to fitted models.
-  const [weather, glofas] = hasCatchment(key, station)
-    ? await Promise.all([getBasinWeather(key, station), covered ? getGlofas(key) : null])
-    : [null, null];
-  return makeForecast({ basin, snapshot, station, weather, glofas });
+  const [weather, glofas, gsmap] = hasCatchment(key, station)
+    ? await Promise.all([getBasinWeather(key, station), covered ? getGlofas(key) : null, STORM4.stations[station] ? import("./gsmap").then((m) => m.getGsmap()) : null])
+    : [null, null, null];
+  return makeForecast({ basin, snapshot, station, weather, glofas, gsmap });
 });
 
 const r5 = (p: number) => Math.round(p * 20) / 20;
@@ -204,7 +224,7 @@ function emptyResult(station: string, unit: Unit, headline: string, notes: strin
     station, unit, currentLevel: level, asOfTs,
     method: "none", status: "unavailable", direction: "unknown", experimental: true,
     basis: [], horizons: [], crossings: [], outlook: null, headline, notes,
-    signals: signalsOf(trend), rain: null, rainRisk: null, stormHorizons: [],
+    signals: signalsOf(trend), rain: null, rainRisk: null, stormHorizons: [], stormHorizonsMeasured: [],
   };
 }
 
@@ -245,10 +265,19 @@ export function makeForecast(input: ForecastInput): Forecast {
   const measured = measuredAt(snapshot, basin, station, now);
   const coef = COEFFS[station];
   const f = !coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)
-    ? fromTrend(station, me, trend, L0, anchor, input.weather, gaugeSteps(snapshot, station, anchor, now, null, !!measured))
+    ? fromTrend(station, me, trend, L0, anchor, input.weather, gaugeSteps(snapshot, station, anchor, now, null, !!measured, v4InputOf(input)))
     : fromModel(input, me, coef, trend, L0, anchor, now, !!measured);
   return measured ? { ...f, rainRisk: withMeasured(f.rainRisk, measured) } : f;
 }
+
+/** The satellite catchment rain for this gauge plus the weather series the v4 model times it against; null when either is missing. */
+function v4InputOf(input: ForecastInput): V4In | null {
+  const w = input.weather && input.weather.ok ? input.weather.data : null;
+  const key = `${normaliseBasin(input.basin)}/${input.station}`;
+  const sat = input.gsmap?.stations?.[key] ?? null;
+  return w && sat ? { sat, w } : null;
+}
+type V4In = { sat: GsmapGauge; w: BasinWeather };
 
 /**
  * Measured heavy rain (lib/measuredRain.ts) at `station` or a gauge upstream of it on the same river (BASIN_ORDER; a river that
@@ -318,7 +347,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
     horizons: [{ h: 1, ts: anchor + HOUR_MS, level: pred, low, high }],
     crossings: [], outlook: null, headline,
     notes,
-    signals: signalsOf(t, w?.past6hMm ?? null), rain, rainRisk: rainRiskOf(rain ? { det: rain.next24hMm.det, p90: rain.next24hMm.p90 } : null), stormHorizons: [],
+    signals: signalsOf(t, w?.past6hMm ?? null), rain, rainRisk: rainRiskOf(rain ? { det: rain.next24hMm.det, p90: rain.next24hMm.p90 } : null), stormHorizons: [], stormHorizonsMeasured: [],
   };
 }
 
@@ -418,9 +447,10 @@ function fromModel(
   // misses were larger than "level stays put" (0.99 vs 0.72 ft, 1.43 vs 1.13 ft), so a horizon that is not skilled ships
   // persistence with an empirical range. On storm hours the pooled rain correction is added (gauges/horizons where the
   // leave-one-storm-out backtest said it helps) and the upper end of the range allows for the heavier ensemble rain.
-  const gsteps = gaugeSteps(snapshot, station, anchor, now, w ? { det: w.rain, p90: w.scenarios?.p90 ?? null } : null, measuredHeavy);
+  const gsteps = gaugeSteps(snapshot, station, anchor, now, w ? { det: w.rain, p90: w.scenarios?.p90 ?? null } : null, measuredHeavy, v4InputOf(input));
   const v2h = new Set<number>();
   const stormH = new Set<number>();
+  const stormM = new Set<number>();
   for (const st of gsteps ?? []) {
     const j = hs.findIndex((x) => x.h === st.h);
     if (j < 0) continue;
@@ -431,6 +461,7 @@ function fromModel(
     hs[j] = { h: st.h, mix, persistence: !st.skilled && !st.storm, level: mu, low: mu + st.q10 * gi, high: mu + st.q90 * gi };
     v2h.add(st.h);
     if (st.storm) stormH.add(st.h);
+    if (st.measured) stormM.add(st.h);
   }
   // A persistence horizon says "stays where it is", which is wrong right after a rain-driven
   // rise: a river that peaks at 12h is rarely back to normal by 24h. Blend 40% of the previous
@@ -551,6 +582,7 @@ function fromModel(
     basis.push(`Forecast model estimate of catchment rain (Open-Meteo, area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm modelled for the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
   }
   if (v2h.size) basis.push(`The ${[...v2h].sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings, including the November 2025 Ditwah floods); where this was tested against 'level stays the same' it missed by less.`);
+  if (stormM.size) basis.push(`The ${[...stormM].sort((a, b) => a - b).join(", ")} hour steps read the rain the satellite measured over ${station}'s catchment (JAXA GSMaP, corrected for how it reads here), with rain beside the gauge and rain on the channels upstream timed separately (about ${STORM4.stations[station]?.lags.near ?? "?"} h from beside the gauge${STORM4.stations[station]?.lags.up ? `, about ${STORM4.stations[station].lags.up} h from upstream` : ""}). Tested storm by storm it was closer than the version that reads the weather model's rain.`);
   if (stormH.size) basis.push(`Heavy rain upstream is part of the ${[...stormH].sort((a, b) => a - b).join(", ")} hour steps: rain that has fallen or is forecast over the catchment above ${station} raises the level, and the top of the range allows for the heavier forecast rain. Tested storm by storm (leaving each storm out, Ditwah included) it was closer than the river's own trend alone.`);
   const old = hs.filter((x) => !v2h.has(x.h));
   if (old.length) {
@@ -570,6 +602,7 @@ function fromModel(
     rain: w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null,
     rainRisk: w ? rainRiskOf({ det: w.next24hMm.det, p90: w.next24hMm.p90 }) : null,
     stormHorizons: [...stormH].sort((a, b) => a - b),
+    stormHorizonsMeasured: [...stormM].sort((a, b) => a - b),
   };
 }
 
@@ -600,6 +633,8 @@ type GaugeStep = {
   missing: string[];
   /** True when the pooled storm rain correction is in `delta` and the range is the storm range (q10 / q90 already final, no widening). */
   storm: boolean;
+  /** The storm correction came from the measured-rain model (v4). */
+  measured?: boolean;
 };
 
 /** Hourly catchment rain: the deterministic series (past analysis + forecast) and the heavier ensemble scenario (p90), keyed by hour-end ms. */
@@ -614,7 +649,7 @@ type StormRain = { det: RainSeries; p90: RainSeries | null };
  * Returns null when the gauge has no entry in the model files. When the gauge's own history is too short for the features
  * the range comes from the middle volatility bin and `missing` names it.
  */
-function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number, rain: StormRain | null = null, measuredHeavy = false): GaugeStep[] | null {
+function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number, rain: StormRain | null = null, measuredHeavy = false, v4in: V4In | null = null): GaugeStep[] | null {
   const gm = GAUGE_MODEL.stations[station];
   const sm = STORM.stations[station];
   if (!gm) return null;
@@ -634,6 +669,12 @@ function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, n
   // Storm hours: forecast or catchment-analysis rain reaches the gate, OR the gauges themselves measured heavy rain
   // (lib/measuredRain.ts). The correction still reads the catchment rain series, so it needs that series (rain != null).
   const stormOn = !!sm && (heaviest >= STORM.gate || (measuredHeavy && !!rain));
+  // v4: measured rain for the past, if the satellite hours are there (hour ending at the forecast time, file fresh)
+  const m4 = STORM4.stations[station];
+  const r4 = v4in && m4
+    ? v4Rain(v4in.sat, m4.bias.k, STORM4.clipMmPerHour, origin, { full: v4in.w.rain, near: v4in.w.nearRain, up: v4in.w.upRain, fullHeavy: v4in.w.scenarios?.p90 ?? null })
+    : null;
+  const stormOn4 = !!r4 && isStormHour4(r4.rFull, STORM4.gate, STORM4.burstMm3h);
   const out: GaugeStep[] = [];
   const keys = new Set([...Object.keys(gm.horizons), ...Object.keys(sm?.horizons ?? {}).filter((k) => sm?.horizons[k].base)]);
   for (const key of keys) {
@@ -648,6 +689,29 @@ function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, n
     const step: GaugeStep = { h, delta: base, q10: band.q10, q90: band.q90, skilled, missing: f ? f.missing : [station], storm: false };
     const sh = sm?.horizons[key];
     const pooled = STORM.pooled[key];
+    const sh4 = m4?.horizons[key];
+    const pooled4 = STORM4.pooled[key];
+    if (stormOn4 && r4 && sh4?.use && pooled4 && f) {
+      const x = stormFeatures4(r4.rFull, r4.rNear, r4.rUp, h, m4.lags);
+      if (x) {
+        const cap = STORM_MAX_CORR * m4.scale;
+        const corrOf = (xs: number[]) => Math.max(-cap, Math.min(cap, m4.scale * (pooled4.b0 + pooled4.w.reduce((a, w, j) => a + w * xs[j], 0))));
+        const corr = corrOf(x);
+        const xH = r4.rFullHeavy ? stormFeatures4(r4.rFullHeavy, r4.rNear, r4.rUp, h, m4.lags) : null;
+        const corrH = xH ? Math.max(corr, corrOf(xH)) : corr;
+        const bin = tier4Bin(r4.rFull);
+        const bf = STORM4.bandFactor[key] ?? 1;
+        const q10 = sh4.band ? sh4.band.q10[bin] : m4.scale * pooled4.q10[bin] * bf;
+        const q90 = sh4.band ? sh4.band.q90[bin] : m4.scale * pooled4.q90[bin] * bf;
+        step.delta = base + corr;
+        step.q10 = Math.min(q10, 0);
+        step.q90 = Math.max(q90, 0, corrH - corr);
+        step.storm = true;
+        step.measured = true;
+        out.push(step);
+        continue;
+      }
+    }
     if (stormOn && sh?.use && pooled && rain && f) {
       const x = stormFeatures(rAt(rain.det), h, sm.win);
       if (x) {

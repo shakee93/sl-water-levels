@@ -342,5 +342,6 @@ for (const g of gauges) {
   }) + "\n");
   console.log(`wrote grid.json (${keep.length} steps)`);
 }
-writeFileSync(path.join(root, "latest.json"), JSON.stringify(out, null, 1) + "\n");
+// compact: every station now carries 96 hourly values x 3, which pretty-printing would put one per line
+writeFileSync(path.join(root, "latest.json"), JSON.stringify(out) + "\n");
 console.log(`wrote latest.json (anchor ${out.latestStart}, ${times.length} steps kept)`);

@@ -32,6 +32,16 @@ export type GsmapGauge = {
   mm3h: number | null;
   mm6h: number | null;
   mm24h: number | null;
+  /**
+   * The last 96 whole hours of raw satellite rain, oldest first (mm in that hour; null = file missing); the newest ends at `hourlyEnd` (ms).
+   * `hourlyNear` = only the cells beside the gauge, `hourlyUp` = only the cells of the gauges upstream (null when it has none).
+   * Read by the v4 storm model (lib/model/stormModel.mjs v4Rain), which applies the per-catchment bias factor and the hourly cap itself.
+   * Absent in files written before 26 Oct 2026 evening.
+   */
+  hourlyEnd?: number;
+  hourly?: (number | null)[];
+  hourlyNear?: (number | null)[] | null;
+  hourlyUp?: (number | null)[] | null;
 };
 
 /** Rain over a named box of pixels (scripts/gsmap-snapshot.mjs STREET_RAIN_ZONES), same fields as a gauge catchment. */

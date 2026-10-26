@@ -1,4 +1,91 @@
 {
-  "note": "Per-gauge flood-relevant rain thresholds, read by lib/rainTriggers.ts. Placeholder written by the rain-audit work so the import resolves; the forecast-model work replaces it. Shape: gauges[<gauge name>] = { mm1h?, mm3h?, mm24h? } (mm over the gauge's response window that historically preceded a rise). Missing = national numbers.",
-  "gauges": {}
+ "note": "Per-gauge flood-relevant rain thresholds, read by lib/rainTriggers.ts. Written by scripts/river-rain-response.mjs from 11 months of hourly levels and JAXA GSMaP_NOW catchment rain (bias-corrected per catchment against rain gauges, each hour clipped at 15 mm/h). mmNh = catchment-mean mm over the last N hours that was followed, at least half of the time, by a rise of 1 ft or more within 24 h (smallest tested amount with at least 8 hours and 2 separate events). windowH = the window whose rain separated rise from no-rise best; mmWindow = the threshold for that window; mmAlert = the same for crossing the alert mark (>= 30% of hours). AREA averages, not a point gauge reading: a point gauge in a cloudburst reads more. Gauges with no determinable threshold use the national numbers (lib/rainWords.ts).",
+ "basis": "catchment-mean satellite rain, bias-corrected",
+ "generatedAt": "2026-10-26T08:46:30.171Z",
+ "gauges": {
+  "Badalgama": {
+   "mm6h": 5,
+   "mm12h": 12,
+   "mm24h": 30,
+   "windowH": 24,
+   "mmWindow": 30,
+   "confidence": "high",
+   "events": 16
+  },
+  "Dunamale": {
+   "mm24h": 50,
+   "windowH": 24,
+   "mmWindow": 50,
+   "confidence": "medium",
+   "events": 5
+  },
+  "Giriulla": {
+   "mm12h": 10,
+   "mm24h": 30,
+   "windowH": 24,
+   "mmWindow": 30,
+   "confidence": "high",
+   "events": 7
+  },
+  "Hanwella": {
+   "mm12h": 35,
+   "mm24h": 35,
+   "windowH": 24,
+   "mmWindow": 35,
+   "mmAlert": 40,
+   "confidence": "medium",
+   "events": 6
+  },
+  "Horowpothana": {
+   "mm6h": 15,
+   "mm12h": 20,
+   "mm24h": 20,
+   "windowH": 24,
+   "mmWindow": 20,
+   "confidence": "high",
+   "events": 9
+  },
+  "Magura": {
+   "mm24h": 40,
+   "windowH": 24,
+   "mmWindow": 40,
+   "mmAlert": 40,
+   "confidence": "medium",
+   "events": 3
+  },
+  "Manampitiya": {
+   "mm12h": 20,
+   "mm24h": 30,
+   "windowH": 24,
+   "mmWindow": 30,
+   "confidence": "medium",
+   "events": 10
+  },
+  "Moragaswewa": {
+   "mm6h": 10,
+   "mm12h": 20,
+   "mm24h": 35,
+   "windowH": 24,
+   "mmWindow": 35,
+   "mmAlert": 50,
+   "confidence": "high",
+   "events": 6
+  },
+  "Moraketiya": {
+   "mm24h": 35,
+   "windowH": 24,
+   "mmWindow": 35,
+   "mmAlert": 40,
+   "confidence": "medium",
+   "events": 5
+  },
+  "Padiyathalawa": {
+   "mm12h": 60,
+   "mm24h": 70,
+   "windowH": 24,
+   "mmWindow": 70,
+   "confidence": "medium",
+   "events": 3
+  }
+ }
 }

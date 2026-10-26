@@ -8,6 +8,7 @@ import { detectUnit } from "@/lib/units";
 import { LevelChartLazy } from "./LevelChartLazy";
 import type { ChartForecast } from "./LevelChart";
 import { RangePicker } from "./RangePicker";
+import { RiverReaction } from "./RiverReaction";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -50,6 +51,7 @@ export async function StationCard({ lang, stationName, basin }: { lang: Locale; 
             </span>
           </p>
         )}
+        <RiverReaction station={stationName} lang={lang} />
         {accLine && <p className="mt-2 px-2 sm:px-0 text-xs text-slate-500 dark:text-slate-400">{accLine}</p>}
         {!hasT && (
           <p className="mt-3 px-2 sm:px-0 text-sm text-slate-600 dark:text-slate-400">

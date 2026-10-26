@@ -5,7 +5,8 @@
 //
 // Each forecast point is checked against the gauge reading closest to its target time (within 40 minutes).
 // Levels are in feet. "No change" is the level at the time of the forecast. Segments:
-//   model-v3     issued since the storm-aware version went live (gauge-only model at 1/3/6/12/24 h + rain correction on storm hours)
+//   model-v4     issued since the measured-rain storm model went live (satellite rain, up-channels timed separately, where it beat v3; v3 elsewhere)
+//   model-v3     issued from the storm-aware version until v4: the storm-aware version went live (gauge-only model at 1/3/6/12/24 h + rain correction on storm hours)
 //   model        issued from 24 Oct 2026 (gauge-only 1/3/6 h model live; 12 / 24 h were still the older rain model) until then
 //   model-early  fitted-model forecasts before that
 //   trend        gauges without a fitted model (simple trend estimate)
@@ -13,7 +14,7 @@
 const URL_ = process.env.ACCURACY_URL ?? "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/accuracy/latest.json";
 
 export type Stat = { n: number; gauges: number; maeFt: number | null; baseMaeFt: number | null; inBandPct: number | null; bandFt: number | null; dirPct: number | null; dirSteadyPct: number | null };
-type BySeg = Partial<Record<"model" | "model-early" | "model-v3" | "trend", Record<string, Stat>>>;
+type BySeg = Partial<Record<"model" | "model-early" | "model-v3" | "model-v4" | "trend", Record<string, Stat>>>;
 export type AccuracyFile = {
   version: number;
   generatedAt: string;
@@ -22,6 +23,8 @@ export type AccuracyFile = {
   gaugeModelSince: string;
   /** Sri Lanka date the storm-aware version went live; absent in files written before it. */
   stormModelSince?: string;
+  /** Sri Lanka date the measured-rain storm model (v4) went live; absent until it does. */
+  stormModelV4Since?: string;
   overall: { d30?: BySeg; all?: BySeg };
   /** Fitted-model forecasts split by storm (a heavy-rain warning showing or a storm-horizon step in use) and calm hours. Absent in older files. */
   rainSplit?: { d30?: Partial<Record<"storm" | "calm", Record<string, Stat>>>; all?: Partial<Record<"storm" | "calm", Record<string, Stat>>> };
@@ -65,13 +68,16 @@ type Scope = { d30?: BySeg; all?: BySeg };
 export function figure(scope: Scope | undefined, h: number, win: Win, withTrend = false): Stat | null {
   const w = scope?.[win];
   if (!w) return null;
-  const m = pool([w.model?.[h], w["model-early"]?.[h], w["model-v3"]?.[h]]);
+  const m = pool([w.model?.[h], w["model-early"]?.[h], w["model-v3"]?.[h], w["model-v4"]?.[h]]);
   return m ?? (withTrend ? (w.trend?.[h] ?? null) : null);
 }
 /** Only the gauge-only model's own record (issued since it went live). */
-export const newModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => pool([scope?.[win]?.model?.[h], scope?.[win]?.["model-v3"]?.[h]]);
+export const newModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => pool([scope?.[win]?.model?.[h], scope?.[win]?.["model-v3"]?.[h], scope?.[win]?.["model-v4"]?.[h]]);
 /** Only the storm-aware version's own record (issued since it went live): its 12 / 24 h steps are the new gauge-only + rain model, not the old rain ridge. */
-export const stormModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => scope?.[win]?.["model-v3"]?.[h] ?? null;
+export const stormModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => pool([scope?.[win]?.["model-v3"]?.[h], scope?.[win]?.["model-v4"]?.[h]]);
+
+/** Only the measured-rain version's own record (issued since it went live); null until it has checks. */
+export const measuredStormFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => scope?.[win]?.["model-v4"]?.[h] ?? null;
 
 /** Fitted-model record on storm or calm hours for one horizon; null when the file has no split or it is empty. */
 export const rainSplitFigure = (a: AccuracyFile | null, mode: "storm" | "calm", h: number, win: Win): Stat | null => a?.rainSplit?.[win]?.[mode]?.[String(h)] ?? null;

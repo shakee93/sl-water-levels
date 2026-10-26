@@ -5,7 +5,8 @@
 //
 // Reads forecast_verification (each stored forecast point matched to the gauge reading closest to its target time,
 // within 40 minutes) joined to forecast_runs.current_level (the "no change" baseline). Everything is converted to feet.
-// Segments: "model-v3" forecasts issued from STORM_SINCE on (storm-aware: gauge-only model at every horizon + rain correction on
+// Segments: "model-v4" forecasts issued from V4_SINCE on (the storm model reads satellite-measured rain with up-channel timing where it beat v3; v3 and
+// the gauge-only model everywhere else), "model-v3" from STORM_SINCE to then (storm-aware: gauge-only model at every horizon + rain correction on
 // storm hours), "model" from GM_SINCE to then (gauge-only 1/3/6 h; 12/24 h still the older rain ridge), "model-early" before that,
 // and "trend" (simple estimate for gauges without a fitted model).
 // "rainSplit": the fitted-model forecasts (model + model-v3) split by whether rain was part of the picture when they were issued
@@ -20,6 +21,7 @@ import { feedbackRows, feedbackSql, publicFeedback } from "../lib/feedbackLearn.
 
 export const GM_SINCE = 1792841552000; // 2026-10-24, commit 717de26 (gauge-only model live)
 // Storm-aware version (v3): gauge-only model at all of 1/3/6/12/24 h plus the rain correction on storm hours. Replaced the 8-day rain ridge at 12/24 h.
+export const V4_SINCE = 9e15; // set to the deploy time of model-v4 when it ships (a far-future value = no v4 segment yet)
 export const STORM_SINCE = 1792991600000; // 2026-10-26, commit 2242440 deployed (Vercel status success 1792991585)
 const FT = 0.3048, STEADY_FT = 0.02, DAY = 864e5;
 const HORIZONS = [1, 3, 6, 12, 24];
@@ -67,7 +69,7 @@ const usable = rows
   .map((r) => {
     const k = r.unit === "m" ? 1 / FT : 1;
     return { ...r, p: r.p * k, y: r.y * k, c: r.c * k, low: r.low == null ? null : r.low * k, high: r.high == null ? null : r.high * k,
-      seg: r.method === "trend" ? "trend" : r.method === "model" ? (r.issued_at >= STORM_SINCE ? "model-v3" : r.issued_at >= GM_SINCE ? "model" : "model-early") : null };
+      seg: r.method === "trend" ? "trend" : r.method === "model" ? (r.issued_at >= V4_SINCE ? "model-v4" : r.issued_at >= STORM_SINCE ? "model-v3" : r.issued_at >= GM_SINCE ? "model" : "model-early") : null };
   })
   .filter((r) => r.seg && HORIZONS.includes(r.h));
 
@@ -77,7 +79,7 @@ function splitBuild(rs) {
   for (const [w, from] of Object.entries(WINDOWS)) {
     for (const [mode, flag] of [["storm", 1], ["calm", 0]]) {
       for (const h of HORIZONS) {
-        const sub = rs.filter((r) => r.issued_at >= from && r.storm === flag && r.h === h && (r.seg === "model" || r.seg === "model-v3"));
+        const sub = rs.filter((r) => r.issued_at >= from && r.storm === flag && r.h === h && (r.seg === "model" || r.seg === "model-v3" || r.seg === "model-v4"));
         if (sub.length) ((o[w] ??= {})[mode] ??= {})[h] = stats(sub);
       }
     }
@@ -88,7 +90,7 @@ const WINDOWS = { d30: now - 30 * DAY, all: 0 };
 function build(rs) {
   const o = {};
   for (const [w, from] of Object.entries(WINDOWS)) {
-    for (const seg of ["model", "model-early", "model-v3", "trend"]) {
+    for (const seg of ["model", "model-early", "model-v3", "model-v4", "trend"]) {
       for (const h of HORIZONS) {
         const sub = rs.filter((r) => r.issued_at >= from && r.seg === seg && r.h === h);
         if (sub.length) ((o[w] ??= {})[seg] ??= {})[h] = stats(sub);
@@ -114,6 +116,7 @@ const json = {
   firstForecast: new Date(first + 5.5 * 3600e3).toISOString().slice(0, 10),
   gaugeModelSince: new Date(GM_SINCE + 5.5 * 3600e3).toISOString().slice(0, 10),
   stormModelSince: new Date(STORM_SINCE + 5.5 * 3600e3).toISOString().slice(0, 10),
+  ...(V4_SINCE < 9e15 ? { stormModelV4Since: new Date(V4_SINCE + 5.5 * 3600e3).toISOString().slice(0, 10) } : {}),
   overall: build(usable),
   rainSplit: splitBuild(usable),
   stations,

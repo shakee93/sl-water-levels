@@ -19,6 +19,7 @@
 
 import catchments from "./model/catchments.json";
 import { normaliseBasin } from "./basinOrder";
+import subcatchments from "./model/subcatchments.json";
 
 const HOUR_MS = 3_600_000;
 const RAIN_REVALIDATE_S = 1800;
@@ -40,6 +41,12 @@ export type BasinWeather = {
   nowHour: number;
   /** Deterministic past + forecast. */
   rain: RainSeries;
+  /**
+   * The same series over only the cells beside the gauge (`nearRain`) and only the cells of the gauges upstream (`upRain`; null when
+   * this gauge has none): the v4 storm model times them separately (lib/model/subcatchments.json). null = cells missing.
+   */
+  nearRain: RainSeries | null;
+  upRain: RainSeries | null;
   /** Past from `rain`; the future from the ensemble members ranked by next-24h total. null = ensemble unavailable. */
   scenarios: { p10: RainSeries; p50: RainSeries; p90: RainSeries } | null;
   ensembleReason: string | null;
@@ -68,6 +75,7 @@ type BasinCfg = {
   glofas?: { lat: number; lon: number; p95: number; p99: number };
 };
 const BASINS = (catchments as unknown as { basins: Record<string, BasinCfg> }).basins;
+const SUBS = subcatchments as unknown as Record<string, Record<string, { near: number[]; up: number[] }>>;
 
 export function hasCatchment(basin: string, station: string): boolean {
   return !!BASINS[normaliseBasin(basin)]?.stations[station];
@@ -139,11 +147,10 @@ export async function getBasinWeather(basin: string, station: string, now = Date
   const eLon = ensPts.map((p) => p[1]).join(",");
   const nowHour = Math.floor(now / HOUR_MS) * HOUR_MS;
 
+  const detUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation&past_days=4&forecast_days=3&timezone=UTC`;
   const [detR, ens] = await Promise.all([
-    getJson(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation&past_days=4&forecast_days=3&timezone=UTC`,
-      RAIN_REVALIDATE_S,
-    ),
+    // One retry: a single 429 / timeout used to drop the storm model and widen the band for half an hour (a failure is never cached).
+    getJson(detUrl, RAIN_REVALIDATE_S).then(async (r) => (r.ok ? r : (await new Promise((ok) => setTimeout(ok, 600)), getJson(detUrl, RAIN_REVALIDATE_S)))),
     getJson(
       `https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${eLat}&longitude=${eLon}&hourly=precipitation&models=ecmwf_ifs025&past_days=0&forecast_days=3&timezone=UTC`,
       RAIN_REVALIDATE_S,
@@ -152,6 +159,17 @@ export async function getBasinWeather(basin: string, station: string, now = Date
   if (!detR.ok) return { ok: false, reason: `rain forecast unavailable (${detR.reason})` };
   const rain = catchmentSeries(asList(detR.data), "precipitation");
   if (!rain) return { ok: false, reason: "rain forecast response was empty" };
+
+  // sub-catchment series (cells are listed in sc.cells order, so a cell index maps to its position there)
+  const sub = SUBS[key]?.[station];
+  const pick = (idx: number[] | undefined): RainSeries | null => {
+    if (!idx?.length) return null;
+    const pos = idx.map((c) => sc.cells.indexOf(c));
+    if (pos.some((p) => p < 0)) return null;
+    const all = asList(detR.data);
+    return catchmentSeries(pos.map((p) => all[p]), "precipitation");
+  };
+  const nearRain = pick(sub?.near), upRain = pick(sub?.up);
 
   const horizonEnd = nowHour + 24 * HOUR_MS;
   const detNext = sumWindow(rain, nowHour, horizonEnd);
@@ -203,6 +221,8 @@ export async function getBasinWeather(basin: string, station: string, now = Date
       cells: { det: det.length, ens: ensPts.length },
       nowHour,
       rain,
+      nearRain,
+      upRain,
       scenarios,
       ensembleReason,
       past6hMm: past6,
