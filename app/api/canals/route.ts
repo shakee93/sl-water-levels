@@ -26,6 +26,7 @@ export async function GET(req: Request) {
         state: g.state, // offline | learning | normal | rising | higher | lower ("usual" = this gauge's own recent range)
         level_m: g.level,
         observedAt: g.observedMs ? new Date(g.observedMs).toISOString() : null,
+        change3h_m: g.change3h == null ? null : Number(g.change3h.toFixed(3)),
         last24h: g.series.map((p) => ({ t: new Date(p.ms).toISOString(), level_m: Number(p.m.toFixed(3)) })),
       })),
     predictedTide: {
