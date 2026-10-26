@@ -5,7 +5,7 @@
 // openings; the path used (llm / template) is recorded and shown in the Slack preview. No real OpenAI call is made.
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { composeGaugeRise, composeGaugeClear, composeStorm, composeSummary, composeWarning, lunaFacts, lunaWrite, validateLlmText, LUNA_INSTRUCTIONS, DISCLAIMER } from "../lib/xCompose.ts";
+import { tweetLength, sharedWithRecent, composeRiversRising, MODEL_TARGET, composeGaugeRise, composeGaugeClear, composeStorm, composeSummary, composeWarning, lunaFacts, lunaWrite, validateLlmText, LUNA_INSTRUCTIONS, DISCLAIMER } from "../lib/xCompose.ts";
 import { run, prepare, makeLlm, dryRunMessage, X_SCHEMA } from "./x-post.mjs";
 
 const SITE = "https://sl-water-levels.vercel.app";
@@ -83,7 +83,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
 
   calls.length = 0;
   r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm: llm(["Totally invented 99 ft", "Still wrong 98 ft"]) });
-  assert.equal(r.used, "template"); assert.equal(r.text, p.textNoLink); assert.equal(calls.length, 2, "one retry, no more"); assert.match(r.why, /rejected twice/);
+  assert.equal(r.used, "template"); assert.equal(r.text, p.textNoLink); assert.equal(calls.length, 3, "two retries, no more"); assert.match(r.why, /rejected 3 times/);
 
   assert.equal((await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm: async () => { throw new Error("down"); } })).used, "template");
   assert.equal((await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm: async () => null })).used, "template");
@@ -104,7 +104,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
 // ---- variety: an opening that repeats a recent post is sent back, and the second try is accepted
 {
   const p = post();
-  const other = good.replace(/^Kalu Ganga at Ratnapura is rising and just crossed the alert mark/, "Ratnapura on the Kalu Ganga has just crossed the alert mark");
+  const other = good.replace(/^Kalu Ganga at Ratnapura is rising and just crossed the alert mark/, "Ratnapura on the Kalu Ganga has reached its alert line, reading").replace("If you're near the river in Ratnapura, keep an eye on it this evening.", "Worth a look if you live along it.");
   const seen = [];
   const llm = async (_i, input) => { seen.push(JSON.parse(input)); return seen.length === 1 ? good : other; };
   const r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm, recent: [good, "Morning! Rivers are calm."] });
@@ -206,8 +206,8 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
     const w = world({ OPENAI_API_KEY: "sk-test-fake" }, () => "Hanwella is at 99.9 ft. Not an official warning. Emergency: 117."); const query = makeDb();
     await twice(w, query);
     assert.equal((await query("SELECT ai FROM x_posts WHERE kind = 'alert'"))[0].ai, 0);
-    assert.equal(w.calls.ai.length, 2);
-    assert.ok(w.calls.slack.some((t) => /plain template \(model text rejected twice/.test(t)));
+    assert.equal(w.calls.ai.length, 3);
+    assert.ok(w.calls.slack.some((t) => /plain template \(model text rejected 3 times/.test(t)));
   }
   { // the writer is shown the last posts
     const w = world({ OPENAI_API_KEY: "sk-test-fake" }, () => hanwella); const query = makeDb();
@@ -216,6 +216,56 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
     await twice(w, query);
     assert.ok(w.calls.ai[0].recent_posts.includes("Earlier post about the Kalu Ganga"));
   }
+}
+
+// ---- forecasts are never certain
+bad(good.replace("keep an eye on it this evening", "it is expected to reach the minor flood level"), /certain/);
+bad(good.replace("keep an eye on it this evening", "it will reach minor flood level"), /certain|minor/);
+bad(good.replace("keep an eye on it this evening", "Ratnapura will flood tonight"), /certain/);
+assert.deepEqual(validateLlmText(good.replace("keep an eye on it this evening", "it could reach the alert level in the next hour"), c), []);
+assert.deepEqual(validateLlmText(good.replace("keep an eye on it this evening", "it may reach the alert level in the next hour"), c), []);
+assert.equal(lunaFacts("storm", { river: "K", at: NOW, gauges: [gf({ nextHour: { level: 21.5, low: 21.3, high: 21.8, direction: "rising", crossing: "expected to reach minor flood level" } })] }).gauges[0].next_hour_forecast.may_cross, "could reach minor flood level");
+// number words need their number in the facts
+bad(good.replace("this evening", "for the next five hours"), /"five"/);
+
+// ---- variety: nothing reused from the last posts
+{
+  const a = "Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. Worth a look if you live along it. Not an official warning. Emergency: 117.";
+  assert.equal(sharedWithRecent(a, [a.replace("Worth a look if you live along it.", "Check back later.")]) != null, true, "same first sentence");
+  assert.equal(sharedWithRecent("Ratnapura is above the alert mark at 21.3 ft, up since morning. Check back later. Not an official warning. Emergency: 117.", [a]), null);
+  assert.equal(sharedWithRecent("Different words entirely. Worth a look if you live along it. Not an official warning. Emergency: 117.", [a]) != null, true, "a whole recent sentence reused");
+  assert.equal(sharedWithRecent("Water is climbing quickly at the Ratnapura gauge right now. Take care near the river. Not an official warning. Emergency: 117.", ["Hanwella is up. Take care near the river. Not an official warning. Emergency: 117."]) != null, true, "Take care near the river repeated");
+  assert.equal(sharedWithRecent("Calm morning on the rivers. Not an official warning. Emergency: 117.", ["Calm afternoon here. Not an official warning. Emergency: 117."]), null, "the closing is ignored");
+  assert.equal(sharedWithRecent("Six words in a row are shared here today. Not official. 117.", ["Another post: six words in a row are shared. Not official. 117."]) != null, true, "6-word run");
+  bad("Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. Check back later. Not an official warning. Emergency: 117.", /repeats wording/, ctxOf("gauge_rise", [gf()], { recent: [a.replace("Kalu Ganga at Ratnapura is rising", "Ratnapura is rising")] }));
+  assert.match(LUNA_INSTRUCTIONS, /Take care near the river/); assert.match(LUNA_INSTRUCTIONS, /six or more words/); assert.match(LUNA_INSTRUCTIONS, /could reach/);
+}
+
+// ---- length: the model is told 260 (276 - link); a too-long answer gets a shorter-please; at most 3 calls
+{
+  const p = post();
+  const seen = [];
+  const long = good + " " + "x ".repeat(60);
+  const llm = async (_i, input) => { seen.push(JSON.parse(input)); return seen.length < 3 ? long : good; };
+  const r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm });
+  assert.equal(r.used, "llm"); assert.equal(r.attempts, 3); assert.equal(seen[0].max_characters, MODEL_TARGET); assert.equal(MODEL_TARGET, 260);
+  assert.match(seen[1].problems_to_fix.join(), /too long/); assert.ok(seen[1].shorten); assert.ok(seen[2].shorten);
+  const w = [];
+  await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: true, llm: async (_i, input) => { w.push(JSON.parse(input)); return good; } });
+  assert.equal(w[0].max_characters, 260 - 24);
+}
+
+// ---- the national "rivers rising" post
+{
+  const rf = { at: NOW, count: 4, url: `${SITE}/x`, gauges: [gf(), gf({ station: "Holombuwa", river: "Kelani Ganga", level: 13, alertMark: 9.8, url: `${SITE}/k` }), gf({ station: "Dunamale", river: "Aththanagalu Oya", level: 10.8, alertMark: 11, tier: "watch" })] };
+  const t = composeRiversRising(rf);
+  assert.match(t.textNoLink, /4 rivers/); assert.ok(tweetLength(t.text) <= 280 && tweetLength(t.textNoLink) <= 280); assert.match(t.textNoLink, /and 1 more/);
+  const lf = lunaFacts("rivers_rising", rf);
+  assert.equal(lf.rivers_rising_total, 4); assert.equal(lf.other_rivers_not_listed, 1); assert.equal(lf.rivers.length, 3);
+  const cx = ctxOf("rivers_rising", rf, { must: ["Ratnapura"] });
+  assert.deepEqual(validateLlmText("Four rivers are rising towards or past their alert marks at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Holombuwa 13 ft and Aththanagalu Oya at Dunamale 10.8 ft, plus 1 more. Not an official warning. Emergency: 117.", cx), []);
+  const r = await prepare({ type: "rivers_rising", kind: "alert", rivers: rf }, async () => "Four rivers are rising at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Holombuwa 13 ft and Aththanagalu Oya at Dunamale 10.8 ft. Not an official warning. Emergency: 117.", {});
+  assert.equal(r.ai, true);
 }
 
 console.log("x-luna tests passed");

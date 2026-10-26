@@ -752,7 +752,7 @@ creates the account, adds the keys and flips one switch.
 Data read: `/api/levels` (levels, status, next-hour forecast), `/api/reservoirs` (spill / release), `/api/warnings`
 (current DMC / Irrigation bulletins, new), and `/api/places-state` (rain expected). Heavy rain over a canal town's low spots is never posted. A source that cannot be read leaves its memory unchanged: unknown is never "calm".
 
-Post types: **alert** (a gauge rising to Alert / Minor flood / Major flood; gauges of one river rising together are one post),
+Post types: **alert** (a gauge rising to Alert / Minor flood / Major flood; gauges of one river rising together are one post; when 3 or more rivers rise to Alert (or are rising towards it in storm mode) in the same run they become ONE national "rivers rising" post naming the worst 3, while Minor / Major crossings keep their own posts),
 **all-clear** (after 2 calm checks, only for something we posted about), **reservoir** starts or stops letting water out
 (spill from 300 cusecs, gate release from 2,000), **official warning** (a new bulletin
 issued in the last 6 h, passed on once), **storm mode** (3+ gauges at Alert, any Minor/Major, 3+ rising towards a mark, or 100 mm
@@ -764,16 +764,17 @@ Words: **gpt-6-luna writes every post** (all kinds, official-warning relays incl
 deterministic template as the fallback. The model (Responses API, same conventions as `lib/openai.ts`: plain fetch, JSON-schema output,
 `store: false`, per-run call cap `AI_MAX_CALLS_PER_HOUR`, default 60) is given a compact JSON of the facts (river, station, level in ft, mark,
 trend, next-hour forecast and range, time in Sri Lanka, rain mm, reservoir cusecs, warning summary, post kind) plus the last 5 posts so it
-varies its openings, and a voice guide with a few made-up example posts per kind (`LUNA_INSTRUCTIONS` in `lib/xCompose.ts`). It never writes
+varies its wording, and a voice guide with a few made-up example posts per kind (`LUNA_INSTRUCTIONS` in `lib/xCompose.ts`). It never writes
 links (the code adds one when `X_LINKS` allows). Its text is accepted only if `validateLlmText()` passes: every number is in the facts
 (formats like 22.0 vs 22 and "4.10pm" are fine; 117 aside), at most 280 characters the way X counts them, a closing that says it is not
 an official warning (or, for a relayed bulletin, that we are not the source) plus 117, no links, no @mentions, at most one hashtag from the
 template's list, at most one of the emoji 🌧️ / ⚠️ (alerts, storms, rain only), no "official" outside the closing, no "major"/"minor",
-"rising"/"falling" or evacuation the facts do not support, no talk of low ground, canals or street flooding, and an opening that differs from
-the last posts. If it fails, the model gets the list of problems and one more try; after that the plain template is posted. Which path was
+"rising"/"falling" or evacuation the facts do not support, no talk of low ground, canals or street flooding, an opening that differs from
+the last posts, no sentence and no run of 6 or more words (names and number lists aside, closing line excluded) shared with any of the last 5 posts, and no certain
+forecast ("expected to reach", "will reach", "will flood"; the model says "could reach" / "may reach"). The model is told the limit is 260 characters (the hard limit stays 280). If it fails, the model gets the list of problems and up to two more tries (at most 3 calls per post; a too-long answer is asked to be shorter); after that the plain template is posted. Which path was
 used is recorded in D1 (`x_posts.ai`: 1 = written by the model, 0 = template) and every Slack preview says "written by gpt-6-luna, every
 number checked" or "plain template (why)". `X_AI_POLISH=off` switches the writer off; `X_AI_TEMPERATURE` (unset by default, because reasoning
-models may reject it) adds a temperature. Cost: 1 to 2 calls per post at gpt-6-luna prices ($0.10 / $0.50 per million tokens), a fraction of a
+models may reject it) adds a temperature. Cost: 1 to 3 calls per post at gpt-6-luna prices ($0.10 / $0.50 per million tokens), a fraction of a
 cent a day. `OPENAI_API_KEY` is **not** in GitHub today (only in Vercel): until `gh secret set OPENAI_API_KEY` is run the templates are used,
 the Slack previews say so, and nothing else changes. Thread replies and the Sinhala / Tamil drafts stay template text (`gh variable set X_LANGS
 --body en,si,ta` adds the drafts; needs `X_REPLIES=on`; off by default). Tests: `node --experimental-strip-types --no-warnings scripts/x-luna.test.mts`.

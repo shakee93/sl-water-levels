@@ -22,6 +22,8 @@ export const DEFAULTS = {
   stormEveryMin: 55,
   stormQuietMin: 180, // an unchanged storm update is repeated at most this often
   maxStormRivers: 3,
+  surgeRivers: 3, // this many rivers rising to Alert in one run become ONE national post
+  surgeShown: 3, // rivers named in it
   warningMaxAgeMs: 6 * 3_600_000,
   reservoirFlapMs: 12 * 3_600_000,
   morningFrom: 6 * 60 + 30,
@@ -239,8 +241,42 @@ export function evaluate(snap, prevState, cfgIn = {}) {
     }
   }
 
-  events.sort((a, c) => c.priority - a.priority);
-  return { events, state };
+  const merged = mergeSurge(events, cfg, b);
+  merged.sort((a, c) => c.priority - a.priority);
+  return { events: merged, state };
+}
+
+/**
+ * Three or more rivers rising to (or towards) Alert in the same run say the same thing three times. They become one
+ * "rivers_rising" event naming the worst few; rivers at Minor / Major, rivers that are not rising, and everything else
+ * keep their own posts. The merged event counts once against the daily caps.
+ */
+export function mergeSurge(events, cfg, b) {
+  const lvl = (g) => tierLevel(g.tier) ?? 0;
+  const risingGauge = (g) => /rising/.test(g.trend ?? "");
+  const members = []; // { ev, river, gauges }
+  for (const ev of events) {
+    if (ev.type !== "gauge_rise" && ev.type !== "storm") continue;
+    const all = ev.type === "gauge_rise" ? ev.gauges : ev.storm.gauges;
+    if (Math.max(...all.map(lvl)) > 2) continue; // a Minor / Major crossing keeps its own post
+    const rising = ev.type === "gauge_rise" ? all : all.filter(risingGauge);
+    if (!rising.length) continue;
+    members.push({ ev, river: ev.type === "gauge_rise" ? ev.river : ev.storm.river, gauges: rising });
+  }
+  const rivers = new Map();
+  for (const m of members) rivers.set(m.river, [...(rivers.get(m.river) ?? []), ...m.gauges]);
+  if (rivers.size < cfg.surgeRivers) return events;
+  const ratio = (g) => (g.alertMark ? g.level / g.alertMark : 0);
+  const severity = (a, c) => lvl(c) - lvl(a) || Number(!!c.nextHour?.crossing) - Number(!!a.nextHour?.crossing) || ratio(c) - ratio(a);
+  const reps = [...rivers.values()].map((gs) => gs.slice().sort(severity)[0]).sort(severity);
+  const gone = new Set(members.map((m) => m.ev));
+  const any = members.some((m) => m.ev.type === "storm");
+  const merged = {
+    type: "rivers_rising", kind: any ? "storm" : "alert", urgent: members.some((m) => m.ev.urgent), priority: Math.max(...members.map((m) => m.ev.priority)),
+    rivers: { at: Math.max(...reps.map((g) => g.at ?? 0)), count: reps.length, gauges: reps.slice(0, cfg.surgeShown), url: reps[0].url },
+    dedupe: `surge:${b}`,
+  };
+  return [...events.filter((e) => !gone.has(e)), merged];
 }
 
 export function summaryEvent(snap, period, now, b = bucket(now), site = snap.site ?? "") {

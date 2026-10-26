@@ -23,7 +23,7 @@ import { d1Query } from "../lib/d1.ts";
 import { gate, postTweet } from "../lib/xClient.ts";
 import {
   composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop,
-  composeWarning, composeSummary, composeStorm, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
+  composeWarning, composeSummary, composeStorm, composeRiversRising, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
 } from "../lib/xCompose.ts";
 import { OPENAI_MODEL } from "../lib/openai.ts";
 import { evaluate, applyCaps, emptyState, summaryEvent, tierLevel } from "./x-engine.mjs";
@@ -95,6 +95,7 @@ export function composeEvent(ev) {
     case "warning": c = composeWarning(ev.warning); facts = ev.warning; break;
     case "summary": c = composeSummary(ev.summary); facts = ev.summary; break;
     case "storm": c = composeStorm(ev.storm); facts = ev.storm; break;
+    case "rivers_rising": c = composeRiversRising(ev.rivers); facts = ev.rivers; break;
     case "rainwatch": c = composeRainWatch(ev.rainwatch); facts = ev.rainwatch; break;
     default: throw new Error(`unknown event ${ev.type}`);
   }
@@ -173,7 +174,7 @@ export function costOf(text, replies, rates) {
 }
 
 /** The raw facts of an event, the shape lunaFacts() reads. */
-const eventFacts = (ev) => ev.gauges ?? ev.reservoirs ?? ev.warning ?? ev.summary ?? ev.storm ?? ev.rainwatch;
+const eventFacts = (ev) => ev.gauges ?? ev.reservoirs ?? ev.warning ?? ev.summary ?? ev.storm ?? ev.rivers ?? ev.rainwatch;
 
 /**
  * Compose, write and check. The template is always built and checked first (a template that fails its own checks is never

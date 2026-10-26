@@ -193,6 +193,36 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   assert.equal(none.events.filter((e) => e.type === "gauge_clear").length, 0);
 }
 
+// ---- engine: 3+ rivers rising to Alert in one run are ONE national post; Minor / Major keep their own
+{
+  const quiet = (id, station, river, o = {}) => st(id, station, river, "normal", 2, { observedAt: iso(NOW - 600_000), ...o });
+  const rivers = [["kelani-ganga/hanwella", "Hanwella", "Kelani Ganga"], ["kalu-ganga/ratnapura", "Ratnapura", "Kalu Ganga"], ["gin-ganga/baddegama", "Baddegama", "Gin Ganga"], ["nilwala-ganga/pitabeddara", "Pitabeddara", "Nilwala Ganga"]];
+  const base = snap(rivers.map(([id, n, r]) => quiet(id, n, r)), { rain: null }, NOW - 7 * 3_600_000);
+  const first = evaluate(base, emptyState()).state;
+  const at = (levels) => snap(rivers.map(([id, n, r], i) => levels[i] ? st(id, n, r, levels[i][0], levels[i][1]) : quiet(id, n, r)), { rain: null }, NOW);
+  // three rivers at Alert: one rivers_rising, naming the top 3 with the total
+  let r = evaluate(at([["alert", 8.2], ["alert", 9.5], ["alert", 8.6], ["alert", 8.1]]), first);
+  const surge = r.events.filter((e) => e.type === "rivers_rising");
+  assert.equal(r.events.filter((e) => e.type === "gauge_rise").length, 0); assert.equal(surge.length, 1);
+  assert.equal(surge[0].rivers.count, 4); assert.equal(surge[0].rivers.gauges.length, 3); assert.equal(surge[0].rivers.gauges[0].station, "Ratnapura");
+  assert.equal(surge[0].kind, "alert"); assert.match(surge[0].dedupe, /^surge:/);
+  // it counts once against the daily limit
+  assert.equal(applyCaps(r.events, { normal: 14, urgent: 0 }).send.filter((e) => e.type === "rivers_rising").length, 1);
+  // two rivers only: separate posts
+  r = evaluate(at([["alert", 8.2], ["alert", 9.5]]), first);
+  assert.equal(r.events.filter((e) => e.type === "gauge_rise").length, 2); assert.equal(r.events.filter((e) => e.type === "rivers_rising").length, 0);
+  // a Minor crossing keeps its own post; the three Alert rivers are merged
+  r = evaluate(at([["alert", 8.2], ["alert", 9.5], ["alert", 8.6], ["minor", 10.6]]), first);
+  assert.equal(r.events.filter((e) => e.type === "gauge_rise").length, 1); assert.equal(r.events.find((e) => e.type === "gauge_rise").gauges[0].station, "Pitabeddara");
+  assert.equal(r.events.find((e) => e.type === "rivers_rising").rivers.count, 3);
+  // Alert + Alert + Minor: only 2 alert rivers, nothing merged
+  r = evaluate(at([["alert", 8.2], ["alert", 9.5], ["minor", 10.6]]), first);
+  assert.equal(r.events.filter((e) => e.type === "gauge_rise").length, 3); assert.equal(r.events.filter((e) => e.type === "rivers_rising").length, 0);
+  // the post can be composed and passes its own checks
+  const p = await prepare(evaluate(at([["alert", 8.2], ["alert", 9.5], ["alert", 8.6]]), first).events.find((e) => e.type === "rivers_rising"), null, {});
+  assert.ok(!p.error, p.error); assert.match(p.text, /3 rivers/);
+}
+
 // ---- engine: reservoirs, street, warnings, storm, summary window
 {
   const rv = (status, cusecs, day = "2026-10-25") => [{ id: "deduru-oya", name: "Deduru Oya", river: "Deduru Oya", status, storagePercent: 100, flow: cusecs == null ? null : { cusecs, day, source: "Irrigation Department" }, readingDay: day, source: "Irrigation Department", url: `${SITE}/reservoirs/deduru-oya` }];
