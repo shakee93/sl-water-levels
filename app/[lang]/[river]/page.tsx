@@ -11,6 +11,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { orderStations } from "@/lib/basinOrder";
 import { resolveBasin, stationPath } from "@/lib/slug";
 import { RiverGauges } from "@/app/RiverGauges";
+import { RiverRain } from "@/app/RiverRain";
 import { TimeAgo } from "@/app/TimeAgo";
 import { colomboTime } from "@/app/tierUi";
 import { BasinDams } from "@/app/BasinDams";
@@ -264,6 +265,8 @@ export default async function BasinPage({
             <Clock className="size-4" aria-hidden /> {t("river.unavailable")}
           </p>
         )}
+
+        <Suspense key={`rain-${basin}`} fallback={null}><RiverRain lang={lang} basin={basin} /></Suspense>
 
         <Suspense key={`history-${basin}`} fallback={null}>
           <FloodHistoryCard basin={basin} lang={lang} />
