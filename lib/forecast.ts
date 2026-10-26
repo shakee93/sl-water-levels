@@ -36,6 +36,7 @@ import coefficientsJson from "./model/coefficients.json";
 import gaugeModelJson from "./model/gauge-model.json";
 import stormModelJson from "./model/storm-model.json";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
+import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { rainTotals, stormFeatures } from "./model/stormModel.mjs";
 import {
@@ -264,7 +265,7 @@ export function measuredAt(snapshot: Pick<BasinStation, "station" | "trend24h">[
     const r = gaugeRainNow(g, s.trend24h, now);
     if (r) gauges.push(r);
   }
-  const m = measuredRainFor(station, gauges);
+  const m = measuredRainFor(station, gauges, rainTriggersFor); // per-gauge thresholds when lib/model/rain-thresholds.json has them
   return m ? { ...m, gaugeName: stationDisplayName(m.gauge) } : null;
 }
 

@@ -61,11 +61,18 @@ const MLINES: Record<Locale, string> = {
   si: "{gauge} හි පසුගිය {n} {hours} තුළ ඉතා තද වැසි මැනිණි (මි.මී. {mm}). ගඟ වේගයෙන් ඉහළ යා හැක.",
   ta: "{gauge} இல் கடந்த {n} {hours} மிகக் கனமழை அளக்கப்பட்டது ({mm} மி.மீ). ஆறு வேகமாக உயரலாம்.",
 };
+// Same sentence when the trigger was this gauge's own number (lib/rainWords.ts): it is "heavy for this river", not "very heavy" nationally.
+const MLINES_LOCAL: Record<Locale, string> = {
+  en: "Rain that is heavy for this river was measured at {gauge} in the last {n} {hours} ({mm} mm). The river may rise fast.",
+  // si / ta: DRAFT translations, not yet reviewed by a native speaker.
+  si: "{gauge} හි පසුගිය {n} {hours} තුළ මෙම ගඟට තද වැසි මැනිණි (මි.මී. {mm}). ගඟ වේගයෙන් ඉහළ යා හැක.",
+  ta: "{gauge} இல் கடந்த {n} {hours} இந்த ஆற்றுக்குக் கனமான மழை அளக்கப்பட்டது ({mm} மி.மீ). ஆறு வேகமாக உயரலாம்.",
+};
 const HOURS_WORD: Record<Locale, [string, string]> = { en: ["hour", "hours"], si: ["පැය", "පැය"], ta: ["மணி நேரத்தில்", "மணி நேரத்தில்"] };
 
 /** The plain sentence for a measured burst, in the reader's language (si/ta are drafts). `gauge` is the display name. */
-export function measuredRainLine(m: Pick<MeasuredRain, "hours" | "mm">, gauge: string, lang: Locale = "en"): string {
-  const l = MLINES[lang] ?? MLINES.en;
+export function measuredRainLine(m: Pick<MeasuredRain, "hours" | "mm"> & { local?: boolean }, gauge: string, lang: Locale = "en"): string {
+  const l = (m.local ? MLINES_LOCAL : MLINES)[lang] ?? MLINES.en;
   const w = (HOURS_WORD[lang] ?? HOURS_WORD.en)[m.hours === 1 ? 0 : 1];
   // "the last 1 hour" reads oddly: say "the last hour"
   const s = l.replace("{gauge}", gauge).replace("{mm}", String(m.mm));

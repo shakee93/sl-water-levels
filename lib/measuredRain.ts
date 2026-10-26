@@ -77,14 +77,19 @@ export type MeasuredRain = {
   mm: number;
   mm1h: number | null;
   mm3h: number | null;
+  /** True when the gauge that tripped had its own per-gauge threshold (lib/rainWords.ts), so "heavy for this river" is honest. */
+  local?: boolean;
 };
 
+/** Thresholds for one gauge: the national ones unless the caller knows better (lib/rainTriggers.ts). */
+export type TriggerLookup = (station: string) => { mm1h: number; mm3h: number; local: boolean };
+
 /** Does one gauge's measured rain trip the warning? Returns the window to quote, or null. */
-export function tripped(g: GaugeRain): { hours: 1 | 3; mm: number } | null {
+export function tripped(g: GaugeRain, t?: { mm1h: number; mm3h: number }): { hours: 1 | 3; mm: number } | null {
   const a = g.mm1h ?? 0;
   const b = g.mm3h ?? 0;
-  const by3 = b >= MEASURED_3H_MM;
-  const by1 = a >= MEASURED_1H_MM;
+  const by3 = b >= (t?.mm3h ?? MEASURED_3H_MM);
+  const by1 = a >= (t?.mm1h ?? MEASURED_1H_MM);
   if (!by3 && !by1) return null;
   // quote the 3 h total when it tripped (it is always at least the 1 h one); else the 1 h burst
   return by3 ? { hours: 3, mm: Math.round(b) } : { hours: 1, mm: Math.round(a) };
@@ -95,14 +100,14 @@ export function tripped(g: GaugeRain): { hours: 1 | 3; mm: number } | null {
  * already restricted to that). Needs at least one gauge with data; returns null when none tripped. Ties go to the larger
  * 3 h total, own gauge first.
  */
-export function measuredRainFor(station: string, gauges: GaugeRain[]): MeasuredRain | null {
+export function measuredRainFor(station: string, gauges: GaugeRain[], triggers?: TriggerLookup): MeasuredRain | null {
   let best: { g: GaugeRain; t: { hours: 1 | 3; mm: number } } | null = null;
   for (const g of gauges) {
-    const t = tripped(g);
+    const t = tripped(g, triggers?.(g.station));
     if (!t) continue;
     const score = (g.mm3h ?? 0) + (g.station === station ? 0.001 : 0);
     if (!best || score > (best.g.mm3h ?? 0) + (best.g.station === station ? 0.001 : 0)) best = { g, t };
   }
   if (!best) return null;
-  return { gauge: best.g.station, upstream: best.g.station !== station, hours: best.t.hours, mm: best.t.mm, mm1h: best.g.mm1h, mm3h: best.g.mm3h };
+  return { gauge: best.g.station, upstream: best.g.station !== station, hours: best.t.hours, mm: best.t.mm, mm1h: best.g.mm1h, mm3h: best.g.mm3h, ...(triggers?.(best.g.station).local ? { local: true } : {}) };
 }
