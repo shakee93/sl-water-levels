@@ -690,18 +690,10 @@ for new developers except approved public-utility apps. **Verify the current pri
    Avatar: the site icon (`app/icon.svg`) on a blue background. Pinned post: "Automated river-level alerts for Sri Lanka from Department of Irrigation gauges. Not an official warning service. Emergency: 117. Live levels: https://sl-water-levels.vercel.app".
 2. **Label it automated:** Settings and privacy, Your account, Account information, Automation: choose "Managing account" = your personal @shakeeb_x. (The "Automated" label then shows on the profile.)
 3. **Apply for developer access** at developer.x.com: first the free public-utility programme if offered, otherwise pay-per-use with a small credit. Use case text: "Automated public-safety river level and flood-status updates for Sri Lanka, from public government data; no replies, no mass mentions."
-4. **Create a project and app**, set **User authentication settings** to **Read and write** (App permissions), Type of app "Web App / Automated App or Bot". Then generate the four values (regenerate the Access Token and Secret *after* setting Read and write):
-   API Key, API Key Secret, Access Token, Access Token Secret.
-5. **Add them** (from the repo folder):
-   ```
-   gh secret set X_API_KEY
-   gh secret set X_API_SECRET
-   gh secret set X_ACCESS_TOKEN
-   gh secret set X_ACCESS_SECRET
-   gh secret set OPENAI_API_KEY        # optional: rewording
-   ```
+4. **Create a project and app** in the developer console (console.x.com; sign in with your personal account, that is fine). In the app's **User authentication settings** choose permissions **Read and write**, enable **OAuth 1.0a** (pick the app type that supports OAuth 1.0a user context, e.g. "Web App, Automated App or Bot") and allow the **PIN-based (oob) callback** (a callback URL such as `https://sl-water-levels.vercel.app` and website URL are required by the form but are not used). Copy the **API Key** and **API Key Secret**. Do **not** use the console's own Access Token: it belongs to the account that owns the app (your personal one).
+5. **Authorise the BOT account (one time):** `node scripts/x-authorize.mjs` (`scripts/x-authorize.mjs`). It asks for the API Key and Secret (typing is hidden), prints a link; open the link in a browser **logged in as the bot account**, press Authorize, paste the PIN back. It prints only the account name (check it is the bot) and stores `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` straight into GitHub secrets with `gh secret set`, never on screen or in a file. (By hand instead: `gh secret set X_API_KEY` etc.) Optional: `gh secret set OPENAI_API_KEY` for rewording.
 6. **Review in dry-run first:** run `gh workflow run x-post.yml -f mode=sample` (3 sample posts from today's data to Slack), and watch the `DRY RUN` posts that arrive when something changes.
-7. **Go live:** `gh variable set X_POSTING --body live`. Optional: `gh variable set X_LINKS --body alerts`, `X_MONTHLY_BUDGET_USD`, `X_EVENING --body on`.
+7. **Buy API credits first** (console, Billing: pay-per-use credits; with $0 credits every post would fail). The pipeline stays in dry-run until you set the variable, so nothing is spent before you are ready. Then **go live:** `gh variable set X_POSTING --body live`. Optional: `gh variable set X_LINKS --body alerts`, `X_MONTHLY_BUDGET_USD`, `X_EVENING --body on`.
 8. **Show the account on the site:** add the handle (no `@`) as the Vercel environment variable `X_HANDLE` (Production) and redeploy: `vercel env add X_HANDLE production`. The footer and About page then show "Automated updates: @handle". Until it is set nothing is shown.
 
 ### How to pause
