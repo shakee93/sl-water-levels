@@ -111,7 +111,7 @@ function MapSvg({ model, cls, strings, sel, onSelect, onDown, onClick }: SvgProp
               <text x={num1(geo.scale.px) / 2} y={-7} textAnchor="middle" className={haloLand} strokeWidth={2.5}>{geo.scale.label}</text>
             </g>
           )}
-          <text x={model.w - 4} y={model.h - 5} textAnchor="end" fontSize={7.5} className={haloLand} strokeWidth={2.5}>© OpenStreetMap contributors</text>
+          <text x={model.w - 4} y={model.h - 5} textAnchor="end" fontSize={7.5} className={haloLand} strokeWidth={2.5}>© OpenStreetMap contributors; rivers: Irrigation Department</text>
         </g>
       )}
     </svg>
