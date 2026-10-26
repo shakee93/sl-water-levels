@@ -4,48 +4,48 @@
     {
       "id": "town-answer",
       "text": "Is your area flooding? Search your town on our site and you get one plain answer: Normal, Keep an eye on it, Get ready or Flooding likely. It comes from the nearest river gauge, rain at your town and official warnings, and updates every hour.",
-      "url": "https://sl-water-levels.vercel.app/flood"
+      "url": "https://waterlevels.lk/flood"
     },
     {
       "id": "read-chart",
       "text": "How to read a gauge chart: the solid line is the measured river level, the dashed line is our forecast and the shaded band is the likely range. The coloured lines are the official alert, minor flood and major flood marks. Hanwella on the Kelani:",
-      "url": "https://sl-water-levels.vercel.app/kelani-ganga/hanwella"
+      "url": "https://waterlevels.lk/kelani-ganga/hanwella"
     },
     {
       "id": "street-level",
       "text": "Water in your street today? Mark your spot: on your town or gauge page, tap \"Set your street's flood level\" and enter the river reading when water reached you. Then the chart shows your line and the site warns you at your level. Saved on your phone only.",
-      "url": "https://sl-water-levels.vercel.app/kelani-ganga/nagalagam-street",
+      "url": "https://waterlevels.lk/kelani-ganga/nagalagam-street",
       "image": "content/x-series/street-level.png"
     },
     {
       "id": "rain-map",
       "text": "New: a rain map. See the rain that actually fell in the last hour, 3 hours and 24 hours (JAXA satellite), our river gauges on top, and the forecast kept separate. Tap a river to see what the rain means for it.",
-      "url": "https://sl-water-levels.vercel.app/rain"
+      "url": "https://waterlevels.lk/rain"
     },
     {
       "id": "alerts",
       "text": "Get a phone alert when your place needs attention: one message when it does and one when it is clear. No account, nothing else. Save your town on the site and turn on alerts.",
-      "url": "https://sl-water-levels.vercel.app/"
+      "url": "https://waterlevels.lk/"
     },
     {
       "id": "releases",
       "text": "When a reservoir opens its spill gates, the water reaches towns downstream hours later. Our reservoir pages show which gates are open, how much is released (1 cusec is about 28 litres a second) and which towns are below.",
-      "url": "https://sl-water-levels.vercel.app/reservoirs"
+      "url": "https://waterlevels.lk/reservoirs"
     },
     {
       "id": "colombo-tide",
       "text": "Colombo: the Kelani at Nagalagam Street rises and falls twice a day with the sea. Our forecast takes the tide out, and the canal page shows the next high tides, when canals drain slowest.",
-      "url": "https://sl-water-levels.vercel.app/colombo-canals"
+      "url": "https://waterlevels.lk/colombo-canals"
     },
     {
       "id": "feedback",
       "text": "Every forecast on the site has an \"Is this right?\" button. One tap, with a rough location, tells us where we were right or wrong, and that is how the prediction for your area gets better.",
-      "url": "https://sl-water-levels.vercel.app/flood"
+      "url": "https://waterlevels.lk/flood"
     },
     {
       "id": "official-first",
       "text": "We are not an official warning service. We repeat the Irrigation Department and the DMC, never replace them. If officials tell you to move, move. Emergency: 117. Flood help and district numbers:",
-      "url": "https://sl-water-levels.vercel.app/help"
+      "url": "https://waterlevels.lk/help"
     }
   ]
 }

@@ -13,7 +13,7 @@ export async function GET() {
   // The next-hour line is time-boxed (1.5 s) so a slow forecast never delays the file.
   const [national, nh, acc] = await Promise.all([getNational().catch(() => null), timeBox(getNextHourAll()), getAccuracy()]);
   const summary = national ? nationalSummary(national, Date.now(), nh) : "";
-  const body = summary ? `${llmsIntro(acc)}\n${summary}\nFull detail for every gauge, reservoir and town: https://sl-water-levels.vercel.app/llms-full.txt\n` : `${llmsIntro(acc)}\n`;
+  const body = summary ? `${llmsIntro(acc)}\n${summary}\nFull detail for every gauge, reservoir and town: https://waterlevels.lk/llms-full.txt\n` : `${llmsIntro(acc)}\n`;
   return new Response(body, {
     headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600", "Access-Control-Allow-Origin": "*" },
   });

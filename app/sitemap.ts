@@ -7,7 +7,7 @@ import { CONTENT_UPDATED } from "@/lib/seo";
 import { WF_MODIFIED, WF_PATH } from "@/lib/research";
 import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 // Rendered on request (cached by the CDN for an hour, next.config.ts), not at build: building it during every deploy, while
 // all pages prerender at once, ran into the Irrigation Department ArcGIS quota (26 Oct 2026).

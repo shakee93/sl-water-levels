@@ -41,7 +41,7 @@ persistence, caching, basin-flow ordering, MCP endpoint).
 This app exposes itself as an MCP server at `/mcp`. Add it to Claude Code:
 
 ```bash
-claude mcp add --transport http sl-water-levels https://sl-water-levels.vercel.app/mcp
+claude mcp add --transport http sl-water-levels https://waterlevels.lk/mcp
 ```
 
 Tools: `list_basins`, `list_stations`, `get_station_readings`,

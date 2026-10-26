@@ -44,7 +44,7 @@ import { photoLd, photosFor } from "@/lib/reservoirPhotoData";
 
 const nowMs = () => Date.now();
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 // Rendered per request (see `await connection()` in the page) and cached by the CDN for 60 s with a
 // 5 min stale window (proxy.ts sets the header), not prerendered and not ISR: an ISR render waits for
@@ -173,7 +173,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         ...imageLd,
         inLanguage: lang,
         isAccessibleForFree: true,
-        license: "https://sl-water-levels.vercel.app/about#data-sources",
+        license: "https://waterlevels.lk/about#data-sources",
         creator: { "@type": "Organization", name: sh ? "Irrigation Department, Sri Lanka" : "Mahaweli Authority of Sri Lanka" },
         temporalCoverage: `${covStart}/${covEnd}`,
         variableMeasured: ["Storage (% full)", "Spill (cusecs)", "Outlet discharge (cusecs)"],

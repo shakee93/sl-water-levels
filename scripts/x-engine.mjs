@@ -226,7 +226,7 @@ export function evaluate(snap, prevState, cfgIn = {}) {
       }
       if (rainHeavy && affected.length === 0 && now - st.rain >= 3 * 3_600_000) {
         st.rain = now;
-        events.push({ type: "rainwatch", kind: "storm", urgent: true, rainwatch: { mm: snap.rain.mm, place: snap.rain.place, windowH: 24, atAlert: high.length, at: now, url: site || "https://sl-water-levels.vercel.app" }, dedupe: `rainwatch:${b}`, priority: 24 });
+        events.push({ type: "rainwatch", kind: "storm", urgent: true, rainwatch: { mm: snap.rain.mm, place: snap.rain.place, windowH: 24, atAlert: high.length, at: now, url: site || "https://waterlevels.lk" }, dedupe: `rainwatch:${b}`, priority: 24 });
       }
     }
   }
@@ -295,7 +295,7 @@ export function summaryEvent(snap, period, now, b = bucket(now), site = snap.sit
       atAlert: atAlert.map((s) => ({ station: s.station, tier: s.status })), nearAlert: us.filter((s) => s.status === "watch").length,
       // the summary quotes the heaviest forecast figure we have: a town's point forecast or a catchment's (same numbers as the site)
       rain: [snap.rain, snap.rainCatch].filter(Boolean).sort((a, c) => c.mm - a.mm)[0] ? { ...[snap.rain, snap.rainCatch].filter(Boolean).sort((a, c) => c.mm - a.mm)[0], over: [snap.rain, snap.rainCatch].filter(Boolean).sort((a, c) => c.mm - a.mm)[0] === snap.rainCatch && snap.rainCatch !== snap.rain } : null,
-      fallen: snap.fallen ?? null, rainWindowH: 24, spilling, url: site || "https://sl-water-levels.vercel.app",
+      fallen: snap.fallen ?? null, rainWindowH: 24, spilling, url: site || "https://waterlevels.lk",
     },
     dedupe: `${period}:${colomboDay(now).day}`,
   };

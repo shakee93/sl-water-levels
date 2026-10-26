@@ -24,6 +24,29 @@ const deviceInfo = () => ({
 
 type Status = "loading" | "hidden" | "off" | "on" | "busy" | "denied" | "unsupported" | "error";
 
+const MOVED_NOTE = {
+  en: "The site moved to waterlevels.lk. Turn alerts on again here to keep getting them (your old alerts keep coming until you do).",
+  si: "වෙබ් අඩවිය waterlevels.lk වෙත ගෙන ගොස් ඇත. ඇඟවීම් දිගටම ලැබීමට මෙහි නැවත සක්‍රිය කරන්න (එතෙක් පැරණි ඇඟවීම් ලැබේ).",
+  ta: "தளம் waterlevels.lk க்கு மாறியுள்ளது. எச்சரிக்கைகளைத் தொடர்ந்து பெற இங்கே மீண்டும் இயக்கவும் (அதுவரை பழைய எச்சரிக்கைகள் வரும்).",
+} as const;
+
+/** The push endpoint this phone had on the old address (sl-water-levels.vercel.app), carried by the move hand-over. */
+const OLD_PUSH = "sl_push_old";
+const oldPush = (): string | null => {
+  try {
+    return localStorage.getItem(OLD_PUSH);
+  } catch {
+    return null;
+  }
+};
+const forgetOldPush = () => {
+  try {
+    localStorage.removeItem(OLD_PUSH);
+  } catch {
+    /* nothing to forget */
+  }
+};
+
 export function AlertsToggle({ keys }: { keys: string[] }) {
   const { lang } = useI18n();
   const rt = rtFor(lang);
@@ -32,14 +55,20 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
   const [status, setStatus] = useState<Status>("loading");
   const vapid = useRef<string | null>(null);
   const joined = keys.join("|");
+  // had alerts on the old address: say why the switch is off here (read after mount, storage is browser-only)
+  const [moved, setMoved] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only flag, read after hydration
+  useEffect(() => setMoved(oldPush() != null), []);
 
   const save = useCallback(
     async (sub: PushSubscription) => {
       const res = await fetch("/api/push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub.toJSON(), places: joined ? joined.split("|") : [], lang }),
+        // after the move to waterlevels.lk: the old address's subscription this one replaces (app/ImportHandover.tsx)
+        body: JSON.stringify({ subscription: sub.toJSON(), places: joined ? joined.split("|") : [], lang, replaces: oldPush() ?? undefined }),
       });
+      if (res.ok) forgetOldPush();
       return res.ok;
     },
     [joined, lang],
@@ -166,6 +195,7 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
         <p className="text-sm text-slate-600 dark:text-slate-400" role="status">{rt(status === "denied" ? "al.denied" : "al.unsupported")}</p>
       ) : (
         <div>
+          {status === "off" && moved && <p className="mb-1.5 text-sm text-slate-700 dark:text-slate-300" role="status">{MOVED_NOTE[lang]}</p>}
           <button type="button" onClick={enable} disabled={status === "busy" || !joined} className={btn}>
             <Bell className="size-4" aria-hidden /> {status === "busy" ? rt("al.busy") : rt("al.enable")}
           </button>

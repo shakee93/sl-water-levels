@@ -94,7 +94,7 @@ export function evalSub({ prefs, state, keys, glances, seeds = new Map(), now })
   return { messages, state: st };
 }
 
-export const BROADCAST_HOST = "sl-water-levels.vercel.app";
+export const BROADCAST_HOST = "waterlevels.lk";
 
 /** Checks the owner's broadcast input. Returns { ok: true, payload } (no endpoints involved) or { ok: false, error }. */
 export function broadcastPayload({ title, body, url, language }) {
@@ -106,7 +106,7 @@ export function broadcastPayload({ title, body, url, language }) {
   let path = "/";
   if (u) {
     let parsed;
-    try { parsed = new URL(u); } catch { return { ok: false, error: "url must be a full https://sl-water-levels.vercel.app/... address" }; }
+    try { parsed = new URL(u); } catch { return { ok: false, error: "url must be a full https://waterlevels.lk/... address" }; }
     if (parsed.protocol !== "https:" || parsed.hostname !== BROADCAST_HOST || parsed.username || parsed.password || parsed.port) return { ok: false, error: `url must be on ${BROADCAST_HOST}` };
     path = parsed.pathname + parsed.search + parsed.hash;
   }

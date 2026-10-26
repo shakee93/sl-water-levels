@@ -10,7 +10,7 @@ import { dayRange, riverName } from "@/lib/i18n/format";
 
 export const revalidate = 3600;
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 async function resolve(river: string) {
   const data = await getHistory();

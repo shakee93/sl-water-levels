@@ -183,9 +183,9 @@ const handler = createMcpHandler(
                           const f = newModelFigure(acc.overall, 1, win);
                           return f ? { since: acc.gaugeModelSince, checks: f.n, average_miss_ft: f.maeFt, average_miss_if_no_change_ft: f.baseMaeFt } : null;
                         })(),
-                        details: "https://sl-water-levels.vercel.app/about#next-hour",
+                        details: "https://waterlevels.lk/about#next-hour",
                       }
-                    : { unavailable: true, details: "https://sl-water-levels.vercel.app/about#next-hour" },
+                    : { unavailable: true, details: "https://waterlevels.lk/about#next-hour" },
                   forecasts,
                 },
                 null,

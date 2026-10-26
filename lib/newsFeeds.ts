@@ -9,7 +9,7 @@ export type Outlet = "Newswire" | "Ada Derana" | "Daily Mirror";
 export type FeedItem = { guid: string; title: string; desc: string; link: string; pubMs: number | null };
 export type OutletItem = FeedItem & { outlet: Outlet };
 
-const SITE_URL = "https://sl-water-levels.vercel.app";
+const SITE_URL = "https://waterlevels.lk";
 export const NEWSWIRE_UA = `sl-water-levels/1.0 (+${SITE_URL}; shakee.zats@gmail.com)`;
 const OLD_UA = "Mozilla/5.0 (compatible; sl-water-levels; +https://github.com/shakee93/sl-water-levels)";
 

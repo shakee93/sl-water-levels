@@ -57,7 +57,7 @@ type ArcgisPage = {
 // minute and shared by everyone using the Irrigation Department's data); pages keep the last good copy meanwhile.
 let quotaUntil = 0;
 // Who is asking, so the data owner can reach us if our requests ever bother them.
-const UA = "sl-water-levels (+https://sl-water-levels.vercel.app; shakee.zats@gmail.com)";
+const UA = "sl-water-levels (+https://waterlevels.lk; shakee.zats@gmail.com)";
 
 // Last good answer per query, kept in D1 so it survives deploys and cold servers. When ArcGIS refuses (quota) or fails, the
 // page shows this instead of "Latest data unavailable" (26 Oct 2026: a deploy during a quota spell had an empty cache and the

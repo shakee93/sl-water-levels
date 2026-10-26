@@ -36,7 +36,7 @@ import { TownFloodMap } from "@/app/flood/OfficialFloodMap";
 // Town pages are rendered per request and CDN-cached for 60 s (proxy.ts), never at build time: a build that had
 // to fetch rain, gauges and warnings for 135 towns would depend on every upstream being up, and an ISR render
 // would wait for every Suspense boundary before the first byte.
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 type Params = { params: Promise<{ lang: string; town: string }> };
 

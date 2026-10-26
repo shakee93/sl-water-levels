@@ -41,7 +41,7 @@ import os from "node:os";
 
 const execFileP = promisify(execFile);
 const BASE = "http://pub.curwsl.org/dyn/";
-const UA = "sl-water-levels-archive (+https://sl-water-levels.vercel.app; shakee.zats@gmail.com)";
+const UA = "sl-water-levels-archive (+https://waterlevels.lk; shakee.zats@gmail.com)";
 // Pages in priority order: a gauge shown on several pages (Kalupalama DS, Sedawatta Bridge DS, Ambathale
 // also sit on the Kelani page) is filed under the first page it appears on.
 const PAGES = ["Kolonnawa", "North Canal", "Parliament Lake", "Madiwela East Diversion", "Wellawatta Canal", "South and Torrington", "Kelani River"];

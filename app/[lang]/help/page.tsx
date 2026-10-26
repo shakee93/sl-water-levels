@@ -19,7 +19,7 @@ import type { TFn } from "@/lib/i18n/translate";
 
 export const revalidate = 86400;
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};

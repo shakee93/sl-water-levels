@@ -4,9 +4,9 @@
 //   (home, river, station, reservoir, town, about, data) every JSON-LD block parses, the answer
 //   sentence is in the HTML, every FAQ question in the JSON-LD is also visible text, and there is
 //   one h1, a canonical link, hreflang links and no noindex.
-// Usage: node scripts/seo-check.mjs [--site https://sl-water-levels.vercel.app]
+// Usage: node scripts/seo-check.mjs [--site https://waterlevels.lk]
 // Exit code 1 when anything fails. No dependencies.
-const SITE = (process.argv.includes("--site") ? process.argv[process.argv.indexOf("--site") + 1] : process.env.SITE_URL || "https://sl-water-levels.vercel.app").replace(/\/$/, "");
+const SITE = (process.argv.includes("--site") ? process.argv[process.argv.indexOf("--site") + 1] : process.env.SITE_URL || "https://waterlevels.lk").replace(/\/$/, "");
 const UA = "Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot) seo-check";
 const fails = [];
 const ok = (m) => console.log(`ok    ${m}`);

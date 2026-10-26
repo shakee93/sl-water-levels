@@ -11,7 +11,7 @@ let raw;
 const fi = process.argv.indexOf("--from");
 if (fi > 0) raw = JSON.parse(fs.readFileSync(process.argv[fi + 1], "utf8"));
 else for (const u of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"]) {
-  try { const r = await fetch(u, { method: "POST", headers: { "User-Agent": "sl-water-levels-build (+https://sl-water-levels.vercel.app; shakee.zats@gmail.com)", "Content-Type": "application/x-www-form-urlencoded" }, body: "data=" + encodeURIComponent(Q), signal: AbortSignal.timeout(90000) }); if (r.ok) { raw = await r.json(); break; } } catch {}
+  try { const r = await fetch(u, { method: "POST", headers: { "User-Agent": "sl-water-levels-build (+https://waterlevels.lk; shakee.zats@gmail.com)", "Content-Type": "application/x-www-form-urlencoded" }, body: "data=" + encodeURIComponent(Q), signal: AbortSignal.timeout(90000) }); if (r.ok) { raw = await r.json(); break; } } catch {}
 }
 if (!raw) throw new Error("Overpass unavailable");
 const k = (p) => p.join(",");

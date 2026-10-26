@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BOX = "6.84,79.84,6.99,79.95";
 const MIRRORS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
-const UA = "sl-water-levels-build (+https://sl-water-levels.vercel.app; shakee.zats@gmail.com)";
+const UA = "sl-water-levels-build (+https://waterlevels.lk; shakee.zats@gmail.com)";
 const QUERY = `[out:json][timeout:120];(
  way["waterway"~"^(canal|drain|river|stream|ditch)$"](${BOX});
  way["natural"="water"](${BOX});

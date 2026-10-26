@@ -35,7 +35,7 @@ on:
         type: string
         required: false
       url:
-        description: "broadcast only: page to open, must be on https://sl-water-levels.vercel.app (empty = home page)"
+        description: "broadcast only: page to open, must be on https://waterlevels.lk (empty = home page)"
         type: string
         required: false
       language:

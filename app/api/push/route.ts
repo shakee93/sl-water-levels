@@ -1,7 +1,7 @@
 // /api/push: alerts for pinned places (Web Push). No account.
 //   GET     -> { enabled, key }   enabled only when the site has a VAPID public key AND can save (D1); the page
 //                                 shows the "Tell me when it changes" button only then, so nobody meets an error.
-//   POST    {subscription, places[], lang, morning}  -> saves / updates this browser's subscription (morning only on first save;
+//   POST    {subscription, places[], lang, morning, replaces?}  -> saves / updates this browser's subscription (morning only on first save;
 //                                 later it is changed through /api/push/prefs, which keeps the settings apart from the places).
 //   DELETE  {endpoint}            -> deletes it (the "Turn off alerts" button). Knowing the endpoint is the key.
 // Needs, in the Vercel project's environment variables:
@@ -51,6 +51,15 @@ export async function POST(req: NextRequest) {
   const now = Date.now();
   try {
     await withSchema(async () => {
+      // Moving from the old address (sl-water-levels.vercel.app -> waterlevels.lk, MIGRATION.md): a browser's push subscription
+      // belongs to one address, so the phone subscribes again here and sends its old endpoint as `replaces`. The old row is
+      // re-pointed at the new endpoint (keeping every alert setting), so the phone never gets the same alert twice.
+      const replaces = (body as { replaces?: unknown }).replaces;
+      if (endpointOk(replaces, anyHost()) && replaces !== sub.endpoint) {
+        const mine = await d1Query("SELECT 1 AS n FROM push_subscriptions WHERE endpoint = ?", [sub.endpoint]);
+        if (mine.length === 0) await d1Query("UPDATE push_subscriptions SET endpoint = ?, p256dh = ?, auth = ?, fail_count = 0 WHERE endpoint = ?", [sub.endpoint, sub.p256dh, sub.auth, replaces as string]);
+        else await d1Query("DELETE FROM push_subscriptions WHERE endpoint = ?", [replaces as string]);
+      }
       const known = await d1Query("SELECT 1 AS n FROM push_subscriptions WHERE endpoint = ?", [sub.endpoint]);
       if (known.length === 0) {
         const c = await d1Query("SELECT COUNT(*) AS n FROM push_subscriptions");

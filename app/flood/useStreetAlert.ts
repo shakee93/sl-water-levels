@@ -19,6 +19,15 @@ import { useLowSpot } from "./useLowSpot";
  * local:   this site cannot send pushes, or this browser cannot receive them (or they are blocked): the switch only keeps the device note
  * ready:   pushes can work; `on` says whether this town's street water is switched on for this browser
  */
+/** After the move to waterlevels.lk: the old address's push endpoint (app/ImportHandover.tsx), replaced server-side so no alert comes twice. */
+const oldPushEndpoint = (): string | undefined => {
+  try {
+    return localStorage.getItem("sl_push_old") ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 export type StreetAlertState = "loading" | "local" | "ready";
 export type StreetAlertWhy = "nopush" | "unsupported" | "denied" | null;
 
@@ -106,7 +115,7 @@ export function useStreetAlert(slug: string, townName: string, lang: string) {
       pin();
       const pins = parsePins(readPinsRaw()).map((p) => townSlugOfHref(p.href)).filter((s): s is string => !!s).map((s) => `t:${s}`);
       const places = [...new Set([...pins, key])].slice(0, MAX_PLACES);
-      const res = await post("/api/push", { subscription: sub.toJSON(), places, lang });
+      const res = await post("/api/push", { subscription: sub.toJSON(), places, lang, replaces: oldPushEndpoint() });
       if (!res.ok) {
         await sub.unsubscribe().catch(() => {});
         throw new Error("save");
@@ -119,7 +128,7 @@ export function useStreetAlert(slug: string, townName: string, lang: string) {
     // already subscribed, but this town is not one of its places yet
     const followed = (cur.j.places ?? []).map(baseKey);
     if (!followed.includes(key)) {
-      const res = await post("/api/push", { subscription: sub.toJSON(), places: [...followed, key].slice(0, MAX_PLACES), lang });
+      const res = await post("/api/push", { subscription: sub.toJSON(), places: [...followed, key].slice(0, MAX_PLACES), lang, replaces: oldPushEndpoint() });
       if (!res.ok) throw new Error("save");
     }
     const p = cur.j.prefs;

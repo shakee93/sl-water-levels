@@ -17,7 +17,7 @@ import { FloodCalendar } from "./FloodCalendar";
 import { YearSummary, type YearSummaryLabels } from "./YearSummary";
 import type { TFn } from "@/lib/i18n/translate";
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 function yearLabels(t: TFn): Partial<YearSummaryLabels> {
   return {

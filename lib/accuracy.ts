@@ -98,7 +98,7 @@ export function spanText(a: AccuracyFile, win: Win): string {
 
 /** Plain sentences for llms.txt / the MCP: live, per horizon, with the date and number of checks. */
 export function accuracyLine(a: AccuracyFile | null): string {
-  if (!a) return "Live accuracy figures are temporarily unavailable; see https://sl-water-levels.vercel.app/about#next-hour.";
+  if (!a) return "Live accuracy figures are temporarily unavailable; see https://waterlevels.lk/about#next-hour.";
   const win = bestWindow(a);
   const h1 = figure(a.overall, 1, win);
   if (!h1) return "Live accuracy figures are not available yet.";

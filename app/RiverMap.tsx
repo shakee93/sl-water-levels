@@ -19,7 +19,7 @@ import { SpillWatchChip } from "./SpillWatchChip";
 import { tierLine } from "./tierUi";
 import { RiverMapView } from "./RiverMapView";
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 /**
  * The river on one small map: its gauges (coloured by level), the reservoirs that feed it, and a
