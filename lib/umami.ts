@@ -12,6 +12,7 @@ type UmamiClient = {
 declare global {
   interface Window {
     umami?: UmamiClient;
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
@@ -19,6 +20,8 @@ export function trackEvent(name: string, data?: UmamiEventData) {
   if (typeof window === "undefined") return;
   try {
     window.umami?.track(name, data);
+    // the same event in Google Analytics, when it is loaded (production only, app/[lang]/layout.tsx)
+    window.gtag?.("event", name, data ?? {});
   } catch {
     /* swallow — analytics must never break the app */
   }

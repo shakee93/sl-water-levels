@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Activity, AlertTriangle, Database } from "lucide-react";
+import { Activity, AlertTriangle, Database, Lock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { isLocale, pageAlternates } from "@/lib/i18n/config";
 import { AboutTrust } from "@/app/AboutTrust";
@@ -9,6 +9,25 @@ import { JsonLd } from "@/app/Answer";
 import { breadcrumbLd, publisherLd, webPageLd, CONTENT_UPDATED, REPO } from "@/lib/seo";
 import { MIN_CHECKS, bestWindow, figure, getAccuracy, newModelFigure, spanText } from "@/lib/accuracy";
 import { getI18n } from "@/lib/i18n/server";
+
+// Visitor statistics and privacy (Google Analytics added 27 Oct 2026). si/ta reviewed with the rest of the site's strings.
+const PRIVACY = {
+  en: {
+    h: "Privacy and visitor statistics",
+    p1: "No account, no sign-in. Your saved places, street level and location stay on your phone; alerts store only your browser's push address and the places you chose.",
+    p2: "We count visits with Umami (no cookies) and Google Analytics (cookies; Google signals and ad features off) to see which pages help people. Nothing about you is sold or used for ads.",
+  },
+  si: {
+    h: "පෞද්ගලිකත්වය සහ පැමිණීම් සංඛ්‍යාලේඛන",
+    p1: "ගිණුමක් හෝ පුරනය වීමක් නැත. ඔබ සුරැකි ස්ථාන, වීදි මට්ටම සහ ස්ථානය ඔබේ දුරකථනයේ පමණක් රැඳේ; ඇඟවීම් සඳහා ඔබේ බ්‍රවුසරයේ push ලිපිනය සහ ඔබ තෝරාගත් ස්ථාන පමණක් ගබඩා වේ.",
+    p2: "කුමන පිටු මිනිසුන්ට උදව් වේදැයි දැනගැනීමට අපි Umami (කුකීස් නැත) සහ Google Analytics (කුකීස්; Google signals සහ දැන්වීම් විශේෂාංග අක්‍රියයි) මගින් පැමිණීම් ගණන් කරමු. ඔබ ගැන කිසිවක් විකුණනු හෝ දැන්වීම් සඳහා භාවිත කරනු නොලැබේ.",
+  },
+  ta: {
+    h: "தனியுரிமை மற்றும் வருகை புள்ளிவிவரம்",
+    p1: "கணக்கு இல்லை, உள்நுழைவு இல்லை. நீங்கள் சேமித்த இடங்கள், தெரு மட்டம் மற்றும் இருப்பிடம் உங்கள் தொலைபேசியிலேயே இருக்கும்; எச்சரிக்கைகளுக்கு உங்கள் உலாவியின் push முகவரியும் நீங்கள் தேர்ந்த இடங்களும் மட்டுமே சேமிக்கப்படும்.",
+    p2: "எந்தப் பக்கங்கள் மக்களுக்கு உதவுகின்றன என்பதை அறிய Umami (குக்கீகள் இல்லை) மற்றும் Google Analytics (குக்கீகள்; Google signals, விளம்பர அம்சங்கள் அணைக்கப்பட்டுள்ளன) மூலம் வருகைகளைக் கணக்கிடுகிறோம். உங்களைப் பற்றி எதுவும் விற்கப்படுவதில்லை, விளம்பரங்களுக்குப் பயன்படுத்தப்படுவதில்லை.",
+  },
+} as const;
 
 export const revalidate = 3600;
 
@@ -85,6 +104,13 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
           <Card icon={<Database className="size-5" />} title={t("about.src.h")}>
             <p>{t("about.src.p1")}</p>
             <p>{t("about.src.p2")}</p>
+          </Card>
+          </div>
+
+          <div id="privacy" className="scroll-mt-20">
+          <Card icon={<Lock className="size-5" />} title={PRIVACY[lang].h}>
+            <p>{PRIVACY[lang].p1}</p>
+            <p>{PRIVACY[lang].p2}</p>
           </Card>
           </div>
 

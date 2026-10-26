@@ -52,6 +52,8 @@ const notoTamil = Noto_Sans_Tamil({
 import { SITE } from "@/lib/seo";
 
 // viewport-fit=cover lets the pages use env(safe-area-inset-*) on notched phones.
+const GA_ID = "G-NDXLV0T8QC";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -168,6 +170,9 @@ export default async function RootLayout({
           </AlertSettingsProvider>
           </InstallProvider>
         </LocaleProvider>
+        {/* Google Analytics (G-NDXLV0T8QC, property "waterlevels.lk", created 27 Oct 2026): loaded after the page is idle so it
+            never slows the first view; production host only; Google signals and ad personalisation off. Privacy note: /about#privacy. */}
+        <Script id="ga-init" strategy="lazyOnload">{`if(location.hostname==="waterlevels.lk"){window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag("js",new Date());gtag("config","${GA_ID}",{allow_google_signals:false,allow_ad_personalization_signals:false});var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}";document.head.appendChild(s);}`}</Script>
         <Script
           defer
           src="https://analytics.freshpixl.com/script.js"
