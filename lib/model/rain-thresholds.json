@@ -1,0 +1,4 @@
+{
+  "note": "Per-gauge flood-relevant rain thresholds, read by lib/rainTriggers.ts. Placeholder written by the rain-audit work so the import resolves; the forecast-model work replaces it. Shape: gauges[<gauge name>] = { mm1h?, mm3h?, mm24h? } (mm over the gauge's response window that historically preceded a rise). Missing = national numbers.",
+  "gauges": {}
+}
