@@ -20,7 +20,8 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { extractText, getDocumentProxy } from "unpdf";
 import { fetchStations } from "./arcgis";
-import { normaliseBasin } from "./basinOrder";
+import { BASIN_ORDER, normaliseBasin } from "./basinOrder";
+import { DISTRICT_BY_STATION } from "./districts";
 import { aiConfigured, decide, respondJson, type DecisionInput, type DecisionQuestion } from "./openai";
 
 export type WarningSeverity = "none" | "advisory" | "alert" | "minor flood" | "major flood" | "evacuation";
@@ -70,7 +71,12 @@ type Row = { title: string; url: string; issuedAt: string | null; listing: strin
 
 // ---------------------------------------------------------------- listing
 
-const SKIP_TITLE = /water\s*level|rainfall|forecast|tamil|sinhala|sea|boat|marine|fish|lightning|wind|drought|situation/i;
+const SKIP_TITLE = /water\s*level|tamil|sinhala|sea|boat|marine|fish|lightning|wind|drought|situation/i;
+// "Heavy rainfall warning" and "... forecast advisory" are exactly the bulletins we want, so those words alone no longer drop a title (they
+// used to, silently). A plain "Rainfall forecast" (the daily weather summary) is still dropped: it carries none of the warning words.
+const ROUTINE_TITLE = /rainfall|forecast/i;
+const WARNING_WORD = /warning|advis|alert|heavy|special|landslide|flood/i;
+export const wantTitle = (title: string): boolean => KEEP_TITLE.test(title) && !SKIP_TITLE.test(title) && !(ROUTINE_TITLE.test(title) && !WARNING_WORD.test(title));
 const KEEP_TITLE = /flood|warning|special|bulletin|advis|alert|heavy rain|landslide/i;
 
 function parseRows(html: string, listing: string): Row[] {
@@ -115,7 +121,7 @@ async function listBulletins(now: number): Promise<{ rows: Row[]; errors: string
   );
   const seen = new Set<string>();
   const rows = all
-    .filter((r) => KEEP_TITLE.test(r.title) && !SKIP_TITLE.test(r.title))
+    .filter((r) => wantTitle(r.title))
     // Only bulletins issued in the last 24h are ever analysed (so older ones cost nothing); rows
     // without a parseable date are kept and settled by the model fallback.
     .filter((r) => r.issuedAt == null || now - Date.parse(r.issuedAt) <= DAY_MS)
@@ -394,8 +400,17 @@ async function loadOfficialWarnings(now: number): Promise<WarningsResult> {
   }
 }
 
-/** Current warnings that name this basin (matched on the trimmed name). */
-export function warningsForBasin(result: WarningsResult, basin: string): OfficialWarning[] {
+/**
+ * Current warnings that name this basin (matched on the trimmed name). A Met Department advisory (heavy rain) names districts, not
+ * basins, so it also matches when it names the district of one of the river's gauges (`stations`, else the gauges BASIN_ORDER lists
+ * for the river). Irrigation and DMC flood warnings stay basin-only: their district lists overlap between rivers.
+ */
+export function warningsForBasin(result: WarningsResult, basin: string, stations?: string[]): OfficialWarning[] {
   const key = normaliseBasin(basin);
-  return result.warnings.filter((w) => w.basins.some((b) => normaliseBasin(b) === key));
+  const districts = new Set((stations ?? BASIN_ORDER[key] ?? []).map((s) => DISTRICT_BY_STATION[s]).filter((d): d is string => !!d).map((d) => d.toLowerCase()));
+  return result.warnings.filter(
+    (w) =>
+      w.basins.some((b) => normaliseBasin(b) === key) ||
+      (w.source === "Department of Meteorology" && w.basins.length === 0 && (w.districts ?? []).some((d) => districts.has(d.toLowerCase()))),
+  );
 }

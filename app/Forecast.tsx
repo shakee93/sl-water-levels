@@ -118,7 +118,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const realTier = status.tier;
   const [advisory, warnings, release, sat] = await Promise.all([
     getAdvisory({ station: selectedStation, river: basin.trim(), district, tier: realTier, forecast: f }),
-    warningsP.then((w) => warningsForBasin(w, basin)),
+    warningsP.then((w) => warningsForBasin(w, basin, [selectedStation])),
     releaseAffecting(selectedStation).catch(() => ({ active: false, confirmed: false }) as const),
     getGsmapForStation(basin, selectedStation),
   ]);

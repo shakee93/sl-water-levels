@@ -251,7 +251,7 @@ export default async function BasinPage({
         </header>
 
         <Suspense key={`warn-${basin}`} fallback={null}>
-          <OfficialWarningLine basin={basin} lang={lang} />
+          <OfficialWarningLine basin={basin} lang={lang} stations={onBasin.map((s) => s.station)} />
         </Suspense>
 
         <Suspense key={`release-${basin}`} fallback={null}><ReleaseCard lang={lang} basin={basin} /></Suspense>
@@ -306,9 +306,9 @@ export default async function BasinPage({
 }
 
 /** One compact amber line when a current official bulletin names this basin. Fails soft. */
-async function OfficialWarningLine({ basin, lang }: { basin: string; lang: Locale }) {
+async function OfficialWarningLine({ basin, lang, stations }: { basin: string; lang: Locale; stations: string[] }) {
   const { t } = getI18n(lang);
-  const w = warningsForBasin(await getOfficialWarnings(), basin)[0];
+  const w = warningsForBasin(await getOfficialWarnings(), basin, stations)[0];
   if (!w) return null;
   return (
     <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">

@@ -21,6 +21,7 @@ export async function GET() {
       title: w.title,
       issuedAt: w.issuedAt,
       basins: w.basins,
+      districts: w.districts ?? [],
       severity: w.severity,
       releaseCusecs: w.releaseCusecs ?? null,
     }))
