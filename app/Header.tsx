@@ -30,17 +30,17 @@ export async function Header({ lang }: { lang: Locale }) {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] h-14 flex items-center justify-between gap-2 sm:gap-3">
         <Link
           href={p("/")}
-          className="group flex items-center gap-2 min-w-0 min-h-11 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="group flex items-center gap-2 min-w-0 sm:shrink-0 min-h-11 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           aria-label={t("site.homeAria")}
         >
           <span className="grid place-items-center size-7 shrink-0 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-sm group-hover:shadow transition">
             <Waves className="size-4" aria-hidden />
           </span>
           <span className="flex flex-col leading-tight min-w-0">
-            <span className="text-xs sm:text-[13px] leading-tight font-semibold tracking-tight text-slate-900 dark:text-slate-100 line-clamp-2 sm:truncate">
+            <span className="text-xs sm:text-[13px] leading-tight font-semibold tracking-tight text-slate-900 dark:text-slate-100 line-clamp-2 sm:line-clamp-none sm:whitespace-nowrap">
               {t("site.name")}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 -mt-0.5 hidden sm:block">
+            <span className="text-xs text-slate-500 dark:text-slate-400 -mt-0.5 hidden sm:block whitespace-nowrap">
               {t("site.tagline")}
             </span>
           </span>
