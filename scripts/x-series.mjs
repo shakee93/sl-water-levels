@@ -47,6 +47,8 @@ async function main() {
   }
 
   const text = `${next.text} ${next.url}`;
+  // X counts any link as 23 characters; over 280 it refuses the post (403), so stop here with a clear message instead
+  if ([...next.text].length + 1 + 23 > 280) throw new Error(`"${next.id}" is ${[...next.text].length + 24} characters with its link; the limit is 280`);
   const key = `series:${next.id}`;
   // claim first (UNIQUE dedupe_key): a second run at the same moment finds the row and stops
   await d1Query("INSERT OR IGNORE INTO x_posts (ts, day, kind, dedupe_key, mode, status, text, cost_usd) VALUES (?, ?, 'series', ?, ?, 'claimed', ?, ?)", [now, day, key, mode, text, cost]);
