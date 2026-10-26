@@ -64,6 +64,17 @@ import type { Unit } from "./units";
 
 /** Owner decision 26 Oct 2026: "Get ready" is the gauge's official alert level. Releases and rising canals no longer lift a town to it early. */
 const PRE_ALERT_LIFTS = false;
+/**
+ * Owner decision 26 Oct 2026 (after Wellampitiya read "Alert" at 2.6 ft with the official alert mark at 4 ft): the verdict uses the
+ * Irrigation Department's steps only (Normal, Alert, Minor flood, Major flood), set by the river gauge and official warnings. Your own
+ * street level, heavy rain on the streets and heavy forecast rain are shown as the note under the verdict ("close to your street's
+ * flood level", "very heavy rain here: low streets often get water"), never as Alert or Minor flood. true restores the old lifts.
+ */
+let STREET_SIGNALS_RAISE_STEP = false;
+/** Tests only: run the rules with the pre-26-Oct street/rain lifts on, to keep their behaviour covered. */
+export function setStreetSignalsRaiseStep(on: boolean): void {
+  STREET_SIGNALS_RAISE_STEP = on;
+}
 
 export type Tone = "normal" | "watch" | "alert" | "minor" | "major" | "stale";
 export const TONES: Tone[] = ["normal", "watch", "alert", "minor", "major"];
@@ -299,6 +310,8 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
       if (lvl >= myLevel) p = "minor";
       else if (fMax != null && fMax >= myLevel && rising) p = "alert";
       else if (lvl >= myLevel * PERSONAL_NEAR) p = rising ? "alert" : "watch";
+      // the street's own level is a note under the river's official step, not a step of its own (see STREET_SIGNALS_RAISE_STEP)
+      if (p && !STREET_SIGNALS_RAISE_STEP) p = "watch";
       if (p) {
         // the street's own level is stronger evidence than the gauge's official marks
         const before = river;
@@ -324,7 +337,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     } else if (tone === "normal") {
       tone = "watch";
       rainRaised = true;
-    } else if (drainage !== "upland" && rank(tone) < rank("minor")) {
+    } else if (STREET_SIGNALS_RAISE_STEP && drainage !== "upland" && rank(tone) < rank("minor")) {
       tone = at(rank(tone) + 1);
       rainRaised = true;
     }
@@ -360,7 +373,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   // unmatched alarms a year. Only towns with a satellite rain zone have streetRain, so river towns are unaffected.
   const streetLikely = lowSpot?.level === "likely";
   const streetRaised = streetLikely && (tone == null || rank("alert") > rank(tone));
-  if (streetLikely) tone = maxTone(tone, "alert");
+  if (streetLikely) tone = maxTone(tone, STREET_SIGNALS_RAISE_STEP ? "alert" : "watch");
   const baseTone: Tone = tone ?? "stale";
 
   // ---- reasons (most important first)

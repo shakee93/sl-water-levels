@@ -1,5 +1,8 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { createHash } from "node:crypto";
+import { d1Configured, d1Query } from "./d1";
+import { soft } from "./soft";
 import {
   ageMinutes,
   HOUR_MS,
@@ -50,17 +53,87 @@ type ArcgisPage = {
 // full revalidate window, so the request is made INSIDE unstable_cache and
 // validated before returning: a throw is never cached, and a previously cached
 // good value keeps being served while a refresh fails.
+// Back-off for this server instance: after a quota answer (429) no request goes to ArcGIS for a minute (their quota is per
+// minute and shared by everyone using the Irrigation Department's data); pages keep the last good copy meanwhile.
+let quotaUntil = 0;
+// Who is asking, so the data owner can reach us if our requests ever bother them.
+const UA = "sl-water-levels (+https://waterlevels.lk; shakee.zats@gmail.com)";
+
+// Last good answer per query, kept in D1 so it survives deploys and cold servers. When ArcGIS refuses (quota) or fails, the
+// page shows this instead of "Latest data unavailable" (26 Oct 2026: a deploy during a quota spell had an empty cache and the
+// home page went blank while every other page had data). Written only on a cache miss that succeeded, so at most once per
+// query per cache window. The time bucket in a query is ignored in the key: the previous window's answer is the fallback.
+const LAST_GOOD_MAX_AGE_MS = 48 * 3_600_000;
+const lastGoodKey = (url: string) => {
+  let u = url;
+  try {
+    u = decodeURIComponent(url.replace(/\+/g, " "));
+  } catch {
+    /* keep raw */
+  }
+  return createHash("sha1").update(u.replace(/TIMESTAMP '[^']*'/g, "TS")).digest("hex");
+};
+async function saveLastGood(url: string, page: ArcgisPage): Promise<void> {
+  if (!d1Configured()) return;
+  const body = JSON.stringify(page);
+  if (body.length > 900_000) return;
+  await soft(
+    d1Query("CREATE TABLE IF NOT EXISTS arcgis_last_good (k TEXT PRIMARY KEY, ts INTEGER NOT NULL, body TEXT NOT NULL)")
+      .then(() => d1Query("INSERT INTO arcgis_last_good (k, ts, body) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET ts = excluded.ts, body = excluded.body", [lastGoodKey(url), Date.now(), body]))
+      .then(() => undefined)
+      .catch(() => undefined),
+    2000,
+    undefined,
+  );
+}
+async function loadLastGood(url: string): Promise<ArcgisPage | null> {
+  if (!d1Configured()) return null;
+  const rows = await soft(d1Query("SELECT ts, body FROM arcgis_last_good WHERE k = ?", [lastGoodKey(url)]).catch(() => []), 3000, []);
+  const r = rows[0];
+  if (!r || Date.now() - Number(r.ts) > LAST_GOOD_MAX_AGE_MS) return null;
+  try {
+    return JSON.parse(String(r.body)) as ArcgisPage;
+  } catch {
+    return null;
+  }
+}
+
 const fetchPageCached = unstable_cache(
   async (url: string): Promise<ArcgisPage> => {
+    const fresh = await fetchFresh(url).catch(async (e: unknown) => {
+      const lg = await loadLastGood(url);
+      if (lg) return { ...lg, stale: true } as ArcgisPage;
+      throw e;
+    });
+    if (!(fresh as ArcgisPage & { stale?: boolean }).stale) await saveLastGood(url, fresh);
+    return fresh;
+  },
+  ["arcgis-page"],
+  // 5 minutes (was 60 s until 26 Oct 2026): the Irrigation Department's ArcGIS org allows 3,000 request units a minute for
+  // EVERYONE using its data and ran out on a flood afternoon. Gauges report hourly, so 5 min costs little freshness; the
+  // background checker (workers/scheduler, every 5 min) still notices a new reading for X and push. Language versions of a
+  // page share this cache: it is keyed by the query, not the page.
+  { revalidate: 300 },
+);
+
+async function fetchFresh(url: string): Promise<ArcgisPage> {
+    if (Date.now() < quotaUntil) throw new Error("ArcGIS error 429: backing off after a quota answer");
     let lastErr: Error | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       if (attempt > 0) await new Promise((r) => setTimeout(r, 600));
       try {
-        const r = await fetch(url);
+        const r = await fetch(url, { headers: { "User-Agent": UA } });
         if (!r.ok) throw new Error(`ArcGIS -> HTTP ${r.status}`);
         const json = (await r.json()) as ArcgisPage & { error?: { code?: number; message?: string } };
         if (json.error) {
-          throw new Error(`ArcGIS error ${json.error.code ?? ""}: ${json.error.message ?? "unknown"}`.trim());
+          const err = new Error(`ArcGIS error ${json.error.code ?? ""}: ${json.error.message ?? "unknown"}`.trim());
+          // quota: retrying at once only spends more of the shared per-minute units (see revalidate below)
+          if (json.error.code === 429) {
+            quotaUntil = Date.now() + 60_000;
+            lastErr = err;
+            break;
+          }
+          throw err;
         }
         if (!Array.isArray(json.features)) throw new Error("ArcGIS response had no features");
         return { features: json.features, exceededTransferLimit: json.exceededTransferLimit };
@@ -69,10 +142,7 @@ const fetchPageCached = unstable_cache(
       }
     }
     throw lastErr ?? new Error("ArcGIS request failed");
-  },
-  ["arcgis-page"],
-  { revalidate: 60 },
-);
+}
 
 // generateMetadata, the page and its Suspense children ask for the same URL at the same moment; on a
 // cold data cache unstable_cache would run the request once per caller.
@@ -177,12 +247,22 @@ function toThresholds(a: RawGauge): Thresholds {
 
 /** Per-gauge history for the long chart. gauges_2_view only retains ~7 days. */
 export async function fetchStationData(stationName: string, days = 4): Promise<StationData> {
-  const features = await arcgis("gauges_2_view/FeatureServer/0/query", {
-    where: `gauge='${stationName.replace(/'/g, "''")}'`,
-    outFields: GAUGE_FIELDS,
-    orderByFields: "CreationDate DESC, objectid DESC",
-    returnGeometry: "false",
-  });
+  let features: ArcgisPage["features"];
+  try {
+    features = await arcgis("gauges_2_view/FeatureServer/0/query", {
+      where: `gauge='${stationName.replace(/'/g, "''")}'`,
+      outFields: GAUGE_FIELDS,
+      orderByFields: "CreationDate DESC, objectid DESC",
+      returnGeometry: "false",
+    });
+  } catch (e) {
+    // ArcGIS refused (quota) and this gauge's history has no saved copy yet: fall back to the all-gauges answer (last 26 h),
+    // which every page shares and which has its own saved copy, so the page still shows the reading and the last day
+    // instead of "Could not load this station" (26 Oct 2026, Dunamale during a quota spell).
+    const s = (await getNational().catch(() => [] as NationalStation[])).find((x) => x.station === stationName);
+    if (!s) throw e;
+    return { station: stationName, basin: s.basin, thresholds: s.thresholds, readings: s.trend24h, latest: s.latest };
+  }
 
   const cutoff = Date.now() - days * 24 * HOUR_MS;
   const rows = features.map((f) => f.attributes as RawGauge).filter((a) => Number.isFinite(a.CreationDate));

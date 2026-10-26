@@ -1,0 +1,296 @@
+[
+{
+"id": "aththanagalu-oya/dunamale",
+"station": "Dunamale",
+"river": "Aththanagalu Oya",
+"lat": 7.116416,
+"lon": 80.084085
+},
+{
+"id": "deduru-oya/moragaswewa",
+"station": "Moragaswewa",
+"river": "Deduru Oya",
+"lat": 7.7,
+"lon": 79.99
+},
+{
+"id": "gal-oya/ampara",
+"station": "Ampara",
+"river": "Gal Oya",
+"lat": 7.290711,
+"lon": 81.670343
+},
+{
+"id": "gin-ganga/baddegama",
+"station": "Baddegama",
+"river": "Gin Ganga",
+"lat": 6.173806,
+"lon": 80.175381
+},
+{
+"id": "gin-ganga/thawalama",
+"station": "Thawalama",
+"river": "Gin Ganga",
+"lat": 6.341776,
+"lon": 80.330616
+},
+{
+"id": "heda-oya/siyambalanduwa",
+"station": "Siyambalanduwa",
+"river": "Heda Oya",
+"lat": 6.905911,
+"lon": 81.54541
+},
+{
+"id": "kala-oya/thambuththegama",
+"station": "Thambuththegama",
+"river": "Kala Oya",
+"lat": 8.121269,
+"lon": 80.325558
+},
+{
+"id": "kalu-ganga/ellagawa",
+"station": "Ellagawa",
+"river": "Kalu Ganga",
+"lat": 6.731554,
+"lon": 80.218254
+},
+{
+"id": "kalu-ganga/kalawellawa-millakanda",
+"station": "Kalawellawa (Millakanda)",
+"river": "Kalu Ganga",
+"lat": 6.631166,
+"lon": 80.16069
+},
+{
+"id": "kalu-ganga/magura",
+"station": "Magura",
+"river": "Kalu Ganga",
+"lat": 6.513727,
+"lon": 80.243935
+},
+{
+"id": "kalu-ganga/putupaula",
+"station": "Putupaula",
+"river": "Kalu Ganga",
+"lat": 6.614324,
+"lon": 80.061511
+},
+{
+"id": "kalu-ganga/rathnapura",
+"station": "Ratnapura",
+"river": "Kalu Ganga",
+"lat": 6.679067,
+"lon": 80.397235
+},
+{
+"id": "kelani-ganga/deraniyagala",
+"station": "Deraniyagala",
+"river": "Kelani Ganga",
+"lat": 6.925934,
+"lon": 80.339212
+},
+{
+"id": "kelani-ganga/glencourse",
+"station": "Glencourse",
+"river": "Kelani Ganga",
+"lat": 6.976981,
+"lon": 80.194247
+},
+{
+"id": "kelani-ganga/hanwella",
+"station": "Hanwella",
+"river": "Kelani Ganga",
+"lat": 6.9097,
+"lon": 80.083126
+},
+{
+"id": "kelani-ganga/holombuwa",
+"station": "Holombuwa",
+"river": "Kelani Ganga",
+"lat": 7.188201,
+"lon": 80.266331
+},
+{
+"id": "kelani-ganga/kithulgala",
+"station": "Kithulgala",
+"river": "Kelani Ganga",
+"lat": 6.991259,
+"lon": 80.419213
+},
+{
+"id": "kelani-ganga/nagalagam-street",
+"station": "Nagalagam Street",
+"river": "Kelani Ganga",
+"lat": 6.958265,
+"lon": 79.878642
+},
+{
+"id": "kelani-ganga/norwood",
+"station": "Norwood",
+"river": "Kelani Ganga",
+"lat": 6.840145,
+"lon": 80.611301
+},
+{
+"id": "kirindi-oya/kuda-oya",
+"station": "Kuda Oya",
+"river": "Kirindi Oya",
+"lat": 6.524746,
+"lon": 81.123337
+},
+{
+"id": "kirindi-oya/thanamalwila",
+"station": "Thanamalwila",
+"river": "Kirindi Oya",
+"lat": 6.46905,
+"lon": 81.133751
+},
+{
+"id": "kirindi-oya/wellawaya",
+"station": "Wellawaya",
+"river": "Kirindi Oya",
+"lat": 6.69576,
+"lon": 81.11214
+},
+{
+"id": "kumbukkan-oya/nakkala",
+"station": "Nakkala",
+"river": "Kumbukkan Oya",
+"lat": 6.895362,
+"lon": 81.297065
+},
+{
+"id": "ma-oya/yaka-wewa",
+"station": "Yaka Wewa",
+"river": "Ma Oya",
+"lat": 8.726031,
+"lon": 80.674968
+},
+{
+"id": "maduru-oya/padiyathalawa",
+"station": "Padiyathalawa",
+"river": "Maduru Oya",
+"lat": 7.382251,
+"lon": 81.194637
+},
+{
+"id": "maha-oya/badalgama",
+"station": "Badalgama",
+"river": "Maha Oya",
+"lat": 7.300741,
+"lon": 79.983916
+},
+{
+"id": "maha-oya/giriulla",
+"station": "Giriulla",
+"river": "Maha Oya",
+"lat": 7.330736,
+"lon": 80.125095
+},
+{
+"id": "mahaweli-ganga/calidonia",
+"station": "Calidonia",
+"river": "Mahaweli Ganga",
+"lat": 6.901996,
+"lon": 80.697581
+},
+{
+"id": "mahaweli-ganga/manampitiya",
+"station": "Manampitiya",
+"river": "Mahaweli Ganga",
+"lat": 7.912987,
+"lon": 81.090594
+},
+{
+"id": "mahaweli-ganga/nawalapitiya",
+"station": "Nawalapitiya",
+"river": "Mahaweli Ganga",
+"lat": 7.04894547,
+"lon": 80.53616209
+},
+{
+"id": "mahaweli-ganga/peradeniya",
+"station": "Peradeniya",
+"river": "Mahaweli Ganga",
+"lat": 7.269059,
+"lon": 80.593005
+},
+{
+"id": "mahaweli-ganga/thaldena",
+"station": "Thaldena",
+"river": "Mahaweli Ganga",
+"lat": 7.090653,
+"lon": 81.048886
+},
+{
+"id": "mahaweli-ganga/weraganthota",
+"station": "Weraganthota",
+"river": "Mahaweli Ganga",
+"lat": 7.31647,
+"lon": 80.98911
+},
+{
+"id": "malwathu-oya/thanthirimale",
+"station": "Thanthirimale",
+"river": "Malwathu Oya",
+"lat": 8.590081,
+"lon": 80.27807
+},
+{
+"id": "mee-oya/galgamuwa",
+"station": "Galgamuwa",
+"river": "Mee Oya",
+"lat": 7.969368,
+"lon": 80.262322
+},
+{
+"id": "menik-ganga/katharagama",
+"station": "Katharagama",
+"river": "Menik Ganga",
+"lat": 6.417705,
+"lon": 81.33219
+},
+{
+"id": "nilwala-ganga/panadugama",
+"station": "Panadugama",
+"river": "Nilwala Ganga",
+"lat": 6.11178,
+"lon": 80.482384
+},
+{
+"id": "nilwala-ganga/pitabeddara",
+"station": "Pitabeddara",
+"river": "Nilwala Ganga",
+"lat": 6.213746,
+"lon": 80.476604
+},
+{
+"id": "nilwala-ganga/thalgahagoda",
+"station": "Thalgahagoda",
+"river": "Nilwala Ganga",
+"lat": 6.0103,
+"lon": 80.53293
+},
+{
+"id": "nilwala-ganga/urawa",
+"station": "Urawa",
+"river": "Nilwala Ganga",
+"lat": 6.23673,
+"lon": 80.572011
+},
+{
+"id": "walawe-ganga/moraketiya",
+"station": "Moraketiya",
+"river": "Walawe Ganga",
+"lat": 6.345339,
+"lon": 80.901244
+},
+{
+"id": "yan-oya/horowpothana",
+"station": "Horowpothana",
+"river": "Yan Oya",
+"lat": 8.576998,
+"lon": 80.880815
+}
+]

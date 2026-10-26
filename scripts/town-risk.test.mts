@@ -1,7 +1,7 @@
 // @ts-nocheck (node strip-types test: explicit .ts extensions)
 // node --experimental-strip-types scripts/town-risk.test.mts
 import assert from "node:assert/strict";
-import { assessTown, type GaugeIn, type TownRiskInput } from "../lib/townRisk.ts";
+import { setStreetSignalsRaiseStep, assessTown, type GaugeIn, type TownRiskInput } from "../lib/townRisk.ts";
 import { readFileSync } from "node:fs";
 import { PLACES } from "../lib/places.ts";
 import { FAR_GAUGE_KM } from "../lib/townRisk.ts";
@@ -12,6 +12,10 @@ const rain = (o = {}) => ({ past6hMm: 0, past24hMm: 0, next6hMm: 0, next24hMm: 0
 
 // slugs are unique
 assert.equal(new Set(PLACES.map((p) => p.slug)).size, PLACES.length);
+
+// The blocks below cover the full rule set with the street/rain lifts ON (as before 26 Oct 2026); the live default is OFF
+// (official steps only), checked in the block at the end of this file.
+setStreetSignalsRaiseStep(true);
 
 // calm
 assert.equal(assessTown(base()).tone, "normal");
@@ -381,3 +385,21 @@ try {
   console.log("(station list unreachable, skipped gauge-distance checks)");
 }
 console.log("town-risk ok");
+
+// ---------------------------------------------------------------------------------------------
+// Live default since 26 Oct 2026: your street level, street rain and heavy rain never make Alert or Minor flood; they
+// stay "watch" (shown as Normal with the note). River tiers and official warnings still set the step.
+setStreetSignalsRaiseStep(false);
+{
+  const sr = (mm24h: number) => ({ mm24h, mm24hRaw: mm24h, mm6h: 10, mm1h: 1, endsAt: 0 });
+  assert.equal(assessTown(base({ streetRain: sr(131) })).tone, "watch");
+  assert.ok(keys(assessTown(base({ streetRain: sr(131) }))).includes("r.streetLikely"));
+  assert.equal(assessTown(base({ primary: g({ level: 2.6, rate3hM: 0.05 }) }), 3.0).tone, "watch");
+  assert.equal(assessTown(base({ primary: g({ level: 3.2 }) }), 3.0).tone, "watch");
+  assert.ok(keys(assessTown(base({ primary: g({ level: 3.2 }) }), 3.0)).includes("r.personalAt"));
+  assert.equal(assessTown(base({ primary: g({ tier: "alert" }), rain: rain({ next6hMm: 80 }) })).tone, "alert");
+  assert.equal(assessTown(base({ rain: rain({ next6hMm: 60 }) })).tone, "watch");
+  assert.equal(assessTown(base({ primary: g({ tier: "minor" }) })).tone, "minor");
+  assert.equal(assessTown(base({ warning: { severity: "alert", source: "DMC", area: "Kelani Ganga" } })).tone, "alert");
+}
+console.log("town-risk official-steps ok");

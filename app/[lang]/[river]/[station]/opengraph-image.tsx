@@ -11,7 +11,7 @@ export const contentType = "image/png";
 
 const COLORS: Record<string, { bg: string; fg: string }> = {
   normal: { bg: "#d1fae5", fg: "#064e3b" },
-  watch: { bg: "#fef3c7", fg: "#451a03" },
+  watch: { bg: "#d1fae5", fg: "#064e3b" }, // near alert reads Normal
   alert: { bg: "#fcd34d", fg: "#451a03" },
   minor: { bg: "#c2410c", fg: "#ffffff" },
   major: { bg: "#b91c1c", fg: "#ffffff" },

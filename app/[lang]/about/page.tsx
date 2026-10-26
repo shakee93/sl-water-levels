@@ -91,6 +91,9 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
           <Card icon={<AlertTriangle className="size-5" />} title={t("about.levels.h")}>
             <ul className="list-disc pl-5 space-y-1.5">
               <li>
+                <strong>{t("tier.normal")}</strong>: {t("about.levels.normal")}
+              </li>
+              <li>
                 <strong>{t("mark.alert")}</strong>: {t("about.levels.alert")}
               </li>
               <li>

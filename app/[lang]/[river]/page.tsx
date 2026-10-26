@@ -179,7 +179,8 @@ export default async function BasinPage({
   }
   const serverNow = nowMs();
   const reporting = snap.filter((s) => s.tier !== "stale" && s.latest);
-  const flagged = reporting.filter((s) => ["major", "minor", "alert", "watch"].includes(s.tier));
+  // near alert (tier "watch") is Normal: only Alert and above are flagged (owner, 26 Oct 2026)
+  const flagged = reporting.filter((s) => ["major", "minor", "alert"].includes(s.tier));
   const newest = snap.reduce<number | null>((m, s) => (s.latest && (m == null || s.latest.ts > m) ? s.latest.ts : m), null);
 
   let status: React.ReactNode;

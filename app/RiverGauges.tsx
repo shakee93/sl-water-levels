@@ -16,7 +16,8 @@ const STYLE: Partial<Record<Tier, Style>> = {
   major: { pill: "bg-red-700 text-white", bar: "bg-red-500", line: "#dc2626", dot: "bg-red-500" },
   minor: { pill: "bg-orange-700 text-white", bar: "bg-orange-500", line: "#ea580c", dot: "bg-orange-500" },
   alert: { pill: "bg-amber-400 text-amber-950", bar: "bg-amber-500", line: "#d97706", dot: "bg-amber-500" },
-  watch: { pill: "bg-yellow-300 text-yellow-950", bar: "bg-yellow-400", line: "#ca8a04", dot: "bg-yellow-400" },
+  // near alert reads Normal: a quiet pill and the calm bar, with the reason as a note beside it
+  watch: { pill: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100", bar: "bg-sky-500", line: "#64748b", dot: "bg-slate-400 dark:bg-slate-500" },
 };
 const QUIET: Style = { pill: "", bar: "bg-sky-500", line: "#64748b", dot: "bg-slate-400 dark:bg-slate-500" };
 
@@ -24,7 +25,6 @@ const ROW_BORDER: Partial<Record<Tier, string>> = {
   major: "border-red-300 dark:border-red-900 bg-red-50/70 dark:bg-red-950/30",
   minor: "border-orange-300 dark:border-orange-900 bg-orange-50/70 dark:bg-orange-950/30",
   alert: "border-amber-300 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/30",
-  watch: "border-yellow-300 dark:border-yellow-900 bg-yellow-50/60 dark:bg-yellow-950/20",
 };
 
 function Sparkline({ t, s, color }: { t: TFn; s: NationalStation; color: string }) {
@@ -112,7 +112,7 @@ function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: N
     <Link
       href={p(s.href)}
       className={`block rounded-xl border px-3.5 py-3 min-h-[44px] transition hover:border-sky-400 dark:hover:border-sky-700 ${
-        flagged && !muted
+        flagged && !muted && ROW_BORDER[tier]
           ? ROW_BORDER[tier]
           : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
       } ${notReporting ? "opacity-70" : ""}`}
@@ -126,6 +126,7 @@ function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: N
               {tierLabel(t, tier)}
             </span>
           )}
+          {tier === "watch" && !muted && <span data-verdict-note className="truncate text-xs text-slate-500 dark:text-slate-400">{t("tier.nearShort")}</span>}
         </span>
         <span className="inline-flex items-center gap-1 text-xs tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
           {s.latest && (

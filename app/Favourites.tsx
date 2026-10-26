@@ -9,6 +9,7 @@ import {
   STEADY_M_PER_H,
   TIER_DOT,
   tierLabel,
+  tierLine,
   TIER_TEXT_CLASS,
   type HomeStation,
 } from "./tierUi";
@@ -105,7 +106,7 @@ export function Favourites({
                   {stationDisplayName(s.station)}
                 </span>
                 <span className={`block truncate text-xs ${TIER_TEXT_CLASS[s.tier]}`}>
-                  {tierLabel(t, s.tier)}
+                  {tierLine(t, s.tier)}
                   {s.tier === "stale" && s.ts != null && (
                     <>
                       {" · "}

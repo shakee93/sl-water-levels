@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LevelGauge } from "./LevelGauge";
 import { useI18n } from "./LocaleProvider";
-import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Eye, Info, Minus, MessageCircle, Phone, Share2, Siren, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Info, Minus, MessageCircle, Phone, Share2, Siren, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
 
 const KEY = "sl_favourites";
 const EVT = "sl:favourites";
@@ -182,7 +182,7 @@ export type VerdictTone = "normal" | "watch" | "alert" | "minor" | "major" | "no
 
 export const TONE: Record<VerdictTone, { icon: typeof Clock; text: string; bar: string }> = {
   normal: { icon: CircleCheck, text: "text-emerald-700 dark:text-emerald-400", bar: "border-l-emerald-500" },
-  watch: { icon: Eye, text: "text-slate-900 dark:text-slate-100", bar: "border-l-slate-300 dark:border-l-slate-600" },
+  watch: { icon: CircleCheck, text: "text-emerald-700 dark:text-emerald-400", bar: "border-l-emerald-500" }, // shown as Normal
   alert: { icon: TriangleAlert, text: "text-amber-700 dark:text-amber-400", bar: "border-l-amber-500" },
   minor: { icon: TriangleAlert, text: "text-orange-700 dark:text-orange-400", bar: "border-l-orange-600" },
   major: { icon: Siren, text: "text-red-700 dark:text-red-400", bar: "border-l-red-600" },
@@ -223,6 +223,7 @@ export function VerdictCard({
   level,
   gauge,
   share,
+  note,
   children,
 }: {
   tone: VerdictTone;
@@ -243,6 +244,8 @@ export function VerdictCard({
   /** Horizontal gauge data; omitted when the gauge has no flood levels or no reading. */
   gauge?: React.ComponentProps<typeof LevelGauge> | null;
   share: { href: string; name: string; text: string };
+  /** The reason a near-alert gauge or town still reads Normal ("Near alert: 1.4 ft below the alert mark, rising"); small, under the verdict. */
+  note?: string | null;
   children: React.ReactNode;
 }) {
   const { lang, t } = useI18n();
@@ -273,6 +276,12 @@ export function VerdictCard({
             </p>
           )}
         </div>
+
+        {note && (
+          <p data-verdict-note className="mt-1 text-sm text-slate-600 dark:text-slate-400" lang={lang}>
+            {note}
+          </p>
+        )}
 
         {gauge && <LevelGauge {...gauge} />}
 

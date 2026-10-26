@@ -73,3 +73,6 @@ export function seaTrend(pts: Pt[]): "rising" | "falling" | "steady" | null {
   const d = last.m - ref[0].m;
   return d > 0.04 ? "rising" : d < -0.04 ? "falling" : "steady";
 }
+
+/** Canal levels are metres above mean sea level at the source; the site shows feet. */
+export const toFt = (m: number) => m * 3.28084;

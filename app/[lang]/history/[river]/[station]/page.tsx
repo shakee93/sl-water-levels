@@ -18,9 +18,10 @@ async function resolve(river: string, gauge: string) {
   return { data, station };
 }
 
+// Built on first visit, not at deploy: pre-building every gauge in three languages on each deploy queried the data
+// sources for pages nobody had asked for (26 Oct 2026). ISR (revalidate below) then keeps each one for its window.
 export async function generateStaticParams() {
-  const data = await getHistory();
-  return (data?.stations ?? []).map((s) => ({ river: basinSlug(s.basin), station: stationSlug(s.station) }));
+  return [];
 }
 
 export async function generateMetadata({

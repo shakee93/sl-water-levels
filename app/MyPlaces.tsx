@@ -8,7 +8,7 @@ import { hasLowSpot } from "@/lib/lowSpots";
 import { useLowSpotsRaw } from "./flood/useLowSpot";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ChevronRight, CircleCheck, CircleHelp, Eye, Share2, Star, TriangleAlert } from "lucide-react";
+import { ChevronRight, CircleCheck, CircleHelp, Share2, Star, TriangleAlert } from "lucide-react";
 import { levelOf, overall, MAX_PLACES, type Glance } from "@/lib/myPlaces";
 import { keyOfPin, parsePins, PINS_EVENT, PINS_KEY, readPinsRaw } from "@/lib/pins";
 import { MY_LEVELS_EVENT, MY_LEVELS_KEY, parseMyLevel, readMyLevelsRaw } from "@/lib/myLevels";
@@ -201,12 +201,12 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
       : sum.kind === "calm"
         ? sum.n === 1 ? rt("mp.calm1", { name: ready[0].name }) : rt("mp.calmN", { n: sum.n })
         : sum.kind === "attention"
-          ? `${rt("mp.attention", { name: sum.worst.name, verdict: verdictText(sum.worst) })}${sum.calmOthers > 0 ? " " + (sum.calmOthers === 1 ? rt("mp.attentionOthers1") : rt("mp.attentionOthers", { n: sum.calmOthers })) : ""}`
+          ? `${levelOf(sum.worst) === 1 ? rt("mp.attentionNear", { name: sum.worst.name }) : rt("mp.attention", { name: sum.worst.name, verdict: verdictText(sum.worst) })}${sum.calmOthers > 0 ? " " + (sum.calmOthers === 1 ? rt("mp.attentionOthers1") : rt("mp.attentionOthers", { n: sum.calmOthers })) : ""}`
           : sum.kind === "unknown"
             ? rt("mp.unknown", { n: sum.n })
             : "";
   const attention = sum.kind === "attention";
-  const SummaryIcon = sum.kind === "calm" ? CircleCheck : attention ? (levelOf(sum.worst)! >= 2 ? TriangleAlert : Eye) : CircleHelp;
+  const SummaryIcon = sum.kind === "calm" ? CircleCheck : attention ? (levelOf(sum.worst)! >= 2 ? TriangleAlert : CircleCheck) : CircleHelp;
   const summaryClass = sum.kind === "calm" ? "text-emerald-700 dark:text-emerald-400" : attention ? TIER_TEXT_CLASS[displayTone(sum.worst)] : "text-slate-600 dark:text-slate-300";
 
   // Today: rain expected, then the season, in one calm line each
@@ -278,9 +278,9 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
             const tone = displayTone(g);
             const trend = g.trend === "up" ? rt("mp.rising") : g.trend === "down" ? rt("mp.falling") : g.trend === "steady" ? rt("mp.steady") : null;
             const rain = g.rain24 == null ? null : g.rain24 < 1 ? rt("mp.noRain") : rt("mp.rain", { mm: Math.round(g.rain24) });
-            const detail = [verdictText(g), tone !== "stale" ? trend : null, rain].filter(Boolean).join(" · ");
+            const detail = [verdictText(g), g.tone === "watch" ? t("tier.nearShort") : null, tone !== "stale" ? trend : null, rain].filter(Boolean).join(" · ");
             // heavy rain over a spot the visitor marked as low ground (lib/lowSpots.ts): a quiet second line, never the verdict
-            const lowNote = g.kind === "t" && g.street && hasLowSpot(lowRaw, k.slice(2)) ? tt(g.street === "likely" ? "low.likely" : "low.possible") : null;
+            const lowNote = g.kind === "t" && g.street && hasLowSpot(lowRaw, k.slice(2)) ? tt(g.street === "likely" ? "low.hLikely" : "low.hPossible") : null;
             return (
               <li key={k}>
                 <Link href={p(g.href)} aria-label={`${rt("mp.open", { name: g.name })}: ${detail}${lowNote ? `. ${lowNote}` : ""}`} className={`group flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}>

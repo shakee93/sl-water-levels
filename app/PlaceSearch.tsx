@@ -28,7 +28,7 @@ type Item =
 const RECENT_KEY = "sl_recent_searches";
 const dot: Record<string, string> = {
   normal: "bg-emerald-500",
-  watch: "bg-yellow-500",
+  watch: "bg-emerald-500",
   alert: "bg-yellow-500",
   minor: "bg-orange-500",
   major: "bg-red-500",

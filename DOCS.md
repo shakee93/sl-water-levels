@@ -619,8 +619,39 @@ English advisory and no official warnings.
 - **What canal and tide data do and do not do**: context only. They add a reason line on canal-area town pages, a tide-timing note
   and "the canal is already high" for visitors who opted in to the low-spot note, and the tide line on X storm posts for the
   Kelani. They never set a town verdict and never make a town-wide flood claim.
-- Page: `/colombo-canals` (en/si/ta) with a schematic map, tide table, live canal levels per basin and the low spots that got
+- Page: `/colombo-canals` (en/si/ta) with the interactive canal map, tide table, live canal levels per basin and the low spots that got
   water first. Internal research: `research/colombo-canal-dynamics.md`.
+- **Canal map** (`app/colombo/CanalMap.tsx` lazy wrapper -> `CanalMapLeaflet.tsx`, Leaflet + react-leaflet like the home map, no new
+  library; chunk loads when the map is near the screen). Base map: OpenStreetMap tiles (CARTO's now need an API key), dark mode by a CSS
+  filter. Layers (toggles): canals, areas (basins), gauges, pumps and tunnels, past flood (2016). Tap a basin (zooms, dims the rest),
+  a canal (name, area, outfall, nearest gauge), a gauge (feet, state, 24 h sparkline) or a work; "Find my area" asks for the location
+  once on tap, finds the basin in the browser and stores/sends nothing; a town picker does the same without location. Moving dots show flow
+  towards the outfall (CSS dash animation, static dots under `prefers-reduced-motion`); drawn only for canals longer than 0.7 km in the
+  Kolonnawa, North and Wellawatta basins and turned to point at the basin outfall (OSM way direction is not trusted); none for
+  Parliament Lake (two outlets).
+  Data files (all committed, none fetched at run time except tiles):
+  - `lib/geo/colombo-canals.json` (about 43 KB): OpenStreetMap waterways (canal, drain, river, stream; unnamed ditches and tiny
+    streams dropped) and lakes/marshes inside 6.84-6.99 N, 79.84-79.95 E, one Overpass fetch (osm base 2026-10-26 11:14 UTC), simplified
+    (about 7 m), delta-encoded in 1e-5 degrees. Rebuild: `node scripts/build-colombo-map.mjs` (Overpass; `--from raw.json` reuses an answer).
+    Each line carries the basin its midpoint falls in. (c) OpenStreetMap contributors, ODbL, credited on the map.
+  - `lib/geo/colombo-basins.json` (about 30 KB): **approximate** basin areas, smooth, no gaps and no overlaps. Built by
+    `node scripts/build-colombo-basins.mjs`: each 100 m cell that is inside the hand-drawn envelope (`colombo-basins-seed.json`, drawn
+    along the OSM canals and ridges between town centres), on land (`colombo-coast.json`, OSM coastline from
+    `scripts/build-colombo-coast.mjs`, simplified by hand through the port) and within 1 km of a canal or lake takes the basin of its
+    nearest canal; the divide between two basins therefore falls half way between their canals. Shared edges are traced once,
+    simplified and Chaikin-smoothed, so neighbours fit exactly. No official catchment boundary was found (OSM has only Colombo ward
+    boundaries; the Irrigation Department / SLLDC publish none), so the map and legend say "approximate".
+  - `lib/geo/colombo-gauges.json`: **approximate** CUrW gauge positions (CUrW publishes none): placed from the gauge name, snapped to
+    the nearest OSM canal within 600 m. Not surveyed; the gauge panel says so. Ranwala N, Kaduwela N and Awerihena Tank are outside
+    the map and not drawn.
+  - `lib/geo/colombo-works.json`: Ambathale pumps 20 m3/s, St Sebastian North 30 and South 10, Torrington tunnel 32, New Mutwal
+    tunnel 15 (MCUDP / CUrW node/170), North Lock pumps 30 (project report) and the Nagalagam Street gates. Design figures, positions
+    approximate, never "live status".
+  - `lib/geo/colombo-floods.json`: one circle per village division in the Irrigation Department's mapped May 2016 Kelani flood
+    (from `lib/model/flood-map.json`); size of the division, not the flood edge. Shown only when the layer is on, labelled as past.
+  Levels: server (`app/[lang]/colombo-canals/page.tsx`) converts our own `getCanals()` data to feet and passes it as props; the
+  browser never calls pub.curwsl.org. Basin colour comes from `basinState()` in `lib/colombo.ts` (higher when 2 or more of its gauges
+  are rising or higher; context only, never a flood verdict).
 
 ## Monitoring (data-source health)
 

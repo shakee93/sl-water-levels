@@ -1,5 +1,6 @@
-// River centrelines for the home page map (Leaflet). Built from OpenStreetMap by
-// scripts/build-home-rivers.mjs, ~26 KB; imported only by the lazily loaded map module.
+// River centrelines for the home page map (Leaflet). Built from OpenStreetMap plus the Irrigation
+// Department's rivers layer (tributaries OSM lacks) by scripts/build-river-extras.mjs and
+// scripts/build-home-rivers.mjs, ~29 KB; imported only by the lazily loaded map module.
 // (c) OpenStreetMap contributors, ODbL.
 
 import json from "./home-rivers.json";
@@ -26,7 +27,7 @@ export const HOME_RIVERS: HomeRiver[] = (json as { rivers: { b: string; m: numbe
 }));
 
 /** The rivers drawn a little thicker and named on the map. */
-export const MAJOR_BASINS = ["Kelani Ganga", "Mahaweli Ganga", "Kalu Ganga", "Walawe Ganga", "Nilwala Ganga", "Deduru Oya"];
+export const MAJOR_BASINS = ["Kelani Ganga", "Mahaweli Ganga", "Kalu Ganga", "Walawe Ganga", "Nilwala Ganga", "Deduru Oya", "Maha Oya", "Aththanagalu Oya"];
 
 /** One line per river (the longest main line of its basin) to hang its name on, longest first. */
 export const RIVER_NAME_LINES: { basin: string; pts: [number, number][] }[] = [...new Set(HOME_RIVERS.map((r) => r.basin))]

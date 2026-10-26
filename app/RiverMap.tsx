@@ -16,7 +16,7 @@ import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import { Map as MapIcon } from "lucide-react";
 import { SpillWatchChip } from "./SpillWatchChip";
-import { tierLabel } from "./tierUi";
+import { tierLine } from "./tierUi";
 import { RiverMapView } from "./RiverMapView";
 
 import { SITE } from "@/lib/seo";
@@ -51,7 +51,7 @@ export async function RiverMap({ lang, basin, highlight, jsonLd, focusStation, f
     return {
       id: s.station, station: s.station, lat: s.latitude, lon: s.longitude, label: name, sub: level, tier: s.tier,
       href: p(stationPath(s.basin, s.station)),
-      detail: [tierLabel(t, s.tier), level].filter(Boolean).join(", "),
+      detail: [tierLine(t, s.tier), level].filter(Boolean).join(", "),
     };
   });
 

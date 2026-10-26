@@ -8,7 +8,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { formatLevel } from "@/lib/units";
 import { riverName } from "@/lib/i18n/format";
 import { rtFor } from "@/lib/i18n/reservoirs";
-import { TIER_HEX, tierLabel, tierRank, type HomeStation } from "./tierUi";
+import { TIER_HEX, tierLine, tierRank, type HomeStation } from "./tierUi";
 import { useI18n } from "./LocaleProvider";
 import { useInView } from "./useInView";
 import { KeyList } from "./MapKey";
@@ -85,7 +85,7 @@ function SidePanel({ stations, lakes, hover, setHover }: { stations: HomeStation
                   <span className="size-2.5 shrink-0 rounded-full" style={{ background: TIER_HEX[s.tier] }} aria-hidden />
                   <span className="min-w-0 flex-1 truncate">
                     <span className="font-medium">{stationDisplayName(s.station)}</span>
-                    <span className="block text-xs text-slate-500 dark:text-slate-400">{riverName(s.basin, lang)} · {tierLabel(t, s.tier)}</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">{riverName(s.basin, lang)} · {tierLine(t, s.tier)}</span>
                   </span>
                   {s.level != null && <span className="shrink-0 tabular-nums text-slate-600 dark:text-slate-300">{formatLevel(s.level, s.unit)}</span>}
                 </>

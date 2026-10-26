@@ -4,6 +4,7 @@
 // Overpass etiquette: one request at a time, >= 1.5 s apart, a User-Agent, small tiles, retry with
 // back-off. Raw answers are cached in $TMPDIR/sl-osm-cache so re-running does not hit the API.
 // Data (c) OpenStreetMap contributors, ODbL: shown on the map.
+// Run build-river-extras.mjs next (adds tributaries OSM lacks, so every gauge sits on a line), then build-home-rivers.mjs.
 //
 // Output (all coordinates in 1e-4 degrees, delta-encoded, see lib/geo/decode.ts):
 //   rivers.json     { rivers: [{ n: "Name", b: "basin key", d: [x0,y0,dx,dy,...] }] }

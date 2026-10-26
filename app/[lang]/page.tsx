@@ -189,15 +189,12 @@ function NationalLine({
   }
 
   let above = 0;
-  let near = 0;
   for (const s of snapshot) {
     if (s.tier === "alert" || s.tier === "minor" || s.tier === "major") above++;
-    else if (s.tier === "watch") near++;
   }
 
   const bits: string[] = [];
   if (above) bits.push(t(above === 1 ? "nat.aboveOne" : "nat.aboveMany", { n: above }));
-  if (near) bits.push(t("nat.nearAlert", { n: near }));
   const lead = bits.length ? bits.join(" · ") : t("nat.allBelow");
 
   return (

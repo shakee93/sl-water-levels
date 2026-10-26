@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatLevel } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { matchLocation } from "@/lib/nearby";
-import { TIER_HEX, tierLabel, type HomeStation } from "./tierUi";
+import { TIER_HEX, tierLine, type HomeStation } from "./tierUi";
 import { useI18n } from "./LocaleProvider";
 import { riverName } from "@/lib/i18n/format";
 import { useLocation } from "./useLocation";
@@ -52,8 +52,9 @@ const SL_BOUNDS: [[number, number], [number, number]] = [
   [10.4, 82.4],
 ];
 
+// near alert (tier "watch") reads Normal, so it gets no extra emphasis on the map
 const isHot = (s: HomeStation) =>
-  s.tier === "watch" || s.tier === "alert" || s.tier === "minor" || s.tier === "major";
+  s.tier === "alert" || s.tier === "minor" || s.tier === "major";
 
 const inSriLanka = (lat: number, lon: number) =>
   lat >= SL_BOUNDS[0][0] && lat <= SL_BOUNDS[1][0] && lon >= SL_BOUNDS[0][1] && lon <= SL_BOUNDS[1][1];
@@ -70,13 +71,15 @@ function FitToUser({ points }: { points: Array<[number, number]> | null }) {
   return null;
 }
 
+const CREDIT = "© OpenStreetMap contributors; rivers: Irrigation Department";
+
 /** Frame the whole island on load and on resize; that framing is also the minimum zoom. */
 function FitIsland() {
   const map = useMap();
   useEffect(() => {
-    // one credit line, no Leaflet flag: the land and rivers are OpenStreetMap data
+    // one credit line, no Leaflet flag: the land and most rivers are OpenStreetMap data, some tributaries the Irrigation Department's
     map.attributionControl.setPrefix(false);
-    map.attributionControl.addAttribution("© OpenStreetMap contributors");
+    map.attributionControl.addAttribution(CREDIT);
     const fit = () => {
       map.invalidateSize();
       map.setMinZoom(0);
@@ -90,7 +93,7 @@ function FitIsland() {
     const later = window.setTimeout(refit, 400);
     map.on("resize", refit);
     return () => {
-      map.attributionControl.removeAttribution("© OpenStreetMap contributors");
+      map.attributionControl.removeAttribution(CREDIT);
       window.clearTimeout(later);
       map.off("resize", refit);
     };
@@ -233,7 +236,7 @@ export function MapLeaflet({ stations, lakes, hover }: Props) {
             <Tooltip direction="top" offset={[0, -6]} opacity={1}>
               <span className="font-medium">{stationDisplayName(s.station)}</span>
               <span className="text-slate-500">
-                {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {tierLabel(t, s.tier)}
+                {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {tierLine(t, s.tier)}
               </span>
             </Tooltip>
             <Popup>
@@ -243,7 +246,7 @@ export function MapLeaflet({ stations, lakes, hover }: Props) {
                 </Link>
                 <div className="text-xs text-slate-500">
                   {riverName(s.basin, lang)}
-                  {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {tierLabel(t, s.tier)}
+                  {s.level != null ? ` · ${formatLevel(s.level, s.unit)}` : ""} · {tierLine(t, s.tier)}
                 </div>
                 <Link href={p(s.href)} className="text-xs text-sky-600 hover:underline inline-block mt-1">
                   {t("map.openStation")}

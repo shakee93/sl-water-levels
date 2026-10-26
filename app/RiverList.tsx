@@ -14,6 +14,7 @@ import {
   TIER_TEXT_CLASS,
   STEADY_M_PER_H,
   tierLabel,
+  tierLine,
   tierRank,
   type HomeStation,
 } from "./tierUi";
@@ -30,12 +31,12 @@ const COPY = {
   ta: { stale: "சமீபத்திய அளவீடு இல்லை", none: "வெள்ள மட்டங்கள் வெளியிடப்படவில்லை" },
 } as const;
 
-const FLAGGED: Tier[] = ["major", "minor", "alert", "watch"];
+const FLAGGED: Tier[] = ["major", "minor", "alert"]; // near alert reads Normal, so no bold
 
 function statusText(t: TFn, lang: Locale, tier: Tier): string {
   if (tier === "stale") return COPY[lang].stale;
   if (tier === "none") return COPY[lang].none;
-  return tierLabel(t, tier);
+  return tierLine(t, tier);
 }
 
 function Trend({ t, s }: { t: TFn; s: HomeStation }) {

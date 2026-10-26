@@ -13,6 +13,7 @@ import { baseKey, DEFAULT_PREFS, MORNING_TIMES, QUIET_DEFAULT, type Prefs, type 
 import { useI18n } from "./LocaleProvider";
 import { parseLowSpots, readLowSpotsRaw, writeLowSpot } from "@/lib/lowSpots";
 import { placeBySlug } from "@/lib/places";
+import { currentSubscription } from "@/lib/pushClient";
 
 /** Only towns with the satellite rain rule (canal-backwater towns) can have a low spot. */
 const canalTown = (key: string) => key.startsWith("t:") && !!placeBySlug(key.slice(2))?.rainZone;
@@ -37,15 +38,6 @@ export function AlertSettingsProvider({ children }: { children: React.ReactNode 
       {shown && <SettingsSheet onClose={() => setShown(false)} />}
     </SettingsCtx.Provider>
   );
-}
-
-async function currentSubscription(): Promise<PushSubscription | null> {
-  try {
-    const reg = await navigator.serviceWorker.getRegistration("/");
-    return reg ? await reg.pushManager.getSubscription() : null;
-  } catch {
-    return null;
-  }
 }
 
 /** A row for the phone's More sheet. Shows only where this browser really has alerts on. */

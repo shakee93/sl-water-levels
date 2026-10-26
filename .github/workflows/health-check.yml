@@ -36,22 +36,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GitHub's own cron never started gsmap-snapshot.yml, and the Cloudflare scheduler that would
-      # has not been redeployed yet. This job is reliably started every 30 min (:07/:37), and JAXA
-      # posts at :01/:31, so start the satellite-rain snapshot from here. Harmless double starts:
-      # both share the `snapshot` concurrency group.
-      - name: Start the GSMaP satellite-rain snapshot
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        run: gh workflow run gsmap-snapshot.yml --repo "${{ github.repository }}"
-
-      # Same reason for the private CUrW canal-level archive (it recovers the last 24 h from each
-      # chart, so every 30 min is plenty; it skips itself if it succeeded <10 min ago).
-      - name: Start the CUrW canal-level snapshot
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        run: gh workflow run curw-snapshot.yml --repo "${{ github.repository }}"
-
+      # The satellite-rain and CUrW snapshots are started by the Cloudflare scheduler (workers/scheduler, :07/:37 and every
+      # 15 min). They used to be started from here too, which ran the satellite-rain job twice every half hour (each run also
+      # queries the Irrigation Department's ArcGIS for gauge rain); removed 26 Oct 2026 to stop the double load.
       - name: Slack connection test (manual runs only)
         if: github.event_name == 'workflow_dispatch' && inputs.slack_test
         run: node scripts/health-alert.mjs --slack-test

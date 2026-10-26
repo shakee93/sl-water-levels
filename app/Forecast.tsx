@@ -30,8 +30,8 @@ const mm = (v: number | null) => (v == null ? "—" : v < 10 ? v.toFixed(1) : St
 
 const ACTION: Partial<Record<VerdictTone, T3>> = {
   alert: { en: "Move valuables up, charge your phone", si: "ඔබේ භාණ්ඩ ඉහළට ගෙන යන්න, දුරකථනය චාජ් කරන්න", ta: "உடைமைகளை உயரத்தில் வையுங்கள், தொலைபேசியை சார்ஜ் செய்யுங்கள்" },
-  minor: { en: "Be ready to leave low areas", si: "පහත් ප්‍රදේශවලින් ඉවත් වීමට සූදානම් වන්න", ta: "தாழ்வான பகுதிகளிலிருந்து வெளியேறத் தயாராக இருங்கள்" },
-  major: { en: "Follow official instructions", si: "නිල උපදෙස් අනුගමනය කරන්න", ta: "அதிகாரப்பூர்வ அறிவுறுத்தல்களைப் பின்பற்றுங்கள்" },
+  minor: { en: "Leave low areas near the river", si: "ගඟ අසල පහත් ප්‍රදේශවලින් ඉවත් වන්න", ta: "ஆற்றருகே தாழ்வான பகுதிகளிலிருந்து வெளியேறுங்கள்" },
+  major: { en: "Move to safety. Follow official instructions", si: "ආරක්ෂිත ස්ථානයකට යන්න. නිල උපදෙස් අනුගමනය කරන්න", ta: "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள். அதிகாரப்பூர்வ அறிவுறுத்தல்களைப் பின்பற்றுங்கள்" },
 };
 const ORDER = ["normal", "watch", "alert", "minor", "major"] as const;
 
@@ -209,6 +209,18 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   );
   const levelText = level != null ? formatLevel(level, unit) : null;
   const rn = riverName(basin, lang);
+  // A near-alert gauge, or a calm one the forecast or a release points at, still reads "Normal": the reason is the small note
+  // under it (owner, 26 Oct 2026: the verdict ladder is the Department's four steps only).
+  const nearNote: string | null =
+    tone !== "watch" || !me
+      ? null
+      : realTier === "watch" && alertLvl != null && lvlNow != null
+        ? t("needs.nearNote", { amount: formatDelta(alertLvl - lvlNow, unit) }) + (rising ? `, ${t("trend.rising").toLowerCase()}` : "")
+        : fact && lift?.verdict === "watch"
+          ? fact[lang]
+          : releaseLift
+            ? ({ en: "A reservoir release upstream is confirmed", si: "ඉහළ ජලාශයකින් ජලය මුදාහැරීම තහවුරුයි", ta: "மேலே உள்ள நீர்த்தேக்கத்திலிருந்து நீர் திறப்பு உறுதி" } as T3)[lang]
+            : null;
   const shareText = stale
     ? t("share.stale", { name, river: rn, last: level != null ? t("share.staleLast", { level: formatLevel(level, unit) }) : "" })
     : t("share.live", {
@@ -310,6 +322,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
             : null
         }
         share={{ href: p(stationPath(basin, selectedStation)), name: `${name} (${rn})`, text: shareText }}
+        note={nearNote}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
           <p className="font-medium">{f.headline}</p>

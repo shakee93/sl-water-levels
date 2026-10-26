@@ -237,11 +237,13 @@ export function composeGaugeRise(gs: GaugeFact[]): Composed {
     return `${river}: ${gs.length} gauges are at Alert level or higher (${listMore(names, more)}) at ${time}.`;
   };
   const variants: Parts[] = [3, 2, 1].filter((k) => k <= shown.length || k === 1).map((k) => ({ body: mk(Math.min(k, shown.length)), link, must: [river, ...shown.slice(0, Math.min(k, 3)).map((g) => g.station)], tags }));
-  const reply = shown.map((g) => `${g.station}: ${ft(g.level)}, ${g.tier === "normal" || g.tier === "watch" ? "below alert" : TIER_MARK[g.tier]}${trendWord(g.trend)}`).slice(0, 6).join("\n");
+  const reply = shown.map((g) => `${g.station}: ${ft(g.level)}, ${g.tier === "normal" || g.tier === "watch" ? belowAlert(g) : TIER_MARK[g.tier]}${trendWord(g.trend)}`).slice(0, 6).join("\n");
   return { ...assemble(variants, isSerious(gs)), reply: `${reply}\n${link}` };
 }
 /** Minor / Major reached, or the next-hour forecast says it could reach one. */
 export const isSerious = (gs: { tier: string; nextHour?: { crossing: string | null } | null }[]) => gs.some((g) => g.tier === "minor" || g.tier === "major" || /minor|major/i.test(g.nextHour?.crossing ?? ""));
+/** A gauge below the alert mark is "below the alert mark of Y ft", never a status word: the ladder is Normal, Alert, Minor flood, Major flood (owner, 26 Oct 2026). */
+const belowAlert = (g: GaugeFact, noun = "mark"): string => (g.alertMark != null ? `below the alert ${noun} of ${ft(g.alertMark)}` : `below alert ${noun === "level" ? "level" : ""}`.trim());
 const rank = (t: string) => ["normal", "watch", "alert", "minor", "major"].indexOf(t);
 
 /** Gauges of one river that are no longer at Alert level. */
@@ -354,7 +356,7 @@ export function composeStorm(f: StormFact): Composed {
   const line = (g: GaugeFact) => {
     const nh = g.nextHour;
     const fc = nh ? ` Forecast next hour: about ${ft(nh.level)}${nh.low != null && nh.high != null ? ` (${ft(nh.low)} to ${ft(nh.high)})` : ""}.` : "";
-    const lab = g.tier === "normal" || g.tier === "watch" ? "below alert" : TIER_MARK[g.tier];
+    const lab = g.tier === "normal" || g.tier === "watch" ? belowAlert(g) : TIER_MARK[g.tier];
     const mr = g.measuredRain ? ` Very heavy rain measured at ${g.measuredRain.gauge}: ${g.measuredRain.mm} mm in the last ${g.measuredRain.hours === 1 ? "hour" : `${g.measuredRain.hours} hours`}.` : "";
     return `${g.station} ${ft(g.level)}, ${lab}${trendWord(g.trend)}.${mr}${fc}`;
   };
@@ -424,7 +426,7 @@ const r1 = (n: number) => Math.round(n * 10) / 10;
 const gaugeLuna = (g: GaugeFact) => ({
   station: g.station,
   river: g.river,
-  status: g.tier === "normal" || g.tier === "watch" ? "below alert level" : TIER_MARK[g.tier],
+  status: g.tier === "normal" || g.tier === "watch" ? belowAlert(g, "level") : TIER_MARK[g.tier],
   level_ft: r1(g.level),
   mark_ft: g.mark != null ? r1(g.mark) : undefined,
   alert_mark_ft: g.alertMark != null ? r1(g.alertMark) : undefined,

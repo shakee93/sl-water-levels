@@ -11,6 +11,7 @@ import { trackEvent } from "@/lib/umami";
 import { useI18n } from "./LocaleProvider";
 import { useInstall } from "./InstallProvider";
 import { useAlertSettings } from "./AlertSettings";
+import { keyBytes, pushSupported as supported, registration } from "@/lib/pushClient";
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const btn = `inline-flex items-center justify-center gap-2 min-h-11 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-sm font-medium text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60 transition-colors ${ring}`;
@@ -22,20 +23,6 @@ const deviceInfo = () => ({
 });
 
 type Status = "loading" | "hidden" | "off" | "on" | "busy" | "denied" | "unsupported" | "error";
-
-const supported = () => typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-
-function keyBytes(b64: string): Uint8Array<ArrayBuffer> {
-  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
-  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  const out = new Uint8Array(new ArrayBuffer(raw.length));
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
-
-async function registration(): Promise<ServiceWorkerRegistration> {
-  return (await navigator.serviceWorker.getRegistration("/")) ?? (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
-}
 
 const MOVED_NOTE = {
   en: "The site moved to waterlevels.lk. Turn alerts on again here to keep getting them (your old alerts keep coming until you do).",

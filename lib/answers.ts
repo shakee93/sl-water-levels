@@ -38,7 +38,7 @@ const D = {
   near: { en: "close to the {v} alert level", si: "අනතුරු ඇඟවීමේ මට්ටමට ({v}) ආසන්නයි", ta: "எச்சரிக்கை மட்டத்திற்கு ({v}) அருகில் உள்ளது" },
   alert: { en: "above the {v} alert level", si: "අනතුරු ඇඟවීමේ මට්ටම ({v}) ඉක්මවා ඇත", ta: "எச்சரிக்கை மட்டத்தை ({v}) தாண்டியுள்ளது" },
   minor: { en: "above the {v} minor flood level", si: "සුළු ගංවතුර මට්ටම ({v}) ඉක්මවා ඇත", ta: "சிறிய வெள்ள மட்டத்தை ({v}) தாண்டியுள்ளது" },
-  major: { en: "above the {v} major flood level", si: "මහා ගංවතුර මට්ටම ({v}) ඉක්මවා ඇත", ta: "பெரிய வெள்ள மட்டத்தை ({v}) தாண்டியுள்ளது" },
+  major: { en: "above the {v} major flood level", si: "ප්‍රධාන ගංවතුර මට්ටම ({v}) ඉක්මවා ඇත", ta: "பெரிய வெள்ள மட்டத்தை ({v}) தாண்டியுள்ளது" },
   none: { en: "and this gauge has no published flood levels", si: "මෙම මානයට පළ කළ ගංවතුර මට්ටම් නැත", ta: "இந்த அளவீட்டுக்கு வெள்ள மட்டங்கள் வெளியிடப்படவில்லை" },
   rising: { en: ", and rising", si: "; ඉහළ යමින් තිබේ", ta: "; உயர்ந்து வருகிறது" },
   risingSlow: { en: ", and rising slowly", si: "; සෙමින් ඉහළ යමින් තිබේ", ta: "; மெதுவாக உயர்ந்து வருகிறது" },
@@ -108,7 +108,7 @@ const NH = {
   },
   reachAlert: { en: " It {how} reach the alert level.", si: " එය අනතුරු ඇඟවීමේ මට්ටමට {how}.", ta: " அது எச்சரிக்கை மட்டத்தை {how}." },
   reachMinor: { en: " It {how} reach the minor flood level.", si: " එය සුළු ගංවතුර මට්ටමට {how}.", ta: " அது சிறிய வெள்ள மட்டத்தை {how}." },
-  reachMajor: { en: " It {how} reach the major flood level.", si: " එය මහා ගංවතුර මට්ටමට {how}.", ta: " அது பெரிய வெள்ள மட்டத்தை {how}." },
+  reachMajor: { en: " It {how} reach the major flood level.", si: " එය ප්‍රධාන ගංවතුර මට්ටමට {how}.", ta: " அது பெரிய வெள்ள மட்டத்தை {how}." },
   may: { en: "may", si: "ළඟා විය හැක", ta: "எட்டலாம்" },
   expected: { en: "will likely", si: "ළඟා වනු ඇතැයි අපේක්ෂා කෙරේ", ta: "எட்டும் என எதிர்பார்க்கப்படுகிறது" },
 } satisfies Record<string, L3>;
@@ -148,9 +148,9 @@ export function nextHourSubject(lang: Locale, basin: string | null | undefined, 
 
 const R = {
   flagged: {
-    en: "{asOf}, {n} of the {m} reporting gauges on the {river} are at or near a flood mark: {names}.",
-    si: "{asOf}, {river} හි වාර්තා කරන මාන {m} න් {n} ක් ගංවතුර මට්ටමකට ළඟයි හෝ ඉක්මවා ඇත: {names}.",
-    ta: "{asOf}, {river} இல் தகவல் தரும் {m} அளவீடுகளில் {n} வெள்ள மட்டத்தில் அல்லது அருகில் உள்ளன: {names}.",
+    en: "{asOf}, {n} of the {m} reporting gauges on the {river} are at or above an official mark (Alert, Minor flood or Major flood): {names}.",
+    si: "{asOf}, {river} හි වාර්තා කරන මාන {m} න් {n} ක් අනතුරු ඇඟවීමේ හෝ ඉහළ මට්ටමක ඇත: {names}.",
+    ta: "{asOf}, {river} இல் தகவல் தரும் {m} அளவீடுகளில் {n} எச்சரிக்கை அல்லது அதற்கு மேல் மட்டத்தில் உள்ளன: {names}.",
   },
   calm: {
     en: "{asOf}, all {m} reporting gauges on the {river} are below their alert levels.",
@@ -170,7 +170,7 @@ export function riverAnswer(lang: Locale, t: TFn, basin: string, snap: NationalS
   const newest = snap.reduce<number | null>((m, s) => (s.latest && (m == null || s.latest.ts > m) ? s.latest.ts : m), null);
   if (!reporting.length || newest == null) return W(R.none, lang, { river, total: snap.length });
   const asOf = W(D.asOf, lang, { stamp: fullStamp(newest, t) });
-  const flagged = reporting.filter((s) => ["major", "minor", "alert", "watch"].includes(s.tier));
+  const flagged = reporting.filter((s) => ["major", "minor", "alert"].includes(s.tier));
   if (!flagged.length) return W(R.calm, lang, { asOf, river, m: reporting.length });
   const names = flagged.map((s) => `${stationDisplayName(s.station)} (${lvText(s.latest!.water_level!, s.unit)})`).join(", ");
   return W(R.flagged, lang, { asOf, river, n: flagged.length, m: reporting.length, names });
@@ -185,14 +185,14 @@ const Q = {
   now: { en: "Is {name} flooding now?", si: "{name} දැන් ගංවතුරට යටවෙලාද?", ta: "{name} இப்போது வெள்ளத்தில் உள்ளதா?" },
   marks: { en: "What is the flood level at {name}?", si: "{name} හි ගංවතුර මට්ටම කීයද?", ta: "{name} இல் வெள்ள மட்டம் என்ன?" },
   marksA: {
-    en: "The official marks for this gauge are {list}. Alert means get ready, minor flood means water is spilling over low ground, and major flood means move to safety.",
-    si: "මෙම මානයේ නිල මට්ටම්: {list}. අනතුරු ඇඟවීම යනු සූදානම් වීම, සුළු ගංවතුර යනු පහත් බිම්වලට ජලය පැමිණීම, මහා ගංවතුර යනු ආරක්ෂිත ස්ථානයකට යාමයි.",
+    en: "The official marks for this gauge are {list}. Alert means the river has reached the alert mark: move valuables up and charge your phone. Minor flood means water is spilling over low ground, and major flood means move to safety.",
+    si: "මෙම මානයේ නිල මට්ටම්: {list}. අනතුරු ඇඟවීම යනු සූදානම් වීම, සුළු ගංවතුර යනු පහත් බිම්වලට ජලය පැමිණීම, ප්‍රධාන ගංවතුර යනු ආරක්ෂිත ස්ථානයකට යාමයි.",
     ta: "இந்த அளவீட்டின் அதிகாரப்பூர்வ மட்டங்கள்: {list}. எச்சரிக்கை என்பது தயாராக இருப்பது, சிறிய வெள்ளம் என்பது தாழ்ந்த நிலங்களில் நீர் புகுவது, பெரிய வெள்ளம் என்பது பாதுகாப்பான இடத்திற்குச் செல்வது.",
   },
   marksNone: { en: "No flood levels are published for this gauge, so it cannot be compared with an alert level.", si: "මෙම මානය සඳහා ගංවතුර මට්ටම් පළ කර නැත.", ta: "இந்த அளவீட்டுக்கு வெள்ள மட்டங்கள் வெளியிடப்படவில்லை." },
   alertWord: { en: "alert {v}", si: "අනතුරු ඇඟවීම {v}", ta: "எச்சரிக்கை {v}" },
   minorWord: { en: "minor flood {v}", si: "සුළු ගංවතුර {v}", ta: "சிறிய வெள்ளம் {v}" },
-  majorWord: { en: "major flood {v}", si: "මහා ගංවතුර {v}", ta: "பெரிய வெள்ளம் {v}" },
+  majorWord: { en: "major flood {v}", si: "ප්‍රධාන ගංවතුර {v}", ta: "பெரிய வெள்ளம் {v}" },
   source: { en: "Where does this come from and how often does it update?", si: "මෙය කොහෙන්ද, කොපමණ වාරයක් යාවත්කාලීන වේද?", ta: "இது எங்கிருந்து வருகிறது, எத்தனை முறை புதுப்பிக்கப்படுகிறது?" },
   sourceA: {
     en: "River readings come from the Department of Irrigation's gauges, roughly once an hour, and this page checks for new ones every minute. This site is independent and not an official warning service: follow the Disaster Management Centre and call 117 in an emergency.",

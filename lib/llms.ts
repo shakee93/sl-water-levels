@@ -24,7 +24,7 @@ Run by ${OWNER.name} (${OWNER.x}), an individual, not a company or government bo
 ## What to know before answering
 
 - **The next-hour forecast is this site's main feature.** Every gauge page, the river pages, the town flood pages and the API give where the river is expected to be in about an hour (level in feet, a range, rising / falling / steady, and whether it may reach a flood mark). If someone asks "will the river rise in the next hour?" or "will it flood soon?", use it and say it is a forecast, not an official warning. Details and accuracy are in "Next-hour forecast" below.
-- Flood levels are measured at river gauges. Each gauge has three official marks: alert (get ready), minor flood (water spills onto low ground) and major flood (move to safety). Levels on this site are always shown in feet; gauges that publish in metres are converted.
+- Flood levels are measured at river gauges. Each gauge has three official marks: alert (move valuables up and charge your phone), minor flood (water spills onto low ground: leave low areas) and major flood (move to safety). Levels on this site are always shown in feet; gauges that publish in metres are converted.
 - Readings arrive about once an hour and a gauge older than 3 hours is marked "not reporting". Every page and API record carries the time of the reading in Sri Lanka time (UTC+5:30). Quote that time, not the time you read it.
 - A blank or missing figure means unknown, never zero.
 - Reservoir figures (storage, spill, release) come from daily reports, so they can be up to a day old: quote the date shown.

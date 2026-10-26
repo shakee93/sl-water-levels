@@ -9,11 +9,14 @@ export const tierRank = (t: Tier) => TIER_ORDER.indexOf(t);
 /** Localised tier label: tierLabel(t, "major") -> "Major flood" / "ප්‍රධාන ගංවතුර". */
 export const tierLabel = (t: TFn, tier: Tier): string => t(`tier.${tier}` as const);
 
+/** Compact one-line status. A near-alert gauge reads "Normal" with the reason as a plain note; never its own step. */
+export const tierLine = (t: TFn, tier: Tier): string => (tier === "watch" ? `${t("tier.watch")} · ${t("tier.nearShort")}` : tierLabel(t, tier));
+
 export const TIER_DOT: Record<Tier, string> = {
   major: "bg-red-500",
   minor: "bg-orange-500",
   alert: "bg-amber-500",
-  watch: "bg-yellow-400",
+  watch: "bg-slate-400 dark:bg-slate-500", // near alert is Normal to look at (owner, 26 Oct 2026)
   normal: "bg-slate-400 dark:bg-slate-500",
   none: "bg-slate-300",
   stale: "bg-slate-300",
@@ -24,7 +27,7 @@ export const TIER_HEX: Record<Tier, string> = {
   major: "#dc2626",
   minor: "#ea580c",
   alert: "#f59e0b",
-  watch: "#facc15",
+  watch: "#64748b", // same as normal: near alert is not a step
   normal: "#64748b",
   none: "#cbd5e1",
   stale: "#cbd5e1",
@@ -35,7 +38,7 @@ export const TIER_TEXT_CLASS: Record<Tier, string> = {
   major: "text-red-700 dark:text-red-400",
   minor: "text-orange-700 dark:text-orange-400",
   alert: "text-amber-700 dark:text-amber-400",
-  watch: "text-yellow-700 dark:text-yellow-400",
+  watch: "text-slate-600 dark:text-slate-300",
   normal: "text-slate-600 dark:text-slate-300",
   none: "text-slate-500 dark:text-slate-400",
   stale: "text-slate-500 dark:text-slate-400",
