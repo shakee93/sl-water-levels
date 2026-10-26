@@ -12,7 +12,7 @@
 // and queues the post for one retry within 2 h; it is never retried in a loop.
 //
 // Env: SITE_URL, SLACK_WEBHOOK_URL, CLOUDFLARE_API_TOKEN (state), X_POSTING, X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN,
-//      X_ACCESS_SECRET, OPENAI_API_KEY (optional polish), X_AI_POLISH=off, X_LANGS=en,si,ta (default en), X_DAILY_MAX,
+//      X_ACCESS_SECRET, OPENAI_API_KEY (the writer, gpt-6-luna; templates without it), X_AI_POLISH=off (turns the writer off), X_AI_TEMPERATURE, X_LANGS=en,si,ta (default en), X_DAILY_MAX,
 //      X_EVENING=on.
 // Cost (the X API is pay-per-use; a post with a link costs about 13 times a post without): links are OFF by default
 // (X_LINKS=off|alerts|all; "alerts" = major-flood rises, major official warnings), thread
@@ -23,8 +23,9 @@ import { d1Query } from "../lib/d1.ts";
 import { gate, postTweet } from "../lib/xClient.ts";
 import {
   composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop,
-  composeWarning, composeSummary, composeStorm, composeRainWatch, validatePost, validateText, polish, tweetLength, colomboDay, MAX_TWEET,
+  composeWarning, composeSummary, composeStorm, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
 } from "../lib/xCompose.ts";
+import { OPENAI_MODEL } from "../lib/openai.ts";
 import { evaluate, applyCaps, emptyState, summaryEvent, tierLevel } from "./x-engine.mjs";
 import { PLACES } from "../lib/places.ts";
 import { pushText } from "../lib/i18n/return.ts";
@@ -37,8 +38,6 @@ export const X_SCHEMA = [
 ];
 
 const SITE_DEFAULT = "https://sl-water-levels.vercel.app";
-// The OpenAI model the site already uses for advisories (lib/openai.ts OPENAI_MODEL).
-const OPENAI_MODEL = "gpt-6-luna";
 const RAIN_PLACES = ["colombo", "gampaha", "kalutara", "ratnapura", "kandy", "galle", "matara", "anuradhapura", "batticaloa", "jaffna"];
 const PENDING_MAX_AGE_MS = 2 * 3_600_000;
 
@@ -115,21 +114,36 @@ export function localisedReply(ev, lang) {
   return tweetLength(text) <= MAX_TWEET ? text : null;
 }
 
-/** OpenAI Responses call that returns the text field, or null. Only used when OPENAI_API_KEY is set. */
+/**
+ * OpenAI Responses call (gpt-6-luna, same conventions as lib/openai.ts: plain fetch, JSON-schema output, reasoning low,
+ * store false) that returns the post's text field, or null. Only exists when OPENAI_API_KEY is set and X_AI_POLISH is not
+ * "off". Calls per run are capped (AI_MAX_CALLS_PER_HOUR, default 60, same variable as lib/openai.ts); the key is only
+ * ever placed in the Authorization header and neither prompts nor outputs are logged. X_AI_TEMPERATURE (e.g. 0.8) is
+ * sent only when set: reasoning models may reject it, so the default relies on the recent-posts list for variety.
+ */
 export function makeLlm(env, doFetch = fetch) {
   const key = env.OPENAI_API_KEY;
   if (!key || (env.X_AI_POLISH ?? "").trim().toLowerCase() === "off") return null;
+  const cap = Number(env.AI_MAX_CALLS_PER_HOUR) > 0 ? Number(env.AI_MAX_CALLS_PER_HOUR) : 60;
+  const temp = Number(env.X_AI_TEMPERATURE);
+  let calls = 0;
   return async (instructions, input) => {
+    if (calls >= cap) return null;
+    calls++;
     const res = await doFetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: OPENAI_MODEL, instructions, input, reasoning: { effort: "low" }, max_output_tokens: 600, store: false,
+        model: OPENAI_MODEL, instructions, input, reasoning: { effort: "low" }, max_output_tokens: 800, store: false,
+        ...(temp > 0 && temp <= 2 ? { temperature: temp } : {}),
         text: { format: { type: "json_schema", name: "post", strict: true, schema: { type: "object", additionalProperties: false, required: ["text"], properties: { text: { type: "string" } } } } },
       }),
       signal: AbortSignal.timeout(25_000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn(`[ai] post writer call failed: HTTP ${res.status}`);
+      return null;
+    }
     const j = await res.json();
     let out = "";
     for (const item of j.output ?? []) if (item.type === "message") for (const c of item.content ?? []) if (c.type === "output_text" && c.text) out += c.text;
@@ -158,20 +172,27 @@ export function costOf(text, replies, rates) {
   return one(text) + replies.reduce((n, t) => n + one(t), 0);
 }
 
-/** Compose, check and (optionally) polish. Returns { post, text, reply, ai } or { error }. A post that fails its own checks is never sent. */
-export async function prepare(ev, llm, { links = "off", replies = false } = {}) {
+/** The raw facts of an event, the shape lunaFacts() reads. */
+const eventFacts = (ev) => ev.gauges ?? ev.reservoirs ?? ev.warning ?? ev.summary ?? ev.storm ?? ev.rainwatch;
+
+/**
+ * Compose, write and check. The template is always built and checked first (a template that fails its own checks is never
+ * sent); then gpt-6-luna writes the post from compact facts (lib/xCompose.ts lunaWrite: 1 retry, then the template).
+ * Returns { post, text, reply, ai, why, withLink } (ai = the model's words were used) or { error }.
+ * @param o.recent  texts of the last few posts, so the model varies its openings
+ * @param o.offReason  why there is no model (shown in the Slack preview)
+ */
+export async function prepare(ev, llm, { links = "off", replies = false, recent = [], offReason } = {}) {
   const post = composeEvent(ev);
   const bad = validatePost(post);
   if (bad.length) return { error: `template failed its own checks (${bad.join("; ")})`, post };
   const withLink = linkWanted(ev, links);
   let text = withLink ? post.text : post.textNoLink;
-  let ai = false;
-  if (llm && ev.type !== "warning") {
-    const p = await polish(post, llm, withLink);
-    text = p.text;
-    ai = p.used === "ai";
-    if (p.why) log(`polish rejected (${p.why}): using the template`);
-  }
+  const w = await lunaWrite(post, { type: ev.type, facts: eventFacts(ev), recent, withLink, llm, offReason });
+  text = w.text;
+  const ai = w.used === "llm";
+  const why = ai ? (w.attempts > 1 ? "after one retry" : null) : w.why;
+  if (llm && !ai) log(`model text not used (${w.why}): using the template`);
   let reply = replies ? post.reply ?? null : null;
   if (reply && !withLink && links !== "all") reply = reply.replace(/\nhttps?:\/\/\S+$/, "").replace(/\nBulletin: https?:\/\/\S+/, "");
   if (reply) {
@@ -181,7 +202,7 @@ export async function prepare(ev, llm, { links = "off", replies = false } = {}) 
       reply = null;
     }
   }
-  return { post, text, reply, ai, withLink };
+  return { post, text, reply, ai, why, withLink };
 }
 
 // ---- Slack ---------------------------------------------------------------------------------------------------------
@@ -204,9 +225,9 @@ async function slack(text, { env = process.env, doFetch = fetch } = {}) {
 
 const quote = (t) => t.split("\n").map((l) => `> ${l}`).join("\n");
 
-export function dryRunMessage({ n, of, kind, text, reply, extra, ai, reason, cost = null, sample = false }) {
+export function dryRunMessage({ n, of, kind, text, reply, extra, ai, why, reason, cost = null, sample = false }) {
   return [
-    `*${sample ? "SAMPLE, " : ""}DRY RUN: not posted to X* (${n}/${of}) [${kind}] ${tweetLength(text)}/${MAX_TWEET} characters, ${ai ? "reworded by AI (checked)" : "plain template"}${cost != null ? `, est. cost $${cost.toFixed(3)}` : ""}`,
+    `*${sample ? "SAMPLE, " : ""}DRY RUN: not posted to X* (${n}/${of}) [${kind}] ${tweetLength(text)}/${MAX_TWEET} characters, ${ai ? `written by ${OPENAI_MODEL}, every number checked${why ? ` (${why})` : ""}` : `plain template${why ? ` (${why})` : ""}`}${cost != null ? `, est. cost $${cost.toFixed(3)}` : ""}`,
     quote(text),
     reply ? `_Thread reply:_\n${quote(reply)}` : null,
     ...(extra ?? []).map((x) => `_${x.lang} reply (draft):_\n${quote(x.text)}`),
@@ -221,6 +242,16 @@ async function loadValue(key, query) {
   try { return r ? JSON.parse(String(r.value)) : null; } catch { return null; }
 }
 const saveValue = (key, v, now, query) => query("INSERT INTO x_state (key, value, updated_ms) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_ms = excluded.updated_ms", [key, JSON.stringify(v), now]);
+
+/** Texts of the last 5 posts (posted or shown in dry-run), newest first, so the writer does not repeat its openings. */
+async function recentPosts(mode, query) {
+  try {
+    const rows = await query("SELECT text FROM x_posts WHERE mode = ? AND status IN ('posted','dry') ORDER BY id DESC LIMIT 5", [mode]);
+    return rows.map((r) => String(r.text));
+  } catch {
+    return [];
+  }
+}
 
 /** Claims a dedupe key; false when another run already took it. */
 async function claim(row, query) {
@@ -293,6 +324,9 @@ export async function run(o = {}) {
   const month = day.slice(0, 7);
   let spent = Number((await query("SELECT COALESCE(SUM(cost_usd), 0) AS c FROM x_posts WHERE day LIKE ? AND mode = ? AND status IN ('posted','dry')", [`${month}%`, g.mode]))[0]?.c ?? 0);
   const llm = makeLlm(env, doFetch);
+  const offReason = llm ? undefined : (env.OPENAI_API_KEY ? "AI writer switched off (X_AI_POLISH=off)" : "OPENAI_API_KEY is not set in GitHub, so the plain templates are used");
+  log(llm ? `writer: ${OPENAI_MODEL} (checked, template fallback)` : `writer: plain templates (${offReason}). To let ${OPENAI_MODEL} write the posts: gh secret set OPENAI_API_KEY`);
+  const recent = await recentPosts(g.mode, query);
   const queue = [];
   // a post that failed earlier goes first, if still fresh
   for (const p of state.pending ?? []) {
@@ -301,7 +335,7 @@ export async function run(o = {}) {
   }
   state.pending = [];
   for (const ev of send) {
-    const r = await prepare(ev, llm, { links, replies });
+    const r = await prepare(ev, llm, { links, replies, recent, offReason });
     if (r.error) {
       await note(`:warning: X account: a ${ev.type} post was NOT sent because it failed its own checks: ${r.error}`);
       continue;
@@ -323,7 +357,8 @@ export async function run(o = {}) {
       const t = localisedReply(ev, lang);
       if (t) extra.push({ lang, text: t });
     }
-    queue.push({ ts: now, day, kind: ev.kind, dedupe: ev.dedupe, text: r.text, reply: r.reply, ai: r.ai, extra, cost });
+    recent.unshift(r.text);
+    queue.push({ ts: now, day, kind: ev.kind, dedupe: ev.dedupe, text: r.text, reply: r.reply, ai: r.ai, why: r.why, extra, cost });
   }
 
   let posted = 0;
@@ -341,7 +376,7 @@ export async function run(o = {}) {
       continue;
     }
     if (!live) {
-      await note(dryRunMessage({ n: i + 1, of: total, kind: item.kind, text: item.text, reply: item.reply, extra: item.extra, ai: item.ai, reason: g.reason, cost: item.cost }));
+      await note(dryRunMessage({ n: i + 1, of: total, kind: item.kind, text: item.text, reply: item.reply, extra: item.extra, ai: item.ai, why: item.why, reason: g.reason, cost: item.cost }));
       await query("UPDATE x_posts SET status = 'dry' WHERE dedupe_key = ?", [item.dedupe]);
       posted++;
       continue;
@@ -395,6 +430,8 @@ export async function sample(o = {}) {
   const snap = o.snap ?? (await buildSnapshot({ site: env.SITE_URL || SITE_DEFAULT, now, doFetch }));
   if (!snap.stations) throw new Error("the site's levels could not be read");
   const llm = makeLlm(env, doFetch);
+  const offReason = llm ? undefined : (env.OPENAI_API_KEY ? "AI writer switched off (X_AI_POLISH=off)" : "OPENAI_API_KEY is not set in GitHub, so the plain templates are used");
+  const recent = env.CLOUDFLARE_API_TOKEN ? await recentPosts("dry", o.query ?? d1Query) : [];
   const evs = [summaryEvent(snap, "morning", now)];
   const us = snap.stations.filter((s) => tierLevel(s.status) != null && s.unit === "ft" && s.observedAt && typeof s.level === "number");
   // a river update for the river with the highest gauge relative to its alert mark (real numbers, real forecast when there is one)
@@ -409,9 +446,10 @@ export async function sample(o = {}) {
   if (res) evs.push({ type: "reservoir_start", kind: "reservoir", reservoirs: [{ name: res.name, river: res.river, status: res.status, cusecs: res.flow.cusecs, storagePercent: res.storagePercent, day: res.flow.day ?? res.readingDay, source: res.source, url: res.url }] });
   const out = [];
   for (const [i, ev] of evs.slice(0, 3).entries()) {
-    const r = await prepare(ev, llm);
+    const r = await prepare(ev, llm, { recent, offReason });
     if (r.error) throw new Error(r.error);
-    const msg = dryRunMessage({ n: i + 1, of: Math.min(3, evs.length), kind: ev.kind, text: r.text, reply: r.reply, ai: r.ai, sample: true, cost: costOf(r.text, [], { post: 0.015, link: 0.2 }), reason: "Sample from today's real data to show the wording. The real account posts only when something changes." });
+    recent.unshift(r.text);
+    const msg = dryRunMessage({ n: i + 1, of: Math.min(3, evs.length), kind: ev.kind, text: r.text, reply: r.reply, ai: r.ai, why: r.why, sample: true, cost: costOf(r.text, [], { post: 0.015, link: 0.2 }), reason: "Sample from today's real data to show the wording. The real account posts only when something changes." });
     out.push({ ev, ...r, msg });
     await slack(msg, { env, doFetch });
   }

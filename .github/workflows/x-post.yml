@@ -6,8 +6,9 @@
 #     (GitHub's cron is best-effort: the morning summary is sent by the first run after 06:30 and only once a day).
 #   - Manual: mode "run" = one normal pass; mode "sample" = up to 3 sample posts from today's data to Slack only.
 # Optional variables: X_LINKS (off|alerts|all, default off), X_REPLIES (on), X_LANGS (en,si,ta), X_EVENING (on),
-# X_DAILY_MAX, X_MONTHLY_BUDGET_USD, X_COST_POST, X_COST_LINK_POST, X_AI_POLISH (off). Optional secret OPENAI_API_KEY
-# lets the posts be reworded (checked word for word against the facts; without it the plain templates are used).
+# X_DAILY_MAX, X_MONTHLY_BUDGET_USD, X_COST_POST, X_COST_LINK_POST, X_AI_POLISH (off = no AI writer), X_AI_TEMPERATURE.
+# Secret OPENAI_API_KEY makes gpt-6-luna write every post in a human voice from the facts (every number checked against
+# the facts, one retry, then the plain template). Without the secret the plain templates are used and Slack says so.
 # See DOCS.md "X account".
 
 name: X account
@@ -61,6 +62,7 @@ jobs:
           X_COST_POST: ${{ vars.X_COST_POST }}
           X_COST_LINK_POST: ${{ vars.X_COST_LINK_POST }}
           X_AI_POLISH: ${{ vars.X_AI_POLISH }}
+          X_AI_TEMPERATURE: ${{ vars.X_AI_TEMPERATURE }}
         run: |
           if [ "$MODE" != "sample" ] && [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::warning::CLOUDFLARE_API_TOKEN is missing: the X account keeps its memory in D1, so nothing is posted."

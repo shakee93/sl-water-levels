@@ -742,7 +742,7 @@ creates the account, adds the keys and flips one switch.
 | Piece | Where |
 |---|---|
 | Decides what changed (gauges, reservoirs, official bulletins, storm mode, morning/evening summary) | `scripts/x-engine.mjs` (reuses `pushStep` from `lib/myPlaces.ts`, so X and push alerts agree on rise / all-clear / flap) |
-| Writes the posts (templates, length, validation, optional AI reword) | `lib/xCompose.ts` |
+| Writes the posts (gpt-6-luna with the voice guide and checker; templates as the fallback) | `lib/xCompose.ts` |
 | Gate (off / dry / live), OAuth 1.0a signing, `POST /2/tweets` | `lib/xClient.ts` |
 | One run: read the site, decide, compose, send, remember | `scripts/x-post.mjs` |
 | Schedule | `.github/workflows/x-post.yml`: started after every satellite-rain snapshot (every 30 min), plus a 06:30 Colombo cron; one run at a time (`concurrency: x-post`) |
@@ -760,13 +760,28 @@ forecast: hourly update per affected river, at most 3 rivers, an unchanged updat
 a forecast) and the **morning summary** (06:30 to 11:00 Colombo, once a day; `X_EVENING=on` adds one at 18:00 to 21:00).
 Limit: 15 routine posts a day (`X_DAILY_MAX`); urgent ones (Minor/Major, storm, official warnings) up to 40.
 
-Words: the template prints only numbers from the data, and a checker re-reads every finished post: every number must appear
-in the data (117 aside), at most 280 characters the way X counts them (a link is 23), the disclaimer present, hashtags only the
-ones the template chose. If `OPENAI_API_KEY` is available the post may be reworded; the reworded text is accepted only if it passes the same
-checks (same numbers, names, status words, disclaimer, no new hashtag or emoji), else the template is posted. `OPENAI_API_KEY` is
-**not** in GitHub today (only in Vercel): to enable it run `gh secret set OPENAI_API_KEY`; without it the plain templates are used,
-which is fine. Official-warning relays are never reworded. Sinhala / Tamil: `gh variable set X_LANGS --body en,si,ta` adds short draft
-replies (needs `X_REPLIES=on`); off by default.
+Words: **gpt-6-luna writes every post** (all kinds, official-warning relays included) in a calm, caring, local human voice, with the
+deterministic template as the fallback. The model (Responses API, same conventions as `lib/openai.ts`: plain fetch, JSON-schema output,
+`store: false`, per-run call cap `AI_MAX_CALLS_PER_HOUR`, default 60) is given a compact JSON of the facts (river, station, level in ft, mark,
+trend, next-hour forecast and range, time in Sri Lanka, rain mm, reservoir cusecs, warning summary, post kind) plus the last 5 posts so it
+varies its openings, and a voice guide with a few made-up example posts per kind (`LUNA_INSTRUCTIONS` in `lib/xCompose.ts`). It never writes
+links (the code adds one when `X_LINKS` allows). Its text is accepted only if `validateLlmText()` passes: every number is in the facts
+(formats like 22.0 vs 22 and "4.10pm" are fine; 117 aside), at most 280 characters the way X counts them, a closing that says it is not
+an official warning (or, for a relayed bulletin, that we are not the source) plus 117, no links, no @mentions, at most one hashtag from the
+template's list, at most one of the emoji 🌧️ / ⚠️ (alerts, storms, rain only), no "official" outside the closing, no "major"/"minor",
+"rising"/"falling" or evacuation the facts do not support, no talk of low ground, canals or street flooding, and an opening that differs from
+the last posts. If it fails, the model gets the list of problems and one more try; after that the plain template is posted. Which path was
+used is recorded in D1 (`x_posts.ai`: 1 = written by the model, 0 = template) and every Slack preview says "written by gpt-6-luna, every
+number checked" or "plain template (why)". `X_AI_POLISH=off` switches the writer off; `X_AI_TEMPERATURE` (unset by default, because reasoning
+models may reject it) adds a temperature. Cost: 1 to 2 calls per post at gpt-6-luna prices ($0.10 / $0.50 per million tokens), a fraction of a
+cent a day. `OPENAI_API_KEY` is **not** in GitHub today (only in Vercel): until `gh secret set OPENAI_API_KEY` is run the templates are used,
+the Slack previews say so, and nothing else changes. Thread replies and the Sinhala / Tamil drafts stay template text (`gh variable set X_LANGS
+--body en,si,ta` adds the drafts; needs `X_REPLIES=on`; off by default). Tests: `node --experimental-strip-types --no-warnings scripts/x-luna.test.mts`.
+
+**Enable the AI writer (owner):** the key that was pasted in chat earlier should be treated as exposed: create a NEW key at
+platform.openai.com/api-keys, revoke the old one, then put the new key in both places (you type it at the prompt, it is never printed):
+`gh secret set OPENAI_API_KEY` (GitHub, used by the X workflow) and `vercel env add OPENAI_API_KEY production` followed by a redeploy
+(Vercel, used by the site's advisories). Check with `gh workflow run x-post.yml -f mode=sample`: the previews should say "written by gpt-6-luna".
 
 ### Cost controls (the X API is pay-per-use)
 
@@ -787,7 +802,7 @@ for new developers except approved public-utility apps. **Verify the current pri
 2. **Label it automated:** Settings and privacy, Your account, Account information, Automation: choose "Managing account" = your personal @shakeeb_x. (The "Automated" label then shows on the profile.)
 3. **Apply for developer access** at developer.x.com: first the free public-utility programme if offered, otherwise pay-per-use with a small credit. Use case text: "Automated public-safety river level and flood-status updates for Sri Lanka, from public government data; no replies, no mass mentions."
 4. **Create a project and app** in the developer console (console.x.com; sign in with your personal account, that is fine). In the app's **User authentication settings** choose permissions **Read and write**, enable **OAuth 1.0a** (pick the app type that supports OAuth 1.0a user context, e.g. "Web App, Automated App or Bot") and allow the **PIN-based (oob) callback** (a callback URL such as `https://sl-water-levels.vercel.app` and website URL are required by the form but are not used). Copy the **API Key** and **API Key Secret**. Do **not** use the console's own Access Token: it belongs to the account that owns the app (your personal one).
-5. **Authorise the BOT account (one time):** `node scripts/x-authorize.mjs` (`scripts/x-authorize.mjs`). It asks for the API Key and Secret (typing is hidden), prints a link; open the link in a browser **logged in as the bot account**, press Authorize, paste the PIN back. It prints only the account name (check it is the bot) and stores `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` straight into GitHub secrets with `gh secret set`, never on screen or in a file. (By hand instead: `gh secret set X_API_KEY` etc.) Optional: `gh secret set OPENAI_API_KEY` for rewording.
+5. **Authorise the BOT account (one time):** `node scripts/x-authorize.mjs` (`scripts/x-authorize.mjs`). It asks for the API Key and Secret (typing is hidden), prints a link; open the link in a browser **logged in as the bot account**, press Authorize, paste the PIN back. It prints only the account name (check it is the bot) and stores `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` straight into GitHub secrets with `gh secret set`, never on screen or in a file. (By hand instead: `gh secret set X_API_KEY` etc.) Optional: `gh secret set OPENAI_API_KEY` so gpt-6-luna writes the posts (see Words above).
 6. **Review in dry-run first:** run `gh workflow run x-post.yml -f mode=sample` (3 sample posts from today's data to Slack), and watch the `DRY RUN` posts that arrive when something changes.
 7. **Buy API credits first** (console, Billing: pay-per-use credits; with $0 credits every post would fail). The pipeline stays in dry-run until you set the variable, so nothing is spent before you are ready. Then **go live:** `gh variable set X_POSTING --body live`. Optional: `gh variable set X_LINKS --body alerts`, `X_MONTHLY_BUDGET_USD`, `X_EVENING --body on`.
 8. **Show the account on the site:** add the handle (no `@`) as the Vercel environment variable `X_HANDLE` (Production) and redeploy: `vercel env add X_HANDLE production`. The footer and About page then show "Automated updates: @handle". Until it is set nothing is shown.
