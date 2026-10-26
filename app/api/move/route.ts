@@ -4,7 +4,7 @@
 // any server), clears the cookie so this happens once, and opens the same page on the new address, where
 // app/ImportHandover.tsx stores it. Everyone else gets a plain permanent redirect.
 import { SITE } from "@/lib/seo";
-import { CARRY_KEYS } from "@/app/SavedDataMarker";
+import { CARRY_KEYS } from "@/lib/carryKeys";
 
 export const dynamic = "force-dynamic";
 

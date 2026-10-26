@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { CARRY_KEYS } from "./SavedDataMarker";
+import { CARRY_KEYS } from "@/lib/carryKeys";
 
 /**
  * After the move to waterlevels.lk: the old address's hand-over page (app/api/move/route.ts) opens this site with

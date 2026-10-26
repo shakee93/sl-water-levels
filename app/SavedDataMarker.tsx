@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 
-// Keys worth carrying to the new address (waterlevels.lk). Device-only conveniences (theme, dismissed banners) are not.
-export const CARRY_KEYS = ["sl_favourites", "sl_my_levels", "sl_low_spots", "sl_loc", "sl_lang", "sl_recent_searches", "sl_station", "sl_theme"] as const;
+export { CARRY_KEYS } from "@/lib/carryKeys";
 const MARK = ["sl_favourites", "sl_my_levels", "sl_low_spots", "sl_loc"];
 
 /**
