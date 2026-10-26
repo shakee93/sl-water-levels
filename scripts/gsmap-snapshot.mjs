@@ -29,6 +29,9 @@
 //   hourly/YYYY/YYYY-MM-DD.jsonl    one line per clock hour {t: hour start, end, mm: {gauge or zone:id: catchment-mean mm in that hour | null}}
 //                                   (the same value latest.json calls mm1h at that anchor), so a backtest has the catchment rain
 //                                   hour by hour, not only 30-minute rates; hourly-state.json remembers the last hour written
+//   grid.json            the rain map (/rain): every 0.1 degree pixel over Sri Lanka and its coast (GRID below, 25 x 42), rate in
+//                        tenths of mm/h per 30-minute step, rolling 26 h. Cropped from files this run downloads anyway; the only
+//                        extra download is a one-time back-fill of the :00 files of the last 25 h when grid.json is new.
 //
 // The ~24 files needed for the first run are downloaded once; afterwards each run fetches only the
 // steps it has not seen. Credentials go to curl on stdin, never on the command line.
@@ -118,6 +121,20 @@ for (const [id, z] of Object.entries(STREET_RAIN_ZONES)) {
 }
 const allKeys = [...gauges, ...subs, ...zones].map((x) => x.key);
 
+// National grid for the rain map: pixel centres 79.55..81.95 E x 9.95..5.85 N (row 0 = north).
+const GRID = { lat0: 9.95, lon0: 79.55, step: STEP, nx: 25, ny: 42 };
+const GRID_KEEP_MS = 26 * HOUR;
+const gridRow0 = Math.round((LAT0 - GRID.lat0) / STEP), gridCol0 = Math.round((GRID.lon0 - LON0) / STEP);
+/** Crop one global file to the national grid: tenths of mm/h, -1 = missing. */
+function cropGrid(grid) {
+  const out = new Array(GRID.nx * GRID.ny);
+  for (let r = 0; r < GRID.ny; r++) for (let c = 0; c < GRID.nx; c++) {
+    const v = grid[(gridRow0 + r) * NX + gridCol0 + c];
+    out[r * GRID.nx + c] = v >= 0 && v < 1000 ? Math.round(v * 10) : -1;
+  }
+  return out;
+}
+
 // ---- state ------------------------------------------------------------------------------------
 const root = path.join(outDir, "gsmap");
 const seriesFile = path.join(root, "series.json");
@@ -137,6 +154,18 @@ if (existsSync(seriesFile)) {
   }
 }
 
+const gridFile = path.join(root, "grid.json");
+/** Map<ms, number[]> of cropped steps already kept. */
+const gridSteps = new Map();
+if (existsSync(gridFile)) {
+  try {
+    const g = JSON.parse(readFileSync(gridFile, "utf8"));
+    g.times.forEach((iso, i) => gridSteps.set(Date.parse(iso), g.frames[i]));
+  } catch (e) {
+    console.warn(`grid.json unreadable, starting over: ${e.message}`);
+  }
+}
+
 // ---- find new files ---------------------------------------------------------------------------
 const names = curl(["--list-only", `${HOST}${DIR}`]).toString().split(/\r?\n/);
 const files = [];
@@ -151,7 +180,9 @@ if (!files.length) {
 files.sort((a, b) => a.t - b.t);
 const newest = files[files.length - 1].t;
 // New steps, plus recent steps an older series.json recorded without a zone (re-read once, not archived again).
-const todo = files.filter((f) => f.t >= newest - NEED_MS && (!rec.has(f.t) || [...zones, ...subs].some((z) => !(z.key in rec.get(f.t)))));
+const todo = files.filter((f) => f.t >= newest - NEED_MS && (!rec.has(f.t) || [...zones, ...subs].some((z) => !(z.key in rec.get(f.t)))
+  // rain-map back-fill: whole hours of the last 25 h the grid has not seen (once, when grid.json is new)
+  || (f.t % HOUR === 0 && f.t >= newest - 25 * HOUR && !gridSteps.has(f.t))));
 console.log(`newest step ${new Date(newest).toISOString()}, ${todo.length} file(s) to read`);
 
 const newSteps = [];
@@ -168,6 +199,7 @@ try {
       console.warn(`skip ${f.name}: ${e.message}`);
       continue;
     }
+    gridSteps.set(f.t, cropGrid(grid));
     const isNew = !rec.has(f.t);
     const o = rec.get(f.t) ?? {};
     for (const g of [...gauges, ...subs, ...zones]) {
@@ -297,6 +329,18 @@ for (const g of gauges) {
   }
   writeFileSync(stateFile, JSON.stringify({ last: Math.max(last, anchor) }) + "\n");
   if (wrote) console.log(`archived ${wrote} hourly catchment line(s)`);
+}
+{
+  const keep = [...gridSteps.keys()].filter((t) => t >= anchor - GRID_KEEP_MS && t <= anchor).sort((a, b) => a - b);
+  writeFileSync(gridFile, JSON.stringify({
+    source: "GSMaP_NOW (JAXA)",
+    credit: out.credit,
+    note: "rain rate in tenths of mm/h for the 30 minutes starting at each time (UTC), -1 = missing; row 0 = northmost; cell centres lat0 - row*step, lon0 + col*step",
+    ...GRID,
+    times: keep.map((t) => new Date(t).toISOString()),
+    frames: keep.map((t) => gridSteps.get(t)),
+  }) + "\n");
+  console.log(`wrote grid.json (${keep.length} steps)`);
 }
 writeFileSync(path.join(root, "latest.json"), JSON.stringify(out, null, 1) + "\n");
 console.log(`wrote latest.json (anchor ${out.latestStart}, ${times.length} steps kept)`);
