@@ -47,6 +47,7 @@ export const publisherLd = () => ({
 export const websiteLd = (lang: Locale, description: string) => ({
   "@type": "WebSite",
   "@id": WEBSITE_ID,
+  ...(X_HANDLE ? { sameAs: [`https://x.com/${X_HANDLE}`] } : {}),
   name: SITE_NAME,
   url: SITE,
   inLanguage: ["en", "si", "ta"],

@@ -7,7 +7,7 @@ import { stationDisplayName } from "./displayName";
 import { fullStamp } from "./i18n/format";
 import { makeT } from "./i18n/translate";
 import { en } from "./i18n/en";
-import { OWNER, REPO, SITE, SITE_NAME, DATA_BRANCH, CONTENT_UPDATED } from "./seo";
+import { OWNER, REPO, SITE, SITE_NAME, DATA_BRANCH, CONTENT_UPDATED, X_HANDLE } from "./seo";
 import type { ReservoirsData } from "./reservoirData";
 import { PLACES } from "./places";
 import { accuracyLine, type AccuracyFile } from "./accuracy";
@@ -19,7 +19,7 @@ export const llmsIntro = (acc: AccuracyFile | null = null) => `# ${SITE_NAME}
 
 > Live river water levels and a next-hour forecast for every river gauge in Sri Lanka: where the river is expected to be in about an hour, with a range, updated hourly. As far as we know it is the only public next-hour river forecast for Sri Lanka. Also flood warnings and reservoir spill/release information, in English, Sinhala and Tamil. Built from the Department of Irrigation's river gauges and its daily reservoir sheet, the Mahaweli Authority's daily report and official Disaster Management Centre bulletins. Free to use. Independent, not an official warning service.
 
-Run by ${OWNER.name} (${OWNER.x}), an individual, not a company or government body. Source code: ${REPO}. Page text last reviewed ${CONTENT_UPDATED}.
+Run by ${OWNER.name} (${OWNER.x}), an individual, not a company or government body. Source code: ${REPO}.${X_HANDLE ? ` Automated updates and alerts on X: https://x.com/${X_HANDLE}.` : ""} Page text last reviewed ${CONTENT_UPDATED}.
 
 ## What to know before answering
 
