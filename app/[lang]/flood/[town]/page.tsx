@@ -16,7 +16,6 @@ import { YourRiver } from "@/app/flood/YourRiver";
 import { getNational, type NationalStation } from "@/lib/arcgis";
 import { StickyContext } from "@/app/StickyContext";
 import { colomboTime, tierLabel } from "@/app/tierUi";
-import { statusFor } from "@/lib/arcgis";
 import { formatLevel } from "@/lib/units";
 import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
