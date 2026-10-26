@@ -1,5 +1,8 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
+import { createHash } from "node:crypto";
+import { d1Configured, d1Query } from "./d1";
+import { soft } from "./soft";
 import {
   ageMinutes,
   HOUR_MS,
@@ -56,8 +59,64 @@ let quotaUntil = 0;
 // Who is asking, so the data owner can reach us if our requests ever bother them.
 const UA = "sl-water-levels (+https://sl-water-levels.vercel.app; shakee.zats@gmail.com)";
 
+// Last good answer per query, kept in D1 so it survives deploys and cold servers. When ArcGIS refuses (quota) or fails, the
+// page shows this instead of "Latest data unavailable" (26 Oct 2026: a deploy during a quota spell had an empty cache and the
+// home page went blank while every other page had data). Written only on a cache miss that succeeded, so at most once per
+// query per cache window. The time bucket in a query is ignored in the key: the previous window's answer is the fallback.
+const LAST_GOOD_MAX_AGE_MS = 48 * 3_600_000;
+const lastGoodKey = (url: string) => {
+  let u = url;
+  try {
+    u = decodeURIComponent(url.replace(/\+/g, " "));
+  } catch {
+    /* keep raw */
+  }
+  return createHash("sha1").update(u.replace(/TIMESTAMP '[^']*'/g, "TS")).digest("hex");
+};
+async function saveLastGood(url: string, page: ArcgisPage): Promise<void> {
+  if (!d1Configured()) return;
+  const body = JSON.stringify(page);
+  if (body.length > 900_000) return;
+  await soft(
+    d1Query("CREATE TABLE IF NOT EXISTS arcgis_last_good (k TEXT PRIMARY KEY, ts INTEGER NOT NULL, body TEXT NOT NULL)")
+      .then(() => d1Query("INSERT INTO arcgis_last_good (k, ts, body) VALUES (?, ?, ?) ON CONFLICT(k) DO UPDATE SET ts = excluded.ts, body = excluded.body", [lastGoodKey(url), Date.now(), body]))
+      .then(() => undefined)
+      .catch(() => undefined),
+    2000,
+    undefined,
+  );
+}
+async function loadLastGood(url: string): Promise<ArcgisPage | null> {
+  if (!d1Configured()) return null;
+  const rows = await soft(d1Query("SELECT ts, body FROM arcgis_last_good WHERE k = ?", [lastGoodKey(url)]).catch(() => []), 3000, []);
+  const r = rows[0];
+  if (!r || Date.now() - Number(r.ts) > LAST_GOOD_MAX_AGE_MS) return null;
+  try {
+    return JSON.parse(String(r.body)) as ArcgisPage;
+  } catch {
+    return null;
+  }
+}
+
 const fetchPageCached = unstable_cache(
   async (url: string): Promise<ArcgisPage> => {
+    const fresh = await fetchFresh(url).catch(async (e: unknown) => {
+      const lg = await loadLastGood(url);
+      if (lg) return { ...lg, stale: true } as ArcgisPage;
+      throw e;
+    });
+    if (!(fresh as ArcgisPage & { stale?: boolean }).stale) await saveLastGood(url, fresh);
+    return fresh;
+  },
+  ["arcgis-page"],
+  // 5 minutes (was 60 s until 26 Oct 2026): the Irrigation Department's ArcGIS org allows 3,000 request units a minute for
+  // EVERYONE using its data and ran out on a flood afternoon. Gauges report hourly, so 5 min costs little freshness; the
+  // background checker (workers/scheduler, every 5 min) still notices a new reading for X and push. Language versions of a
+  // page share this cache: it is keyed by the query, not the page.
+  { revalidate: 300 },
+);
+
+async function fetchFresh(url: string): Promise<ArcgisPage> {
     if (Date.now() < quotaUntil) throw new Error("ArcGIS error 429: backing off after a quota answer");
     let lastErr: Error | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -83,14 +142,7 @@ const fetchPageCached = unstable_cache(
       }
     }
     throw lastErr ?? new Error("ArcGIS request failed");
-  },
-  ["arcgis-page"],
-  // 5 minutes (was 60 s until 26 Oct 2026). The Irrigation Department's ArcGIS org allows 3,000 request units a minute for
-  // EVERYONE using its data (their own dashboard included) and ran out on a flood afternoon, answering 429 "Too many
-  // requests" for half an hour. Gauges report once an hour, so 5 min costs freshness little; the background checker
-  // (workers/scheduler, every 5 min) still notices a new reading for X and push.
-  { revalidate: 300 },
-);
+}
 
 // generateMetadata, the page and its Suspense children ask for the same URL at the same moment; on a
 // cold data cache unstable_cache would run the request once per caller.
