@@ -12,7 +12,7 @@ const RainMapView = dynamic(() => import("./RainMapView").then((m) => m.RainMapV
 function Skeleton() {
   const { lang } = useI18n();
   return (
-    <div className="mx-auto grid aspect-[500/848] w-[min(100%,max(320px,calc(78vh*500/848)))] place-items-center rounded-xl bg-slate-100 dark:bg-slate-900 lg:mx-0">
+    <div className="mx-auto grid aspect-[500/848] w-full max-w-[560px] place-items-center rounded-xl bg-slate-100 dark:bg-slate-900 lg:aspect-auto lg:h-[max(560px,75vh)] lg:max-w-none">
       <span className="flex flex-col items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
         <CloudRain className="size-5 animate-pulse motion-reduce:animate-none" aria-hidden />
         {rmFor(lang)("loading")}

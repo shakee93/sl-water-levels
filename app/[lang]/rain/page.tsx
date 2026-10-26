@@ -58,7 +58,7 @@ export default async function RainPage({ params }: Params) {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-24 sm:pt-10 lg:pb-10">
         <JsonLd graph={ld} />
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.home")}</Link> <span aria-hidden>›</span>{" "}

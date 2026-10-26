@@ -49,39 +49,74 @@ const BAND_RGBA: Record<Exclude<RainBand, "none">, [number, number, number, numb
 };
 const BAND_CSS = Object.fromEntries(Object.entries(BAND_RGBA).map(([k, [r, g, b, a]]) => [k, `rgba(${r},${g},${b},${(a / 255).toFixed(2)})`])) as Record<keyof typeof BAND_RGBA, string>;
 
-/**
- * Draw one layer: the grid values are interpolated bilinearly onto a canvas UP times finer and each pixel is coloured by its rain
- * band, so the bands read as smooth areas instead of 10 km squares. Missing values (null / negative) are left clear.
- */
-const UP = 12;
-function paint(canvas: HTMLCanvasElement | null, values: (number | null)[] | null, nx: number, ny: number, win: RainWindow) {
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  canvas.width = nx * UP;
-  canvas.height = ny * UP;
-  if (!values) return;
-  const img = ctx.createImageData(nx * UP, ny * UP);
+type GridSpec = { lat0: number; lon0: number; step: number; nx: number; ny: number };
+type Sampler = (lon: number, lat: number) => number | null;
+
+/** Bilinear value at any point of a grid of cell centres (missing cells left out; null when under half the weight is known). */
+function sampler(vals: (number | null)[], g: GridSpec): Sampler {
   const at = (r: number, c: number) => {
-    const v = values[Math.min(ny - 1, Math.max(0, r)) * nx + Math.min(nx - 1, Math.max(0, c))];
+    if (r < 0 || r >= g.ny || c < 0 || c >= g.nx) return null;
+    const v = vals[r * g.nx + c];
     return v == null || v < 0 ? null : v;
   };
-  for (let y = 0; y < ny * UP; y++) {
-    const gy = (y + 0.5) / UP - 0.5, r = Math.floor(gy), fy = gy - r;
-    for (let x = 0; x < nx * UP; x++) {
-      const gx = (x + 0.5) / UP - 0.5, c = Math.floor(gx), fx = gx - c;
-      const q = [at(r, c), at(r, c + 1), at(r + 1, c), at(r + 1, c + 1)];
-      const w = [(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy];
-      let s = 0, ws = 0;
-      for (let k = 0; k < 4; k++) if (q[k] != null) { s += q[k]! * w[k]; ws += w[k]; }
-      if (ws < 0.5) continue;
-      const b = rainBand(win, s / ws);
-      if (!b || b === "none") continue;
-      img.data.set(BAND_RGBA[b], (y * nx * UP + x) * 4);
+  return (lon, lat) => {
+    const gy = (g.lat0 - lat) / g.step, gx = (lon - g.lon0) / g.step;
+    const r = Math.floor(gy), c = Math.floor(gx), fy = gy - r, fx = gx - c;
+    const q = [at(r, c), at(r, c + 1), at(r + 1, c), at(r + 1, c + 1)];
+    const w = [(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy];
+    let s = 0, ws = 0;
+    for (let k = 0; k < 4; k++) if (q[k] != null) { s += q[k]! * w[k]; ws += w[k]; }
+    return ws < 0.5 ? null : s / ws;
+  };
+}
+
+// One canvas over the whole map frame for both layers, so they always line up with the land drawn in SVG.
+const CW = 300;
+const CH = Math.round((CW * H) / W);
+let landMask: HTMLCanvasElement | null = null;
+/** Opaque over land, faint over the sea: rain at sea stays visible (storms coming in) but the island reads first. */
+function getLandMask() {
+  if (landMask) return landMask;
+  const m = document.createElement("canvas");
+  m.width = CW;
+  m.height = CH;
+  const c = m.getContext("2d")!;
+  c.fillStyle = "rgba(0,0,0,0.3)";
+  c.fillRect(0, 0, CW, CH);
+  c.scale(CW / W, CH / H);
+  c.fillStyle = "#000";
+  c.fill(new Path2D(COAST_D));
+  landMask = m;
+  return m;
+}
+
+/**
+ * Colour every canvas pixel by the rain band of the interpolated value at its position, so the bands read as smooth areas
+ * instead of 10 or 25 km squares, then fade the sea.
+ */
+function paint(canvas: HTMLCanvasElement | null, sample: Sampler | null, win: RainWindow) {
+  const ctx = canvas?.getContext("2d");
+  if (!canvas || !ctx) return;
+  canvas.width = CW;
+  canvas.height = CH;
+  if (!sample) return;
+  const img = ctx.createImageData(CW, CH);
+  for (let y = 0; y < CH; y++) {
+    const lat = LAT0 - ((y + 0.5) / CH) * (LAT0 - LAT1);
+    for (let x = 0; x < CW; x++) {
+      const v = sample(LON0 + ((x + 0.5) / CW) * (LON1 - LON0), lat);
+      const b = v == null ? null : rainBand(win, v);
+      if (b && b !== "none") img.data.set(BAND_RGBA[b], (y * CW + x) * 4);
     }
   }
   ctx.putImageData(img, 0, 0);
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(getLandMask(), 0, 0);
+  ctx.globalCompositeOperation = "source-over";
 }
+
+/** Level colours for the key, in the order a river rises. */
+const KEY_TIERS = ["normal", "watch", "alert", "minor", "major"] as const;
 
 export type RainMapStrings = { rivers: Record<string, string> };
 
@@ -93,8 +128,20 @@ export function RainMapView({ rivers }: RainMapStrings) {
   const [view, setView] = useState<View>({ kind: "total", tab: "24h" });
   const [playing, setPlaying] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
-  const satRef = useRef<HTMLCanvasElement>(null);
-  const fcRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  // screen pixels per map unit, so dots and labels keep one size on every screen
+  const [scale, setScale] = useState(0.7);
+  // the visitor has picked a view: do not switch it for them
+  const touched = useRef(false);
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => { if (el.clientWidth) setScale(el.clientWidth / W); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // load, then refresh every 10 minutes while the tab is visible
   useEffect(() => {
@@ -102,7 +149,13 @@ export function RainMapView({ rivers }: RainMapStrings) {
     const load = () =>
       fetch("/api/rain-map")
         .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-        .then((d: RainMapData) => { if (alive) { setData(d); setFailed(false); } })
+        .then((d: RainMapData) => {
+          if (!alive) return;
+          setData(d);
+          setFailed(false);
+          // no satellite yet: open on the layer that has data
+          if (!d.satellite && d.forecast && !touched.current) setView({ kind: "total", tab: "f24" });
+        })
         .catch(() => { if (alive) setFailed(true); });
     load();
     const id = setInterval(() => { if (document.visibilityState === "visible") load(); }, 600_000);
@@ -114,16 +167,17 @@ export function RainMapView({ rivers }: RainMapStrings) {
   // what to draw for the current view
   const frame = useMemo(() => {
     if (!data) return null;
-    const sat = (vals: (number | null)[] | null, win: RainWindow) => ({ layer: "sat" as const, vals, win });
-    // forecast values come per kept point: spread them onto the full forecast grid (sea points stay clear)
+    const sat = (vals: (number | null)[] | null, win: RainWindow) => ({ layer: "sat" as const, sample: vals ? sampler(vals, data.grid) : null, win });
+    // forecast values come per kept point: spread them onto the full forecast grid (sea points stay missing)
     const fc = (vals: (number | null)[] | null, win: RainWindow) => {
-      const g = data.forecast?.grid;
-      let full: (number | null)[] | null = null;
-      if (vals && g && data.forecast) {
-        full = new Array(g.nx * g.ny).fill(null);
-        data.forecast.points.forEach(([r, c], i) => { full![r * g.nx + c] = vals[i]; });
+      const f = data.forecast;
+      let sample: Sampler | null = null;
+      if (vals && f) {
+        const full: (number | null)[] = new Array(f.grid.nx * f.grid.ny).fill(null);
+        f.points.forEach(([r, c], i) => { full[r * f.grid.nx + c] = vals[i]; });
+        sample = sampler(full, f.grid);
       }
-      return { layer: "fc" as const, vals: full, win };
+      return { layer: "fc" as const, sample, win };
     };
     if (view.kind === "total") {
       if (view.tab === "f24") return fc(forecastTotal(data, 24), "24h");
@@ -141,10 +195,8 @@ export function RainMapView({ rivers }: RainMapStrings) {
   }, [data, view, nowHour]);
 
   useEffect(() => {
-    if (!data || !frame) return;
-    paint(satRef.current, frame.layer === "sat" ? frame.vals : null, data.grid.nx, data.grid.ny, frame.win);
-    paint(fcRef.current, frame.layer === "fc" ? frame.vals : null, data.forecast?.grid.nx ?? 1, data.forecast?.grid.ny ?? 1, frame.win);
-  }, [data, frame]);
+    if (frame) paint(canvasRef.current, frame.sample, frame.win);
+  }, [frame]);
 
   // play hour by hour, -24 h to +24 h
   useEffect(() => {
@@ -185,6 +237,39 @@ export function RainMapView({ rivers }: RainMapStrings) {
   const labelWin: { win: RainWindow; key: "mm1h" | "mm3h" | "mm24h" } | null =
     view.kind === "total" && view.tab !== "f24" ? { win: view.tab, key: view.tab === "1h" ? "mm1h" : view.tab === "3h" ? "mm3h" : "mm24h" } : null;
   const legendWin: RainWindow = frame?.win ?? "24h";
+
+  // gauge dots and mm labels at a fixed screen size; a label is shown only where it overlaps no other label or dot
+  // (the chosen river's gauges first, then the wettest), so a crowded cluster keeps every dot and its biggest numbers
+  const dotR = 6 / scale;
+  const labels = useMemo(() => {
+    const out = new Map<string, { x: number; y: number; w: number; h: number; txt: string; band: keyof typeof BAND_CSS }>();
+    if (!data || !labelWin) return out;
+    const u = 1 / scale, h = 16 * u;
+    const dots = data.gauges.map((g) => ({ x: px(g.lon) - dotR, y: py(g.lat) - dotR, w: 2 * dotR, h: 2 * dotR, id: g.station }));
+    const placed: { x: number; y: number; w: number; h: number }[] = [];
+    const hit = (a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) =>
+      a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const cands = data.gauges
+      .map((g) => ({ g, mm: g.measured?.[labelWin.key] ?? null }))
+      .filter((c): c is { g: RainMapGauge; mm: number } => {
+        const b = c.mm == null ? null : rainBand(labelWin.win, c.mm);
+        return b === "moderate" || b === "heavy" || b === "veryHeavy";
+      })
+      .sort((a, b) => Number(basinIdx.get(b.g.basin) === sel) - Number(basinIdx.get(a.g.basin) === sel) || b.mm - a.mm);
+    for (const { g, mm } of cands) {
+      const txt = `${Math.round(mm)}`;
+      const w = (txt.length * 6.6 + 8) * u;
+      const x0 = px(g.lon), y0 = py(g.lat) - h / 2;
+      for (const x of [x0 + dotR + 2 * u, x0 - dotR - 2 * u - w]) {
+        const r = { x, y: y0, w, h };
+        if (placed.some((p) => hit(p, r)) || dots.some((d) => d.id !== g.station && hit(d, r))) continue;
+        placed.push(r);
+        out.set(g.station, { ...r, txt, band: rainBand(labelWin.win, mm) as keyof typeof BAND_CSS });
+        break;
+      }
+    }
+    return out;
+  }, [data, labelWin?.key, labelWin?.win, scale, sel, basinIdx, dotR]); // eslint-disable-line react-hooks/exhaustive-deps
   const isFc = frame?.layer === "fc";
 
   // caption over the map: which layer, which hours
@@ -199,16 +284,16 @@ export function RainMapView({ rivers }: RainMapStrings) {
     } else if (view.kind === "total") {
       const h = view.tab === "1h" ? 1 : view.tab === "3h" ? 3 : 24;
       caption = lastSat ? rm("frame.satTotal", { h, to: clock(lastSat.start + HOUR, t) }) : "";
-      if (!data.satellite) note = rm("frame.noSat");
+      if (!data.satellite) note = rm("frame.satSoon");
       else if (h === 24 && satHours.length < 24) note = rm("frame.partial", { n: satHours.length });
     } else if (view.i < 0) {
       const s = nowHour + view.i * HOUR;
       caption = rm("frame.sat", { from: clock(s, t), to: clock(s + HOUR, t) });
-      if (!frame.vals) note = data.satellite ? rm("frame.notIn") : rm("frame.noSat");
+      if (!frame.sample) note = data.satellite ? rm("frame.notIn") : rm("frame.satSoon");
     } else {
       const s = nowHour + view.i * HOUR;
       caption = rm("frame.fc", { from: clock(s, t), to: clock(s + HOUR, t) });
-      if (!frame.vals) note = rm("frame.noFc");
+      if (!frame.sample) note = rm("frame.noFc");
     }
   }
 
@@ -221,103 +306,88 @@ export function RainMapView({ rivers }: RainMapStrings) {
     ? data.basins.map((b, i) => ({ i, b, mm: fell24[i] })).filter((x) => x.mm != null && x.mm >= 2.5).sort((a, b) => (b.mm ?? 0) - (a.mm ?? 0)).slice(0, 6)
     : [];
 
+  const tabBar = (
+    <div role="tablist" aria-label={rm("legend.title")} className="grid grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800 lg:col-start-2 lg:row-start-1">
+      {tabs.map((k) => {
+        const on = view.kind === "total" && view.tab === k;
+        return (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={on}
+            onClick={() => { touched.current = true; setPlaying(false); setView({ kind: "total", tab: k }); }}
+            className={`rounded-md px-1 py-2 font-medium leading-tight transition ${on ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100" : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"} ${k === "f24" ? "underline decoration-dashed decoration-amber-500 underline-offset-4" : ""}`}
+          >
+            {rm(`tab.${k}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <div className="lg:grid lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-6">
-      {/* map */}
-      <div className="relative mx-auto" style={{ width: `min(100%, max(320px, calc(78vh * ${W} / ${H})))`, aspectRatio: `${W} / ${H}` }}>
-        <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full rounded-xl" aria-hidden>
-          <rect width={W} height={H} className="fill-[#d6e8f5] dark:fill-[#10263d]" />
-          <path d={COAST_D} className="fill-[#f6f5f1] stroke-[#7d9db8] dark:fill-[#1a2433] dark:stroke-[#5b7da0]" strokeWidth={1} strokeLinejoin="round" />
-        </svg>
-        <canvas ref={satRef} className="absolute inset-0 h-full w-full" aria-hidden />
-        {data?.forecast && (
-          <canvas
-            ref={fcRef}
-            className="absolute"
-            style={{
-              left: `${(px(data.forecast.grid.lon0 - data.forecast.grid.step / 2) / W) * 100}%`,
-              top: `${(py(data.forecast.grid.lat0 + data.forecast.grid.step / 2) / H) * 100}%`,
-              width: `${((data.forecast.grid.nx * data.forecast.grid.step) / (LON1 - LON0)) * 100}%`,
-              height: `${((data.forecast.grid.ny * data.forecast.grid.step) / (LAT0 - LAT1)) * 100}%`,
-            }}
-            aria-hidden
-          />
-        )}
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="absolute inset-0 h-full w-full cursor-pointer select-none"
-          role="img"
-          aria-label={rm("map.aria")}
-          onClick={tapMap}
-        >
-          <defs>
-            <pattern id="rm-hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <line x1="0" y1="0" x2="0" y2="9" strokeWidth="3" className="stroke-white/70 dark:stroke-slate-950/70" />
-            </pattern>
-          </defs>
-          {isFc && <rect width={W} height={H} fill="url(#rm-hatch)" />}
-          <path d={COAST_D} fill="none" strokeWidth={1.1} strokeLinejoin="round" className="stroke-[#7d9db8] dark:stroke-[#5b7da0]" />
-          <path d={RIVER_TRIB_D} fill="none" strokeWidth={0.7} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-400/70 dark:stroke-sky-500/60" />
-          <path d={RIVER_MAIN_D} fill="none" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-500 dark:stroke-sky-400" />
-          {outline && (
-            <>
-              <path d={outline} fill="none" strokeWidth={5} strokeLinejoin="round" className="stroke-white/90 dark:stroke-slate-950/90" />
-              <path d={outline} strokeWidth={2.2} strokeLinejoin="round" className="fill-slate-900/5 stroke-slate-900 dark:fill-amber-300/5 dark:stroke-amber-300" />
-            </>
-          )}
-          {(data?.gauges ?? []).map((g) => (
-            <GaugeDot
-              t={t}
-              key={`${g.basin}/${g.station}`}
-              g={g}
-              label={labelWin && g.measured ? g.measured[labelWin.key] : null}
-              win={labelWin?.win ?? "1h"}
-              selected={sel != null && basinIdx.get(g.basin) === sel}
-              onTap={() => {
-                const b = basinIdx.get(g.basin);
-                setSel(b ?? null);
-              }}
-            />
-          ))}
-          <text x={W - 6} y={H - 6} textAnchor="end" fontSize={9} className="fill-slate-500 dark:fill-slate-400">© OpenStreetMap contributors</text>
-        </svg>
-        {/* caption */}
-        <div className="pointer-events-none absolute left-2 right-2 top-2 flex flex-col items-start gap-1">
-          {caption && (
-            <span className={`rounded-md px-2 py-1 text-xs font-medium shadow-sm ${isFc ? "bg-amber-50/95 text-amber-900 ring-1 ring-amber-300 dark:bg-amber-950/90 dark:text-amber-100 dark:ring-amber-800" : "bg-white/95 text-slate-800 ring-1 ring-slate-200 dark:bg-slate-900/90 dark:text-slate-100 dark:ring-slate-700"}`}>
-              {caption}
-            </span>
-          )}
-          {note && <span className="max-w-[90%] rounded-md bg-white/95 px-2 py-1 text-xs text-slate-700 ring-1 ring-slate-200 dark:bg-slate-900/90 dark:text-slate-300 dark:ring-slate-700">{note}</span>}
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:grid-rows-[auto_auto_auto_1fr] lg:items-start lg:gap-x-6">
+      {tabBar}
+      {/* map card: a slim caption bar, then the map */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-start-1 lg:row-span-4 lg:row-start-1">
+        <div className={`flex min-h-10 flex-wrap items-center gap-x-2 gap-y-0.5 border-b px-3 py-2 text-xs ${isFc ? "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/60 dark:text-amber-100" : "border-slate-200 text-slate-700 dark:border-slate-800 dark:text-slate-200"}`}>
+          {caption && <span className="font-medium">{caption}</span>}
+          {note && <span className="text-slate-600 dark:text-slate-400">{note}</span>}
+          {!data && <span>{failed ? rm("failed") : rm("loading")}</span>}
         </div>
-        {!data && (
-          <div className="absolute inset-0 grid place-items-center rounded-xl bg-slate-50/70 text-sm text-slate-600 dark:bg-slate-900/70 dark:text-slate-300">
-            {failed ? rm("failed") : rm("loading")}
+        <div className="bg-[#d6e8f5] dark:bg-[#10263d] lg:flex lg:h-[max(560px,75vh)] lg:justify-center">
+          <div ref={boxRef} className="relative mx-auto aspect-[500/848] w-full max-w-[560px] lg:mx-0 lg:h-full lg:w-auto lg:max-w-none">
+            <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" aria-hidden>
+              <path d={COAST_D} className="fill-[#f6f5f1] dark:fill-[#1a2433]" />
+            </svg>
+            <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden />
+            <svg
+              viewBox={`0 0 ${W} ${H}`}
+              className="absolute inset-0 h-full w-full cursor-pointer select-none"
+              role="img"
+              aria-label={rm("map.aria")}
+              onClick={tapMap}
+            >
+              <defs>
+                <clipPath id="rm-land"><path d={COAST_D} /></clipPath>
+                <pattern id="rm-hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="9" strokeWidth="2.5" className="stroke-white/60 dark:stroke-slate-950/60" />
+                </pattern>
+              </defs>
+              {isFc && <rect width={W} height={H} fill="url(#rm-hatch)" clipPath="url(#rm-land)" />}
+              <path d={COAST_D} fill="none" strokeWidth={1.1} strokeLinejoin="round" className="stroke-[#7d9db8] dark:stroke-[#5b7da0]" />
+              <path d={RIVER_TRIB_D} fill="none" strokeWidth={0.7} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-400/70 dark:stroke-sky-500/60" />
+              <path d={RIVER_MAIN_D} fill="none" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-500 dark:stroke-sky-400" />
+              {outline && (
+                <>
+                  <path d={outline} fill="none" strokeWidth={5} strokeLinejoin="round" className="stroke-white/90 dark:stroke-slate-950/90" />
+                  <path d={outline} strokeWidth={2.2} strokeLinejoin="round" className="fill-slate-900/5 stroke-slate-900 dark:fill-amber-300/5 dark:stroke-amber-300" />
+                </>
+              )}
+              {(data?.gauges ?? []).map((g) => (
+                <GaugeDot
+                  t={t}
+                  key={`${g.basin}/${g.station}`}
+                  g={g}
+                  r={dotR}
+                  scale={scale}
+                  label={labels.get(g.station) ?? null}
+                  selected={sel != null && basinIdx.get(g.basin) === sel}
+                  onTap={() => {
+                    touched.current = true;
+                    setSel(basinIdx.get(g.basin) ?? null);
+                  }}
+                />
+              ))}
+              <text x={W - 6} y={H - 6} textAnchor="end" fontSize={9 / scale} className="fill-slate-500 dark:fill-slate-400">© OpenStreetMap contributors</text>
+            </svg>
           </div>
-        )}
+        </div>
       </div>
 
       {/* controls and the river card */}
-      <div className="mt-4 lg:mt-0 lg:max-w-md">
-        <div role="tablist" aria-label={rm("legend.title")} className="grid grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800">
-          {tabs.map((k) => {
-            const on = view.kind === "total" && view.tab === k;
-            return (
-              <button
-                key={k}
-                role="tab"
-                aria-selected={on}
-                onClick={() => { setPlaying(false); setView({ kind: "total", tab: k }); }}
-                className={`rounded-md px-1 py-2 font-medium leading-tight transition ${on ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100" : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"} ${k === "f24" ? "underline decoration-dashed decoration-amber-500 underline-offset-4" : ""}`}
-              >
-                {rm(`tab.${k}`)}
-              </button>
-            );
-          })}
-        </div>
-
         {/* slider */}
-        <div className="mt-3">
+        <div className="lg:col-start-2 lg:row-start-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -353,7 +423,8 @@ export function RainMapView({ rivers }: RainMapStrings) {
         </div>
 
         {/* legend */}
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+        <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 lg:col-start-2 lg:row-start-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           {(["light", "moderate", "heavy", "veryHeavy"] as const).map((b, k) => {
             const e = RAIN_BANDS[legendWin];
             const range = k === 0 ? `< ${e.moderate}` : k === 1 ? `${e.moderate}–${e.heavy}` : k === 2 ? `${e.heavy}–${e.veryHeavy}` : `${e.veryHeavy}+`;
@@ -364,18 +435,25 @@ export function RainMapView({ rivers }: RainMapStrings) {
               </span>
             );
           })}
-          <span className="inline-flex items-center gap-1">
-            <span className="inline-block size-3 rounded-full border-2 border-white bg-slate-500 shadow dark:border-slate-900" aria-hidden />
-            {rm("legend.gauge")}
-          </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-slate-500 dark:text-slate-400">{rm("legend.gauge")}:</span>
+            {KEY_TIERS.map((k) => (
+              <span key={k} className="inline-flex items-center gap-1">
+                <span className="inline-block size-3 rounded-full border-2 border-white shadow-sm dark:border-slate-900" style={{ background: TIER_HEX[k] }} aria-hidden />
+                {tierLabel(t, k)}
+              </span>
+            ))}
+          </div>
         </div>
+        <div className="lg:col-start-2 lg:row-start-4">
 
         {/* river picker (keyboard and screen readers) */}
         {data && (
           <select
             value={sel ?? ""}
-            onChange={(e) => setSel(e.target.value === "" ? null : Number(e.target.value))}
-            className="mt-4 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-900"
+            onChange={(e) => { touched.current = true; setSel(e.target.value === "" ? null : Number(e.target.value)); }}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-900"
             aria-label={rm("card.hint")}
           >
             <option value="">{rm("card.hint")}</option>
@@ -402,7 +480,7 @@ export function RainMapView({ rivers }: RainMapStrings) {
             <ul className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white text-sm dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
               {ranked.map((x) => (
                 <li key={x.b.basin}>
-                  <button type="button" onClick={() => setSel(x.i)} className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                  <button type="button" onClick={() => { touched.current = true; setSel(x.i); }} className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
                     <span className="inline-block size-3 shrink-0 rounded-sm" style={{ background: BAND_CSS[(rainBand("24h", x.mm) ?? "light") === "none" ? "light" : (rainBand("24h", x.mm) as keyof typeof BAND_CSS)] }} aria-hidden />
                     <span className="min-w-0 flex-1 truncate font-medium">{rivers[x.b.basin] ?? x.b.basin}</span>
                     <span className="shrink-0 tabular-nums text-slate-600 dark:text-slate-300">{Math.round(x.mm!)} mm</span>
@@ -419,28 +497,22 @@ export function RainMapView({ rivers }: RainMapStrings) {
           {data && <> {rm("updated", { time: clock(data.generatedAt, t) })}.</>}
         </p>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{rm("note.credit")}</p>
-      </div>
+        </div>
     </div>
   );
 }
 
-function GaugeDot({ t, g, label, win, selected, onTap }: { t: TFn; g: RainMapGauge; label: number | null; win: RainWindow; selected: boolean; onTap: () => void }) {
-  const x = px(g.lon), y = py(g.lat);
-  const band = label != null ? rainBand(win, label) : null;
-  const show = band === "moderate" || band === "heavy" || band === "veryHeavy";
-  const txt = show ? `${Math.round(label!)}` : "";
+function GaugeDot({ t, g, r, scale, label, selected, onTap }: { t: TFn; g: RainMapGauge; r: number; scale: number; label: { x: number; y: number; w: number; h: number; txt: string; band: keyof typeof BAND_CSS } | null; selected: boolean; onTap: () => void }) {
+  const x = px(g.lon), y = py(g.lat), u = 1 / scale;
   return (
-    <g
-      onClick={(e) => { e.stopPropagation(); onTap(); }}
-      className="cursor-pointer"
-    >
+    <g onClick={(e) => { e.stopPropagation(); onTap(); }} className="cursor-pointer">
       <title>{`${g.name}: ${tierLabel(t, g.tier)}${g.level ? `, ${g.level}` : ""}`}</title>
-      <circle cx={x} cy={y} r={14} fill="transparent" />
-      <circle cx={x} cy={y} r={selected ? 6.5 : 5.5} fill={TIER_HEX[g.tier]} strokeWidth={selected ? 2.5 : 1.8} className="stroke-white dark:stroke-slate-900" />
-      {show && (
-        <g transform={`translate(${r1(x + 8)} ${r1(y - 7)})`}>
-          <rect width={txt.length * 6.2 + 8} height={14} rx={4} style={{ fill: BAND_CSS[band as keyof typeof BAND_CSS] }} className="stroke-white dark:stroke-slate-900" strokeWidth={1} />
-          <text x={4} y={10.5} fontSize={10} fontWeight={600} className="fill-white">{txt}</text>
+      <circle cx={x} cy={y} r={r * 2.2} fill="transparent" />
+      <circle cx={x} cy={y} r={selected ? r * 1.15 : r} fill={TIER_HEX[g.tier]} strokeWidth={(selected ? 2.5 : 1.8) * u} className="stroke-white dark:stroke-slate-900" />
+      {label && (
+        <g>
+          <rect x={label.x} y={label.y} width={label.w} height={label.h} rx={4 * u} style={{ fill: BAND_CSS[label.band] }} className="stroke-white dark:stroke-slate-900" strokeWidth={u} />
+          <text x={label.x + label.w / 2} y={label.y + label.h * 0.72} textAnchor="middle" fontSize={11 * u} fontWeight={600} className="fill-white">{label.txt}</text>
         </g>
       )}
     </g>
