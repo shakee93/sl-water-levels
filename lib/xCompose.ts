@@ -16,6 +16,8 @@ export const TCO_LENGTH = 23;
 /** Appended to every post that is our own words. */
 export const DISCLAIMER = "Not an official warning. Emergency: 117.";
 /** Appended to a post that relays an official bulletin. */
+/** Routine posts carry no closing (the bio and the pinned post say "Not official · 117"); serious ones carry this short one. */
+export const DISCLAIMER_SHORT = "Emergency: 117.";
 export const DISCLAIMER_RELAY = "Relayed, we are not the source. Emergency: 117.";
 /** The only number allowed without being in the facts. */
 export const ALWAYS_OK_NUMBERS = [117];
@@ -78,6 +80,8 @@ export type Post = {
   must: string[];
   hashtags: string[];
   disclaimer: string;
+  /** Flood risk is serious (Minor / Major, or a forecast that could reach one): a short "Emergency: 117" closing is required. */
+  serious?: boolean;
 };
 
 const TAG_RE = /#\w+/g;
@@ -164,16 +168,16 @@ type Parts = { body: string; short?: string; link: string; must: string[]; tags:
  * `text` with the page link and `textNoLink` without (a post with a link costs about 13 times more on the X API, so the
  * sender picks: scripts/x-post.mjs X_LINKS).
  */
-function assemble(parts: Parts[] | Parts): Composed {
+function assemble(parts: Parts[] | Parts, serious = false): Composed {
   const variants = Array.isArray(parts) ? parts : [parts];
   const build = (withLink: boolean) => {
     let last = "";
     let pick: Parts = variants[0];
     for (const p of variants) {
-      const disclaimer = p.disclaimer ?? DISCLAIMER;
+      const disclaimer = p.disclaimer ?? (serious ? DISCLAIMER_SHORT : "");
       for (const body of [p.body, p.short].filter((x): x is string => !!x)) {
         for (const tags of [p.tags, p.tags.slice(0, 1), []]) {
-          const text = `${body}${withLink ? `\n${p.link}` : ""}\n${disclaimer}${tags.length ? `\n${tags.join(" ")}` : ""}`;
+          const text = `${body}${withLink ? `\n${p.link}` : ""}${disclaimer ? `\n${disclaimer}` : ""}${tags.length ? `\n${tags.join(" ")}` : ""}`;
           last = text;
           pick = p;
           if (tweetLength(text) <= MAX_TWEET) return { text, pick };
@@ -185,7 +189,7 @@ function assemble(parts: Parts[] | Parts): Composed {
   const a = build(true);
   const b = build(false);
   const p = a.pick;
-  return { text: a.text, textNoLink: b.text, link: p.link, must: p.must, hashtags: p.tags, disclaimer: p.disclaimer ?? DISCLAIMER, reply: p.reply };
+  return { text: a.text, textNoLink: b.text, link: p.link, must: p.must, hashtags: p.tags, disclaimer: p.disclaimer ?? (serious ? DISCLAIMER_SHORT : ""), reply: p.reply, serious: serious || p.disclaimer === DISCLAIMER_RELAY };
 }
 
 const trendWord = (t: string | null) => (t === "rising" ? ", rising" : t === "rising slowly" ? ", rising slowly" : t === "falling" ? ", falling" : t === "steady" ? ", steady" : "");
@@ -219,7 +223,7 @@ export function composeGaugeRise(gs: GaugeFact[]): Composed {
       nh,
       "Check the page for the chart and nearby gauges.",
     ].filter(Boolean).join(" ");
-    return assemble({ body, short, link, must, tags, reply: `${reply}\n${g.url}` });
+    return assemble({ body, short, link, must, tags, reply: `${reply}\n${g.url}` }, isSerious(gs));
   }
   const shown = gs.slice().sort((a, b) => rank(b.tier) - rank(a.tier) || b.level - a.level);
   const mk = (k: number) => {
@@ -229,8 +233,10 @@ export function composeGaugeRise(gs: GaugeFact[]): Composed {
   };
   const variants: Parts[] = [3, 2, 1].filter((k) => k <= shown.length || k === 1).map((k) => ({ body: mk(Math.min(k, shown.length)), link, must: [river, ...shown.slice(0, Math.min(k, 3)).map((g) => g.station)], tags }));
   const reply = shown.map((g) => `${g.station}: ${ft(g.level)}, ${g.tier === "normal" || g.tier === "watch" ? "below alert" : TIER_MARK[g.tier]}${trendWord(g.trend)}`).slice(0, 6).join("\n");
-  return { ...assemble(variants), reply: `${reply}\n${link}` };
+  return { ...assemble(variants, isSerious(gs)), reply: `${reply}\n${link}` };
 }
+/** Minor / Major reached, or the next-hour forecast says it could reach one. */
+export const isSerious = (gs: { tier: string; nextHour?: { crossing: string | null } | null }[]) => gs.some((g) => g.tier === "minor" || g.tier === "major" || /minor|major/i.test(g.nextHour?.crossing ?? ""));
 const rank = (t: string) => ["normal", "watch", "alert", "minor", "major"].indexOf(t);
 
 /** Gauges of one river that are no longer at Alert level. */
@@ -331,7 +337,7 @@ export function composeStorm(f: StormFact): Composed {
   const body = `${f.river} update, ${clock(f.at)}: ${gs.map(line).join(" ")}`;
   const short = `${f.river}, ${clock(f.at)}: ${line(gs[0])}`;
   const reply = f.gauges.map((g) => `${g.station}: ${ft(g.level)}${g.alertMark != null ? ` (alert ${ft(g.alertMark)})` : ""}${trendWord(g.trend)}`).join("\n");
-  return assemble({ body, short, link: f.url, must: [f.river, gs[0].station, "forecast"].filter((w, i) => i < 2 || gs[0].nextHour), tags: ["#SriLanka", riverTag(f.river)].filter(Boolean), reply: `${reply}\n${f.url}` });
+  return assemble({ body, short, link: f.url, must: [f.river, gs[0].station, "forecast"].filter((w, i) => i < 2 || gs[0].nextHour), tags: ["#SriLanka", riverTag(f.river)].filter(Boolean), reply: `${reply}\n${f.url}` }, isSerious(f.gauges));
 }
 
 export type RainWatchFact = { mm: number; place: string; windowH: number; atAlert: number; at: number; url: string };
@@ -379,7 +385,7 @@ export function composeRiversRising(f: RiversRisingFact): Composed {
   const mk = (k: number) => `${f.count} rivers are rising towards or past Alert level at ${time}: ${listMore(shown.slice(0, k).map(one), f.count - Math.min(k, shown.length))}.`;
   const short = `${f.count} rivers are rising towards Alert level: ${listMore(shown.slice(0, 3).map((g) => `${g.river} (${g.station})`), more)}.`;
   const variants: Parts[] = [{ body: mk(shown.length), short, link: f.url, must: [shown[0].station], tags: ["#SriLanka"] }];
-  return assemble(variants);
+  return assemble(variants, isSerious(f.gauges));
 }
 
 // ---- the language model writes the post (gpt-6-luna), the template is the fallback -------------------------------
@@ -434,23 +440,27 @@ VOICE
 - Short, plain English as Sri Lankans write it. Lead with what matters to people, e.g. "Kalu Ganga at Ratnapura is rising and just crossed the alert mark".
 - No hype, no drama, no capital-letter shouting. All clears feel reassuring. Storm updates are concise and steady. The morning post is friendly.
 - No emoji, except at most ONE of the two symbols 🌧️ or ⚠️ in an alert, storm or rain post. At most one hashtag, only from allowed_hashtags, and usually none.
-- Never say "official" except inside the closing line (and when relaying a bulletin, to name it).
+- Never say "official" (the account's bio and pinned post already say it is not official), except when relaying a bulletin, to name it.
 
 VARIETY (this account posts many times a day; the posts must not read like copies)
 - recent_posts are what this account said last. Do not reuse ANY sentence or any run of six or more words from them (except the closing line). Change the order too: sometimes lead with the forecast, sometimes with the place, sometimes with the number, sometimes with a short human remark.
 - Do not start like any recent post, and do not use the same tip or the same closing wording as the last two posts. Do not open with a clock time ("At 11:04 am, ..."): put the time inside the sentence or leave it out of the opening.
 - An evening summary is a wrap-up of the day ("This evening", "Tonight", "As the day ends"); a morning summary is a greeting. Even when the numbers match an earlier post, the words must not: change the frame, e.g. lead with the rain or with one station instead of the count, say "above their alert marks" / "past the alert line" / "at or over alert" instead of repeating "are at alert level or higher", and use different verbs.
 - A tip is optional: use one in at most one post out of three, and only when it adds something. Never write "Take care near the river" or "Take care near the water" (overused). Rotate between very different kinds, e.g. "worth a look if you live along it", "I'll check again in an hour", "no need to do anything yet, just good to know", "pass it on to family downstream", "if you're travelling through Ratnapura tonight, allow some extra time", or none at all. Tips stay generic and never go beyond the facts (no evacuation advice unless the facts say evacuation).
-- Closings rotate too. Every closing says it is not an official warning (or "not official") and gives 117, but say it differently each time, e.g. "Not an official warning. Emergency: 117." / "Just what the gauge shows, not an official warning. Emergency: 117." / "Not official, only the gauge readings. Emergency: 117." / "This is not an official warning. In an emergency call 117."
+
+CLOSING (the input field "closing" tells you which)
+- none (most posts: summaries, alert-level rises, all-clears, reservoirs, calm storm updates): end the post with your last useful sentence. No "Not an official warning", no "Emergency: 117", no 117 at all. The bio and the pinned post already say it.
+- short (only when flood risk is serious: Minor or Major flood level, or a forecast that the river could reach one): end with a very short line, "Emergency: 117." or "Unofficial · 117." (use either, varying it naturally). Nothing longer, never "Not an official warning".
+- relay (passing on an official bulletin): say we are only passing it on and are not the source, plus 117, e.g. "We're only passing this on, not the source. Emergency: 117."
 
 FACTS ARE THE LAW
 - Use only the facts in the JSON. Every number, time, place and river you write must come from it. Copy numbers as given (ft, cusecs, mm, %). Write times exactly as given in time_sri_lanka (e.g. "4:10 pm"). Do not add numbers of your own, no dates other than the ones given, no causes.
-- Forecasts are only forecasts. Give the next-hour figure as "about" with the likely range if one is given. If may_cross is given, say the river "could reach" or "may reach" that level in the next hour. NEVER write "expected to reach", "will reach", "will cross", "will flood" or any other certain wording about the future.
+- Forecasts are only forecasts. Give the next-hour figure as "about" with the likely range if one is given. If may_cross is given, say the river "could reach" or "may reach" that level in the next hour (never "reaching" or "to reach" without could/may). NEVER write "expected to reach", "will reach", "will cross", "will flood" or any other certain wording about the future.
 - If a status is "alert level" do not call it minor or major flood; use the status word as given. Do not say rising unless the facts say rising (or the post is about a gauge that just rose).
 - Never talk about street flooding, low-lying ground, canals or what the rain will do to streets. Only rivers, gauges, reservoirs and rain amounts.
 - No links, no @mentions. The link (if any) is added for you.
 
-LENGTH: the hard limit is max_characters (260) characters in total including the closing line. Aim for 200 to 250. Count before you answer; if it is close, drop a clause. Never go over.
+LENGTH: the hard limit is max_characters (260) characters in total including any closing line. Aim for 200 to 250. Count before you answer; if it is close, drop a clause. Never go over.
 
 SHAPE BY KIND
 - alert or storm about one river: the place and what happened, the number, at most one forecast sentence, the closing. Two or three short sentences before the closing at most.
@@ -459,28 +469,31 @@ SHAPE BY KIND
 - reservoir, clear, warning: one or two sentences.
 
 EXAMPLES (all numbers below are MADE UP for illustration; never copy them, use only the facts you are given):
-alert:
-- Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm (mark 21 ft). Not an official warning. Emergency: 117.
-- Hanwella on the Kelani Ganga has reached the minor flood level, 31.2 ft at 9:40 pm and still climbing slowly. Worth a look if you live along it. Just the gauge reading, not an official warning. Emergency: 117.
-- ⚠️ Major flood level at Nagalagam Street on the Kelani Ganga: 8.9 ft at 6:15 am. Please keep away from the river edge and check back soon. Not official, only the gauge. Emergency: 117.
-clear:
-- Good news from Ratnapura: the Kalu Ganga is back below the alert mark, 19.8 ft at 7:30 am and easing. Not an official warning. Emergency: 117.
-- Glencourse has dropped under the alert level again (5.1 ft at 2:05 pm). Nothing to worry about from the gauge right now. This is not an official warning. In an emergency call 117.
-reservoir:
-- Deduru Oya reservoir is spilling, about 1,250 cusecs in the 25 Oct reading. That water goes into the Deduru Oya, so people along it may want to check in today. Not an official warning. Emergency: 117.
-- Castlereagh has stopped letting water out (24 Oct reading). Not an official warning. Emergency: 117.
-warning:
+alert (closing none):
+- Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm (mark 21 ft).
+- Hanwella on the Kelani Ganga has crossed the alert mark, 28.4 ft at 9:40 pm and still climbing slowly. Worth a look if you live along it.
+alert (closing short, because Minor/Major or "could reach"):
+- Hanwella on the Kelani Ganga has reached the minor flood level, 31.2 ft at 9:40 pm and still climbing slowly. Emergency: 117.
+- Ratnapura is at 21.3 ft and rising, about 21.9 ft in the next hour (likely 21.6 to 22.2), and it could reach the minor flood level. Unofficial · 117.
+- ⚠️ Major flood level at Nagalagam Street on the Kelani Ganga: 8.9 ft at 6:15 am. Please keep away from the river edge and check back soon. Emergency: 117.
+clear (closing none):
+- Good news from Ratnapura: the Kalu Ganga is back below the alert mark, 19.8 ft at 7:30 am and easing.
+- Glencourse has dropped under the alert level again (5.1 ft at 2:05 pm). Nothing to worry about from the gauge right now.
+reservoir (closing none):
+- Deduru Oya reservoir is spilling, about 1,250 cusecs in the 25 Oct reading. That water goes into the Deduru Oya, so people along it may want to check in today.
+- Castlereagh has stopped letting water out (24 Oct reading).
+warning (closing relay):
 - The Irrigation Department has put out a flood alert for the Kalu Ganga basin, issued at 3:20 pm, and mentions a release of about 9,000 cusecs. Please follow their instructions. We're only passing it on, not the source. Emergency: 117.
-morning:
-- Morning! All 38 gauges are below their alert marks today, and not much rain is forecast. Have a good one. Not an official warning. Emergency: 117.
-- Morning. 2 of 38 gauges are at alert level or higher (Hanwella and Glencourse), 1 more is close, and up to 60 mm of rain is forecast near Ratnapura. Not official, only the gauge readings. Emergency: 117.
-storm:
-- Kelani Ganga at 8:00 pm: Hanwella is over the alert mark at 28.4 ft and still rising. Forecast for the next hour is about 28.9 ft (likely 28.6 to 29.2), and it could reach the minor flood level. Not an official warning. Emergency: 117.
-- Quick update on the Kalu Ganga, 9:00 pm: Ratnapura 22.1 ft, steady just above the alert mark. Forecast next hour about 22.2 ft. Just what the gauge shows, not an official warning. Emergency: 117.
-several rivers:
-- Rivers are rising across the south-west at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Hanwella 28.4 ft and Gin Ganga at Baddegama 10.2 ft, plus 2 more. Not an official warning. Emergency: 117.
-rain:
-- Heavy rain is forecast near Ratnapura, up to 120 mm over the next 24 hours 🌧️. No river gauge is at alert level yet. Forecasts can change. Not an official warning. Emergency: 117.
+morning (closing none):
+- Morning! All 38 gauges are below their alert marks today, and not much rain is forecast. Have a good one.
+- Morning. 2 of 38 gauges are at alert level or higher (Hanwella and Glencourse), 1 more is close, and up to 60 mm of rain is forecast near Ratnapura.
+storm (closing none, or short when serious):
+- Kelani Ganga at 8:00 pm: Hanwella is over the alert mark at 28.4 ft and still rising. Forecast for the next hour is about 28.9 ft (likely 28.6 to 29.2).
+- Quick update on the Kalu Ganga, 9:00 pm: Ratnapura 22.1 ft, steady just above the alert mark. Forecast next hour about 22.2 ft.
+several rivers (closing none, or short when serious):
+- Rivers are rising across the south-west at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Hanwella 28.4 ft and Gin Ganga at Baddegama 10.2 ft, plus 2 more.
+rain (closing none):
+- Heavy rain is forecast near Ratnapura, up to 120 mm over the next 24 hours 🌧️. No river gauge is at alert level yet. Forecasts can change.
 
 Answer with JSON {"text": "..."} holding only the post text.`;
 
@@ -528,6 +541,8 @@ export type LunaCtx = {
   must: string[];
   recent: string[];
   relay?: boolean;
+  /** Minor / Major, or a forecast that could reach one: needs the short "Emergency: 117" closing. */
+  serious?: boolean;
 };
 
 /** Why model text may not go out (text is the full post, link included when it has one); empty = fine. */
@@ -543,8 +558,13 @@ export function validateLlmText(text: string, c: LunaCtx): string[] {
   for (const n of new Set(numbersIn(normaliseTimes(body)))) if (!ok.has(n)) problems.push(`number ${n} is not in the facts`);
   const WORDS: Record<string, number> = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12 };
   for (const w of new Set(body.toLowerCase().match(/\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g) ?? [])) if (!ok.has(WORDS[w])) problems.push(`number "${w}" is not in the facts`);
-  if (!/\b117\b/.test(text)) problems.push("emergency number 117 missing");
-  if (c.relay ? !/not the (original )?source/i.test(text) : !/not (an )?official/i.test(text)) problems.push(c.relay ? 'closing must say we are "not the source"' : 'closing must say "not an official warning"');
+  if (c.relay) {
+    if (!/\b117\b/.test(text)) problems.push("emergency number 117 missing");
+    if (!/not the (original )?source/i.test(text)) problems.push('closing must say we are "not the source"');
+  } else if (c.serious) {
+    if (!/\b117\b/.test(text)) problems.push('serious flood risk: end with the short closing "Emergency: 117." (or "Unofficial · 117.")');
+    if (/\bofficial/i.test(text)) problems.push('do not write "official" / "not an official warning": the short closing is only "Emergency: 117." or "Unofficial · 117."');
+  } else if (/\bofficial|\bemergency/i.test(text)) problems.push("routine post: no disclaimer or emergency line (the bio and pinned post already say it)");
   const low = body.toLowerCase();
   for (const w of c.must) if (!low.includes(w.toLowerCase())) problems.push(`"${w}" missing`);
   const tags = text.match(TAG_RE) ?? [];
@@ -554,7 +574,6 @@ export function validateLlmText(text: string, c: LunaCtx): string[] {
   if (emoji.length > 1) problems.push("more than one emoji");
   for (const e of emoji) if (!ALLOWED_EMOJI.has(e)) problems.push(`emoji ${e} not allowed`);
   if (emoji.length && ["gauge_clear", "summary", "reservoir_stop"].includes(c.type)) problems.push("no emoji in this kind of post");
-  if (!c.relay && /official/i.test(text.replace(/not (an )?official( warning)?/gi, " "))) problems.push('says "official" outside the closing line');
   for (const w of ["major", "minor"]) if (new RegExp(`\\b${w}\\b`, "i").test(body) && !factsLow.includes(w)) problems.push(`says "${w}" but the facts do not`);
   if (/evacuat/i.test(body) && !factsLow.includes("evacuat")) problems.push("mentions evacuation, which the facts do not");
   if (/\b(rising|rose|risen|climbing|surging|swelling)\b/i.test(body) && !factsLow.includes("rising") && !["gauge_rise", "rivers_rising"].includes(c.type)) problems.push("says the water is rising but the facts do not");
@@ -563,6 +582,7 @@ export function validateLlmText(text: string, c: LunaCtx): string[] {
   if (lowSpot && !factsLow.includes(lowSpot[0].toLowerCase())) problems.push(`talks about "${lowSpot[0]}": only rivers, gauges, reservoirs and rain amounts`);
   if (c.type === "summary" && /\b(calm|all clear|all (of )?\d+ gauges are below)/i.test(body) && /"gauges_at_alert_or_higher":[1-9]/.test(JSON.stringify(c.facts))) problems.push("calls it calm but some gauges are at alert level or higher");
   if (/\b(expected to (reach|cross|hit|exceed)|will (reach|cross|hit|exceed|flood|overflow)|going to (reach|flood))\b/i.test(body)) problems.push('states a forecast as certain ("expected to reach" / "will reach" / "will flood"): say "could reach" or "may reach"');
+  if (/(?<!could |may |might |has |have |just |already )\b(reach(es|ing)?|cross(es|ing)?|hit(s|ting)?)\s+(the\s+|its\s+)?(minor|major)\b/i.test(body)) problems.push('states a forecast crossing as certain ("reaching minor flood level"): say "could reach" or "may reach"');
   const shared = sharedWithRecent(text, c.recent);
   if (shared) problems.push(`repeats wording from a recent post ("${shared}"): say it differently, change the structure and the tip`);
   const open = openingOf(text);
@@ -590,11 +610,11 @@ export async function lunaWrite(post: Post, o: { type: string; facts: unknown; r
   const recent = (o.recent ?? []).slice(0, 5);
   const relay = o.type === "warning";
   const ctx: LunaCtx = {
-    type: o.type, facts: compact, link: post.link, withLink: o.withLink, hashtags: post.hashtags.slice(0, 2), recent, relay,
+    type: o.type, facts: compact, link: post.link, withLink: o.withLink, hashtags: post.hashtags.slice(0, 2), recent, relay, serious: !!post.serious,
     must: (relay ? post.must.slice(1) : post.must).filter((w) => w && !GENERIC_MUST.has(w.toLowerCase())).slice(0, 2),
   };
   const max = MODEL_TARGET - (o.withLink ? TCO_LENGTH + 1 : 0); // told to the model; the checker's hard limit stays 280
-  const input = { kind: post.kind, max_characters: max, allowed_hashtags: ctx.hashtags, facts: compact, recent_posts: recent.map((r) => r.replace(URL_RE, "").trim()) };
+  const input = { kind: post.kind, closing: relay ? "relay: say we are only passing it on, not the source, plus 117" : post.serious ? 'short: end with "Emergency: 117." or "Unofficial · 117." (no other disclaimer)' : "none: do not add any disclaimer, emergency line or 117", max_characters: max, allowed_hashtags: ctx.hashtags, facts: compact, recent_posts: recent.map((r) => r.replace(URL_RE, "").trim()) };
   let last = "";
   let problems: string[] = [];
   const seen = new Set<string>(); // every problem found so far, so the 3rd try also avoids what the 1st one did

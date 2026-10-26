@@ -14,7 +14,7 @@ const gf = (o = {}) => ({ station: "Ratnapura", river: "Kalu Ganga", tier: "aler
 const ev = (o = {}) => ({ type: "gauge_rise", kind: "alert", gauges: [gf(o)] });
 const post = (g = gf()) => ({ kind: "alert", facts: [g], ...composeGaugeRise([g]) });
 const ctxOf = (type, facts, o = {}) => ({ type, facts: lunaFacts(type, facts), link: `${SITE}/x`, withLink: false, hashtags: ["#SriLanka", "#KaluGanga"], must: ["Ratnapura"], recent: [], ...o });
-const good = "Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. If you're near the river in Ratnapura, keep an eye on it this evening. Not an official warning. Emergency: 117.";
+const good = "Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. If you're near the river in Ratnapura, keep an eye on it this evening.";
 
 // ---- the checker: natural phrasing passes
 const c = ctxOf("gauge_rise", [gf()]);
@@ -24,7 +24,6 @@ for (const t of [
   good.replace("21.3 ft", "21 ft"), // rounded
   good.replace("4:10 pm", "4.10pm"), // time written another way
   good.replace("4:10 pm", "4:10 PM"),
-  good.replace("Not an official warning.", "Not official, just what the gauge says."),
   good + " #KaluGanga",
   "⚠️ " + good,
   good.replace("Kalu Ganga at Ratnapura", "Ratnapura gauge on the Kalu Ganga"),
@@ -38,24 +37,37 @@ bad(good.replace("this evening", "for the next 3 days"), /number 3 is not/);
 bad(good + " https://example.com", /link/);
 bad(good + " sl-water-levels.vercel.app", /link|web address/);
 bad(good + " cc @DMCSriLanka", /@mention/);
-bad(good.replace("Not an official warning. ", ""), /not an official warning/);
-bad(good.replace(" Emergency: 117.", ""), /117/);
-bad(good.replace("Emergency: 117", "Emergency: 119"), /number 119|117/);
+// routine posts carry no disclaimer; serious ones the short closing only
+bad(good + " Not an official warning. Emergency: 117.", /routine post/);
+bad(good + " Not official, just what the gauge says.", /routine post/);
+bad(good + " Emergency: 117.", /routine post/);
+{
+  const sc = ctxOf("gauge_rise", [gf({ tier: "minor", mark: 24, level: 24.6 })], { serious: true });
+  const sg = "Ratnapura on the Kalu Ganga has reached the minor flood level: 24.6 ft at 4:10 pm and rising.";
+  assert.deepEqual(validateLlmText(sg + " Emergency: 117.", sc), []);
+  assert.deepEqual(validateLlmText(sg + " Unofficial · 117.", sc), []);
+  bad(sg, /short closing/, sc);
+  bad(sg + " Not an official warning. Emergency: 117.", /do not write "official"/, sc);
+  bad(sg + " Emergency: 119.", /number 119|117/, sc);
+}
+// "reaching minor flood level" is a certain-sounding forecast
+bad(good.replace("keep an eye on it this evening", "next hour about 21.5 ft, reaching minor flood level"), /certain/);
+bad(good.replace("keep an eye on it this evening", "it is set to reach minor flood level"), /certain/);
 bad(good.replace("Ratnapura is", "Colombo is").replace("in Ratnapura", "in Colombo"), /"Ratnapura" missing/);
 bad(good + " #breaking", /hashtag/);
 bad(good + " 🚨", /emoji/);
 bad(good + " 🌧️ ⚠️", /more than one emoji/);
-bad("This official warning says Ratnapura is rising, 21.3 ft at 4:10 pm. Not an official warning. Emergency: 117.", /"official"/);
+bad("This official warning says Ratnapura is rising, 21.3 ft at 4:10 pm.", /routine post/);
 bad(good.replace("alert mark", "major flood mark"), /major/);
 bad(good + " People near canals may see water on the streets.", /canals|water on the streets/);
 bad(good + " Low-lying ground may flood.", /low/i);
 bad(good + " Please evacuate.", /evacuat/);
 bad(good + " " + "x".repeat(280), /too long/);
 bad(good.replace("is rising and just crossed", "is easing after it crossed"), /falling/, ctxOf("gauge_rise", [gf({ trend: "steady" })]));
-bad("Rivers are calm across the island. Not an official warning. Emergency: 117.", /calm/, ctxOf("summary", { period: "morning", at: NOW, reporting: 40, assessed: 38, atAlert: [{ station: "Hanwella", tier: "alert" }], nearAlert: 0, rain: null, rainWindowH: 24, spilling: 0, url: SITE }, { must: [] }));
+bad("Rivers are calm across the island.", /calm/, ctxOf("summary", { period: "morning", at: NOW, reporting: 40, assessed: 38, atAlert: [{ station: "Hanwella", tier: "alert" }], nearAlert: 0, rain: null, rainWindowH: 24, spilling: 0, url: SITE }, { must: [] }));
 // numbers copied from the voice guide's examples must not pass
-bad("Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm (mark 21 ft). Hanwella 31.2 ft. Not an official warning. Emergency: 117.", /number 31\.2/);
-assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("Not an official warning. Emergency: 117."));
+bad("Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm (mark 21 ft). Hanwella 31.2 ft.", /number 31\.2/);
+assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("Unofficial · 117."));
 
 // a relayed bulletin says we are not the source (and may say "official")
 {
@@ -115,7 +127,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
   const opens = ["Kalu Ganga at Ratnapura is rising", "Heads up, Ratnapura is over the alert mark", "Ratnapura gauge reads 21.3 ft at 4:10 pm", "Quick one for Ratnapura: the Kalu Ganga is up", "The Kalu Ganga has reached the alert mark at Ratnapura"];
   const recent = [];
   for (const o of opens) {
-    const t = `${o}, 21.3 ft at 4:10 pm. Not an official warning. Emergency: 117.`;
+    const t = `${o}, 21.3 ft at 4:10 pm.`;
     assert.deepEqual(validateLlmText(t, ctxOf("gauge_rise", [gf()], { recent })), [], t);
     recent.unshift(t);
   }
@@ -126,12 +138,12 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
 {
   const sf = { period: "morning", at: NOW, reporting: 40, assessed: 38, atAlert: [], nearAlert: 0, rain: { mm: 12, place: "Colombo" }, rainWindowH: 24, spilling: 0, url: SITE };
   const cx = ctxOf("summary", sf, { must: [] });
-  assert.deepEqual(validateLlmText("Morning! Rivers are calm across the island today: all 38 gauges are below their alert marks, with up to 12 mm of rain forecast near Colombo. Have a good one. Not an official warning. Emergency: 117.", cx), []);
+  assert.deepEqual(validateLlmText("Morning! Rivers are calm across the island today: all 38 gauges are below their alert marks, with up to 12 mm of rain forecast near Colombo. Have a good one.", cx), []);
   const clear = gf({ tier: "normal", level: 19.8, trend: "falling" });
-  assert.deepEqual(validateLlmText("Good news from Ratnapura: the Kalu Ganga is back below the alert mark, 19.8 ft at 4:10 pm and easing. Not an official warning. Emergency: 117.", ctxOf("gauge_clear", [clear])), []);
-  bad("Ratnapura is all clear 🌧️ 19.8 ft. Not an official warning. Emergency: 117.", /emoji/, ctxOf("gauge_clear", [clear]));
+  assert.deepEqual(validateLlmText("Good news from Ratnapura: the Kalu Ganga is back below the alert mark, 19.8 ft at 4:10 pm and easing.", ctxOf("gauge_clear", [clear])), []);
+  bad("Ratnapura is all clear 🌧️ 19.8 ft.", /emoji/, ctxOf("gauge_clear", [clear]));
   const sto = { river: "Kalu Ganga", at: NOW, gauges: [gf()], url: SITE };
-  assert.deepEqual(validateLlmText("Kalu Ganga at 4:10 pm: Ratnapura is at 21.3 ft, over the alert mark and rising. Forecast for the next hour is about 21.5 ft (likely 21.3 to 21.8). Not an official warning. Emergency: 117.", ctxOf("storm", sto, { must: ["Kalu Ganga", "Ratnapura"] })), []);
+  assert.deepEqual(validateLlmText("Kalu Ganga at 4:10 pm: Ratnapura is at 21.3 ft, over the alert mark and rising. Forecast for the next hour is about 21.5 ft (likely 21.3 to 21.8).", ctxOf("storm", sto, { must: ["Kalu Ganga", "Ratnapura"] })), []);
 }
 
 // ---- prepare(): llm / template path, shown in the Slack preview
@@ -144,7 +156,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
   assert.equal(r.ai, false);
   assert.match(dryRunMessage({ n: 1, of: 1, kind: "alert", text: r.text, ai: r.ai, why: r.why }), /plain template \(OPENAI_API_KEY is not set in GitHub/);
   r = await prepare(e, async () => "Nonsense 99 ft", {});
-  assert.equal(r.ai, false); assert.ok(r.text.includes(DISCLAIMER));
+  assert.equal(r.ai, false); assert.ok(!r.text.includes("official") && !r.text.includes("117"), "routine template has no disclaimer");
 }
 
 // ---- makeLlm: off without a key / when switched off; sends the model; per-run call cap
@@ -181,7 +193,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
     return { calls, doFetch, env: { SLACK_WEBHOOK_URL: "https://hooks.example/slack", ...env } };
   };
   const EARLY = NOW - 7 * 3_600_000; // first sighting: nothing is said
-  const hanwella = "Hanwella on the Kelani Ganga has reached the major flood level, 12.4 ft at 4:00 pm and rising. Please stay away from the river edge. Not an official warning. Emergency: 117.";
+  const hanwella = "Hanwella on the Kelani Ganga has reached the major flood level, 12.4 ft at 4:00 pm and rising. Please stay away from the river edge. Emergency: 117.";
   const twice = async (w, query) => {
     await run({ env: w.env, doFetch: w.doFetch, query, snap: snapOf("normal", 4.2, EARLY), now: EARLY });
     w.calls.ai.length = 0;
@@ -203,7 +215,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("N
     assert.ok(w.calls.slack.some((t) => /plain template \(OPENAI_API_KEY is not set in GitHub/.test(t)));
   }
   { // the model keeps inventing numbers: template, only two calls, Slack says why
-    const w = world({ OPENAI_API_KEY: "sk-test-fake" }, () => "Hanwella is at 99.9 ft. Not an official warning. Emergency: 117."); const query = makeDb();
+    const w = world({ OPENAI_API_KEY: "sk-test-fake" }, () => "Hanwella is at 99.9 ft."); const query = makeDb();
     await twice(w, query);
     assert.equal((await query("SELECT ai FROM x_posts WHERE kind = 'alert'"))[0].ai, 0);
     assert.equal(w.calls.ai.length, 3);
@@ -230,14 +242,14 @@ bad(good.replace("this evening", "for the next five hours"), /"five"/);
 
 // ---- variety: nothing reused from the last posts
 {
-  const a = "Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. Worth a look if you live along it. Not an official warning. Emergency: 117.";
+  const a = "Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. Worth a look if you live along it.";
   assert.equal(sharedWithRecent(a, [a.replace("Worth a look if you live along it.", "Check back later.")]) != null, true, "same first sentence");
-  assert.equal(sharedWithRecent("Ratnapura is above the alert mark at 21.3 ft, up since morning. Check back later. Not an official warning. Emergency: 117.", [a]), null);
-  assert.equal(sharedWithRecent("Different words entirely. Worth a look if you live along it. Not an official warning. Emergency: 117.", [a]) != null, true, "a whole recent sentence reused");
-  assert.equal(sharedWithRecent("Water is climbing quickly at the Ratnapura gauge right now. Take care near the river. Not an official warning. Emergency: 117.", ["Hanwella is up. Take care near the river. Not an official warning. Emergency: 117."]) != null, true, "Take care near the river repeated");
-  assert.equal(sharedWithRecent("Calm morning on the rivers. Not an official warning. Emergency: 117.", ["Calm afternoon here. Not an official warning. Emergency: 117."]), null, "the closing is ignored");
+  assert.equal(sharedWithRecent("Ratnapura is above the alert mark at 21.3 ft, up since morning. Check back later.", [a]), null);
+  assert.equal(sharedWithRecent("Different words entirely. Worth a look if you live along it.", [a]) != null, true, "a whole recent sentence reused");
+  assert.equal(sharedWithRecent("Water is climbing quickly at the Ratnapura gauge right now. Take care near the river.", ["Hanwella is up. Take care near the river."]) != null, true, "Take care near the river repeated");
+  assert.equal(sharedWithRecent("Calm morning on the rivers.", ["Calm afternoon here."]), null, "the closing is ignored");
   assert.equal(sharedWithRecent("Six words in a row are shared here today. Not official. 117.", ["Another post: six words in a row are shared. Not official. 117."]) != null, true, "6-word run");
-  bad("Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. Check back later. Not an official warning. Emergency: 117.", /repeats wording/, ctxOf("gauge_rise", [gf()], { recent: [a.replace("Kalu Ganga at Ratnapura is rising", "Ratnapura is rising")] }));
+  bad("Kalu Ganga at Ratnapura is rising and just crossed the alert mark: 21.3 ft at 4:10 pm. Check back later.", /repeats wording/, ctxOf("gauge_rise", [gf()], { recent: [a.replace("Kalu Ganga at Ratnapura is rising", "Ratnapura is rising")] }));
   assert.match(LUNA_INSTRUCTIONS, /Take care near the river/); assert.match(LUNA_INSTRUCTIONS, /six or more words/); assert.match(LUNA_INSTRUCTIONS, /could reach/);
 }
 
@@ -245,7 +257,7 @@ bad(good.replace("this evening", "for the next five hours"), /"five"/);
 {
   const p = post();
   const seen = [];
-  const long = good + " " + "x ".repeat(60);
+  const long = good + " " + "x ".repeat(100);
   const llm = async (_i, input) => { seen.push(JSON.parse(input)); return seen.length < 3 ? long : good; };
   const r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm });
   assert.equal(r.used, "llm"); assert.equal(r.attempts, 3); assert.equal(seen[0].max_characters, MODEL_TARGET); assert.equal(MODEL_TARGET, 260);
@@ -263,8 +275,8 @@ bad(good.replace("this evening", "for the next five hours"), /"five"/);
   const lf = lunaFacts("rivers_rising", rf);
   assert.equal(lf.rivers_rising_total, 4); assert.equal(lf.other_rivers_not_listed, 1); assert.equal(lf.rivers.length, 3);
   const cx = ctxOf("rivers_rising", rf, { must: ["Ratnapura"] });
-  assert.deepEqual(validateLlmText("Four rivers are rising towards or past their alert marks at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Holombuwa 13 ft and Aththanagalu Oya at Dunamale 10.8 ft, plus 1 more. Not an official warning. Emergency: 117.", cx), []);
-  const r = await prepare({ type: "rivers_rising", kind: "alert", rivers: rf }, async () => "Four rivers are rising at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Holombuwa 13 ft and Aththanagalu Oya at Dunamale 10.8 ft. Not an official warning. Emergency: 117.", {});
+  assert.deepEqual(validateLlmText("Four rivers are rising towards or past their alert marks at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Holombuwa 13 ft and Aththanagalu Oya at Dunamale 10.8 ft, plus 1 more.", cx), []);
+  const r = await prepare({ type: "rivers_rising", kind: "alert", rivers: rf }, async () => "Four rivers are rising at 4:10 pm: Kalu Ganga at Ratnapura 21.3 ft, Kelani Ganga at Holombuwa 13 ft and Aththanagalu Oya at Dunamale 10.8 ft.", {});
   assert.equal(r.ai, true);
 }
 

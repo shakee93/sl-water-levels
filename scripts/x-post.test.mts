@@ -75,13 +75,19 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   const one = composeGaugeRise([gf()]);
   const post = { kind: "alert", facts: [gf()], ...one };
   assert.deepEqual(validatePost(post), []);
-  assert.ok(one.text.includes(`${SITE}/kelani-ganga/hanwella`) && one.text.includes(DISCLAIMER));
-  assert.ok(!one.textNoLink.includes("http") && one.textNoLink.includes(DISCLAIMER) && one.textNoLink.includes("Hanwella"));
+  assert.ok(one.text.includes(`${SITE}/kelani-ganga/hanwella`) && !/official|117/.test(one.text), "alert level: no closing");
+  assert.ok(!one.textNoLink.includes("http") && !/official|117/.test(one.textNoLink) && one.textNoLink.includes("Hanwella"));
   assert.ok(one.text.includes("8.2 ft") && one.text.includes("6:40 am"), one.text);
   assert.ok(tweetLength(one.text) <= MAX_TWEET && tweetLength(one.textNoLink) <= MAX_TWEET);
   // a number not in the data is caught
   assert.ok(validateText(one.textNoLink.replace("8.2 ft", "9.9 ft"), { ...post, link: "" }).some((p) => /9\.9/.test(p)));
-  assert.ok(validateText(one.text.replace(DISCLAIMER, ""), post).some((p) => /disclaimer/.test(p)));
+  // Minor / Major, or a forecast that could reach one: the short closing is part of the template and required
+  const minor = composeGaugeRise([gf({ tier: "minor", mark: 10, level: 10.3 })]);
+  assert.ok(minor.serious && minor.text.includes("Emergency: 117.") && !/official/.test(minor.text), minor.text);
+  assert.ok(validateText(minor.text.replace("Emergency: 117.", ""), { kind: "alert", facts: [gf({ tier: "minor", mark: 10, level: 10.3 })], ...minor }).some((p) => /disclaimer/.test(p)));
+  assert.ok(composeGaugeRise([gf({ nextHour: { level: 9.8, low: 9.6, high: 10.1, direction: "rising", crossing: "may reach minor flood level" } })]).text.includes("Emergency: 117."));
+  assert.ok(!composeGaugeClear([gf({ tier: "normal" })]).text.includes("117"));
+  assert.ok(composeWarning({ source: "Irrigation Department", severity: "alert", basins: ["Kalu Ganga"], issuedAt: NOW, releaseCusecs: null, bulletinUrl: `${SITE}/b`, url: `${SITE}/kalu-ganga` }).text.includes("not the source"));
   assert.ok(validateText(one.text.replace(post.link, ""), post).some((p) => /link/.test(p)));
   assert.ok(validateText(one.text + " #scam", post).some((p) => /hashtag/.test(p)));
   assert.ok(one.reply.includes("Forecast for the next hour (not official): about 8.4 ft") && one.reply.includes("8.3 ft") && one.reply.includes("8.6 ft"));
@@ -128,11 +134,11 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
 
 // ---- polish: accepted only when it keeps the numbers, link, disclaimer and must-keep words
 {
-  const c = composeGaugeRise([gf()]);
-  const post = { kind: "alert", facts: [gf()], ...c };
+  const c = composeGaugeRise([gf({ tier: "minor", mark: 10, level: 10.3 })]);
+  const post = { kind: "alert", facts: [gf({ tier: "minor", mark: 10, level: 10.3 })], ...c };
   const good = c.text.replace("reached at", "has been reached at");
   assert.deepEqual(await polish(post, async () => good), { text: good, used: "ai" });
-  for (const bad of [c.text.replace("8.2 ft", "9.1 ft"), c.text.replace(DISCLAIMER, ""), c.text.replace("Hanwella", "Somewhere"), c.text + " #breaking", c.text + " 🚨", "x".repeat(300) + c.text]) {
+  for (const bad of [c.text.replace("10.3 ft", "9.1 ft"), c.text.replace("Emergency: 117.", ""), c.text.replace("Hanwella", "Somewhere"), c.text + " #breaking", c.text + " 🚨", "x".repeat(300) + c.text]) {
     const r = await polish(post, async () => bad);
     if (r.used !== "template") console.log("ACCEPTED:", JSON.stringify(bad.slice(0, 150)));
     assert.equal(r.used, "template"); assert.equal(r.text, c.text);
@@ -363,7 +369,7 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
     assert.equal(r.mode, "live");
     assert.equal(w.calls.x.length, 1, "one post, no thread reply by default");
     assert.ok(!w.calls.x[0].text.includes("http"), "links are off by default");
-    assert.ok(w.calls.x[0].text.includes("Hanwella") && w.calls.x[0].text.includes(DISCLAIMER) && w.calls.x[0].text.includes("12.4 ft"));
+    assert.ok(w.calls.x[0].text.includes("Hanwella") && w.calls.x[0].text.includes("Emergency: 117.") && w.calls.x[0].text.includes("12.4 ft"));
     assert.equal(w.calls.slack.length, 0);
     assert.equal((await query("SELECT status FROM x_posts WHERE kind = 'alert'"))[0].status, "posted");
     const again = await run({ env: w.env, doFetch: w.doFetch, query, snap: rising(LATE + 600_000), now: LATE + 600_000 });

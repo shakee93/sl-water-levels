@@ -766,9 +766,8 @@ deterministic template as the fallback. The model (Responses API, same conventio
 trend, next-hour forecast and range, time in Sri Lanka, rain mm, reservoir cusecs, warning summary, post kind) plus the last 5 posts so it
 varies its wording, and a voice guide with a few made-up example posts per kind (`LUNA_INSTRUCTIONS` in `lib/xCompose.ts`). It never writes
 links (the code adds one when `X_LINKS` allows). Its text is accepted only if `validateLlmText()` passes: every number is in the facts
-(formats like 22.0 vs 22 and "4.10pm" are fine; 117 aside), at most 280 characters the way X counts them, a closing that says it is not
-an official warning (or, for a relayed bulletin, that we are not the source) plus 117, no links, no @mentions, at most one hashtag from the
-template's list, at most one of the emoji 🌧️ / ⚠️ (alerts, storms, rain only), no "official" outside the closing, no "major"/"minor",
+(formats like 22.0 vs 22 and "4.10pm" are fine; 117 aside), at most 280 characters the way X counts them, no disclaimer on routine posts (the bio and pinned post say "Not official · 117"; summaries, Alert-level rises, all-clears, reservoirs, calm storm updates), the short closing "Emergency: 117." / "Unofficial · 117." only on serious ones (Minor / Major reached, or a forecast that could reach one), "we are only passing it on, not the source" plus 117 on a relayed bulletin, no links, no @mentions, at most one hashtag from the
+template's list, at most one of the emoji 🌧️ / ⚠️ (alerts, storms, rain only), no "official" / "emergency" in a routine post, no "reaching minor flood level" (a crossing is only ever "could reach" / "may reach"), no "major"/"minor",
 "rising"/"falling" or evacuation the facts do not support, no talk of low ground, canals or street flooding, an opening that differs from
 the last posts, no sentence and no run of 6 or more words (names and number lists aside, closing line excluded) shared with any of the last 5 posts, and no certain
 forecast ("expected to reach", "will reach", "will flood"; the model says "could reach" / "may reach"). The model is told the limit is 260 characters (the hard limit stays 280). If it fails, the model gets the list of problems and up to two more tries (at most 3 calls per post; a too-long answer is asked to be shorter); after that the plain template is posted. Which path was
