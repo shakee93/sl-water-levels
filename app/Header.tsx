@@ -11,6 +11,8 @@ import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { getSearchStations, type SearchStation } from "./PlaceSearchData";
+import { X_HANDLE } from "@/lib/seo";
+import { XLogo } from "./XLogo";
 
 export async function Header({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
@@ -116,6 +118,21 @@ export async function Header({ lang }: { lang: Locale }) {
             {t("nav.github")}
           </a>
 
+          {X_HANDLE && (
+            <a
+              href={`https://x.com/${X_HANDLE}`}
+              target="_blank"
+              rel="noreferrer me"
+              data-umami-event="x_click"
+              aria-label={`Live updates on X: @${X_HANDLE}`}
+              title={`Live updates on X: @${X_HANDLE}`}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition"
+            >
+              <XLogo className="size-3.5" />
+              <span>@{X_HANDLE}</span>
+            </a>
+          )}
+
           <HeaderInstall />
 
           {/* on phones the theme choice lives in the More sheet (bottom tab bar) */}
@@ -124,6 +141,7 @@ export async function Header({ lang }: { lang: Locale }) {
           <LangSwitch />
 
           <MobileMenu
+            xHandle={X_HANDLE}
             rivers={basins.map((b) => ({ href: p(basinPath(b)), label: riverName(b, lang), slug: b.trim() }))}
           />
         </nav>

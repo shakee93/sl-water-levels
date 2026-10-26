@@ -9,6 +9,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LifeBuoy, Info, FlaskConical, Activity, Code, X } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
+import { XLogo } from "./XLogo";
 import { ThemeSegmented } from "./ThemeSwitch";
 import { InstallButton } from "./InstallButton";
 import { AlertSettingsRow } from "./AlertSettings";
@@ -21,7 +22,7 @@ const ring =
 
 export type MenuRiver = { href: string; label: string; slug: string };
 
-export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
+export function MobileMenu({ rivers, xHandle = null }: { rivers: MenuRiver[]; xHandle?: string | null }) {
   const { t, p, lang } = useI18n();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -124,6 +125,23 @@ export function MobileMenu({ rivers }: { rivers: MenuRiver[] }) {
                       </Link>
                     </li>
                   ))}
+                  {xHandle && (
+                    <li>
+                      <a
+                        href={`https://x.com/${xHandle}`}
+                        target="_blank"
+                        rel="noreferrer me"
+                        data-umami-event="x_click"
+                        className={`flex items-center gap-3 min-h-12 rounded-md px-2 text-base font-medium hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}
+                      >
+                        <XLogo className="size-5 text-slate-500 dark:text-slate-400" />
+                        <span>
+                          @{xHandle}
+                          <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">Live updates on X</span>
+                        </span>
+                      </a>
+                    </li>
+                  )}
                   <li>
                     <a
                       href="https://github.com/shakee93/sl-water-levels"
