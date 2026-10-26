@@ -24,6 +24,14 @@ const q = (v) =>
       : `'${String(v).replace(/'/g, "''")}'`;
 
 const now = data.generatedAt ?? Date.now();
+
+// Fail loudly (Slack via the workflow) when the feed is stale: newest forecast older than 3 h means
+// the site is serving an old copy and nothing new would be logged.
+const newestIssued = Math.max(0, ...(data.runs ?? []).map((r) => r.issuedAt ?? 0));
+if (newestIssued && Date.now() - newestIssued > 3 * 3600_000) {
+  console.error(`stale forecasts: newest issuedAt ${new Date(newestIssued).toISOString()}`);
+  process.exit(1);
+}
 const sql = [];
 let points = 0;
 let obs = 0;

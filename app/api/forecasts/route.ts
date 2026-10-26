@@ -3,16 +3,20 @@
 // Cloudflare D1 prediction log so forecasts can be checked against what happened.
 // Public data only; cached so repeated hits don't re-run 42 forecasts.
 
+import { connection } from "next/server";
 import { fetchBasinSnapshot, getNational } from "@/lib/arcgis";
 import { loadForecast } from "@/lib/forecast";
 import coefficients from "@/lib/model/coefficients.json";
 
-export const revalidate = 600;
+// Computed per request (no ISR): as an ISR route a failed background regeneration kept serving
+// one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
+// data calls are cached in lib/arcgis.ts; the CDN still absorbs repeat hits for 60 s.
 export const maxDuration = 60;
 
 const RANK = ["normal", "watch", "alert", "minor", "major"] as const;
 
 export async function GET() {
+  await connection();
   const national = await getNational();
   const basins = [...new Set(national.map((s) => s.basin))];
   const runs: unknown[] = [];
