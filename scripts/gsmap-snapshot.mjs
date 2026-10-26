@@ -26,6 +26,9 @@
 //   latest.json          per gauge: rate now (mm/h) and rain over the past 1/3/6/24 h (mm); plus "zones"
 //   series.json          rolling 49 h of 30-minute rates per gauge (the state each run builds on)
 //   archive/YYYY/YYYY-MM-DD.jsonl   one line per new 30-minute step {t, r: {gauge: mm/h}} (UTC day of t)
+//   hourly/YYYY/YYYY-MM-DD.jsonl    one line per clock hour {t: hour start, end, mm: {gauge or zone:id: catchment-mean mm in that hour | null}}
+//                                   (the same value latest.json calls mm1h at that anchor), so a backtest has the catchment rain
+//                                   hour by hour, not only 30-minute rates; hourly-state.json remembers the last hour written
 //
 // The ~24 files needed for the first run are downloaded once; afterwards each run fetches only the
 // steps it has not seen. Credentials go to curl on stdin, never on the command line.
@@ -54,8 +57,8 @@ if (!user || !pass) {
 const HOST = "ftp://hokusai.eorc.jaxa.jp";
 const DIR = "/now/latest/";
 const NX = 3600, NY = 1200, STEP = 0.1, LAT0 = 59.95, LON0 = 0.05;
-const KEEP_MS = 49 * 3_600_000; // 48 h of history + the anchor step
-const NEED_MS = 25 * 3_600_000; // first run: enough for the 24 h window
+const KEEP_MS = 100 * 3_600_000; // 99 h of history + the anchor step (the v4 storm model reads 96 whole hours)
+const NEED_MS = 76 * 3_600_000; // first run: enough for the 72 h wetness window + the newest hours
 const HOUR = 3_600_000;
 
 function curl(args) {
@@ -83,6 +86,24 @@ for (const [basin, b] of Object.entries(cat.basins)) {
 }
 console.log(`${gauges.length} gauges with catchment cells`);
 
+// Sub-catchments (lib/model/subcatchments.json): "near" = cells beside the gauge, "up" = cells of the gauges upstream (rain on up-channels).
+// The v4 storm model reads each with its own travel time. Keys: "<basin>/<station>#near" and "#up".
+const SUB = JSON.parse(readFileSync(path.join(here, "../lib/model/subcatchments.json"), "utf8"));
+const subs = [];
+for (const g of gauges) {
+  for (const part of ["near", "up"]) {
+    const idx = SUB[g.basin]?.[g.station]?.[part] ?? [];
+    const b = cat.basins[g.basin];
+    const pix = new Set();
+    for (const i of idx) {
+      const [lat, lon] = b.grid[i];
+      const row = Math.round((LAT0 - lat) / STEP), col = Math.round((lon - LON0) / STEP);
+      if (row >= 0 && row < NY && col >= 0 && col < NX) pix.add(row * NX + col);
+    }
+    if (pix.size) subs.push({ key: `${g.key}#${part}`, of: g.key, part, pixels: [...pix] });
+  }
+}
+
 // Zones: pixel CENTRES (lat, lon) of the 0.1 degree cells that are averaged. Keys are prefixed "zone:" in the series.
 const STREET_RAIN_ZONES = {
   "colombo-east": {
@@ -95,7 +116,7 @@ for (const [id, z] of Object.entries(STREET_RAIN_ZONES)) {
   const pixels = z.centres.map(([lat, lon]) => Math.round((LAT0 - lat) / STEP) * NX + Math.round((lon - LON0) / STEP));
   zones.push({ key: `zone:${id}`, id, name: z.name, cells: pixels.length, pixels });
 }
-const allKeys = [...gauges, ...zones].map((x) => x.key);
+const allKeys = [...gauges, ...subs, ...zones].map((x) => x.key);
 
 // ---- state ------------------------------------------------------------------------------------
 const root = path.join(outDir, "gsmap");
@@ -130,7 +151,7 @@ if (!files.length) {
 files.sort((a, b) => a.t - b.t);
 const newest = files[files.length - 1].t;
 // New steps, plus recent steps an older series.json recorded without a zone (re-read once, not archived again).
-const todo = files.filter((f) => f.t >= newest - NEED_MS && (!rec.has(f.t) || zones.some((z) => !(z.key in rec.get(f.t)))));
+const todo = files.filter((f) => f.t >= newest - NEED_MS && (!rec.has(f.t) || [...zones, ...subs].some((z) => !(z.key in rec.get(f.t)))));
 console.log(`newest step ${new Date(newest).toISOString()}, ${todo.length} file(s) to read`);
 
 const newSteps = [];
@@ -149,7 +170,7 @@ try {
     }
     const isNew = !rec.has(f.t);
     const o = rec.get(f.t) ?? {};
-    for (const g of [...gauges, ...zones]) {
+    for (const g of [...gauges, ...subs, ...zones]) {
       if (!isNew && g.key in o) continue;
       let sum = 0, n = 0;
       for (const p of g.pixels) {
@@ -199,6 +220,8 @@ function window(key, n) {
 // Zone rain over the past n clock hours (hour = mean of its :00 and :30 files, each hour capped at 15 mm for the
 // "clipped" sum): see lib/streetRainWindow.mjs, shared with the tests.
 const zoneWindow = (key, n) => zoneWindowOf((t) => rec.get(t)?.[key], anchor, n);
+// Start of the newest whole :00 step: the hour it starts is the newest whole hour.
+const hourlyTop = anchor - (anchor % HOUR);
 const out = {
   source: "GSMaP_NOW (JAXA)",
   credit: "GSMaP data by Japan Aerospace Exploration Agency (JAXA)",
@@ -230,6 +253,10 @@ for (const z of zones) {
 }
 for (const g of gauges) {
   const rate = rec.get(anchor)?.[g.key];
+  // The last 96 whole hours, oldest first: hour ending `hourlyEnd` - i h. Each is the rate (mm/h = mm in that hour) of the :00 file that
+  // STARTS the hour (the :30 files are not used, so a live hour is built exactly as in the 11-month backtest, scripts/fit-storm-model-v4.mjs).
+  // null = file missing. Raw satellite values: the app applies the per-catchment bias factor and the 15 mm/h clip (lib/model/storm-model-v4.json).
+  const hrs = (key) => Array.from({ length: 96 }, (_, i) => { const v = rec.get(hourlyTop - (95 - i) * HOUR)?.[key]; return typeof v === "number" ? v : null; });
   out.stations[g.key] = {
     basin: g.basin,
     station: g.station,
@@ -239,7 +266,37 @@ for (const g of gauges) {
     mm3h: window(g.key, 3),
     mm6h: window(g.key, 6),
     mm24h: window(g.key, 24),
+    hourlyEnd: hourlyTop + HOUR,
+    hourly: hrs(g.key),
+    hourlyNear: subs.some((x) => x.key === `${g.key}#near`) ? hrs(`${g.key}#near`) : null,
+    hourlyUp: subs.some((x) => x.key === `${g.key}#up`) ? hrs(`${g.key}#up`) : null,
   };
+}
+// ---- hourly catchment mm archive ----------------------------------------------------------------
+// One line per hour (start t, the hour's mean rain per catchment and zone). New hours only; the first run back-fills up to 24 h.
+{
+  const stateFile = path.join(root, "hourly-state.json");
+  let last = 0;
+  try { last = JSON.parse(readFileSync(stateFile, "utf8")).last ?? 0; } catch {}
+  let wrote = 0;
+  for (let a = anchor - 23 * HOUR; a <= anchor; a += HOUR) {
+    if (a <= last) continue;
+    const mm = {};
+    let any = false;
+    for (const k of allKeys) {
+      const v = rec.get(a)?.[k];
+      mm[k] = typeof v === "number" ? v : null;
+      if (typeof v === "number") any = true;
+    }
+    if (!any) continue;
+    const iso = new Date(a).toISOString();
+    const dir = path.join(root, "hourly", iso.slice(0, 4));
+    mkdirSync(dir, { recursive: true });
+    appendFileSync(path.join(dir, `${iso.slice(0, 10)}.jsonl`), JSON.stringify({ t: iso, end: new Date(a + HOUR).toISOString(), mm }) + "\n");
+    wrote++;
+  }
+  writeFileSync(stateFile, JSON.stringify({ last: Math.max(last, anchor) }) + "\n");
+  if (wrote) console.log(`archived ${wrote} hourly catchment line(s)`);
 }
 writeFileSync(path.join(root, "latest.json"), JSON.stringify(out, null, 1) + "\n");
 console.log(`wrote latest.json (anchor ${out.latestStart}, ${times.length} steps kept)`);

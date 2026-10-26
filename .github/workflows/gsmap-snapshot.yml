@@ -71,6 +71,14 @@ jobs:
         continue-on-error: true
         run: node scripts/rain-gauges-snapshot.mjs archive
 
+      # The rain forecast as it was issued (deterministic + heavier scenario, next 6 / 24 h per catchment) and the gauges' own
+      # measured rain, from the site's /api/rain -> rain-forecast/ on the data branch (scripts/rain-forecast-snapshot.mjs).
+      # Best effort: a slow weather API never fails the satellite run.
+      - name: Archive the rain forecast as issued
+        if: steps.secrets.outputs.ready == 'true'
+        continue-on-error: true
+        run: node scripts/rain-forecast-snapshot.mjs archive
+
       - name: Commit and push
         if: steps.secrets.outputs.ready == 'true'
         working-directory: archive
