@@ -337,7 +337,7 @@ export const ta: Dict = {
   "dams.mwNow": "⚡ {mw} MW (PUCSL, {time})",
   "dams.mwNa": "நேரடி MW: இல்லை",
   "dams.peak": "(6 மணி உச்சம்: {mw} MW)",
-  "helpcard.watch": "தயாராக இருக்க நல்ல நேரம்",
+  "helpcard.watch": "எச்சரிக்கைக்கு அருகில்: தயாராக இருக்க நல்ல நேரம்",
   "helpcard.alert": "தயாராகுங்கள்",
   "helpcard.minor": "நீர் உங்களை நெருங்கினால்",
   "helpcard.major": "இப்போது பாதுகாப்பாக இருங்கள்",

@@ -337,7 +337,7 @@ export const si: Dict = {
   "dams.mwNow": "⚡ මෙගාවොට් {mw} (PUCSL, {time})",
   "dams.mwNa": "සජීවී MW: නැත",
   "dams.peak": "(පැය 6 උපරිමය: MW {mw})",
-  "helpcard.watch": "සූදානම් වීමට හොඳ වේලාවයි",
+  "helpcard.watch": "අනතුරු ඇඟවීමට ආසන්නයි: සූදානම් වීමට හොඳ වේලාවයි",
   "helpcard.alert": "සූදානම් වෙමු",
   "helpcard.minor": "ජලය ඔබ වෙත ළඟා වුවහොත්",
   "helpcard.major": "දැන් ආරක්ෂිතව සිටින්න",

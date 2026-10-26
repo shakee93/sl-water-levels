@@ -343,7 +343,7 @@ export const en = {
   "dams.mwNow": "⚡ {mw} MW (PUCSL dispatch, {time})",
   "dams.mwNa": "live MW: n/a",
   "dams.peak": "(peak 6h: {mw} MW)",
-  "helpcard.watch": "Good time to get ready",
+  "helpcard.watch": "Near alert: a good time to prepare",
   "helpcard.alert": "Getting ready",
   "helpcard.minor": "If water reaches you",
   "helpcard.major": "Staying safe now",
