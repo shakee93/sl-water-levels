@@ -41,6 +41,9 @@ const RATE_WINDOW_H = 2.25; // 2h + cadence jitter, anchored to each gauge's lat
 //
 // Windows are anchored to each gauge's latest reading, and stale gauges (>3h)
 // are ignored, so a lagging gauge neither hides nor fakes a signal.
+/** Basin rain over 6 h (mm) that is enough to explain a rise on its own: no "Unusual rise" then (unless it is extreme). */
+const RAIN_EXPLAINS_MM_6H = 15;
+
 export function detectAnomaly(
   basin: string,
   snapshot: BasinStation[],
@@ -104,7 +107,12 @@ export function detectAnomaly(
 
   // With no rain data anywhere we can't say it didn't rain.
   const noRain = rainKnown && (rainSum ?? 0) < NO_RAIN_MM_6H;
-  const upstreamFlat = upstreamMaxM == null || upstreamMaxM < UPSTREAM_FLAT_M_PER_H;
+  // "Upstream not rising" needs an upstream gauge to look at. A top-of-river gauge (Thawalama on the Gin Ganga, 26 Oct 2026)
+  // has none, and used to read as "upstream flat", so ordinary rain rises there were called "Unusual rise".
+  const upstreamFlat = upstream.length > 0 && (upstreamMaxM == null || upstreamMaxM < UPSTREAM_FLAT_M_PER_H);
+  // Real rain on the basin explains a rise even when the upstream gauge lags (rain can fall between the gauges).
+  const rainExplains = rainKnown && (rainSum ?? 0) >= RAIN_EXPLAINS_MM_6H;
+  if (rainExplains && !noRain && observedMetres < LIKELY_RISE_M_PER_H * 3) return partial;
 
   let status: AnomalyDetection["status"] = "normal";
   const reasons: string[] = [];
