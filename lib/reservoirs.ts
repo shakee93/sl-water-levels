@@ -16,7 +16,7 @@
 //
 // Not mapped on purpose (too uncertain from geography alone): Kimbulwana Oya, Batalagoda,
 // Ambakolawewa, Attaragalla (Deduru Oya / Ma Oya tributaries), Inginimitiya (Mi Oya, no gauge),
-// Maduru Oya reservoir (Padiyathalawa gauge is upstream of it), Nachchaduwa (Malwathu Oya;
+// Maduru Oya reservoir (Padiyathalawa gauge is upstream of it), Tabbowa (Galgamuwa is upstream of it: basin only), Nachchaduwa (Malwathu Oya;
 // listed with low confidence).
 
 import { BASIN_ORDER } from "./basinOrder";
@@ -90,6 +90,17 @@ export const RESERVOIRS: Reservoir[] = [
     note: "Releases flow west towards Wanathawilluwa and Karuwalagaswewa; there is no gauge of ours below it.",
   },
   {
+    id: "tabbowa",
+    name: "Tabbowa",
+    aliases: ["tabbowa", "tabbowa wewa", "thabbowa", "thabbowa wewa", "tabbowa reservoir", "tabbowa tank"],
+    basin: "Mee Oya",
+    // Mee Oya flows west to the sea: Galgamuwa gauge (80.27E) -> Tabbowa tank (79.95E, 8.07N). Our only
+    // Mee Oya gauge is UPSTREAM of the tank, so nothing is linked; Tabbowa's release goes to the
+    // reach below it (Karuwalagaswewa / Puttalam side), where we have no gauge.
+    gauges: [],
+    note: "Releases flow into the lower Mee Oya, west of Karuwalagaswewa; our Galgamuwa gauge is upstream of the tank, so there is no gauge of ours below it.",
+  },
+  {
     id: "kalawewa",
     name: "Kala Wewa",
     aliases: ["kala wewa", "kalawewa", "kala wawa"],
@@ -121,8 +132,8 @@ export const RESERVOIRS: Reservoir[] = [
     aliases: ["kotmale", "kothmale"],
     basin: "Mahaweli Ganga",
     gauges: [
-      { station: "Nawalapitiya", basin: "Mahaweli Ganga", eta: null, confidence: "medium", note: "Next gauge downstream on the Mahaweli (BASIN_ORDER).", town: "Nawalapitiya" },
-      { station: "Peradeniya", basin: "Mahaweli Ganga", eta: null, confidence: "medium", note: "Further downstream, past Gampola.", town: "Kandy" },
+      // Not Nawalapitiya: that gauge is on the Mahaweli ABOVE Gampola, where the Kotmale Oya joins (lib/riverTopology.ts).
+      { station: "Peradeniya", basin: "Mahaweli Ganga", eta: null, confidence: "medium", note: "First gauge below the Kotmale Oya joining the Mahaweli at Gampola.", town: "Kandy" },
     ],
   },
   {

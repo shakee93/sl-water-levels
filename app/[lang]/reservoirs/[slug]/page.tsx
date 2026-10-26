@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { CalendarDays, Container, CloudRain, DoorOpen, Droplets, Gauge, History, Map as MapIcon, MapPin, Ruler, Waves } from "lucide-react";
 import { getNational, fetchStations, type NationalStation } from "@/lib/arcgis";
+import { ReportedFigureLine } from "@/app/ReleaseCard";
+import { SpillWarningLine } from "@/app/SpillWarningNote";
 import { SOURCE_URL, getReportedRelease, getReservoir, getReservoirHistory, historyKey, riverMatches, type RV } from "@/lib/reservoirData";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
@@ -297,6 +299,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             </p>
           )}
           <Suspense fallback={null}><SpillWatchChip lang={lang} slug={rv.slug} catalogueId={rv.catalogueId} detail className="mt-2" /></Suspense>
+          <Suspense fallback={null}><SpillWarningLine lang={lang} catalogueId={rv.catalogueId} className="mt-2" /></Suspense>
         </header>
 
         {rv.river && (
@@ -431,7 +434,8 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             {otherFlow && (
               <p className={`mt-2 text-xs ${muted}`}>{rt("alsoReports", { source: srcName(t, otherFlow.source), n: fmt(otherFlow.n), date: dayLabel(t, otherFlow.day) })}</p>
             )}
-            {reported && (
+            {reported?.reported && <ReportedFigureLine t={t} rep={reported.reported} className={`mt-1 text-xs ${muted}`} />}
+            {reported && !reported.reported && (
               <p className={`mt-1 text-xs ${muted}`}>
                 <a href={reported.news?.url ?? reported.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
                   {rt("reported", { outlet: reported.news?.outlet ?? reported.source })}, {shortStamp(Date.parse(reported.news?.publishedAt ?? reported.observedAt), t)}

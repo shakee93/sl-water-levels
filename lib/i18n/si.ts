@@ -632,6 +632,13 @@ export const si: Dict = {
   "release.noGaugeBelow": "මෙම අඩවියේ කිසිදු මානයක් එයට සෘජුවම පහළින් නැත.", // needs native review
   "release.reportedNote": "වාරිමාර්ග දෙපාර්තමේන්තුව තවම තහවුරු කර නැත.", // needs native review
   "release.newsLater": "{outlet}: වාන් දොරටු විවෘත කළා, {when}", // needs native review
+  "release.rep.news": "{when} වාර්තා වූයේ: {what} ({outlet})", // needs native review
+  "release.rep.bulletin": "{when} නිවේදනය: {what} ({outlet})", // needs native review
+  "release.rep.over": "කියුසෙක් {n}ට වැඩි", // needs native review
+  "release.rep.gates": "දොරටු {n}", // needs native review
+  "release.rep.gatesPlanned": "දොරටු {n}ක් විවෘත කිරීමට නියමිතයි", // needs native review
+  "release.rep.ft": "අඩි {n}කින් විවෘතයි", // needs native review
+  "release.rep.note": "ප්‍රවෘත්ති වාර්තාවකි, නිල නොවේ.", // needs native review
   "release.readReport": "වාර්තාව කියවන්න", // needs native review
   "release.asOf": "{source} · {when}", // needs native review
   "release.src.irrigation": "වාරිමාර්ග දෙපාර්තමේන්තුව", // needs native review

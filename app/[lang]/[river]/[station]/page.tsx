@@ -1,3 +1,4 @@
+import { SpillWarningNote } from "@/app/SpillWarningNote";
 import { stationDisplayName } from "@/lib/displayName";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
@@ -250,6 +251,7 @@ export default async function StationPage({
         ) : (
           <>
             <Suspense key={`release-${station}`} fallback={null}><ReleaseCard lang={lang} station={station} basin={basin} /></Suspense>
+            <Suspense key={`warn-${station}`} fallback={null}><SpillWarningNote lang={lang} station={station} basin={basin} /></Suspense>
 
             <Suspense key={`forecast-${station}`} fallback={<VerdictSkeleton />}>
               <Forecast lang={lang} basin={basin} selectedStation={station} />

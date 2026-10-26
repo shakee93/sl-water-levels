@@ -94,3 +94,39 @@ export const articleTimeCached = unstable_cache(
   ["releases-news-time-v1"],
   { revalidate: 30 * 24 * 3600 },
 );
+
+// ---------------------------------------------------------------- article body (for the figures in a release story)
+
+export type ArticleInfo = { text: string; publishedMs: number | null; modifiedMs: number | null };
+
+const msOf = (html: string, key: string): number | null => {
+  const m = new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`).exec(html);
+  const ms = m ? Date.parse(m[1]) : NaN;
+  return Number.isFinite(ms) ? ms : null;
+};
+
+/** The story's own paragraphs (Ada Derana's prose block, else the <article>, else the page), at most ~4000 characters. */
+export function articleText(html: string): string {
+  let region = html;
+  const prose = html.search(/class="prose[^"]*"/);
+  if (prose >= 0) region = html.slice(prose, html.indexOf("</div></div>", prose) > 0 ? html.indexOf("</div></div>", prose) : prose + 20_000);
+  else {
+    const a = html.search(/<article[\s>]/i);
+    if (a >= 0) region = html.slice(a, html.indexOf("</article>", a) > 0 ? html.indexOf("</article>", a) : a + 30_000);
+  }
+  const paras = (region.match(/<p[\s>][\s\S]*?<\/p>/gi) ?? []).map((p) => plainText(p)).filter((p) => p.length > 20);
+  return paras.map((p) => (/[.!?”"')]$/.test(p) ? p : `${p}.`)).join(" ").slice(0, 4000);
+}
+
+/** The story page: its text and its publish / last-modified times. Cached 10 minutes (a story is edited as figures come in). */
+export const articleCached = unstable_cache(
+  async (url: string): Promise<ArticleInfo> => {
+    const ua = /newswire\.lk/i.test(url) ? NEWSWIRE_UA : OLD_UA;
+    const res = await fetch(url, { headers: { "User-Agent": ua }, cache: "no-store", signal: AbortSignal.timeout(12_000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+    return { text: articleText(html), publishedMs: msOf(html, "datePublished"), modifiedMs: msOf(html, "dateModified") };
+  },
+  ["releases-news-article-v1"],
+  { revalidate: TEN_MIN },
+);

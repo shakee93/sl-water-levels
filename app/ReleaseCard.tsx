@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, ChevronRight, CircleHelp, Clock, Gauge, MapPin, TrendingDown, TrendingUp, Waves } from "lucide-react";
-import { getReleases, type Release } from "@/lib/releases";
+import { getReleases, type Release, type ReportedLine } from "@/lib/releases";
 import { reservoirById, type GaugeLink } from "@/lib/reservoirs";
 import { reservoirPath } from "@/lib/reservoirData";
 import { releaseTrend, type Trend } from "@/lib/releaseTrend";
@@ -33,6 +33,37 @@ function when(t: TFn, iso: string, dayOnly: boolean): string {
   const a = colomboParts(ms);
   const b = colomboParts(Date.now());
   return a.y === b.y && a.m === b.m && a.d === b.d ? clock(ms, t) : shortStamp(ms, t);
+}
+
+/** "over 15,000 cusecs, 16 gates" (only what the story says). */
+function reportedWhat(t: TFn, r: ReportedLine): string {
+  const parts: string[] = [];
+  if (r.cusecs != null) parts.push(r.atLeast ? t("release.rep.over", { n: fmt(r.cusecs) }) : t("release.cusecs", { n: fmt(r.cusecs) }));
+  if (r.gates != null) parts.push(t(r.planned ? "release.rep.gatesPlanned" : "release.rep.gates", { n: r.gates }));
+  if (r.openedFt != null) parts.push(t("release.rep.ft", { n: r.openedFt }));
+  return parts.join(", ");
+}
+
+/**
+ * The newest figure reported after the official reading, as a plain link to the story:
+ * "Reported 2:52 pm: over 15,000 cusecs, 16 gates (Ada Derana)". A news report, never presented as official.
+ */
+export function ReportedFigureLine({ t, rep, className = "" }: { t: TFn; rep: ReportedLine; className?: string }) {
+  const what = reportedWhat(t, rep);
+  if (!what) return null;
+  return (
+    <p className={className}>
+      <a
+        href={rep.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline underline-offset-2 inline-flex items-center min-h-11 sm:min-h-6"
+        title={rep.via === "news" ? t("release.rep.note") : undefined}
+      >
+        {t(rep.via === "news" ? "release.rep.news" : "release.rep.bulletin", { when: when(t, rep.at, false), what, outlet: rep.via === "news" ? rep.outlet : sourceName(t, rep.outlet) })}
+      </a>
+    </p>
+  );
 }
 
 const chip =
@@ -111,6 +142,7 @@ function RowBody({ t, lang, rel, trend, link, note }: { t: TFn; lang: Locale; re
           </span>
         )}
       </div>
+      {rel.reported && <ReportedFigureLine t={t} rep={rel.reported} className="text-xs text-amber-800/80 dark:text-amber-300/80" />}
       {link && gauge && (
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs" aria-label={t("release.chainLabel", { a: rel.name, b: gauge })}>
           <Waves className="size-3.5 shrink-0" aria-hidden />
@@ -167,7 +199,7 @@ export async function ReleaseCard({ lang, station, basin }: { lang: Locale; stat
                   ? t("release.asOf", { source: sourceName(t, rel.source), when: when(t, rel.observedAt, rel.dayOnly) })
                   : t("release.readReport", { outlet: rel.source })}
               </a>
-              {rel.kind === "confirmed" && rel.news && (
+              {rel.kind === "confirmed" && rel.news && !rel.reported && (
                 <a href={rel.news.url} target="_blank" rel="noopener noreferrer" className={linkCls}>
                   {t("release.newsLater", { outlet: rel.news.outlet, when: when(t, rel.news.publishedAt, false) })}
                 </a>

@@ -632,6 +632,13 @@ export const ta: Dict = {
   "release.noGaugeBelow": "இந்தத் தளத்தின் எந்த அளவீட்டு நிலையமும் அதற்கு நேரடியாகக் கீழே இல்லை.", // needs native review
   "release.reportedNote": "நீர்ப்பாசனத் திணைக்களம் இன்னும் உறுதிப்படுத்தவில்லை.", // needs native review
   "release.newsLater": "{outlet}: வான் கதவுகள் திறப்பு, {when}", // needs native review
+  "release.rep.news": "{when} செய்தி: {what} ({outlet})", // needs native review
+  "release.rep.bulletin": "{when} அறிக்கை: {what} ({outlet})", // needs native review
+  "release.rep.over": "{n} கியூசெக்கிற்கு மேல்", // needs native review
+  "release.rep.gates": "{n} கதவுகள்", // needs native review
+  "release.rep.gatesPlanned": "{n} கதவுகள் திறக்கப்படவுள்ளன", // needs native review
+  "release.rep.ft": "{n} அடி திறப்பு", // needs native review
+  "release.rep.note": "செய்தி அறிக்கை, அதிகாரப்பூர்வமானது அல்ல.", // needs native review
   "release.readReport": "செய்தியை வாசிக்க", // needs native review
   "release.asOf": "{source} · {when}", // needs native review
   "release.src.irrigation": "நீர்ப்பாசனத் திணைக்களம்", // needs native review

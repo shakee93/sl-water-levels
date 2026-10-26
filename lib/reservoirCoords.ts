@@ -48,6 +48,7 @@ export const RESERVOIR_COORDS: Record<string, Coord> = {
   "deduru-oya": { lat: 7.6764, lon: 80.2837, source: "OSM Deduru Oya Reservoir; WP 7.7183, 80.2744", check: "near" },
   batalagoda: { lat: 7.5322, lon: 80.4539, source: "WD Q34877405 (Batalagoda Tank)", check: "single" },
   rajanganaya: { lat: 8.1292, lon: 80.2395, source: "OSM Rajanganaya Reservoir", check: "single" },
+  tabbowa: { lat: 8.0747, lon: 79.9514, source: "WD Q34929492 (Tabbowa Wewa, 8.0747 N 79.9514 E)", check: "single" },
   kalawewa: { lat: 8.0107, lon: 80.5606, source: "OSM Kala Wewa; WD Q7354820 8.0135, 80.5563", check: "agreed" },
   angamuwa: { lat: 8.1753, lon: 80.2264, source: "WD Q34876529 (Angamuwa Tank)", check: "single" },
   dewahuwa: { lat: 7.7998, lon: 80.5454, source: "OSM Dewahuwa tank; WD Q34883228 7.8, 80.55", check: "agreed" },

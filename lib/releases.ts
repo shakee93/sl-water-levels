@@ -22,7 +22,8 @@ import { getDocumentProxy } from "unpdf";
 import { aiConfigured, decide } from "./openai";
 import { getOfficialWarnings } from "./warnings";
 import { matchGateStoryWith } from "./gateStory";
-import { articleTimeCached, getFeeds, type Outlet } from "./newsFeeds";
+import { articleCached, articleTimeCached, getFeeds, type Outlet } from "./newsFeeds";
+import { reportedFigures, type ReportedFigure } from "./newsFigures";
 import { RESERVOIRS, matchReservoir, reservoirsForStation, type Reservoir } from "./reservoirs";
 
 // ---------------------------------------------------------------- types
@@ -70,6 +71,17 @@ export type NewsDetection = {
   publishedAt: string;
 };
 
+/** The newest figure reported after the official reading: a news story or a later bulletin. Shown as a second line, never as the main figure. */
+export type ReportedLine = ReportedFigure & {
+  /** "news" = a news story ("Reported ..."); "bulletin" = a later Irrigation Department bulletin. */
+  via: "news" | "bulletin";
+  /** The news outlet, or "Irrigation Department" for a bulletin. */
+  outlet: string;
+  url: string;
+  /** ISO with +05:30. */
+  at: string;
+};
+
 export type Release = {
   reservoirId: string;
   name: string;
@@ -89,6 +101,8 @@ export type Release = {
   dayOnly: boolean;
   /** A news report newer than the official reading (shown as an extra line). */
   news: NewsDetection | null;
+  /** A cusecs / gate figure newer than the official reading (news story or later bulletin), or null. */
+  reported: ReportedLine | null;
   /** "Reservoir watch": its water goes into another reservoir, so this is never a flood warning (lib/reservoirs.ts kind "watch"). */
   watch?: true;
 };
@@ -420,6 +434,57 @@ const newsCached = unstable_cache(
   { revalidate: TEN_MIN },
 );
 
+type NewsFigure = ReportedLine & { reservoirId: string };
+
+const FIGURE_WORDS = /\b(gates?|spill(?:ing|s)?|cusecs?|cubic\s+feet|releas\w*)\b/i;
+
+/**
+ * Figures (cusecs, gates, feet opened) in release stories of the last 12 hours, per reservoir. A story
+ * about one reservoir can carry another's figures ("Meanwhile, four gates of Tabbowa ..."), so the
+ * story page is read and split by reservoir (lib/newsFigures.ts). Fails soft; a bad story is skipped.
+ */
+const figuresCached = unstable_cache(
+  async (): Promise<NewsFigure[]> => {
+    const out: NewsFigure[] = [];
+    const { items } = await getFeeds();
+    await Promise.all(
+      items.map(async (it) => {
+        try {
+          const head = `${it.title}. ${it.desc}`;
+          if (!FIGURE_WORDS.test(head) || !matchReservoir(head, "contains")) return;
+          const art = await articleCached(it.link).catch(() => null);
+          const published = it.pubMs ?? art?.publishedMs ?? null;
+          if (published == null) return;
+          // A story edited later (the figure often arrives in an update) counts from its last edit.
+          const ms = art?.modifiedMs && art.modifiedMs > published && art.modifiedMs <= Date.now() ? art.modifiedMs : published;
+          if (Date.now() - ms > NEWS_TTL_MS || ms - Date.now() > 3_600_000) return;
+          for (const [reservoirId, f] of reportedFigures(it.title, art?.text || it.desc, matchReservoir)) {
+            out.push({ ...f, reservoirId, via: "news", outlet: it.outlet, url: it.link, at: new Date(ms + COLOMBO_MS).toISOString().slice(0, 19) + "+05:30" });
+          }
+        } catch {
+          /* one bad story never drops the rest */
+        }
+      }),
+    );
+    return out;
+  },
+  ["releases-news-figures-v1"],
+  { revalidate: TEN_MIN },
+);
+
+// The feeds hold a story for only a few hours (Ada Derana's drops it sooner), but a figure stays worth
+// showing for 12. A warm server instance remembers what it has seen; a cold one starts from the feeds.
+const figureMemo = new Map<string, NewsFigure>();
+function rememberedFigures(fresh: NewsFigure[], now: number): NewsFigure[] {
+  for (const f of fresh) {
+    const k = `${f.reservoirId}|${f.url}`;
+    const prev = figureMemo.get(k);
+    if (!prev || Date.parse(f.at) >= Date.parse(prev.at)) figureMemo.set(k, f);
+  }
+  for (const [k, f] of figureMemo) if (now - Date.parse(f.at) > NEWS_TTL_MS) figureMemo.delete(k);
+  return [...figureMemo.values()];
+}
+
 /** Latest report per reservoir that is still inside the 12-hour window; a later "closed" cancels an "opened". */
 export function activeNews(all: NewsDetection[], now = Date.now()): Map<string, NewsDetection> {
   const latest = new Map<string, NewsDetection>();
@@ -451,7 +516,22 @@ const SHEET_URL = `${SHEET_BASE}/pubhtml?gid=${TABS[0].gid}&single=true`;
 /** The sheet is read about 9 am; used to compare a reading's day against a news story's time. */
 const readingMs = (day: string) => dayStartMs(day) + 9 * 3_600_000;
 
-function build(res: Reservoir, cands: Candidate[], news: NewsDetection | undefined, now: number): Release | null {
+/**
+ * The newest figure stated after the official reading `after` (ms; 0 when there is none): a news story
+ * or a later bulletin. A "gates closed" report newer than the story cancels it.
+ */
+export function pickReported(figs: NewsFigure[], bulletins: Candidate[], after: number, closedAt: number | null): ReportedLine | null {
+  const all: ReportedLine[] = [
+    ...figs.filter((f) => closedAt == null || Date.parse(f.at) > closedAt),
+    ...bulletins
+      .filter((c) => c.rank === 1 && !c.dayOnly && c.cusecs != null)
+      .map((c): ReportedLine => ({ via: "bulletin", outlet: "Irrigation Department", url: c.url, at: new Date(c.atMs + COLOMBO_MS).toISOString().slice(0, 19) + "+05:30", cusecs: c.cusecs, atLeast: false, gates: null, openedFt: null, planned: false })),
+  ].filter((r) => Date.parse(r.at) > after);
+  all.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  return all[0] ?? null;
+}
+
+function build(res: Reservoir, cands: Candidate[], news: NewsDetection | undefined, now: number, figs: NewsFigure[] = [], closedAt: number | null = null): Release | null {
   const yesterday = colomboDay(now - 86_400_000);
   const fresh = cands.filter((c) => c.day >= yesterday);
   // Newest day wins; on the same day sheet > DMC bulletin > Mahaweli PDF.
@@ -460,6 +540,7 @@ function build(res: Reservoir, cands: Candidate[], news: NewsDetection | undefin
   const base = { reservoirId: res.id, name: res.name, basin: res.basin, stations: res.gauges.map((g) => g.station), ...(res.kind === "watch" ? { watch: true as const } : {}) };
   if (best && (best.cusecs ?? 0) >= MIN_NOTABLE_CUSECS) {
     const newer = news && Date.parse(news.publishedAt) > best.atMs ? news : null;
+    const reported = pickReported(figs, fresh.filter((c) => c !== best && c.cusecs !== best.cusecs), best.atMs, closedAt);
     return {
       ...base,
       kind: "confirmed",
@@ -470,6 +551,7 @@ function build(res: Reservoir, cands: Candidate[], news: NewsDetection | undefin
       observedAt: new Date(best.atMs + COLOMBO_MS).toISOString().slice(0, 19) + "+05:30",
       dayOnly: best.dayOnly,
       news: newer,
+      reported,
     };
   }
   if (news && !res.barrage) {
@@ -483,6 +565,7 @@ function build(res: Reservoir, cands: Candidate[], news: NewsDetection | undefin
       observedAt: news.publishedAt,
       dayOnly: false,
       news,
+      reported: pickReported(figs, [], 0, closedAt),
     };
   }
   return null;
@@ -499,8 +582,8 @@ async function soft<T>(f: () => Promise<T>): Promise<SourceOutcome<T>> {
 
 /** All raw source data, for the archive and diagnostics. */
 export const getReleaseSources = cache(async () => {
-  const [sheet, wms, news] = await Promise.all([soft(sheetCached), soft(wmsCached), soft(newsCached)]);
-  return { sheet, wms, news };
+  const [sheet, wms, news, figures] = await Promise.all([soft(sheetCached), soft(wmsCached), soft(newsCached), soft(figuresCached)]);
+  return { sheet, wms, news, figures };
 });
 
 /** Active reservoir releases from every source, merged per reservoir. Never throws. */
@@ -511,7 +594,7 @@ export function getReleases(now?: number): Promise<ReleasesResult> {
 const releasesThisRequest = cache(() => computeReleases(Date.now()));
 
 async function computeReleases(now: number): Promise<ReleasesResult> {
-  const [{ sheet, wms, news }, warn] = await Promise.all([getReleaseSources(), soft(() => getOfficialWarnings())]);
+  const [{ sheet, wms, news, figures }, warn] = await Promise.all([getReleaseSources(), soft(() => getOfficialWarnings())]);
   const newsMap = news.ok ? activeNews(news.data, now) : new Map<string, NewsDetection>();
 
   const releases: Release[] = [];
@@ -535,7 +618,9 @@ async function computeReleases(now: number): Promise<ReleasesResult> {
         cands.push({ rank: 2, day: r.day, atMs: readingMs(r.day), source: "Mahaweli Authority", url: WMS_PAGE, cusecs: r.dischargeCusecs, gatesOpen: null, dayOnly: true });
       }
     }
-    const rel = build(res, cands, newsMap.get(res.id), now);
+    const figs = rememberedFigures(figures.ok ? figures.data : [], now).filter((f) => f.reservoirId === res.id);
+    const closedAt = news.ok ? Math.max(0, ...news.data.filter((d) => d.reservoirId === res.id && d.action === "closed").map((d) => Date.parse(d.publishedAt))) || null : null;
+    const rel = build(res, cands, newsMap.get(res.id), now, figs, closedAt);
     if (rel) releases.push(rel);
   }
   releases.sort((a, b) => (b.kind === "confirmed" ? 1 : 0) - (a.kind === "confirmed" ? 1 : 0) || (b.cusecs ?? 0) - (a.cusecs ?? 0));

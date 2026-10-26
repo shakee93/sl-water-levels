@@ -249,6 +249,7 @@ const DISPLAY: Record<string, string> = {
 // Marked for native review like the rest of the Sinhala/Tamil copy.
 const NATIVE: Record<string, { si?: string; ta?: string }> = {
   "cat:rajangana": { si: "රාජාංගනය", ta: "ராஜாங்கனை" },
+  "cat:tabbowa": { si: "තබ්බෝව", ta: "தப்போவ" },
   "cat:deduru-oya": { si: "දැදුරු ඔය", ta: "தெதுரு ஓயா" },
   "cat:kotmale": { si: "කොත්මලේ", ta: "கொத்மலை" },
   "cat:upper-kotmale": { si: "ඉහළ කොත්මලේ", ta: "மேல் கொத்மலை" },
@@ -419,7 +420,7 @@ export async function getReportedRelease(rv: RV): Promise<Release | null> {
   if (!rv.catalogueId) return null;
   const all = await getReleases().catch(() => null);
   const rel = all?.releases.find((r) => r.reservoirId === rv.catalogueId);
-  return rel && (rel.kind === "reported" || rel.news) ? rel : null;
+  return rel && (rel.kind === "reported" || rel.news || rel.reported) ? rel : null;
 }
 
 export const riverMatches = (rv: RV, basin: string) => !!rv.river && rv.river.trim().toLowerCase() === basin.trim().toLowerCase();

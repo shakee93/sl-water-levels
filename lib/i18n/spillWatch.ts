@@ -17,6 +17,10 @@ const en = {
   "home.item": "{name}: {range}",
   "watch.lead": "{name}: reservoir watch",
   "watch.note": "Gates reported open. Its water goes into another reservoir, not straight into a river. Not a flood warning.",
+  "warn.lead": "Spill warning reported (news, not official; gates not open)",
+  "warn.item": "{name}: {outlet}, {when}",
+  "warn.page": "Spill warning reported {when}: {outlet} says this reservoir is near spill level. Gates are not reported open. Not official, and not a release.",
+  "warn.river": "Heads-up: {outlet} reported {when} that {name} reservoir may spill soon. Gates are not reported open. This does not change the river's status.",
 };
 type K = keyof typeof en;
 
@@ -32,6 +36,10 @@ const si: Record<K, string> = {
   "home.item": "{name}: {range}", // needs native review
   "watch.lead": "{name}: ජලාශ නිරීක්ෂණය", // needs native review
   "watch.note": "වාන් දොරටු විවෘත වූ බව වාර්තා වේ. එහි ජලය ගංගාවකට නොව වෙනත් ජලාශයකට ගලා යයි. ගංවතුර අනතුරු ඇඟවීමක් නොවේ.", // needs native review
+  "warn.lead": "පිටාර ගැලීමේ අනතුරු ඇඟවීමක් වාර්තා වී ඇත (පුවත්, නිල නොවේ; දොරටු විවෘත නැත)", // needs native review
+  "warn.item": "{name}: {outlet}, {when}", // needs native review
+  "warn.page": "{when} පිටාර ගැලීමේ අනතුරු ඇඟවීමක් වාර්තා විය: {outlet} පවසන්නේ මෙම ජලාශය පිටාර මට්ටමට ආසන්න බවයි. දොරටු විවෘත වූ බවක් වාර්තා වී නැත. නිල නොවේ, ජලය මුදාහැරීමක් නොවේ.", // needs native review
+  "warn.river": "සැලකිය යුතුයි: {outlet} {when} වාර්තා කළේ {name} ජලාශය ඉක්මනින් පිටාර ගැලිය හැකි බවයි. දොරටු විවෘත වූ බවක් වාර්තා වී නැත. මෙය ගඟේ තත්ත්වය වෙනස් නොකරයි.", // needs native review
 };
 
 const ta: Record<K, string> = {
@@ -46,6 +54,10 @@ const ta: Record<K, string> = {
   "home.item": "{name}: {range}", // needs native review
   "watch.lead": "{name}: நீர்த்தேக்க கண்காணிப்பு", // needs native review
   "watch.note": "வான்கதவுகள் திறக்கப்பட்டதாக அறிவிக்கப்பட்டுள்ளது. இதன் நீர் ஆற்றுக்கு அல்ல, மற்றொரு நீர்த்தேக்கத்துக்குச் செல்கிறது. இது வெள்ள எச்சரிக்கை அல்ல.", // needs native review
+  "warn.lead": "நிரம்பி வழியும் எச்சரிக்கை செய்தியாக அறிவிக்கப்பட்டது (அதிகாரப்பூர்வமற்றது; கதவுகள் திறக்கப்படவில்லை)", // needs native review
+  "warn.item": "{name}: {outlet}, {when}", // needs native review
+  "warn.page": "{when} நிரம்பி வழியும் எச்சரிக்கை: இந்த நீர்த்தேக்கம் நிரம்பி வழியும் நிலைக்கு அருகில் உள்ளதாக {outlet} கூறுகிறது. கதவுகள் திறக்கப்பட்டதாக அறிவிக்கப்படவில்லை. அதிகாரப்பூர்வமற்றது; நீர் வெளியேற்றம் அல்ல.", // needs native review
+  "warn.river": "கவனிக்கவும்: {name} நீர்த்தேக்கம் விரைவில் நிரம்பி வழியக்கூடும் என {outlet} {when} அறிவித்தது. கதவுகள் திறக்கப்பட்டதாக அறிவிக்கப்படவில்லை. இது ஆற்றின் நிலையை மாற்றாது.", // needs native review
 };
 
 const DICTS: Record<Locale, Record<K, string>> = { en, si, ta };
