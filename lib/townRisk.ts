@@ -160,6 +160,11 @@ export type TownRiskInput = {
   streetRain?: StreetRainIn | null;
   /** River half of the street rule (Kelani at its minor flood level). Same convention: undefined = rule not applicable; null = gauges unreadable. */
   streetRiver?: StreetRiverIn | null;
+  /**
+   * Heavy rain the river gauges MEASURED at or above this town's gauge (lib/measuredRain.ts). Used only as a reason line and, at most,
+   * the "keep an eye" tone (watch) for a town that would otherwise read calm: rain alone never makes a town look flooded.
+   */
+  measured?: { gaugeName: string; hours: 1 | 3; mm: number; local?: boolean } | null;
   now: number;
 };
 
@@ -304,6 +309,19 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     }
   }
 
+  // Heavy rain measured by the river gauges on this town's river: a heads-up, never more than "watch" and never on top of a river tone
+  // that is already at watch or above.
+  const mh = input.measured ?? null;
+  let measuredRaised = false;
+  if (mh && !heavy) {
+    if (tone == null) {
+      if (gauge == null) { tone = "watch"; measuredRaised = true; }
+    } else if (tone === "normal") {
+      tone = "watch";
+      measuredRaised = true;
+    }
+  }
+
   // ---- 4. official warning floor
   const floor = warning ? WARN_FLOOR[warning.severity] : null;
   const warnRaised = floor != null && (tone == null || rank(floor) > rank(tone));
@@ -375,6 +393,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     }
     if (rainRaised) reasons.push({ kind: "rain", key: "r.rainRaised", vars: {}, warn: true });
   }
+  if (mh) reasons.push({ kind: "rain", key: mh.local ? "r.rainMeasuredLocal" : "r.rainMeasured", vars: { mm: mh.mm, h: mh.hours, gauge: mh.gaugeName }, warn: measuredRaised });
   if (drainage === "canal-backwater" && tone != null && rank(tone) >= rank("watch")) {
     reasons.push({ kind: "canal", key: "r.canal", vars: {}, warn: false });
   }

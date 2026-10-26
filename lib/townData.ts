@@ -2,7 +2,7 @@
 // Everything fails soft; a missing source is passed as null and the estimate says what it lacks.
 import { fetchBasinSnapshot, getNational, type NationalStation } from "./arcgis";
 import { stationDisplayName } from "./displayName";
-import { loadForecast, type Forecast } from "./forecast";
+import { loadForecast, measuredAt, type Forecast } from "./forecast";
 import { getGsmapZone } from "./gsmap";
 import { getTownRain, type TownRain } from "./townWeather";
 import { releaseAffecting } from "./releases";
@@ -136,6 +136,10 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
     }
   }
 
+  // heavy rain the gauges measured at or above the town's gauge: a heads-up only (lib/townRisk.ts), shown with the rain lines
+  const mAt = eff ? measuredAt(national, eff.basin, eff.station, now) : null;
+  const measuredIn = mAt ? { gaugeName: mAt.gaugeName, hours: mAt.hours, mm: mAt.mm, local: mAt.local } : null;
+
   const input: TownRiskInput = {
     drainage: place.drainage,
     primary,
@@ -152,6 +156,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
       ? { confirmed: release.confirmed, reservoir: release.reservoir, cusecs: release.cusecs, etaHours: release.etaHours }
       : null,
     warning,
+    measured: measuredIn,
     // undefined = the street-rain rule does not apply to this town; null = it does but the satellite file is missing or stale
     // (rule rain = 24 h sum with each hour clipped at 15 mm; the unclipped total rides along for display)
     streetRain: place.rainZone

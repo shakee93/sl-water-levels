@@ -26,6 +26,15 @@ assert.equal(assessTown(base({ primary: g({ tier: "major" }), rain: rain({ next6
 assert.equal(assessTown(base({ drainage: "upland", primary: g({ tier: "alert" }), rain: rain({ next6hMm: 80 }) })).tone, "alert");
 // light rain does nothing; ensemble never changes the tone
 assert.equal(assessTown(base({ rain: rain({ next24hMm: 30, next24hP90Mm: 200 }) })).tone, "normal");
+// rain the river gauges measured: a heads-up ("watch") on a calm river, never more, never on top of a higher tone
+const mh = { gaugeName: "Holombuwa", hours: 3, mm: 43 };
+const m1 = assessTown(base({ measured: mh }));
+assert.equal(m1.tone, "watch");
+assert.ok(m1.reasons.some((r) => r.key === "r.rainMeasured" && r.warn));
+assert.equal(assessTown(base({ measured: { ...mh, local: true } })).reasons.some((r) => r.key === "r.rainMeasuredLocal"), true);
+assert.equal(assessTown(base({ primary: g({ tier: "alert" }), measured: mh })).tone, "alert");
+assert.equal(assessTown(base({ measured: mh, rain: rain({ next6hMm: 60 }) })).tone, "watch");
+assert.equal(assessTown(base({ primary: g({ tier: "watch" }), measured: mh })).reasons.find((r) => r.key === "r.rainMeasured").warn, false);
 // canal early rule
 assert.equal(assessTown(base({ primary: g({ tier: "watch", rate3hM: 0.05 }) })).tone, "alert");
 assert.equal(assessTown(base({ drainage: "riverbank", primary: g({ tier: "watch", rate3hM: 0.05 }) })).tone, "watch");
