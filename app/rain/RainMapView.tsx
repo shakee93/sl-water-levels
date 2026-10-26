@@ -235,7 +235,7 @@ export function RainMapView({ rivers }: RainMapStrings) {
   return (
     <div className="lg:grid lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-6">
       {/* map */}
-      <div className="relative mx-auto" style={{ width: `min(100%, calc(78vh * ${W} / ${H}))`, aspectRatio: `${W} / ${H}` }}>
+      <div className="relative mx-auto" style={{ width: `min(100%, max(320px, calc(78vh * ${W} / ${H})))`, aspectRatio: `${W} / ${H}` }}>
         <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full rounded-xl" aria-hidden>
           <rect width={W} height={H} className="fill-[#d6e8f5] dark:fill-[#10263d]" />
           <path d={COAST_D} className="fill-[#f6f5f1] stroke-[#7d9db8] dark:fill-[#1a2433] dark:stroke-[#5b7da0]" strokeWidth={1} strokeLinejoin="round" />
