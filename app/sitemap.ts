@@ -12,9 +12,19 @@ const SITE = "https://sl-water-levels.vercel.app";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // No try/catch on purpose: if the feed is down this throws, so an empty
-  // sitemap is never cached for an hour. The last good one keeps being served.
-  const stations = await getNational();
+  // No fallback on purpose: if the feed is down this throws, so an empty sitemap is never cached for an hour and the last
+  // good one keeps being served. It does retry: during a build every page prerenders at once and ArcGIS answers
+  // "Too many requests" (26 Oct 2026 a deploy failed on exactly that), which clears within seconds.
+  let stations: Awaited<ReturnType<typeof getNational>> | null = null;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      stations = await getNational();
+      break;
+    } catch (e) {
+      if (attempt >= 3) throw e;
+      await new Promise((r) => setTimeout(r, 3000 * (attempt + 1)));
+    }
+  }
   // Fails soft: the history archive is a separate source and optional here.
   const history = await getHistory();
 
