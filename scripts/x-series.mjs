@@ -6,7 +6,7 @@
 //   node --experimental-strip-types scripts/x-series.mjs [--dry]
 import { readFileSync } from "node:fs";
 import { d1Query } from "../lib/d1.ts";
-import { gate, postTweet } from "../lib/xClient.ts";
+import { deleteTweet, gate, postTweet, uploadMedia } from "../lib/xClient.ts";
 import { X_SCHEMA } from "./x-post.mjs";
 
 const env = process.env;
@@ -26,6 +26,20 @@ async function main() {
   const now = Date.now();
   const day = colomboDay(now);
   for (const s of X_SCHEMA) await d1Query(s);
+
+  // DELETE_ID (manual run): take one of our posts down, and free its series slot so it can be posted again (e.g. with an image)
+  const del = (env.DELETE_ID ?? "").trim();
+  if (del) {
+    if (!/^\d{5,25}$/.test(del)) throw new Error(`DELETE_ID "${del}" is not a post id`);
+    if (mode !== "live") return console.log(`series: dry, would delete ${del}`);
+    const ours = await d1Query("SELECT dedupe_key FROM x_posts WHERE tweet_id = ?", [del]);
+    if (!ours.length) throw new Error(`post ${del} is not one the bot made; not deleting`);
+    const r = await deleteTweet(g.keys, del);
+    if (!r.ok) throw new Error(`delete ${del} failed: ${r.detail}`);
+    await d1Query("UPDATE x_posts SET status = 'deleted', dedupe_key = dedupe_key || ':deleted:' || ? WHERE tweet_id = ?", [String(now), del]);
+    await slack(`:wastebasket: X: deleted post ${del} (${ours.map((o) => o.dedupe_key).join(", ")})`);
+    console.log(`series: deleted ${del}`);
+  }
 
   const done = new Set((await d1Query("SELECT dedupe_key FROM x_posts WHERE kind = 'series' AND mode = ? AND status IN ('posted','dry','claimed')", [mode])).map((r) => String(r.dedupe_key)));
   // SERIES_ID (manual run) posts that one now, out of order and even if one went out today; still never twice
@@ -60,7 +74,16 @@ async function main() {
     await slack(`:test_tube: X series DRY RUN (${g.reason}):\n${text}`);
     return console.log(`series: dry ${next.id}`);
   }
-  const res = await postTweet(g.keys, text);
+  // optional screenshot (content/x-series/*.png); a failed upload stops the post rather than sending it without the picture
+  let mediaIds;
+  if (next.image) {
+    const bytes = readFileSync(new URL(`../${next.image}`, import.meta.url));
+    mediaIds = [await uploadMedia(g.keys, bytes, next.image.endsWith(".png") ? "image/png" : "image/jpeg").catch(async (e) => {
+      await d1Query("DELETE FROM x_posts WHERE dedupe_key = ? AND status = 'claimed'", [key]);
+      throw e;
+    })];
+  }
+  const res = await postTweet(g.keys, text, { mediaIds });
   if (res.ok) {
     await d1Query("UPDATE x_posts SET status = 'posted', tweet_id = ? WHERE dedupe_key = ?", [res.id, key]);
     await slack(`:mega: X series posted "${next.id}": https://x.com/i/status/${res.id}`);

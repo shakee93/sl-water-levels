@@ -52,11 +52,12 @@ export type PostResult =
 export const TWEETS_URL = "https://api.x.com/2/tweets";
 
 /** One POST /2/tweets. Never retries: the caller decides (a 429 or 403 pauses the whole pipeline). */
-export async function postTweet(keys: XKeys, text: string, opts: { replyTo?: string; doFetch?: typeof fetch; now?: number } = {}): Promise<PostResult> {
+export async function postTweet(keys: XKeys, text: string, opts: { replyTo?: string; mediaIds?: string[]; doFetch?: typeof fetch; now?: number } = {}): Promise<PostResult> {
   const doFetch = opts.doFetch ?? fetch;
   const now = opts.now ?? Date.now();
   const body: Record<string, unknown> = { text };
   if (opts.replyTo) body.reply = { in_reply_to_tweet_id: opts.replyTo };
+  if (opts.mediaIds?.length) body.media = { media_ids: opts.mediaIds };
   let res: Response;
   try {
     res = await doFetch(TWEETS_URL, {
@@ -79,4 +80,36 @@ export async function postTweet(keys: XKeys, text: string, opts: { replyTo?: str
   else if (res.status >= 500 || res.status === 0) retryAfterMs = now + 15 * 60_000;
   const duplicate = res.status === 403 && /duplicate/i.test(detail);
   return { ok: false, status: res.status, detail: `HTTP ${res.status} ${detail}`, retryAfterMs: duplicate ? null : retryAfterMs, duplicate };
+}
+
+export const MEDIA_URL = "https://api.x.com/2/media/upload";
+export const MEDIA_URL_V1 = "https://upload.twitter.com/1.1/media/upload.json";
+
+/** Uploads one image (PNG/JPEG, under 5 MB) and returns its media id. Multipart bodies are not part of the OAuth signature.
+ *  Tries the v2 endpoint first and falls back to v1.1 (the same keys work on both). Throws with the API's message. */
+export async function uploadMedia(keys: XKeys, bytes: Uint8Array, mime: string, doFetch: typeof fetch = fetch): Promise<string> {
+  const errs: string[] = [];
+  for (const url of [MEDIA_URL, MEDIA_URL_V1]) {
+    const form = new FormData();
+    form.append("media", new Blob([new Uint8Array(bytes)], { type: mime }), mime === "image/png" ? "image.png" : "image.jpg");
+    if (url === MEDIA_URL) form.append("media_category", "tweet_image");
+    try {
+      const res = await doFetch(url, { method: "POST", headers: { Authorization: oauthHeader("POST", url, keys), "User-Agent": "sl-water-levels-x-poster" }, body: form, signal: AbortSignal.timeout(60_000) });
+      const j = (await res.json().catch(() => ({}))) as { data?: { id?: string }; media_id_string?: string; title?: string; detail?: string; errors?: { message?: string }[] };
+      const id = j.data?.id ?? j.media_id_string;
+      if (res.ok && id) return String(id);
+      errs.push(`${url}: HTTP ${res.status} ${[j.title, j.detail, ...(j.errors ?? []).map((e) => e.message)].filter(Boolean).join(": ").slice(0, 200)}`);
+    } catch (e) {
+      errs.push(`${url}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  throw new Error(`media upload failed: ${errs.join(" | ")}`);
+}
+
+/** Deletes one of the account's own posts. True when X confirms it is gone. */
+export async function deleteTweet(keys: XKeys, id: string, doFetch: typeof fetch = fetch): Promise<{ ok: boolean; detail: string }> {
+  const url = `${TWEETS_URL}/${encodeURIComponent(id)}`;
+  const res = await doFetch(url, { method: "DELETE", headers: { Authorization: oauthHeader("DELETE", url, keys), "User-Agent": "sl-water-levels-x-poster" }, signal: AbortSignal.timeout(20_000) });
+  const j = (await res.json().catch(() => ({}))) as { data?: { deleted?: boolean }; title?: string; detail?: string };
+  return { ok: res.ok && j.data?.deleted === true, detail: `HTTP ${res.status} ${j.title ?? ""} ${j.detail ?? ""}`.trim() };
 }

@@ -1,5 +1,5 @@
 {
-  "note": "Educational 'how to use the site' series for @waterlevelslk, one a day (scripts/x-series.mjs). Posted in this order; each id posts once. Keep each text under 255 characters before the link (X counts a link as 23).",
+  "note": "Educational 'how to use the site' series for @waterlevelslk, one a day (scripts/x-series.mjs). Posted in this order; each id posts once. Keep each text under 255 characters before the link (X counts a link as 23). Optional \"image\": a PNG/JPEG under content/x-series/ attached to the post.",
   "posts": [
     {
       "id": "town-answer",
@@ -14,7 +14,8 @@
     {
       "id": "street-level",
       "text": "Water in your street today? Mark your spot: on your town or gauge page, tap \"Set your street's flood level\" and enter the river reading when water reached you. Then the chart shows your line and the site warns you at your level. Saved on your phone only.",
-      "url": "https://sl-water-levels.vercel.app/kelani-ganga/nagalagam-street"
+      "url": "https://sl-water-levels.vercel.app/kelani-ganga/nagalagam-street",
+      "image": "content/x-series/street-level.png"
     },
     {
       "id": "rain-map",
