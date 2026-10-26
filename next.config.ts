@@ -19,6 +19,13 @@ const nextConfig: NextConfig = {
     // Reservoir photos (app/ReservoirPhotos.tsx) are Wikimedia Commons thumbnails and nothing else.
     remotePatterns: [{ protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/commons/**", search: "" }],
   },
+  async redirects() {
+    // /rain-map was shared as the rain map's address before the page settled on /rain.
+    return [
+      { source: "/rain-map", destination: "/rain", permanent: true },
+      { source: "/:lang(si|ta)/rain-map", destination: "/:lang/rain", permanent: true },
+    ];
+  },
   async headers() {
     const lang = ["", "/:lang(si|ta)"];
     return lang.flatMap((l) => [
