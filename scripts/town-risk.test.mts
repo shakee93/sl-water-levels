@@ -169,6 +169,8 @@ assert.equal(assessTown(base({ drainage: "upland", primary: g({ tier: "normal" }
   const poss = assessTown(base({ drainage: "riverbank", forecast: fc({ crossings: [cross({ wording: "possible" })] }) }));
   assert.equal(poss.tone, "watch");
   assert.equal(poss.day.key, "n24.reachSmallAlert");
+  // Nagalagam / Wellampitiya 26 Oct: canal-backwater town, tide-driven raw rise, small-chance crossing = watch, not alert
+  assert.equal(assessTown(base({ primary: g({ rate3hM: 0.05 }), forecast: fc({ crossings: [cross({ wording: "possible", level: 4, probability: 0.45 })], horizons: [{ h: 12, level: 3 }], currentLevel: 2.6 }) })).tone, "watch");
   // possible + p >= 0.4 + central forecast close to the mark + rising (not tidal) = alert; far from the mark = still watch
   const near = { level: 4, probability: 0.45, wording: "possible" };
   const closeFc = fc({ currentLevel: 3, crossings: [cross(near)], horizons: [{ h: 6, level: 3.9 }] });

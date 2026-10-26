@@ -253,6 +253,8 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   const trend: TownRisk["trend"] = rate == null ? "unknown" : Math.abs(rate) < RISING_M_PER_H ? "steady" : rate < 0 ? "down" : "up";
 
   let river: Tone | null = null;
+  // "watch" that only comes from a small-chance forecast crossing: the raw-rate rules below must not turn it into "alert" (tide rise)
+  let smallChanceWatch = false;
   let forecastReason: Reason | null = null;
   let personalReason: Reason | null = null;
   if (gauge) {
@@ -273,12 +275,15 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
       if ((river === "normal" || river === "watch") && lift.verdict === "alert") {
         river = "alert";
         forecastReason.warn = true;
-      } else if (river === "normal" && small) river = "watch";
+      } else if (river === "normal" && small) {
+        river = "watch";
+        smallChanceWatch = true;
+      }
     }
     // confirmed release upstream, river rising and already near/at alert
-    if (release?.confirmed && drainage !== "upland" && rising && rank(river) >= rank("watch") && rank(river) < rank("alert")) river = "alert";
+    if (release?.confirmed && drainage !== "upland" && rising && !smallChanceWatch && rank(river) >= rank("watch") && rank(river) < rank("alert")) river = "alert";
     // canals back up before the gauge reaches alert
-    if (drainage === "canal-backwater" && river === "watch" && rising) river = "alert";
+    if (drainage === "canal-backwater" && river === "watch" && rising && !smallChanceWatch) river = "alert";
 
     // ---- 2. personal level
     if (myLevel != null && gauge.level != null) {
