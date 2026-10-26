@@ -79,6 +79,8 @@ const en = {
   "down.none": "No river gauge of ours is directly below this reservoir.",
   "down.etaUnknown": "Travel time not measured yet",
   "down.far": "Far downstream: travel time not known",
+  "down.short": "~? h",
+  "down.shortFar": "Far · ~? h",
   "down.noReading": "No reading",
   "same.title": "On the same river",
   "same.river": "River page",
@@ -238,6 +240,8 @@ const si: RDict = {
   "down.none": "මෙම ජලාශයට කෙලින්ම පහළින් අපගේ ගංගා මාපකයක් නැත.",
   "down.etaUnknown": "ගමන් කාලය තවම මැනලා නැත",
   "down.far": "ඈත පහළ: ගමන් කාලය නොදනී", // needs native review
+  "down.short": "~? පැ",
+  "down.shortFar": "ඈත · ~? පැ", // needs native review
   "down.noReading": "කියවීමක් නැත",
   "same.title": "එම ගඟේම",
   "same.river": "ගඟේ පිටුව",
@@ -395,6 +399,8 @@ const ta: RDict = {
   "down.none": "இந்த நீர்த்தேக்கத்தின் நேர் கீழே எங்கள் ஆற்று அளவீட்டு நிலையம் இல்லை.",
   "down.etaUnknown": "பயண நேரம் இன்னும் அளக்கப்படவில்லை",
   "down.far": "தொலைவில் கீழே: பயண நேரம் தெரியவில்லை", // needs native review
+  "down.short": "~? மணி",
+  "down.shortFar": "தொலை · ~? மணி", // needs native review
   "down.noReading": "அளவீடு இல்லை",
   "same.title": "அதே ஆற்றில்",
   "same.river": "ஆற்றுப் பக்கம்",

@@ -53,7 +53,7 @@ export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea, flowsWest }: {
     <div className="relative">
       <ol
         aria-label={rt("down.listLabel")}
-        className={`flex items-stretch overflow-x-auto snap-x snap-proximity pb-1 [scrollbar-width:thin] max-sm:[mask-image:linear-gradient(to_right,transparent,#000_14px,#000_calc(100%-14px),transparent)] sm:overflow-visible ${flowsWest ? "flex-row-reverse" : "flex-row"}`}
+        className={`flex items-stretch overflow-x-auto snap-x snap-proximity pb-1 [scrollbar-width:thin] max-w-full max-sm:[mask-image:linear-gradient(to_right,transparent,#000_14px,#000_calc(100%-14px),transparent)] ${flowsWest ? "flex-row-reverse" : "flex-row"}`}
       >
         <li className="flex max-sm:shrink-0 items-stretch sm:flex-1">
           <div className={`${CARD} border-sky-600 dark:border-sky-400`}>
@@ -81,11 +81,11 @@ export function FlowDiagram({ rv, byStation, lang, t, rt, p, sea, flowsWest }: {
               <Connector flowing={releasing} west={flowsWest}>
                 <span
                   title={etaFull}
-                  className={`inline-flex max-w-[92px] items-center justify-center gap-1 rounded-full border px-2 py-0.5 text-center text-[12px] font-medium leading-tight sm:max-w-[150px] ${eta ? "border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950 text-slate-700 dark:text-slate-200" : "border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300"}`}
+                  className={`inline-flex max-w-[110px] items-center justify-center gap-1 rounded-full border px-2 py-0.5 text-center text-[12px] font-medium leading-tight sm:max-w-[150px] whitespace-nowrap ${eta ? "border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950 text-slate-700 dark:text-slate-200" : "border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300"}`}
                 >
                   {eta ? <Clock className="size-3 shrink-0" aria-hidden /> : null}
-                  <span className={eta ? "tabular-nums" : "text-[11px]"}>{eta ?? (g.indirect ? rt("down.far") : rt("down.etaUnknown"))}</span>
-                  {eta && <span className="sr-only">{rt("down.arrives")}</span>}
+                  <span className="tabular-nums" aria-hidden={eta ? undefined : true}>{eta ?? (g.indirect ? rt("down.shortFar") : rt("down.short"))}</span>
+                  <span className="sr-only">{eta ? rt("down.arrives") : etaFull}</span>
                 </span>
               </Connector>
               <Link
