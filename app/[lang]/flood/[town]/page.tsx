@@ -22,6 +22,7 @@ import { basinOfTown } from "@/lib/colombo";
 import { d1Configured } from "@/lib/d1";
 import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
+import { RainMapLink } from "@/app/rain/RainMapLink";
 import { TownVerdict } from "@/app/flood/TownVerdict";
 import { AnswerLine, JsonLd } from "@/app/Answer";
 import { NextHourFaq } from "@/app/NextHour";
@@ -151,6 +152,7 @@ export default async function TownPage({ params }: Params) {
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
 
         <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} />
+        <p className="mt-2"><RainMapLink lang={lang} /></p>
         {place.rainZone && data.input.streetRain !== undefined && <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} />}
         <ColomboBlock lang={lang} slug={place.slug} now={serverNow} canals={canals} />
 

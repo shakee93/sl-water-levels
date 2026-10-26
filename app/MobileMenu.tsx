@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LifeBuoy, Info, FlaskConical, Activity, Code, Newspaper, X } from "lucide-react";
+import { LifeBuoy, Info, FlaskConical, Activity, Code, Newspaper, CloudRain, X } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
 import { XLogo } from "./XLogo";
 import { ThemeSegmented } from "./ThemeSwitch";
@@ -17,6 +17,7 @@ import { OPEN_MENU_EVENT } from "./BottomTabs";
 import { RESEARCH } from "@/lib/i18n/footer";
 import { statusT } from "@/lib/i18n/status";
 import { nwFor } from "@/lib/i18n/news";
+import { rmFor } from "@/lib/i18n/rainMap";
 
 const ring =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
@@ -81,6 +82,7 @@ export function MobileMenu({ rivers, xHandle = null }: { rivers: MenuRiver[]; xH
 
   const main = [
     { href: p("/news"), label: nwFor(lang)("crumb"), icon: Newspaper, event: "news_nav_click" },
+    { href: p("/rain"), label: rmFor(lang)("link"), icon: CloudRain, event: "rain_map_nav_click" },
     { href: p("/help"), label: t("nav.help"), icon: LifeBuoy, event: "help_nav_click" },
     { href: p("/about"), label: t("nav.about"), icon: Info, event: "about_nav_click" },
     { href: p("/research"), label: RESEARCH[lang], icon: FlaskConical, event: "research_nav_click" },

@@ -3,6 +3,7 @@ import { RESERVOIR_COORDS } from "@/lib/reservoirCoords";
 import { MapClient, type HomeLake } from "./MapClient";
 import type { HomeStation } from "./tierUi";
 import { getI18n } from "@/lib/i18n/server";
+import { RainMapLink } from "./rain/RainMapLink";
 import type { Locale } from "@/lib/i18n/config";
 
 export async function SriLankaMap({ lang, stations }: { lang: Locale; stations: HomeStation[] }) {
@@ -20,13 +21,14 @@ export async function SriLankaMap({ lang, stations }: { lang: Locale; stations: 
   return (
     <section className="mb-8" aria-labelledby="map-heading">
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-        <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800">
           <h2
             id="map-heading"
             className="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100"
           >
             {t("map.heading")}
           </h2>
+          <RainMapLink lang={lang} className="shrink-0" />
         </div>
         <MapClient stations={valid} lakes={lakes} />
       </div>

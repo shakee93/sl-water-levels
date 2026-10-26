@@ -12,6 +12,7 @@ import { orderStations } from "@/lib/basinOrder";
 import { resolveBasin, stationPath } from "@/lib/slug";
 import { RiverGauges } from "@/app/RiverGauges";
 import { RiverRain } from "@/app/RiverRain";
+import { RainMapLink } from "@/app/rain/RainMapLink";
 import { TimeAgo } from "@/app/TimeAgo";
 import { colomboTime } from "@/app/tierUi";
 import { BasinDams } from "@/app/BasinDams";
@@ -267,6 +268,7 @@ export default async function BasinPage({
         )}
 
         <Suspense key={`rain-${basin}`} fallback={null}><RiverRain lang={lang} basin={basin} /></Suspense>
+        <p className="mt-2"><RainMapLink lang={lang} /></p>
 
         <Suspense key={`history-${basin}`} fallback={null}>
           <FloodHistoryCard basin={basin} lang={lang} />

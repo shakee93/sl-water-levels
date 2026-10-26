@@ -70,6 +70,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...PLACES.flatMap((x) => entry(`/flood/${x.slug}`, stations.find((s) => s.station === x.stations[0])?.latest?.ts)),
     // Recent news changes by the hour; the list is fetched live on the page, so no per-item entries.
     ...entry("/colombo-canals", Date.now()),
+    // Rain map: satellite rain hour by hour, refreshed every 30 minutes.
+    ...entry("/rain", Date.now()),
     ...entry("/news", Date.now()),
     ...entry("/help", contentDay),
     ...entry("/about", contentDay),
