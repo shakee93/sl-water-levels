@@ -8,6 +8,9 @@
 // Segments: "model-v3" forecasts issued from STORM_SINCE on (storm-aware: gauge-only model at every horizon + rain correction on
 // storm hours), "model" from GM_SINCE to then (gauge-only 1/3/6 h; 12/24 h still the older rain ridge), "model-early" before that,
 // and "trend" (simple estimate for gauges without a fitted model).
+// "rainSplit": the fitted-model forecasts (model + model-v3) split by whether rain was part of the picture when they were issued
+// (forecast_runs.storm, d1/0009_forecast_rain.sql: a heavy-rain warning showing or a storm-horizon step in use) into "storm" and "calm".
+// Runs from before that column existed have no flag and are left out of the split.
 // Windows: last 30 days and since launch. Scopes: all gauges and each gauge.
 // The site reads the file (lib/accuracy.ts); a missing or old file just hides the figures. Run by .github/workflows/accuracy-snapshot.yml.
 import { execFileSync } from "node:child_process";
@@ -29,10 +32,11 @@ function d1(sql) {
 
 const now = Date.now();
 const rows = [];
+const hasStorm = d1("PRAGMA table_info(forecast_runs)").some((c) => c.name === "storm");
 // Fetch in 4-day slices so no single D1 query is heavy.
 const first = d1("SELECT MIN(issued_at) AS a FROM forecast_runs")[0].a;
 for (let a = first; a < now; a += 4 * DAY) {
-  rows.push(...d1(`SELECT v.station, v.issued_at, v.method, v.unit, v.horizon_h AS h, v.predicted AS p, v.low, v.high, v.actual AS y, r.current_level AS c
+  rows.push(...d1(`SELECT v.station, v.issued_at, v.method, v.unit, v.horizon_h AS h, v.predicted AS p, v.low, v.high, v.actual AS y, r.current_level AS c${hasStorm ? ", r.storm AS storm" : ", NULL AS storm"}
     FROM forecast_verification v JOIN forecast_runs r ON r.station = v.station AND r.issued_at = v.issued_at
     WHERE v.issued_at >= ${a} AND v.issued_at < ${a + 4 * DAY}`));
 }
@@ -66,6 +70,19 @@ const usable = rows
   })
   .filter((r) => r.seg && HORIZONS.includes(r.h));
 
+// Storm vs calm hours, fitted-model forecasts only (the trend estimate uses no rain).
+function splitBuild(rs) {
+  const o = {};
+  for (const [w, from] of Object.entries(WINDOWS)) {
+    for (const [mode, flag] of [["storm", 1], ["calm", 0]]) {
+      for (const h of HORIZONS) {
+        const sub = rs.filter((r) => r.issued_at >= from && r.storm === flag && r.h === h && (r.seg === "model" || r.seg === "model-v3"));
+        if (sub.length) ((o[w] ??= {})[mode] ??= {})[h] = stats(sub);
+      }
+    }
+  }
+  return o;
+}
 const WINDOWS = { d30: now - 30 * DAY, all: 0 };
 function build(rs) {
   const o = {};
@@ -89,6 +106,7 @@ const json = {
   gaugeModelSince: new Date(GM_SINCE + 5.5 * 3600e3).toISOString().slice(0, 10),
   stormModelSince: new Date(STORM_SINCE + 5.5 * 3600e3).toISOString().slice(0, 10),
   overall: build(usable),
+  rainSplit: splitBuild(usable),
   stations,
 };
 if (out) {

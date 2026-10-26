@@ -23,6 +23,8 @@ export type AccuracyFile = {
   /** Sri Lanka date the storm-aware version went live; absent in files written before it. */
   stormModelSince?: string;
   overall: { d30?: BySeg; all?: BySeg };
+  /** Fitted-model forecasts split by storm (a heavy-rain warning showing or a storm-horizon step in use) and calm hours. Absent in older files. */
+  rainSplit?: { d30?: Partial<Record<"storm" | "calm", Record<string, Stat>>>; all?: Partial<Record<"storm" | "calm", Record<string, Stat>>> };
   stations: Record<string, { d30?: BySeg; all?: BySeg }>;
 };
 export type Win = "d30" | "all";
@@ -68,6 +70,9 @@ export const newModelFigure = (scope: Scope | undefined, h: number, win: Win): S
 /** Only the storm-aware version's own record (issued since it went live): its 12 / 24 h steps are the new gauge-only + rain model, not the old rain ridge. */
 export const stormModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => scope?.[win]?.["model-v3"]?.[h] ?? null;
 
+/** Fitted-model record on storm or calm hours for one horizon; null when the file has no split or it is empty. */
+export const rainSplitFigure = (a: AccuracyFile | null, mode: "storm" | "calm", h: number, win: Win): Stat | null => a?.rainSplit?.[win]?.[mode]?.[String(h)] ?? null;
+
 /** 30 days, unless that holds fewer than `min` one-hour checks (then everything since launch). */
 export function bestWindow(a: AccuracyFile, min = 30): Win {
   return (figure(a.overall, 1, "d30")?.n ?? 0) >= min ? "d30" : "all";
@@ -94,7 +99,9 @@ export function accuracyLine(a: AccuracyFile | null): string {
   const nmText = nm && nm.n >= MIN_CHECKS ? ` The gauge-only model that has run since ${day(a.gaugeModelSince)} (next hour, 3 h and 6 h) has its own record: ${nm.n} next-hour checks, average miss ${ftx(nm.maeFt)} ft vs ${ftx(nm.baseMaeFt)} ft for "no change".` : ` The newer gauge-only model (live since ${day(a.gaugeModelSince)}) has only ${nm?.n ?? 0} next-hour checks so far, too few to report on its own.`;
   const sv = a.stormModelSince ? [3, 6, 12, 24].map((h) => ({ h, f: stormModelFigure(a.overall, h, win) })).filter((x) => x.f && x.f.n >= MIN_CHECKS) : [];
   const svText = sv.length ? ` The storm-aware version (live since ${day(a.stormModelSince as string)}; 12 and 24 h now come from the gauge-only model with a rain correction on storm hours) has its own record: ${sv.map(({ h, f }) => `${h} h: ${f!.n} checks, average miss ${ftx(f!.maeFt)} ft vs ${ftx(f!.baseMaeFt)} ft for "no change"`).join("; ")}.` : "";
-  return `Measured live from our prediction log, as of ${day(a.asOf)}, over ${spanText(a, win)} (average miss in feet; each forecast checked against the gauge reading closest to its target time): ${hs.join("; ")}. Longer horizons are much less certain.${nmText}${svText} Do not quote these as a guarantee.`;
+  const sp = [6, 24].map((h) => ({ h, s: rainSplitFigure(a, "storm", h, win), c: rainSplitFigure(a, "calm", h, win) })).filter((x) => x.s && x.c && x.s.n >= MIN_CHECKS && x.c.n >= MIN_CHECKS);
+  const spText = sp.length ? ` On hours with heavy rain in the picture vs calm hours: ${sp.map(({ h, s, c }) => `${h} h average miss ${ftx(s!.maeFt)} ft (${s!.n} checks) vs ${ftx(c!.maeFt)} ft (${c!.n} checks)`).join("; ")}.` : "";
+  return `Measured live from our prediction log, as of ${day(a.asOf)}, over ${spanText(a, win)} (average miss in feet; each forecast checked against the gauge reading closest to its target time): ${hs.join("; ")}. Longer horizons are much less certain.${nmText}${svText}${spText} Do not quote these as a guarantee.`;
 }
 
 /** The small line under a gauge's chart, or null when that gauge has too few checks. */

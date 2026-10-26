@@ -39,9 +39,12 @@ let obs = 0;
 for (const r of data.runs ?? []) {
   if (r.issuedAt == null) continue;
   sql.push(
-    `INSERT OR IGNORE INTO forecast_runs (station, basin, issued_at, stored_at, method, status, model_version, unit, current_level, tier, verdict, headline, rain_past6h_mm, rain_next24h_mm, outlook) VALUES (${[
+    `INSERT OR IGNORE INTO forecast_runs (station, basin, issued_at, stored_at, method, status, model_version, unit, current_level, tier, verdict, headline, rain_past6h_mm, rain_next24h_mm, outlook, rain_next6h_mm, rain_next6h_p90_mm, rain_next24h_p90_mm, rain_risk_kind, rain_risk_level, storm_horizons, storm, measured_mm1h, measured_mm3h, measured_mm24h, sat_mm6h, sat_mm24h) VALUES (${[
       r.station, r.basin, r.issuedAt, now, r.method, r.status, data.modelVersion, r.unit, r.currentLevel,
       r.tier, r.verdict, r.headline, r.rainPast6hMm, r.rainNext24hMm, r.outlook,
+      r.rainNext6hMm, r.rainNext6hP90Mm, r.rainNext24hP90Mm, r.rainRiskKind, r.rainRiskLevel,
+      Array.isArray(r.stormHorizons) ? r.stormHorizons.join(",") : null, r.storm == null ? null : r.storm ? 1 : 0,
+      r.measured?.mm1h, r.measured?.mm3h, r.measured?.mm24h, r.satellite?.mm6h, r.satellite?.mm24h,
     ].map(q).join(", ")});`,
   );
   // Children only attach to a run inserted in this batch (stored_at = now), so an

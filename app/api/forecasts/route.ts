@@ -7,6 +7,8 @@ import { connection } from "next/server";
 import { fetchBasinSnapshot, getNational } from "@/lib/arcgis";
 import { loadForecast } from "@/lib/forecast";
 import coefficients from "@/lib/model/coefficients.json";
+import { getGsmap } from "@/lib/gsmap";
+import { getForecastRainAll, measuredAtGauge } from "@/lib/stationRain";
 
 // Computed per request (no ISR): as an ISR route a failed background regeneration kept serving
 // one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
@@ -19,6 +21,8 @@ export async function GET() {
   await connection();
   const national = await getNational();
   const basins = [...new Set(national.map((s) => s.basin))];
+  // Rain logged with each run (d1/0009_forecast_rain.sql): the 6 h figures and p90 from the cached weather fetch, the satellite file, the gauge itself.
+  const [fcRain, sat] = await Promise.all([getForecastRainAll().catch(() => ({})), getGsmap().catch(() => null)]);
   const runs: unknown[] = [];
   const errors: { basin: string; station?: string; error: string }[] = [];
 
@@ -36,6 +40,10 @@ export async function GET() {
         const f = await loadForecast(basin, snapshot, s.station);
         // Same rule as the station card: a forecast crossing lifts normal/watch to alert
         // when it's likely, or possible while the river is rising.
+        const key = `${basin.trim()}/${s.station}`;
+        const fr = (fcRain as Record<string, import("@/lib/stationRain").ForecastRain>)[key];
+        const g = sat?.stations[key] ?? null;
+        const mAt = measuredAtGauge(s.station, s.trend24h);
         const rising = (s.rate3hM ?? 0) > 0.006;
         const crossing = f.crossings.some(
           (c) => c.wording === "likely" || (c.wording === "possible" && rising),
@@ -55,6 +63,15 @@ export async function GET() {
           headline: f.headline,
           rainPast6hMm: f.rain?.past6hMm ?? null,
           rainNext24hMm: f.rain?.next24hMm.det ?? null,
+          rainNext6hMm: fr?.next6h ?? null,
+          rainNext6hP90Mm: fr?.next6hP90 ?? null,
+          rainNext24hP90Mm: f.rain?.next24hMm.p90 ?? null,
+          rainRiskKind: f.rainRisk ? (f.rainRisk.kind ?? "forecast") : null,
+          rainRiskLevel: f.rainRisk && f.rainRisk.kind !== "measured" ? f.rainRisk.level : null,
+          stormHorizons: f.stormHorizons,
+          storm: f.stormHorizons.length > 0 || f.rainRisk != null,
+          measured: mAt ? { mm1h: mAt.mm1h, mm3h: mAt.mm3h, mm24h: mAt.mm24h } : null,
+          satellite: g ? { mm6h: g.mm6h, mm24h: g.mm24h } : null,
           outlook: f.outlook,
           horizons: f.horizons,
           crossings: f.crossings,

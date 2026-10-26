@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Add the rain columns once (d1/0009_forecast_rain.sql)
+        run: node scripts/d1-ensure-forecast-rain.mjs
       - name: Fetch forecasts from the live site
         run: |
           curl -fsS --retry 3 --retry-delay 20 --max-time 120 \
