@@ -22,8 +22,8 @@ export type Place = {
   district: string;
   stations: string[];
   /**
-   * Set only for towns the satellite street-rain rule was backtested for (lib/townRisk.ts, STREET_RAIN_ZONES in
-   * scripts/gsmap-snapshot.mjs): the id of the rain zone whose 24 h total drives the personal "my spot floods in heavy rain" note (lib/lowSpots.ts); never a town warning.
+   * Set for towns the satellite street-rain rule covers (lib/townRisk.ts, STREET_RAIN_ZONES in
+   * scripts/gsmap-snapshot.mjs; backtested only for "colombo-east", see RAIN_ZONE_OF below): the id of the rain zone whose 24 h total drives the personal "my spot floods in heavy rain" note (lib/lowSpots.ts); never a town warning.
    */
   rainZone?: string;
 };
@@ -116,7 +116,12 @@ const ROWS: Row[] = [
   ["Mirigama", "Gampaha", 7.2430, 80.1270, [DU, GI], ["Mirigama", "මීරිගම"]],
   ["Pannala", "Kurunegala", 7.3290, 80.0200, [BG, GI], ["Pannala", "පන්නල"]],
   ["Giriulla", "Kurunegala", 7.3300, 80.1250, [GI], ["Giriulle", "Giriulla", "ගිරිඋල්ල"]],
-  ["Marawila", "Puttalam", 7.4100, 79.8300, [BG], ["Marawila", "මාරවිල"]],
+  ["Marawila", "Puttalam", 7.4130, 79.8310, [BG], ["Marawila", "මාරවිල", "மாரவில"]],
+  // ── Maha Oya delta and the coast north of Negombo: flat, low, flood from heavy rain more than from the river ──
+  ["Kochchikade", "Gampaha", 7.2650, 79.8590, [BG, DU], ["Kochchikade", "Kochchikade Negombo", "කොච්චිකඩේ", "கொச்சிக்கடை"]],
+  ["Dankotuwa", "Puttalam", 7.2975, 79.8820, [BG, DU], ["Dankotuwa", "Dankotuva", "දංකොටුව", "டங்கொட்டுவ"]],
+  ["Wennappuwa", "Puttalam", 7.3430, 79.8410, [BG], ["Wennappuwa", "Wenappuwa", "වෙන්නප්පුව", "வென்னப்புவ"]],
+  ["Katuneriya", "Puttalam", 7.3650, 79.8330, [BG], ["Katuneriya", "Katuneriye", "Katuneriya Wennappuwa", "කටුනේරිය", "கட்டுநேரிய"]],
   ["Kuliyapitiya", "Kurunegala", 7.4700, 80.0400, [GI, MO], ["Kuliyapitiye", "කුලියාපිටිය"]],
   ["Narammala", "Kurunegala", 7.4250, 80.2108, [GI, MO], ["Narammala", "නාරම්මල"]],
   ["Polgahawela", "Kurunegala", 7.3330, 80.3000, [GI], ["Polgahawela", "පොල්ගහවෙල"]],
@@ -204,13 +209,15 @@ const CANAL_BACKWATER = new Set([
   "Colombo", "Kolonnawa", "Wellampitiya", "Orugodawatta", "Dematagoda", "Grandpass", "Kotahena", "Mattakkuliya", "Modara",
   "Meethotamulla", "Gothatuwa", "Peliyagoda", "Kelaniya", "Kiribathgoda", "Wattala", "Hendala", "Ragama", "Kandana", "Kotikawatta", "Angoda", "Mulleriyawa",
   "Thalangama", "Rajagiriya", "Battaramulla", "Kotte", "Sedawatta", "Pita Kotte", "Ethul Kotte", "Nawala", "Koswatta", "Borella", "Maradana", "Bloemendhal", "Ja-Ela", "Ekala", "Seeduwa", "Katunayake", "Negombo",
+  // the low coast of the Maha Oya delta (lagoon and canals drain slowly), see RAIN_ZONE_OF below
+  "Kochchikade", "Dankotuwa", "Wennappuwa", "Katuneriya", "Marawila",
 ]);
 // A town with a river gauge inside it (under 1.5 km) is ON that river, whatever the terrain: never "upland".
 // (scripts/town-risk.test.mts checks this against the live station list.)
 const UPLAND = new Set([
   "Malabe", "Hokandara", "Athurugiriya", "Homagama", "Kadawatha", "Maskeliya", "Nuwara Eliya", "Talawakele", "Hatton", "Kegalle",
   "Warakapola", "Gampaha", "Yakkala", "Nittambuwa", "Pugoda", "Veyangoda", "Divulapitiya", "Mirigama", "Kurunegala", "Wariyapola",
-  "Kuliyapitiya", "Narammala", "Polgahawela", "Nikaweratiya", "Anamaduwa", "Maho", "Marawila", "Kandy", "Digana", "Kadugannawa",
+  "Kuliyapitiya", "Narammala", "Polgahawela", "Nikaweratiya", "Anamaduwa", "Maho", "Kandy", "Digana", "Kadugannawa",
   "Teldeniya", "Akurana", "Pelmadulla", "Balangoda", "Morawaka", "Deniyaya", "Ingiriya", "Horana", "Bandaragama",
   "Monaragala", "Buttala", "Thanamalwila", "Dehiattakandiya", "Ranala",
   "Kirulapone", "Wellawatta", "Dehiwala",
@@ -223,17 +230,33 @@ const UPLAND = new Set([
 // (named in the 9 Sep 2020 flood), Meethotamulla and Gothatuwa. Other canal-backwater towns (Colombo city,
 // Kelaniya, Wattala, Ja-Ela, Negombo ...) have no record behind the thresholds, so they keep the river-only
 // estimate until someone backtests them.
-const STREET_RAIN_TOWNS = new Set([
-  "Wellampitiya", "Kolonnawa", "Kotikawatta", "Mulleriyawa", "Orugodawatta", "Dematagoda", "Angoda", "Meethotamulla", "Gothatuwa",
-]);
+// Rain zones by town name (zone cells: STREET_RAIN_ZONES in scripts/gsmap-snapshot.mjs, one 0.1 degree satellite pixel
+// is about 11 km, so towns that share a pixel share a zone).
+//  - "colombo-east": the Wellampitiya / Kolonnawa group above. The rule (60 / 100 mm) was backtested on it alone.
+//  - the Puttalam / Maha Oya coast zones (added 26 Oct 2026): on that day a visitor reported water on roads and in homes
+//    at Katuneriya (Wennappuwa DS) with 139 mm of satellite rain in 24 h, more than Wellampitiya's 121 mm where streets
+//    also flooded, while the nearest river gauge (Badalgama, ~18 km inland) stayed below its alert mark: a river gauge
+//    cannot see this kind of flooding. The same 60 / 100 mm marks are used as the best available figures; they are NOT
+//    backtested for these towns yet (no DMC record behind them), so the card says "often" and never gives a verdict step.
+const RAIN_ZONE_OF: Record<string, string> = {
+  ...Object.fromEntries(["Wellampitiya", "Kolonnawa", "Kotikawatta", "Mulleriyawa", "Orugodawatta", "Dematagoda", "Angoda", "Meethotamulla", "Gothatuwa"].map((n) => [n, "colombo-east"])),
+  "Ja-Ela": "ja-ela",
+  Negombo: "negombo", Kochchikade: "negombo", Dankotuwa: "negombo",
+  Wennappuwa: "wennappuwa", Katuneriya: "wennappuwa",
+  Marawila: "marawila",
+  Chilaw: "chilaw",
+};
 const slugOf = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 export const PLACES: Place[] = ROWS.map(([name, district, lat, lon, stations, aliases = []]) => ({
   name, district, lat, lon, stations, aliases: aliases.filter((a) => a !== name),
   slug: slugOf(name),
   drainage: CANAL_BACKWATER.has(name) ? "canal-backwater" : UPLAND.has(name) ? "upland" : "riverbank",
-  ...(STREET_RAIN_TOWNS.has(name) ? { rainZone: "colombo-east" } : {}),
+  ...(RAIN_ZONE_OF[name] ? { rainZone: RAIN_ZONE_OF[name] } : {}),
 }));
+
+/** Which wording the street-water card uses: Colombo canal towns talk about canals, the coastal Puttalam / Maha Oya towns do not. */
+export const streetCardKind = (p: Pick<Place, "rainZone">): "canal" | "coast" => (p.rainZone === "colombo-east" ? "canal" : "coast");
 
 export const placeBySlug = (slug: string): Place | undefined => PLACES.find((p) => p.slug === slug);
 /** Town page path for a place name as the gazetteer spells it. */

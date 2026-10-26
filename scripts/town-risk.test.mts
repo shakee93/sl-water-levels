@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { setStreetSignalsRaiseStep, assessTown, type GaugeIn, type TownRiskInput } from "../lib/townRisk.ts";
 import { readFileSync } from "node:fs";
-import { PLACES } from "../lib/places.ts";
+import { PLACES, streetCardKind } from "../lib/places.ts";
 import { FAR_GAUGE_KM } from "../lib/townRisk.ts";
 
 const g = (o: Partial<GaugeIn> = {}): GaugeIn => ({ station: "Nagalagam Street", name: "Nagalagam Street", basin: "Kelani Ganga", tier: "normal", level: 2, unit: "ft", ts: 0, rate3hM: 0, km: 3, ...o });
@@ -224,6 +224,40 @@ assert.equal(assessTown(base({ drainage: "upland", primary: g({ tier: "normal" }
   assert.ok(keys(nf).includes("r.releaseNoFigure"));
 }
 
+// -- a big CONFIRMED release from the Irrigation Department is at least Alert (lib/releaseAlert.ts; 26 Oct 2026 Deduru Oya, 10,400 cusecs, 8 gates)
+{
+  const dep = { confirmed: true, reservoir: "Deduru Oya", cusecs: 10400, etaHours: 4.5, source: "Irrigation Department", gatesOpen: 8, direct: true };
+  const calm = { drainage: "riverbank", primary: g({ station: "Moragaswewa", name: "Moragaswewa", basin: "Deduru Oya", tier: "normal", level: 14.9, rate3hM: 0 }) };
+  const a = assessTown(base({ ...calm, release: dep }));
+  assert.equal(a.tone, "alert");
+  const rr = a.reasons.find((r) => r.kind === "release");
+  assert.equal(rr.key, "r.releaseAlertGates");
+  assert.deepEqual(rr.vars, { res: "Deduru Oya", cusecs: "10,400", n: 8 });
+  assert.equal(rr.warn, true);
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, gatesOpen: 1 } })).reasons.find((r) => r.kind === "release").key, "r.releaseAlertGate");
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, gatesOpen: null } })).reasons.find((r) => r.kind === "release").key, "r.releaseAlert");
+  assert.equal(assessTown(base({ ...calm, primary: g({ ...calm.primary, tier: "watch" }), release: dep })).tone, "alert");
+  // a stale gauge with no estimate still gets the Department's own figure
+  assert.equal(assessTown(base({ ...calm, primary: g({ ...calm.primary, tier: "stale" }), release: dep })).tone, "alert");
+  // threshold: 5,000 and up; below it stays a reason line
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, cusecs: 5000 } })).tone, "alert");
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, cusecs: 4999 } })).tone, "normal");
+  // never for news-only, another publisher, an indirect link, upland towns, or when the figure is missing
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, confirmed: false } })).tone, "normal");
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, source: "Mahaweli Authority" } })).tone, "normal");
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, source: undefined } })).tone, "normal");
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, direct: false } })).tone, "normal");
+  assert.equal(assessTown(base({ ...calm, drainage: "upland", release: dep })).tone, "normal");
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, cusecs: null } })).tone, "normal");
+  // never above Alert from the release alone, and a real minor / major reading or warning stays
+  assert.equal(assessTown(base({ ...calm, release: { ...dep, cusecs: 60000 } })).tone, "alert");
+  assert.equal(assessTown(base({ ...calm, primary: g({ ...calm.primary, tier: "minor" }), release: dep })).tone, "minor");
+  assert.equal(assessTown(base({ ...calm, primary: g({ ...calm.primary, tier: "major" }), release: dep })).tone, "major");
+  assert.equal(assessTown(base({ ...calm, warning: { severity: "major flood", source: "DMC", area: "x" }, release: dep })).tone, "minor");
+  // baseTone follows the tone
+  assert.equal(a.baseTone, "alert");
+}
+
 // -- warnings
 {
   const w = (severity) => ({ severity, source: "DMC", area: "Kelani Ganga" });
@@ -356,13 +390,25 @@ assert.equal(PLACES.find((p) => p.name === "Nuwara Eliya").drainage, "upland");
     // a major river still wins on tone
     assert.equal(t({ streetRain: sr(0), streetRiver: riv, primary: g({ tier: "major" }) }).tone, "major");
   }
-  // which towns carry the rule: only the validated ones, all canal-backwater
-  const zoned = PLACES.filter((p) => p.rainZone).map((p) => p.name).sort();
-  assert.deepEqual(zoned, ["Angoda", "Dematagoda", "Gothatuwa", "Kolonnawa", "Kotikawatta", "Meethotamulla", "Mulleriyawa", "Orugodawatta", "Wellampitiya"]);
-  for (const p of PLACES.filter((p) => p.rainZone)) {
+  // which towns carry the rule: the Colombo group it was backtested on (colombo-east) and the Puttalam / Maha Oya coast (added 26 Oct 2026, not backtested)
+  const east = PLACES.filter((p) => p.rainZone === "colombo-east").map((p) => p.name).sort();
+  assert.deepEqual(east, ["Angoda", "Dematagoda", "Gothatuwa", "Kolonnawa", "Kotikawatta", "Meethotamulla", "Mulleriyawa", "Orugodawatta", "Wellampitiya"]);
+  for (const p of PLACES.filter((p) => p.rainZone === "colombo-east")) {
     assert.equal(p.drainage, "canal-backwater", p.name);
     // inside the 4-pixel box the thresholds were fitted on (6.8-7.0 N, 79.8-80.0 E)
     assert.ok(p.lat > 6.8 && p.lat < 7.0 && p.lon > 79.8 && p.lon < 80.0, `${p.name} inside the rain box`);
+  }
+  const coast = PLACES.filter((p) => p.rainZone && p.rainZone !== "colombo-east").map((p) => `${p.name}:${p.rainZone}`).sort();
+  assert.deepEqual(coast, ["Chilaw:chilaw", "Dankotuwa:negombo", "Ja-Ela:ja-ela", "Katuneriya:wennappuwa", "Kochchikade:negombo", "Marawila:marawila", "Negombo:negombo", "Wennappuwa:wennappuwa"]);
+  // every coast town sits in (or within 0.03 degrees of) the satellite pixel(s) its zone averages (scripts/gsmap-snapshot.mjs STREET_RAIN_ZONES)
+  const { readFileSync } = await import("node:fs");
+  const snap = readFileSync(new URL("./gsmap-snapshot.mjs", import.meta.url), "utf8");
+  for (const p of PLACES.filter((p) => p.rainZone && p.rainZone !== "colombo-east")) {
+    const m = snap.match(new RegExp(`["']?${p.rainZone}["']?: \\{[^\\n]*centres: (\\[\\[[^\\n]*\\]\\])`));
+    assert.ok(m, `${p.name}: zone ${p.rainZone} is defined in the snapshot`);
+    const cells: number[][] = JSON.parse(m![1]);
+    assert.ok(cells.some(([la, lo]) => Math.abs(p.lat - la) <= 0.08 && Math.abs(p.lon - lo) <= 0.08), `${p.name} is inside its rain zone`);
+    assert.equal(streetCardKind(p), "coast");
   }
   // translations carry the new strings with the same placeholders (checked in full below too)
 }

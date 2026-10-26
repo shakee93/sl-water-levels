@@ -730,6 +730,17 @@ What remains:
   `/api/town-outcome` were removed. Wording everywhere: no "Water on the streets likely"; the honest line "an early heads-up from
   rain totals; it is often wrong and does not mean the area is flooding" is shown with the panel and in the push body.
 
+**Rain-flooding towns beyond Colombo (26 Oct 2026).** A visitor at Katuneriya (Wennappuwa DS, Puttalam) reported water on roads and in
+homes with 139 mm of satellite rain in 24 h (Wellampitiya: 121 mm), while the nearest gauge (Badalgama, Maha Oya, ~18 km inland) stayed
+below alert: a river gauge cannot see this. `lib/places.ts` `RAIN_ZONE_OF` gives a `rainZone` to Katuneriya, Wennappuwa, Marawila,
+Dankotuwa, Kochchikade, Negombo, Ja-Ela and Chilaw (zones `wennappuwa`, `marawila`, `negombo`, `ja-ela`, `chilaw`; their 0.1 degree
+pixels are in `STREET_RAIN_ZONES` in `scripts/gsmap-snapshot.mjs`, a few more cell sums on the grid it already downloads; steps recorded
+before a zone existed are re-read once, so the data appears after the next snapshot, and until then the card says rain data is not
+available). The same 60 / 100 mm marks apply but are NOT backtested outside `colombo-east`. These towns get the same card, push switch
+and street report, worded without canals (`streetCardKind` -> `LowSpot kind="coast"`: "Low roads and homes here often get water at this
+much rain"; no tide note, no Colombo research link). The Kelani river trigger (Nagalagam / Hanwella) applies to `colombo-east` only,
+in `lib/townData.ts` and `scripts/street-rain-log.mjs`. Still no verdict step from street rain.
+
 The rest of this section describes the rule itself, as validated.
 
 The rule in `lib/townRisk.ts` step 6 was backtested on 14 documented floods (16 with the merged ledger) and then
@@ -1153,3 +1164,17 @@ The account answers people who write to it: @-mentions and replies to our posts,
 `scripts/x-reposts.mjs` (`.github/workflows/x-reposts.yml`, every 30 minutes from the scheduler Worker) passes on official flood, rain, cyclone and landslide posts. Candidates come from recent search over **listed official accounts only** (`X_REPOST_ACCOUNTS`, default `dmc_lk,SLMetDept`; add news accounts only on purpose): `(from:a OR from:b) (flood OR rain OR warning OR cyclone OR landslide ...) -is:retweet -is:reply`, so X bills only matching posts; `X_REPOST_READ_CAP` (40 posts a day) caps it. Each new candidate (at most 6 hours old, not a reply) is judged by the OpenAI **Decisions API** (`decide()` in `lib/openai.ts`, gpt-6-luna): five yes/no probabilities, and it reposts only on a confident yes on all of them (worth reposting 85%, Sri Lanka 85%, a warning or update 80%, duplicate of what we shared recently at most 30%, promotional or unrelated at most 20%). The candidate's text is data and the model can only answer probabilities. At most `X_REPOST_DAILY_MAX` (3) a day, never the same post twice (D1 `x_reposts`), budget-guarded like replies. A failed model call means no repost.
 
 `X_REPOST_MODE=dry` (default) shows `DRY RUN REPOST` in Slack with the decision and the reason (including declined ones); `live` needs `X_POSTING=live`; `off` stops it. The handles `dmc_lk` and `SLMetDept` are the defaults from the owner and are not verified: check them on X and set `X_REPOST_ACCOUNTS`. Reposting needs the existing "Read and write" permission.
+
+## A big confirmed release is Alert (26 Oct 2026)
+
+Moragaswewa (Deduru Oya) read Normal at 14.9 ft while the Deduru Oya reservoir spilled 10,400 cusecs through 8 gates and people
+downstream reported water in homes. `lib/releaseAlert.ts` is the one rule: the Irrigation Department's OWN figure (the daily
+Reservoir Water Level sheet or its flood-warning bulletin; never news, never the Mahaweli PDF, whose discharge includes
+power-station flow) of 5,000 cusecs or more for the reservoir directly above a gauge (a hand-curated link in `lib/reservoirs.ts`, not
+"further down the same river") makes that gauge, and the towns resting on it, at least **Alert**. Never more than Alert from the release
+alone (Minor and Major stay with the gauge and official warnings); upland towns are excluded; it applies from the day of the reading
+(the sheet keeps today's and yesterday's rows), not only once the gauge rises. Reason line: "Deduru Oya reservoir is releasing 10,400
+cusecs through 8 gates". Used by `app/Forecast.tsx` (gauge page), `lib/stationVerdict.ts` (home, My places, push, rain map),
+`app/api/forecasts/route.ts` (`verdict`, plus `releaseAlert`), `lib/townRisk.ts` (town page, glance, index via `loadTownStates`) and the
+home "Needs attention" list (`ReleaseAlerts`). The 5,000 cusecs mark is chosen from one event, not fitted: revisit with `releases/` on
+the `data` branch. Tests: `scripts/release-alert.test.mts`, `scripts/town-risk.test.mts`.

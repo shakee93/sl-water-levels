@@ -6,7 +6,7 @@ import { stationDisplayName } from "./displayName";
 import { loadForecast, measuredAt, type Forecast } from "./forecast";
 import { getGsmapZone } from "./gsmap";
 import { getTownRain, type TownRain } from "./townWeather";
-import { releaseAffecting } from "./releases";
+import { getReleases, releaseAffecting, releaseAffectingFrom } from "./releases";
 import { getOfficialWarnings } from "./warnings";
 import { soft } from "./soft";
 
@@ -164,7 +164,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
         }
       : null,
     release: release?.active && release.reservoir
-      ? { confirmed: release.confirmed, reservoir: release.reservoir, cusecs: release.cusecs, etaHours: release.etaHours }
+      ? { confirmed: release.confirmed, reservoir: release.reservoir, cusecs: release.cusecs, etaHours: release.etaHours, source: release.source, gatesOpen: release.gatesOpen ?? null, direct: release.direct }
       : null,
     warning,
     measured: measuredIn,
@@ -174,7 +174,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
       ? zone && zone.mm24hClipped != null ? { mm24h: zone.mm24hClipped, mm24hRaw: zone.mm24h, mm6h: zone.mm6h, mm1h: zone.mm1h, endsAt: zone.endsAt } : null
       : undefined,
     // river half: the Kelani at its minor flood level (Nagalagam Street 5 ft, Hanwella at its own published minor mark)
-    streetRiver: place.rainZone ? streetRiverIn(byName, now) : undefined,
+    streetRiver: place.rainZone === "colombo-east" ? streetRiverIn(byName, now) : undefined,
     now,
   };
 
@@ -217,12 +217,18 @@ export async function loadTownStates(places: Place[]): Promise<Map<string, TownS
   const national = await getNational();
   const byName = new Map(national.map((s) => [s.station, s]));
   const out = new Map<string, TownState>();
+  // the Irrigation Department's own release figures (cached, fails soft): a big confirmed release above the gauge makes the town Alert here too
+  const rel = await getReleases().catch(() => null);
   for (const p of places) {
     const primary = gaugeIn(byName.get(p.stations[0]), p);
     const secondary = gaugeIn(p.stations[1] ? byName.get(p.stations[1]) : undefined, p);
+    const eff = usableGauge(primary) ? primary : usableGauge(secondary) ? secondary : null;
+    const ra = rel && eff ? releaseAffectingFrom(rel, eff.station) : null;
     const r = assessTown({
-      drainage: p.drainage, primary, secondary, forecast: null, rain: null, release: null, warning: null, now,
-      streetRiver: p.rainZone ? streetRiverIn(byName, now) : undefined,
+      drainage: p.drainage, primary, secondary, forecast: null, rain: null,
+      release: ra?.active && ra.reservoir ? { confirmed: ra.confirmed, reservoir: ra.reservoir, cusecs: ra.cusecs, etaHours: ra.etaHours, source: ra.source, gatesOpen: ra.gatesOpen ?? null, direct: ra.direct } : null,
+      warning: null, now,
+      streetRiver: p.rainZone === "colombo-east" ? streetRiverIn(byName, now) : undefined,
     });
     const g = r.gauge ?? primary;
     out.set(p.slug, { tone: r.tone, station: g?.station ?? null, basin: g?.basin ?? null });

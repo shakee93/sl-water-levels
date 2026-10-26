@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { NationalStation } from "@/lib/arcgis";
 import type { StationVerdict } from "@/lib/stationVerdict";
+import { releaseAlertLine } from "@/lib/releaseAlert";
 import {
   buildAttention,
   RISING_M_PER_H,
@@ -299,11 +300,18 @@ export function NeedsAttention({
   const countText = [aboveN > 0 ? t("needs.count", { n: aboveN, m: reporting }) : null, nearN > 0 ? t("needs.countNear", { n: nearN }) : null].filter(Boolean).join(" · ");
   const rateByHref = new Map(snapshot.map((s) => [s.href, s.rate3hM] as const));
 
-  const soon = <ForecastSoon lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />;
+  const soon = (
+    <>
+      <ReleaseAlerts lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />
+      <ForecastSoon lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />
+    </>
+  );
+  const releaseOn = snapshot.some((s) => verdicts[s.station]?.release);
 
   if (basins.length === 0) {
     return (
       <section className="mb-6">
+        {!releaseOn && (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/25 px-4 py-3">
           <ShieldCheck className="size-5 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
           <div className="text-sm text-emerald-900 dark:text-emerald-200">
@@ -313,6 +321,7 @@ export function NeedsAttention({
             </span>
           </div>
         </div>
+        )}
         {soon}
       </section>
     );
@@ -358,6 +367,36 @@ const SOON = {
   si: { title: "අනතුරු ඇඟවීමේ මට්ටමට ළඟා වීමට පුරෝකථනය", alert: "අනතුරු ඇඟවීමේ මට්ටම", minor: "සුළු ගංවතුර මට්ටම", major: "ප්‍රධාන ගංවතුර මට්ටම", line: "පැය {h} කින් පමණ {mark} කරා ළඟා විය හැක", day: "පැය 24 ක් තුළ {mark} කරා ළඟා විය හැක" },
   ta: { title: "எச்சரிக்கை மட்டத்தை அடையும் என முன்னறிவிப்பு", alert: "எச்சரிக்கை மட்டம்", minor: "சிறு வெள்ள மட்டம்", major: "பெரு வெள்ள மட்டம்", line: "சுமார் {h} மணி நேரத்தில் {mark} அடையலாம்", day: "24 மணி நேரத்திற்குள் {mark} அடையலாம்" },
 } as const;
+
+// Gauges the Irrigation Department's own figures put at Alert because a big reservoir release (5,000+ cusecs) is coming down to them
+// (lib/releaseAlert.ts, lib/stationVerdict.ts). si/ta are drafts.
+const REL_TITLE = { en: "Alert: reservoir release upstream", si: "අනතුරු ඇඟවීම: ඉහළ ජලාශයකින් ජලය මුදා හැරීම", ta: "எச்சரிக்கை: மேலே உள்ள நீர்த்தேக்கத்திலிருந்து நீர் திறப்பு" } as const;
+
+function ReleaseAlerts({ lang, p, snapshot, verdicts }: { lang: Locale; p: (path: string) => string; snapshot: NationalStation[]; verdicts: Record<string, StationVerdict> }) {
+  const rows = snapshot.filter((s) => verdicts[s.station]?.release).map((s) => ({ s, a: verdicts[s.station].release! }));
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-3 rounded-xl border border-orange-300 dark:border-orange-900/70 bg-orange-50/70 dark:bg-orange-950/25 px-4 py-3" lang={lang}>
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-orange-900 dark:text-orange-200">
+        <TriangleAlert className="size-4" aria-hidden /> {REL_TITLE[lang]}
+      </h3>
+      <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+        {rows.map(({ s, a }) => (
+          <li key={s.href}>
+            <Link href={p(s.href)} className="group flex items-baseline justify-between gap-3 text-sm hover:underline underline-offset-2">
+              <span className="min-w-0">
+                <span className="font-medium text-slate-900 dark:text-slate-100">{stationDisplayName(s.station)}</span>
+                <span className="text-slate-500 dark:text-slate-400"> · {riverName(s.basin, lang)}</span>
+                <span className="block text-xs text-orange-900/90 dark:text-orange-200/90">{releaseAlertLine(a, lang)}</span>
+              </span>
+              {s.latest?.water_level != null && <span className="shrink-0 tabular-nums text-xs text-slate-600 dark:text-slate-300">{formatLevel(s.latest.water_level, s.unit)}</span>}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function ForecastSoon({ lang, p, snapshot, verdicts }: { lang: Locale; p: (path: string) => string; snapshot: NationalStation[]; verdicts: Record<string, StationVerdict> }) {
   const c = SOON[lang];
