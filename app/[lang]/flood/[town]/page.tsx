@@ -118,8 +118,9 @@ export default async function TownPage({ params }: Params) {
     }),
   ];
 
-  // the bar speaks about the official gauge step (Normal / Alert / Minor / Major), never the town estimate
-  const gTier = g ? statusFor(g.level, g.thresholds, g.ts).tier : null;
+  // the bar shows the same step as the town's own verdict card (official steps; "watch" reads Normal), so the two never disagree
+  // (27 Oct: Wellampitiya's card said Alert from the Irrigation Department's Kelani warning while the bar said Normal)
+  const gTier = risk.tone === "stale" ? null : risk.tone;
   const streetLikely = !!place.rainZone && data.input.streetRain != null && risk.lowSpot?.level === "likely";
   const lowSpotCard = <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} kind={streetCardKind(place)} />;
   return (
