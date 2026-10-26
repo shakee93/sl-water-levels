@@ -9,6 +9,7 @@ import { buildIndex, search, type Hit } from "@/lib/fuzzy";
 import { PLACES, RIVERS, townPath } from "@/lib/places";
 import { basinPath } from "@/lib/slug";
 import { formatLevel } from "@/lib/units";
+import { locate as findMe } from "@/lib/locate";
 import { trackEvent } from "@/lib/umami";
 import { distanceKm, formatKm, matchLocation } from "@/lib/nearby";
 import { ForgetLink } from "./NearYou";
@@ -176,29 +177,26 @@ function useSearch(stations: SearchStation[], onDone?: () => void) {
     }
     setLocError(null);
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude: la, longitude: lo } = pos.coords;
-        storeLocation(la, lo);
-        const near = stations
-          .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
-          .map((s) => ({ s, km: distanceKm({ lat: la, lon: lo }, { lat: s.latitude, lon: s.longitude }) }))
-          .sort((a, b) => a.km - b.km)[0];
-        setLocating(false);
-        if (!near) return;
-        trackEvent("find_nearest_success", { nearest: near.s.station, nearest_km: Number(near.km.toFixed(1)) });
-        onDone?.();
-        window.dispatchEvent(new Event("sl:nav-start"));
-        router.push(p(near.s.href));
-      },
-      (err) => {
-        setLocating(false);
-        trackEvent("find_nearest_error", { code: err.code });
-        if (err.code === err.PERMISSION_DENIED) markDenied();
-        setLocError(err.code === err.PERMISSION_DENIED ? t("search.errDenied") : t("search.errFail"));
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60_000 },
-    );
+    void findMe().then((r) => {
+      setLocating(false);
+      if (!r.ok) {
+        trackEvent("find_nearest_error", { code: r.code, retried: r.retried });
+        if (r.denied) markDenied();
+        setLocError(r.denied ? t("search.errDenied") : t("search.errFail"));
+        return;
+      }
+      const { lat: la, lon: lo } = r;
+      storeLocation(la, lo);
+      const near = stations
+        .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
+        .map((s) => ({ s, km: distanceKm({ lat: la, lon: lo }, { lat: s.latitude, lon: s.longitude }) }))
+        .sort((a, b) => a.km - b.km)[0];
+      if (!near) return;
+      trackEvent("find_nearest_success", { nearest: near.s.station, nearest_km: Number(near.km.toFixed(1)), retried: r.retried });
+      onDone?.();
+      window.dispatchEvent(new Event("sl:nav-start"));
+      router.push(p(near.s.href));
+    });
   }, [stations, router, onDone, t, p]);
 
   const reset = useCallback(() => {

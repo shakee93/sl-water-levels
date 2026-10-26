@@ -5,6 +5,7 @@ import { useState } from "react";
 import { MapPin, Loader2, AlertCircle, X } from "lucide-react";
 import type { Station } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
+import { locate as findMe } from "@/lib/locate";
 import { trackEvent } from "@/lib/umami";
 import { useI18n } from "./LocaleProvider";
 import { riverName } from "@/lib/i18n/format";
@@ -45,35 +46,29 @@ export function StationFinder({ stations }: { stations: StationWithCoords[] }) {
       return;
     }
     setState({ kind: "locating" });
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const user = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-        const ranked = stations
-          .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
-          .map((s) => ({
-            station: s,
-            km: distanceKm(user, { lat: s.latitude, lon: s.longitude }),
-          }))
-          .sort((a, b) => a.km - b.km)
-          .slice(0, 3);
-        trackEvent("find_nearest_success", {
-          nearest: ranked[0]?.station.station,
-          nearest_km: ranked[0] ? Number(ranked[0].km.toFixed(1)) : undefined,
-        });
-        setState({ kind: "results", nearest: ranked });
-      },
-      (err) => {
-        const reason =
-          err.code === err.PERMISSION_DENIED
-            ? t("finder.errDenied")
-            : err.code === err.POSITION_UNAVAILABLE
-              ? t("finder.errUnavailable")
-              : t("finder.errTimeout");
-        trackEvent("find_nearest_error", { code: err.code });
+    void findMe().then((r) => {
+      if (!r.ok) {
+        const reason = r.denied ? t("finder.errDenied") : r.code === 2 ? t("finder.errUnavailable") : t("finder.errTimeout");
+        trackEvent("find_nearest_error", { code: r.code, retried: r.retried });
         setState({ kind: "error", message: reason });
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60_000 },
-    );
+        return;
+      }
+      const user = { lat: r.lat, lon: r.lon };
+      const ranked = stations
+        .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
+        .map((s) => ({
+          station: s,
+          km: distanceKm(user, { lat: s.latitude, lon: s.longitude }),
+        }))
+        .sort((a, b) => a.km - b.km)
+        .slice(0, 3);
+      trackEvent("find_nearest_success", {
+        nearest: ranked[0]?.station.station,
+        nearest_km: ranked[0] ? Number(ranked[0].km.toFixed(1)) : undefined,
+        retried: r.retried,
+      });
+      setState({ kind: "results", nearest: ranked });
+    });
   }
 
   function reset() {
