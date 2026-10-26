@@ -337,7 +337,7 @@ export const en = {
   "dams.hydroStation": "Hydropower station",
   "dams.diversion": "Diversion",
   "dams.irrigation": "Irrigation reservoir",
-  "dams.mwNow": "⚡ {mw} MW now",
+  "dams.mwNow": "⚡ {mw} MW (PUCSL dispatch, {time})",
   "dams.mwNa": "live MW: n/a",
   "dams.peak": "(peak 6h: {mw} MW)",
   "helpcard.watch": "Good time to get ready",

@@ -331,7 +331,7 @@ export const si: Dict = {
   "dams.hydroStation": "ජල විදුලි බලාගාරය",
   "dams.diversion": "ජල හරවනය",
   "dams.irrigation": "වාරි ජලාශය",
-  "dams.mwNow": "⚡ දැන් මෙගාවොට් {mw}",
+  "dams.mwNow": "⚡ මෙගාවොට් {mw} (PUCSL, {time})",
   "dams.mwNa": "සජීවී MW: නැත",
   "dams.peak": "(පැය 6 උපරිමය: MW {mw})",
   "helpcard.watch": "සූදානම් වීමට හොඳ වේලාවයි",

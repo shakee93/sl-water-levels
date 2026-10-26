@@ -1,9 +1,10 @@
-import { Droplet, Zap, ArrowRightLeft, Sprout } from "lucide-react";
+import Link from "next/link";
+import { Droplet, Zap, ArrowRightLeft, Sprout, ArrowRight } from "lucide-react";
 import { DAMS_BY_BASIN, type Dam } from "@/lib/dams";
 import { soft } from "@/lib/soft";
 import { fetchHydroGeneration, currentByPlant, peakInLast } from "@/lib/ceb";
 import { getI18n } from "@/lib/i18n/server";
-import { riverName } from "@/lib/i18n/format";
+import { riverName, clock } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 
 const typeStyle: Record<Dam["type"], { label: "dams.hydroReservoir" | "dams.hydroStation" | "dams.diversion" | "dams.irrigation"; cls: string; Icon: typeof Droplet }> = {
@@ -30,7 +31,7 @@ const typeStyle: Record<Dam["type"], { label: "dams.hydroReservoir" | "dams.hydr
 };
 
 export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }) {
-  const { t } = getI18n(lang);
+  const { t, p } = getI18n(lang);
   const dams = DAMS_BY_BASIN[basin];
   if (!dams || dams.length === 0) return null;
 
@@ -70,7 +71,15 @@ export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    <span className="text-sm font-medium truncate">{d.name}</span>
+                    {d.type === "hydropower-reservoir" ? (
+                      // Every hydropower reservoir here has its own page (storage, level, weekly plan).
+                      <Link href={p(`/reservoirs/${d.name.toLowerCase().replace(/\s+/g, "-")}`)} className="text-sm font-medium truncate hover:text-sky-700 dark:hover:text-sky-300 inline-flex items-center gap-1">
+                        {d.name}
+                        <ArrowRight className="size-3 text-slate-400" aria-hidden />
+                      </Link>
+                    ) : (
+                      <span className="text-sm font-medium truncate">{d.name}</span>
+                    )}
                     <span className="text-xs text-slate-500 dark:text-slate-400">
                       {t(style.label)}
                     </span>
@@ -85,7 +94,7 @@ export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }
                       <span>
                         {liveRec && liveRec.powerMW > 0 ? (
                           <span className="text-amber-700 dark:text-amber-300 tabular-nums">
-                            {t("dams.mwNow", { mw: liveRec.powerMW })}
+                            {t("dams.mwNow", { mw: Math.round(liveRec.powerMW), time: clock(liveRec.ts, t) })}
                           </span>
                         ) : (
                           <span className="text-slate-400">{t("dams.mwNa")}</span>

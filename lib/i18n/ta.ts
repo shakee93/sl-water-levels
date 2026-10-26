@@ -331,7 +331,7 @@ export const ta: Dict = {
   "dams.hydroStation": "நீர்மின் நிலையம்",
   "dams.diversion": "நீர்த் திருப்பு",
   "dams.irrigation": "பாசன நீர்த்தேக்கம்",
-  "dams.mwNow": "⚡ இப்போது {mw} MW",
+  "dams.mwNow": "⚡ {mw} MW (PUCSL, {time})",
   "dams.mwNa": "நேரடி MW: இல்லை",
   "dams.peak": "(6 மணி உச்சம்: {mw} MW)",
   "helpcard.watch": "தயாராக இருக்க நல்ல நேரம்",
