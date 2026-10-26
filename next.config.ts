@@ -29,6 +29,8 @@ const nextConfig: NextConfig = {
       // /rain-map was shared as the rain map's address before the page settled on /rain.
       { source: "/rain-map", destination: "/rain", permanent: true },
       { source: "/:lang(si|ta)/rain-map", destination: "/:lang/rain", permanent: true },
+      // www.waterlevels.lk -> waterlevels.lk: one address for search engines and sharing
+      { source: "/:path*", has: [{ type: "host", value: "www.waterlevels.lk" }], destination: "https://waterlevels.lk/:path*", permanent: true },
       // The move to waterlevels.lk (MIGRATION.md): every page on the old address goes to the same page there, permanently,
       // so search engines carry each page's ranking across. Left working on the old address: /api (apps, scripts, POSTs from
       // pages already open), /mcp, Next's own files, the service worker and the manifest (installed apps and push alerts),
