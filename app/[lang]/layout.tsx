@@ -12,6 +12,7 @@ import { LangSideEffects } from "../LanguageBar";
 import { ThemeSync } from "../ThemeSync";
 import { ReturnShell } from "../ReturnShell";
 import { InstallProvider } from "../InstallProvider";
+import { SavedDataMarker } from "../SavedDataMarker";
 import { AlertSettingsProvider } from "../AlertSettings";
 import { NavProgress } from "../NavProgress";
 import { BottomTabs } from "../BottomTabs";
@@ -144,6 +145,7 @@ export default async function RootLayout({
       >
         <LocaleProvider lang={lang} dict={DICTS[lang]}>
           <InstallProvider>
+            <SavedDataMarker />
           <AlertSettingsProvider>
           <Suspense fallback={null}>
             <NavProgress />
