@@ -818,5 +818,48 @@ for new developers except approved public-utility apps. **Verify the current pri
 - Label the account as automated and tie it to a human managing account (step 2); the bio says so.
 - No duplicate or near-duplicate spam: every post is deduplicated (D1 `x_posts.dedupe_key`, claimed before sending), grouped (several gauges of one river = one post), flap-guarded (3 h) and limited per day; X also rejects exact duplicate text (403), which is skipped and reported.
 - No misleading claims: only data from the Department of Irrigation, Mahaweli Authority, DMC and the satellite rain rule, every number checked against the data, forecasts called forecasts, "Not an official warning. Emergency: 117." on every post (relayed bulletins say we are not the source).
-- No automated replies, mentions, follows or likes; the account posts only its own updates. No trending-hashtag piggybacking (at most `#SriLanka`, `#floods` and the river name).
+- Replies are the one exception to "own updates only", and only to people who mention us or reply to our posts (see "X replies" below); never unprompted mentions, follows or likes. Reposts only of the listed official accounts (see "X reposts"). No trending-hashtag piggybacking (at most `#SriLanka`, `#floods` and the river name).
 - Respect rate limits: one request per post, 429 and 403 pause the pipeline. Check X's current Automation rules and Developer Agreement when applying.
+
+## X replies
+
+The account answers people who write to it: @-mentions and replies to our posts, and (behind a flag) direct messages. Everything is built and runs in **dry** mode: each draft goes to the owner's Slack marked `DRY RUN REPLY`, nothing is posted, until the owner sets `X_REPLIES_MODE=live`.
+
+| Piece | Where |
+|---|---|
+| Intent, place resolution, facts, templates, checks, limits | `lib/xReply.ts` (pure) |
+| Reading mentions / DMs, sending a DM, search, repost (OAuth 1.0a) | `lib/xRead.ts` |
+| One run: poll, decide, send or draft, mirror to Slack, remember | `scripts/x-replies.mjs` |
+| Schedule | `.github/workflows/x-replies.yml`, started every 5 minutes by `workers/scheduler` (a 20-minute GitHub cron is the backup; **the Worker must be redeployed** once: `cd workers/scheduler && npx wrangler deploy`) |
+| Memory | D1 `x_replies` (one row per message: intent, status, draft or sent text, cost) and `x_state` keys `replies_since` (the `since_id`), `replies_me`, `replies_reads`; `d1/0007_x_replies.sql`, created idempotently by each run |
+| Tests | `node --experimental-strip-types --no-warnings scripts/x-replies.test.mts` |
+
+**Modes.** `X_REPLIES_MODE=dry` (default) | `live` | `off`. `live` also needs `X_POSTING=live` and the four keys, otherwise it stays dry and says why; `X_POSTING=off` (the kill switch) or `X_REPLIES_MODE=off` stops the job before it reads anything. Reading costs money even in dry mode (the X API bills per post read), so dry mode with real keys reads real mentions.
+
+**What it does with a message** (the classifier is plain rules, not a model, because it decides whether we speak at all; English, Singlish, Sinhala, Tamil):
+
+| Intent | Reply |
+|---|---|
+| question about a town, river, gauge or reservoir | looks the place up (same fuzzy search as the site, Sinhala and Tamil names too), reads live `/api/levels` + `/api/reservoirs`, and gpt-6-luna writes 1 to 3 short sentences from compact facts; plain template if the model's text fails the checks. Replies are in English (the si/ta wording is still a draft); it names the gauge and the reading time; it says it is the river gauge and never says whether a street or house is flooded or safe; a doubtful match starts "Assuming you mean ..."; no place found or data unreadable gets an honest fixed reply |
+| report ("water in my street") | fixed thank-you that does **not** confirm anything, asks them to tap "Did the streets near you get water?" on the town page (search the name on our site), plus a Slack ping |
+| correction ("your reading is wrong") | fixed thank-you, passed to the owner in Slack |
+| emergency ("help", "trapped", "rescue", Sinhala / Tamil too) | fixed reply with 117, police 119, ambulance 1990, fire and rescue 110, and a **HIGH PRIORITY** Slack ping with `@channel` (also when the reply is held back by a rule, and when sending fails) |
+| thanks, abuse, spam, other chatter, weather and so on | no reply (still shown in the Slack feed) |
+
+**Checks on model text** (the posts' own `validateLlmText` plus reply rules): every number is in the facts (the person's own words are never part of the facts and may not add numbers), 280 characters, no links, no @mentions (the reply is attached to their post), no certain-sounding forecasts ("could reach", never "will"), no invented minor / major / rising / falling, no talk of streets, canals or low ground, it must name the place or gauge, and it ends with "not an official warning" and 117. One retry with the problems fed back, then the template. Links are never added to replies (the site address is in the bio): the wording is "search Wellampitiya on our site".
+
+**Rules** (`mayReply`): only to messages addressed to us (a reply to our post, or our handle opens the text); never to ourselves, accounts that look like bots (name, handle or bio), protected accounts, `X_REPLY_BLOCK` handles; not older than `X_REPLY_MAX_AGE_MIN` (360); never twice to the same person within 10 minutes; at most 2 replies per conversation per day (1 for DMs); at most `X_REPLY_DAILY_CAP` (30) a day; emergencies skip the daily cap, the conversation limit and the budget (hard ceiling 10 over the cap) but never the bot, block, age or 10-minute rules. Identical text is rejected by X, so fixed replies have two wordings and a duplicate rejection tries the other once. A 429 or 401 pauses posting and replies together (shared `meta.pauseUntil`).
+
+**Cost.** Each reply is estimated at `X_COST_POST` (0.015); each post read at `X_COST_READ` (0.005). `X_REPLY_READ_CAP` (150 posts a day) stops reading for the day (one Slack note). Replies and reads are summed with the posts against `X_MONTHLY_BUDGET_USD`: at 80% only emergencies are answered, at 100% nothing is read. (`x-post.mjs` still adds only its own posts to its own guard.) Quote posts that do not @-mention us are not seen; plain quotes would need one paid call per post.
+
+**Slack feed.** Every message read becomes one Slack block: who, what they wrote, a link, the class, and the draft / sent reply or why there is none. It goes to `SLACK_X_WEBHOOK_URL` if that secret is set (a dedicated channel), else to `SLACK_WEBHOOK_URL`: `gh secret set SLACK_X_WEBHOOK_URL`. Reposts appear in the same feed.
+
+**Direct messages (`X_DM=off` by default).** The X app is "Read and write" and has no DM permission, so nothing DM-related is called until the owner: (1) in the developer console, User authentication settings, sets permissions to **Read and write and Direct message**; (2) **regenerates the Access Token and Secret** (the old token keeps the old permissions) with `node scripts/x-authorize.mjs`; (3) `gh variable set X_DM --body on`. Then each run reads recent DM events; the first look only marks existing messages as seen; after that each new message gets one answer per conversation per day (an answer to a question, the report / correction / emergency wording, or a short welcome for anything else). If X refuses (403) the job tells Slack once a day and keeps answering mentions.
+
+**Go live (owner).** Watch the Slack feed in dry mode for a few days; then `gh variable set X_REPLIES_MODE --body live`. Back to review mode: `gh variable set X_REPLIES_MODE --body dry`. Off: `--body off`.
+
+## X reposts
+
+`scripts/x-reposts.mjs` (`.github/workflows/x-reposts.yml`, every 30 minutes from the scheduler Worker) passes on official flood, rain, cyclone and landslide posts. Candidates come from recent search over **listed official accounts only** (`X_REPOST_ACCOUNTS`, default `dmc_lk,SLMetDept`; add news accounts only on purpose): `(from:a OR from:b) (flood OR rain OR warning OR cyclone OR landslide ...) -is:retweet -is:reply`, so X bills only matching posts; `X_REPOST_READ_CAP` (40 posts a day) caps it. Each new candidate (at most 6 hours old, not a reply) is judged by the OpenAI **Decisions API** (`decide()` in `lib/openai.ts`, gpt-6-luna): five yes/no probabilities, and it reposts only on a confident yes on all of them (worth reposting 85%, Sri Lanka 85%, a warning or update 80%, duplicate of what we shared recently at most 30%, promotional or unrelated at most 20%). The candidate's text is data and the model can only answer probabilities. At most `X_REPOST_DAILY_MAX` (3) a day, never the same post twice (D1 `x_reposts`), budget-guarded like replies. A failed model call means no repost.
+
+`X_REPOST_MODE=dry` (default) shows `DRY RUN REPOST` in Slack with the decision and the reason (including declined ones); `live` needs `X_POSTING=live`; `off` stops it. The handles `dmc_lk` and `SLMetDept` are the defaults from the owner and are not verified: check them on X and set `X_REPOST_ACCOUNTS`. Reposting needs the existing "Read and write" permission.

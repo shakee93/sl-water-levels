@@ -5,9 +5,9 @@
 const BY_CRON = {
   // every 5 min: the 15-min jobs on :00/:15/:30/:45 (filtered in wanted()), plus x-post as soon as a
   // new gauge reading has arrived (see freshReading), so river alerts reach X within ~5 min.
-  "*/5 * * * *": ["releases-snapshot.yml", "curw-snapshot.yml"], // curw: private CUrW canal-level archive, all day (no night filter)
+  "*/5 * * * *": ["releases-snapshot.yml", "curw-snapshot.yml", "x-replies.yml"], // x-replies: answers to people who write to the X account; curw: private CUrW canal-level archive, all day (no night filter)
   "25 * * * *": ["store-forecasts.yml"],
-  "7,37 * * * *": ["health-check.yml", "gsmap-snapshot.yml"], // JAXA publishes at :01/:31
+  "7,37 * * * *": ["health-check.yml", "gsmap-snapshot.yml", "x-reposts.yml"], // JAXA publishes at :01/:31
   "30 7,19 * * *": ["snapshot.yml"],
   "0 1 1 * *": ["export-predictions.yml"],
 };

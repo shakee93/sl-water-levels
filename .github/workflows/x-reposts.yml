@@ -1,0 +1,66 @@
+# Reposts of official flood / rain / cyclone / landslide posts (scripts/x-reposts.mjs), decided by the OpenAI Decisions API
+# (gpt-6-luna). See DOCS.md "X reposts". DRY RUN by default (Slack "DRY RUN REPOST"); live only with X_REPOST_MODE=live AND
+# X_POSTING=live. Started every 30 minutes by the Cloudflare scheduler Worker; the cron below is only a backup.
+# Optional variables: X_REPOST_ACCOUNTS (default dmc_lk,SLMetDept), X_REPOST_DAILY_MAX (3), X_REPOST_READ_CAP (40), X_REPOST_MAX_AGE_MIN (360).
+
+name: X reposts
+
+on:
+  schedule:
+    - cron: "12 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x-reposts
+  cancel-in-progress: false
+
+jobs:
+  reposts:
+    if: ${{ vars.X_REPOST_MODE != 'off' && vars.X_POSTING != 'off' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Repost
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_X_WEBHOOK_URL: ${{ secrets.SLACK_X_WEBHOOK_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          X_POSTING: ${{ vars.X_POSTING }}
+          X_HANDLE: ${{ vars.X_HANDLE }}
+          X_MONTHLY_BUDGET_USD: ${{ vars.X_MONTHLY_BUDGET_USD }}
+          X_COST_POST: ${{ vars.X_COST_POST }}
+          X_COST_READ: ${{ vars.X_COST_READ }}
+          X_AI_POLISH: ${{ vars.X_AI_POLISH }}
+          X_REPOST_MODE: ${{ vars.X_REPOST_MODE }}
+          X_REPOST_ACCOUNTS: ${{ vars.X_REPOST_ACCOUNTS }}
+          X_REPOST_DAILY_MAX: ${{ vars.X_REPOST_DAILY_MAX }}
+          X_REPOST_READ_CAP: ${{ vars.X_REPOST_READ_CAP }}
+          X_REPOST_MAX_AGE_MIN: ${{ vars.X_REPOST_MAX_AGE_MIN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is missing: reposts keep their memory in D1, so nothing is read."
+            exit 0
+          fi
+          node --experimental-strip-types --no-warnings scripts/x-reposts.mjs
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true
