@@ -33,9 +33,23 @@ async function cf(path: string, init?: RequestInit): Promise<{ result?: unknown;
   return j;
 }
 
+// Cloudflare's API sometimes stalls for a few seconds (26 Oct 2026: x-post and x-replies both hit the 8 s timeout in the same
+// second and emailed a failure). Reads are retried once after a timeout or network error; writes are not, because a write that
+// timed out may still have landed and must not run twice.
+const transient = (e: unknown) => e instanceof Error && !(e instanceof D1NotConfigured) && !e.message.startsWith("D1 HTTP");
+async function once<T>(f: () => Promise<T>, retry: boolean): Promise<T> {
+  try {
+    return await f();
+  } catch (e) {
+    if (!retry || !transient(e)) throw e;
+    await new Promise((r) => setTimeout(r, 1500));
+    return f();
+  }
+}
+
 async function databaseId(): Promise<string> {
   if (dbId) return dbId;
-  const j = await cf(`/accounts/${ACCOUNT_ID}/d1/database?name=${DB_NAME}`);
+  const j = await once(() => cf(`/accounts/${ACCOUNT_ID}/d1/database?name=${DB_NAME}`), true);
   const hit = (j.result as { uuid: string; name: string }[] | undefined)?.find((d) => d.name === DB_NAME);
   if (!hit) throw new Error(`D1 database ${DB_NAME} not found`);
   dbId = hit.uuid;
@@ -47,7 +61,8 @@ export type D1Row = Record<string, string | number | null>;
 /** Runs one statement with bound parameters and returns its rows. */
 export async function d1Query(sql: string, params: (string | number | null)[] = []): Promise<D1Row[]> {
   const id = await databaseId();
-  const j = await cf(`/accounts/${ACCOUNT_ID}/d1/database/${id}/query`, { method: "POST", body: JSON.stringify({ sql, params }) });
+  const read = /^\s*(select|with|pragma)\b/i.test(sql);
+  const j = await once(() => cf(`/accounts/${ACCOUNT_ID}/d1/database/${id}/query`, { method: "POST", body: JSON.stringify({ sql, params }) }), read);
   const first = (j.result as { results?: D1Row[] }[] | undefined)?.[0];
   return first?.results ?? [];
 }
