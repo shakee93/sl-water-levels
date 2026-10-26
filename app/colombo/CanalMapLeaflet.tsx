@@ -36,7 +36,7 @@ const LAYERS: Layer[] = ["canals", "basins", "gauges", "works", "floods"];
 const STATE_HEX: Record<CanalState, string> = { normal: "#059669", rising: "#d97706", higher: "#ea580c", lower: "#475569", learning: "#94a3b8", offline: "#94a3b8" };
 const BASIN_HEX: Record<string, string> = { higher: "#f59e0b", normal: "#10b981", lower: "#64748b", learning: "#94a3b8", offline: "#94a3b8" };
 const BASIN_ORDER: BasinId[] = ["kolonnawa", "north", "parliament", "wellawatta"];
-const WEIGHT: Record<Line["k"], number> = { r: 3.4, c: 2.4, d: 1.7, s: 1.3, t: 1 };
+const WEIGHT: Record<Line["k"], number> = { r: 3, c: 2, d: 1.4, s: 1, t: 1 };
 // OpenStreetMap's own tiles (CARTO's now need an API key). Dark mode darkens them with a CSS filter.
 const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
@@ -196,7 +196,7 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
   const flowColor = dark ? "#e0f2fe" : "#075985";
 
   return (
-    <section className="cc-map" aria-label={cc("map.title")} lang={lang}>
+    <div className="cc-map" lang={lang}>
       <style>{css}</style>
       <p className="sr-only">{cc("map.sr")}</p>
       <div className="mb-2 flex flex-wrap items-center gap-1.5" role="group" aria-label={cc("map.layers")}>
@@ -273,7 +273,7 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
                         pane="cc-canals"
                         renderer={rend.canvas}
                         bubblingMouseEvents={false}
-                        pathOptions={{ color: hex, weight: isSel ? 3 : 1.5, dashArray: isSel ? undefined : "6 5", fillColor: hex, fillOpacity: selBasin && selBasin !== b.id ? 0.03 : isSel ? 0.3 : 0.16, opacity: selBasin && selBasin !== b.id ? 0.4 : 0.9 }}
+                        pathOptions={{ color: hex, weight: isSel ? 3 : 1.5, dashArray: isSel ? undefined : "6 5", fillColor: hex, fillOpacity: selBasin && selBasin !== b.id ? 0.03 : isSel ? 0.3 : 0.24, opacity: selBasin && selBasin !== b.id ? 0.4 : 0.9 }}
                         eventHandlers={{ click: () => pick({ t: "basin", id: b.id }), add: (e) => (e.target as L.Polygon).bringToBack() }}
                       >
                         <Tooltip permanent direction="center" opacity={0.85} className="cc-wlabel">
@@ -376,7 +376,7 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
         <Panel data={data} cc={cc} sel={sel} setSel={pick} gauge={gauge} basin={basin} reset={reset} floods={on.floods} t={t} p={p} lang={lang} selId={selId} />
       </div>
       <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{cc("map.credit")} {cc("map.note")}</p>
-    </section>
+    </div>
   );
 }
 
@@ -397,6 +397,8 @@ function Legend({ cc, floods }: { cc: CC; floods: boolean }) {
         <li className="flex items-center gap-1.5"><span className="w-4 shrink-0 border-t-[3px] border-dotted border-sky-800 dark:border-sky-100" aria-hidden /> {cc("map.k.flow")}</li>
         <li className="flex items-center gap-1.5"><span className="h-3 w-4 shrink-0 rounded border border-dashed border-emerald-600 bg-emerald-500/20" aria-hidden /> {cc("map.k.basin")}</li>
         <li className="flex items-center gap-1.5"><span className="grid size-4 shrink-0 place-items-center rounded-full border-2 border-sky-700 bg-white text-[8px] dark:border-sky-300 dark:bg-slate-900" aria-hidden>⚡</span> {cc("map.k.work")}</li>
+        <li className="flex items-center gap-1.5"><Dot hex="#0ea5e9" /> {cc("map.sea.title")}</li>
+        <li className="flex items-center gap-1.5"><Dot hex="#1e3a8a" /> {cc("map.nag.title")}</li>
         {floods && <li className="flex items-center gap-1.5"><span className="size-3 shrink-0 rounded-full border border-violet-600 bg-violet-500/20" aria-hidden /> {cc("map.flood.title")}</li>}
       </ul>
     </div>
