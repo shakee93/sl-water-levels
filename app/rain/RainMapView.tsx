@@ -74,14 +74,14 @@ function sampler(vals: (number | null)[], g: GridSpec): Sampler {
 const CW = 300;
 const CH = Math.round((CW * H) / W);
 let landMask: HTMLCanvasElement | null = null;
-/** Opaque over land, faint over the sea: rain at sea stays visible (storms coming in) but the island reads first. */
+/** Opaque over land, very faint over the sea: storms coming in stay just visible, but the island's shape always reads first. */
 function getLandMask() {
   if (landMask) return landMask;
   const m = document.createElement("canvas");
   m.width = CW;
   m.height = CH;
   const c = m.getContext("2d")!;
-  c.fillStyle = "rgba(0,0,0,0.3)";
+  c.fillStyle = "rgba(0,0,0,0.15)";
   c.fillRect(0, 0, CW, CH);
   c.scale(CW / W, CH / H);
   c.fillStyle = "#000";
@@ -255,14 +255,25 @@ export function RainMapView({ rivers }: RainMapStrings) {
         const b = c.mm == null ? null : rainBand(labelWin.win, c.mm);
         return b === "moderate" || b === "heavy" || b === "veryHeavy";
       })
-      .sort((a, b) => Number(basinIdx.get(b.g.basin) === sel) - Number(basinIdx.get(a.g.basin) === sel) || b.mm - a.mm);
+      // the chosen river first, then the worse level, then more rain
+      .sort((a, b) => Number(basinIdx.get(b.g.basin) === sel) - Number(basinIdx.get(a.g.basin) === sel) || tierRank(a.g.tier) - tierRank(b.g.tier) || b.mm - a.mm);
+    // keep a clear gap around every label so neighbours never touch
+    const gap = 4 * u;
+    const pad = (r: { x: number; y: number; w: number; h: number }) => ({ x: r.x - gap, y: r.y - gap, w: r.w + 2 * gap, h: r.h + 2 * gap });
     for (const { g, mm } of cands) {
       const txt = `${Math.round(mm)}`;
       const w = (txt.length * 6.6 + 8) * u;
       const x0 = px(g.lon), y0 = py(g.lat) - h / 2;
-      for (const x of [x0 + dotR + 2 * u, x0 - dotR - 2 * u - w]) {
-        const r = { x, y: y0, w, h };
-        if (placed.some((p) => hit(p, r)) || dots.some((d) => d.id !== g.station && hit(d, r))) continue;
+      // right, left, above, below the dot
+      const spots = [
+        { x: x0 + dotR + 2 * u, y: y0 },
+        { x: x0 - dotR - 2 * u - w, y: y0 },
+        { x: x0 - w / 2, y: y0 - h / 2 - dotR - 2 * u - h / 2 },
+        { x: x0 - w / 2, y: y0 + h / 2 + dotR + 2 * u - h / 2 },
+      ];
+      for (const { x, y } of spots) {
+        const r = { x, y, w, h };
+        if (placed.some((p) => hit(pad(p), r)) || dots.some((d) => d.id !== g.station && hit(pad(d), r))) continue;
         placed.push(r);
         out.set(g.station, { ...r, txt, band: rainBand(labelWin.win, mm) as keyof typeof BAND_CSS });
         break;
@@ -355,7 +366,9 @@ export function RainMapView({ rivers }: RainMapStrings) {
                 </pattern>
               </defs>
               {isFc && <rect width={W} height={H} fill="url(#rm-hatch)" clipPath="url(#rm-land)" />}
-              <path d={COAST_D} fill="none" strokeWidth={1.1} strokeLinejoin="round" className="stroke-[#7d9db8] dark:stroke-[#5b7da0]" />
+              {/* coastline on top of the rain: a halo plus a 1.5 px line, the same on every screen */}
+              <path d={COAST_D} fill="none" strokeWidth={3.5 / scale} strokeLinejoin="round" className="stroke-white/70 dark:stroke-slate-950/70" />
+              <path d={COAST_D} fill="none" strokeWidth={1.5 / scale} strokeLinejoin="round" className="stroke-slate-600 dark:stroke-slate-200" />
               <path d={RIVER_TRIB_D} fill="none" strokeWidth={0.7} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-400/70 dark:stroke-sky-500/60" />
               <path d={RIVER_MAIN_D} fill="none" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" className="stroke-sky-500 dark:stroke-sky-400" />
               {outline && (
