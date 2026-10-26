@@ -247,12 +247,22 @@ function toThresholds(a: RawGauge): Thresholds {
 
 /** Per-gauge history for the long chart. gauges_2_view only retains ~7 days. */
 export async function fetchStationData(stationName: string, days = 4): Promise<StationData> {
-  const features = await arcgis("gauges_2_view/FeatureServer/0/query", {
-    where: `gauge='${stationName.replace(/'/g, "''")}'`,
-    outFields: GAUGE_FIELDS,
-    orderByFields: "CreationDate DESC, objectid DESC",
-    returnGeometry: "false",
-  });
+  let features: ArcgisPage["features"];
+  try {
+    features = await arcgis("gauges_2_view/FeatureServer/0/query", {
+      where: `gauge='${stationName.replace(/'/g, "''")}'`,
+      outFields: GAUGE_FIELDS,
+      orderByFields: "CreationDate DESC, objectid DESC",
+      returnGeometry: "false",
+    });
+  } catch (e) {
+    // ArcGIS refused (quota) and this gauge's history has no saved copy yet: fall back to the all-gauges answer (last 26 h),
+    // which every page shares and which has its own saved copy, so the page still shows the reading and the last day
+    // instead of "Could not load this station" (26 Oct 2026, Dunamale during a quota spell).
+    const s = (await getNational().catch(() => [] as NationalStation[])).find((x) => x.station === stationName);
+    if (!s) throw e;
+    return { station: stationName, basin: s.basin, thresholds: s.thresholds, readings: s.trend24h, latest: s.latest };
+  }
 
   const cutoff = Date.now() - days * 24 * HOUR_MS;
   const rows = features.map((f) => f.attributes as RawGauge).filter((a) => Number.isFinite(a.CreationDate));
