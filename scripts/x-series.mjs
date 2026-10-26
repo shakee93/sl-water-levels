@@ -28,9 +28,14 @@ async function main() {
   for (const s of X_SCHEMA) await d1Query(s);
 
   const done = new Set((await d1Query("SELECT dedupe_key FROM x_posts WHERE kind = 'series' AND mode = ? AND status IN ('posted','dry','claimed')", [mode])).map((r) => String(r.dedupe_key)));
-  const today = await d1Query("SELECT 1 FROM x_posts WHERE kind = 'series' AND mode = ? AND day = ? AND status IN ('posted','dry')", [mode, day]);
-  if (today.length) return console.log("series: already posted today");
-  const next = posts.find((p) => !done.has(`series:${p.id}`));
+  // SERIES_ID (manual run) posts that one now, out of order and even if one went out today; still never twice
+  const pick = (env.SERIES_ID ?? "").trim();
+  if (!pick) {
+    const today = await d1Query("SELECT 1 FROM x_posts WHERE kind = 'series' AND mode = ? AND day = ? AND status IN ('posted','dry')", [mode, day]);
+    if (today.length) return console.log("series: already posted today");
+  }
+  const next = pick ? posts.find((p) => p.id === pick && !done.has(`series:${p.id}`)) : posts.find((p) => !done.has(`series:${p.id}`));
+  if (pick && !next) return console.log(`series: "${pick}" is unknown or already posted`);
   if (!next) return console.log("series: all posts are out");
 
   const cost = num(env.X_COST_LINK_POST, 0.2);

@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: "0 14 * * *" # 19:30 Asia/Colombo
   workflow_dispatch:
+    inputs:
+      id:
+        description: "Post this series id now (out of order); empty = the next one, once a day"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -32,6 +37,7 @@ jobs:
           X_API_SECRET: ${{ secrets.X_API_SECRET }}
           X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          SERIES_ID: ${{ github.event.inputs.id }}
           X_POSTING: ${{ vars.X_POSTING }}
           X_MONTHLY_BUDGET_USD: ${{ vars.X_MONTHLY_BUDGET_USD }}
           X_COST_LINK_POST: ${{ vars.X_COST_LINK_POST }}
