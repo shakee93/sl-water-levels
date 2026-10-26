@@ -280,7 +280,7 @@ export function MyPlaces({ stations }: { stations: HomeStation[] }) {
             const rain = g.rain24 == null ? null : g.rain24 < 1 ? rt("mp.noRain") : rt("mp.rain", { mm: Math.round(g.rain24) });
             const detail = [verdictText(g), g.tone === "watch" ? t("tier.nearShort") : null, tone !== "stale" ? trend : null, rain].filter(Boolean).join(" · ");
             // heavy rain over a spot the visitor marked as low ground (lib/lowSpots.ts): a quiet second line, never the verdict
-            const lowNote = g.kind === "t" && g.street && hasLowSpot(lowRaw, k.slice(2)) ? tt(g.street === "likely" ? "low.likely" : "low.possible") : null;
+            const lowNote = g.kind === "t" && g.street && hasLowSpot(lowRaw, k.slice(2)) ? tt(g.street === "likely" ? "low.hLikely" : "low.hPossible") : null;
             return (
               <li key={k}>
                 <Link href={p(g.href)} aria-label={`${rt("mp.open", { name: g.name })}: ${detail}${lowNote ? `. ${lowNote}` : ""}`} className={`group flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition ${ring}`}>

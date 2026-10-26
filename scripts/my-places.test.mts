@@ -120,7 +120,7 @@ assert.equal(seasonKey(10), "season.inter2");
 assert.equal(seasonKey(7), "season.sw");
 assert.equal(seasonKey(1), "season.ne");
 assert.equal(seasonKey(3), "season.inter1");
-assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely", riverLevel: 0 }]).title, "Heavy rain near Wellampitiya: your low spot is likely to get water");
+assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely", riverLevel: 0 }]).title, "Street water likely: Wellampitiya");
 assert.ok(!/flood|Water on the streets/i.test(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely", riverLevel: 0 }]).body.replace("does not mean the area is flooding", "")), "no flood claim in the low-spot push");
 assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 3, street: "likely", riverLevel: 3 }]).title, "Wellampitiya: Minor flood", "when the river is at that level the river verdict wins");
 assert.equal(pushText("en", "rise", [{ name: "Wellampitiya", level: 2, street: "possible" }]).title, "Wellampitiya: Alert", "a river alert is 'Alert' even when the quiet street heads-up is also on");

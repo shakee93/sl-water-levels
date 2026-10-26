@@ -111,6 +111,7 @@ export default async function TownPage({ params }: Params) {
     }),
   ];
 
+  const lowSpotCard = <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} />;
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -139,7 +140,8 @@ export default async function TownPage({ params }: Params) {
           href={canonical}
         />
 
-        {/* heavy rain on a canal-flood town: ask about the street first, while people are looking (answers tune the street rule) */}
+        {/* heavy rain on a canal-flood town: the street-water card first (state + one switch), then ask about the street while people are looking (answers tune the street rule) */}
+        {place.rainZone && data.input.streetRain !== undefined && risk.lowSpot && lowSpotCard}
         {d1Configured() && risk.lowSpot && <FloodReport slug={place.slug} town={place.name} urgent />}
 
         {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} />}
@@ -157,7 +159,7 @@ export default async function TownPage({ params }: Params) {
 
         <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} />
         <p className="mt-2"><RainMapLink lang={lang} /></p>
-        {place.rainZone && data.input.streetRain !== undefined && <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} />}
+        {place.rainZone && data.input.streetRain !== undefined && !risk.lowSpot && lowSpotCard}
         <ColomboBlock lang={lang} slug={place.slug} now={serverNow} canals={canals} />
 
         {/* Hidden until the site can save answers (CLOUDFLARE_API_TOKEN set), so nobody sees an error. */}
