@@ -188,12 +188,15 @@ function textLive(n) {
   const counted = n.clipped ?? n.mm24h;
   const nums = `24 h ${mm(counted)} mm counted (each hour capped at ${STREET_HOURLY_CAP_MM} mm${n.mm24h != null && n.clipped != null && n.mm24h - n.clipped >= 1 ? `; ${mm(n.mm24h)} mm uncapped` : ""}), 6 h ${mm(n.mm6h)} mm, 1 h ${mm(n.mm1h)} mm`;
   if (n.kind === "clear")
-    return `Low-spot rain heads-up has cleared for ${area} (satellite rain: ${nums}; below ${STREET_POSSIBLE_MM_24H} mm${n.zone === "colombo-east" ? ", Kelani below minor level" : ""}). Did your street flood today? ${link}`;
+    return `Street-water heads-up has cleared for ${area} (satellite rain: ${nums}; below ${STREET_POSSIBLE_MM_24H} mm${n.zone === "colombo-east" ? ", Kelani below minor level" : ""}). Did your street flood today? ${link}`;
   if (n.to === "likely") {
     const why = n.river ? `the Kelani is at its minor flood level${n.riverStation ? ` (${n.riverStation}${n.riverFt != null ? ` ${n.riverFt.toFixed(1)} ft` : ""})` : ""}${(counted ?? 0) >= STREET_LIKELY_MM_24H ? ` and 24 h rain is at or above ${STREET_LIKELY_MM_24H} mm` : ""}` : `24 h rain at or above ${STREET_LIKELY_MM_24H} mm`;
-    return `Low-spot rain heads-up *(higher level)* for ${area} (${why}). Satellite rain: ${nums}. Only people who marked their own spot as low ground are told; the site shows no town warning. Did your street flood? ${link}`;
+    // what people see since 26 Oct 2026: the town page's amber "Street water likely" card (the verdict step stays the river's),
+    // and a push only to phones that switched on "Notify me when my street may get water" for that town
+    const tested = n.zone === "colombo-east" ? "" : " Not backtested here yet.";
+    return `Street water likely: ${area} (${why}). Satellite rain: ${nums}. Town pages show the amber street-water card; phones that turned on street-water alerts for these towns get a push. The river step is unchanged.${tested} Did your street flood? ${link}`;
   }
-  return `Low-spot rain heads-up *(early)* for ${area} (24 h rain at or above ${STREET_POSSIBLE_MM_24H} mm; often wrong${n.zone === "colombo-east" ? ", about 8 times a year with no recorded flood" : "; not backtested here yet"}; nobody is alerted, and the site shows no town warning). Satellite rain: ${nums}. Did your street flood? ${link}`;
+  return `Heavy rain, low spots may get water: ${area} (24 h rain at or above ${STREET_POSSIBLE_MM_24H} mm; often wrong${n.zone === "colombo-east" ? ", about 8 times a year with no recorded flood" : "; not backtested here yet"}). Town pages show the street-water card; no push. Satellite rain: ${nums}. Did your street flood? ${link}`;
 }
 async function slack(msg) {
   if (DRY) return console.log(`[dry-run] Slack: ${msg}`), true;
