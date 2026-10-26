@@ -13,7 +13,7 @@
     },
     {
       "id": "street-level",
-      "text": "Water in your street today? Mark your spot: on your town or gauge page, tap \"Set your street's flood level\" and enter the river reading when water reached you. From then on the chart shows your line and the site warns you at your level. It stays on your phone.",
+      "text": "Water in your street today? Mark your spot: on your town or gauge page, tap \"Set your street's flood level\" and enter the river reading when water reached you. Then the chart shows your line and the site warns you at your level. Saved on your phone only.",
       "url": "https://sl-water-levels.vercel.app/kelani-ganga/nagalagam-street"
     },
     {
