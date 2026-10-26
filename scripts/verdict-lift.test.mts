@@ -65,12 +65,13 @@ const hanwella = {
   horizons: [{ h: 6, level: 3.4 }],
 };
 r = liftVerdict(hanwella);
-assert.equal(r.verdict, "alert");
+assert.equal(r.verdict, "watch"); // 26 Oct 2026: a forecast never says Get ready before alert
+assert.equal(r.why, "likely");
 assert.equal(r.why, "likely");
 // 0.55 "likely" alone is no longer enough, and needs a central forecast within 15% of the 1.0 gap AND rising
 const mid = { ...hanwella, crossings: [{ ...hanwella.crossings[0], probability: 0.55 }] };
 assert.equal(liftVerdict(mid).verdict, "watch");
-assert.equal(liftVerdict({ ...mid, horizons: [{ h: 6, level: 3.86 }] }).verdict, "alert");
+assert.equal(liftVerdict({ ...mid, horizons: [{ h: 6, level: 3.86 }] }).why, "close");
 assert.equal(liftVerdict({ ...mid, horizons: [{ h: 6, level: 3.86 }], rising: false }).verdict, "watch");
 assert.equal(liftVerdict({ ...mid, horizons: [{ h: 24, level: 3.95 }] }).verdict, "watch"); // beyond 12 h does not count
 assert.equal(liftVerdict({ ...mid, horizons: [{ h: 6, level: 3.86 }], crossings: [{ ...mid.crossings[0], probability: 0.35 }] }).verdict, "watch");
@@ -78,7 +79,7 @@ assert.equal(liftVerdict({ ...mid, horizons: [{ h: 6, level: 3.86 }], crossings:
 // ---- real readings win: a gauge already at alert or above is untouched (the lift never sees it, whatever the forecast says)
 for (const tier of ["alert", "minor", "major", "stale", "none"]) assert.equal(liftVerdict({ ...hanwella, tier }).verdict, "none");
 // a watch gauge can be lifted; no crossing = nothing
-assert.equal(liftVerdict({ ...hanwella, tier: "watch" }).verdict, "alert");
+assert.equal(liftVerdict({ ...hanwella, tier: "watch" }).verdict, "watch");
 assert.equal(liftVerdict({ ...hanwella, crossings: [] }).verdict, "none");
 assert.equal(liftVerdict({ ...hanwella, crossings: [{ threshold: "alert", wording: "unlikely", probability: 0.15, etaTs: null }] }).verdict, "none");
 

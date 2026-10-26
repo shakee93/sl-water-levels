@@ -14,11 +14,17 @@
 //   Otherwise a "possible" crossing = the calm "Keep an eye on it" tone with a plain small-chance line, no action.
 // Real readings win: this never touches a gauge whose own level is already alert or higher, and never goes above alert.
 //
+// Owner decision 26 Oct 2026: "Get ready" IS the official alert level. A forecast never says "Get ready" before the gauge
+// reaches alert (having both was too much). A likely or close crossing now gives "Keep an eye on it" (watch) with its forecast
+// line; `why` still says likely / close / small so callers word it right. FORECAST_CAN_LIFT_TO_ALERT turns the old rule back on.
+//
 // Thresholds: the D1 log (forecast_crossings x observations, alert mark, 26 Oct 2026) holds only ~60 candidate rows in ~29
 // 12-hour episodes: p 0.2-0.4 hit 1 of 21 (river) and 0 of 9 (tidal gauges); p 0.4-0.6 hit 1 of 22; p >= 0.6 hit 1 of 7.
 // That is too thin to fit anything, so 0.6 / 0.4 / 15% are chosen (not fitted) to be stricter than the old "likely (50%) or
 // possible + rising"; re-check them against the archive when more storm events exist.
 
+/** false (26 Oct 2026): a forecast crossing gives at most "Keep an eye on it"; "Get ready" comes only from the official alert level. */
+export const FORECAST_CAN_LIFT_TO_ALERT = false;
 export const LIFT_P_LIKELY = 0.6;
 export const LIFT_P_CLOSE = 0.4;
 export const LIFT_CLOSE_FRAC = 0.15;
@@ -111,10 +117,11 @@ export function liftVerdict(i: LiftInput): LiftResult {
     if (gap <= 0) return true;
     return i.horizons.some((h) => h.h <= LIFT_CLOSE_HOURS && h.level >= mark - LIFT_CLOSE_FRAC * gap);
   };
+  const strong: LiftResult["verdict"] = FORECAST_CAN_LIFT_TO_ALERT ? "alert" : "watch";
   for (const c of cands) {
     const p = pOf(c);
-    if (p >= LIFT_P_LIKELY) return { verdict: "alert", why: "likely", crossing: c, etaHours: eta(c) };
-    if (p >= LIFT_P_CLOSE && i.rising && near(c)) return { verdict: "alert", why: "close", crossing: c, etaHours: eta(c) };
+    if (p >= LIFT_P_LIKELY) return { verdict: strong, why: "likely", crossing: c, etaHours: eta(c) };
+    if (p >= LIFT_P_CLOSE && i.rising && near(c)) return { verdict: strong, why: "close", crossing: c, etaHours: eta(c) };
   }
   const c = cands[0];
   return { verdict: "watch", why: "small", crossing: c, etaHours: eta(c) };

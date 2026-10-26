@@ -179,16 +179,17 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
     : liftVerdict({ tier: realTier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
   const tone: VerdictTone = stale
     ? "stale"
-    : (lift?.verdict === "alert" || releaseLift) && (realTier === "normal" || realTier === "watch")
+    : lift?.verdict === "alert" && (realTier === "normal" || realTier === "watch")
       ? "alert"
-      : lift?.verdict === "watch" && realTier === "normal"
+      : // a forecast crossing or a confirmed release upstream: "Keep an eye on it" at most; Get ready is the alert level itself (26 Oct 2026)
+        (lift?.verdict === "watch" || releaseLift) && realTier === "normal"
         ? "watch"
         : realTier;
   // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
   const heavier = f.rainRisk != null || f.stormHorizons.length > 0;
   const fact: T3 | null = stale
     ? null
-    : lift?.verdict === "watch" && lift.crossing
+    : lift?.why === "small" && lift.crossing
       ? smallChanceFact(lift.crossing, lift.etaHours, heavier)
       : (forecastLine ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
 

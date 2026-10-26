@@ -344,18 +344,18 @@ export function NeedsAttention({
   );
 }
 
-// "Get ready" from the forecast, for gauges whose level is still below alert: the same rule and words as their own pages
-// (lib/verdictLift.ts), so the home page never says nothing about a gauge whose page says "Get ready". si/ta are drafts.
+// Gauges below alert whose forecast says they will likely reach a mark (lib/verdictLift.ts, the same words as their pages).
+// Since 26 Oct 2026 this is a heads-up, not "Get ready": Get ready is the gauge's own alert level. si/ta are drafts.
 const SOON = {
-  en: { title: "Get ready: forecast to rise", alert: "alert level", minor: "minor flood level", major: "major flood level", line: "Likely to reach {mark} in about {h} h", day: "Likely to reach {mark} within 24 hours" },
-  si: { title: "සූදානම් වන්න: ඉහළ යාමට පුරෝකථනය", alert: "අනතුරු ඇඟවීමේ මට්ටම", minor: "සුළු ගංවතුර මට්ටම", major: "ප්‍රධාන ගංවතුර මට්ටම", line: "පැය {h} කින් පමණ {mark} කරා ළඟා විය හැක", day: "පැය 24 ක් තුළ {mark} කරා ළඟා විය හැක" },
-  ta: { title: "தயாராகுங்கள்: உயரும் என முன்னறிவிப்பு", alert: "எச்சரிக்கை மட்டம்", minor: "சிறு வெள்ள மட்டம்", major: "பெரு வெள்ள மட்டம்", line: "சுமார் {h} மணி நேரத்தில் {mark} அடையலாம்", day: "24 மணி நேரத்திற்குள் {mark} அடையலாம்" },
+  en: { title: "Forecast to reach alert level", alert: "alert level", minor: "minor flood level", major: "major flood level", line: "Likely to reach {mark} in about {h} h", day: "Likely to reach {mark} within 24 hours" },
+  si: { title: "අනතුරු ඇඟවීමේ මට්ටමට ළඟා වීමට පුරෝකථනය", alert: "අනතුරු ඇඟවීමේ මට්ටම", minor: "සුළු ගංවතුර මට්ටම", major: "ප්‍රධාන ගංවතුර මට්ටම", line: "පැය {h} කින් පමණ {mark} කරා ළඟා විය හැක", day: "පැය 24 ක් තුළ {mark} කරා ළඟා විය හැක" },
+  ta: { title: "எச்சரிக்கை மட்டத்தை அடையும் என முன்னறிவிப்பு", alert: "எச்சரிக்கை மட்டம்", minor: "சிறு வெள்ள மட்டம்", major: "பெரு வெள்ள மட்டம்", line: "சுமார் {h} மணி நேரத்தில் {mark} அடையலாம்", day: "24 மணி நேரத்திற்குள் {mark} அடையலாம்" },
 } as const;
 
 function ForecastSoon({ lang, p, snapshot, verdicts }: { lang: Locale; p: (path: string) => string; snapshot: NationalStation[]; verdicts: Record<string, StationVerdict> }) {
   const c = SOON[lang];
   const rows = snapshot
-    .filter((s) => (s.tier === "normal" || s.tier === "watch") && verdicts[s.station]?.v === "alert" && verdicts[s.station]?.th)
+    .filter((s) => (s.tier === "normal" || s.tier === "watch") && verdicts[s.station]?.th)
     .map((s) => ({ s, v: verdicts[s.station] }))
     .sort((a, b) => ["major", "minor", "alert"].indexOf(a.v.th!) - ["major", "minor", "alert"].indexOf(b.v.th!) || (a.v.h ?? 99) - (b.v.h ?? 99));
   if (rows.length === 0) return null;

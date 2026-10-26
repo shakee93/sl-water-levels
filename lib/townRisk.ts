@@ -62,6 +62,9 @@ import type { Tier } from "./status";
 import { isTidalStation, liftVerdict } from "./verdictLift.ts";
 import type { Unit } from "./units";
 
+/** Owner decision 26 Oct 2026: "Get ready" is the gauge's official alert level. Releases and rising canals no longer lift a town to it early. */
+const PRE_ALERT_LIFTS = false;
+
 export type Tone = "normal" | "watch" | "alert" | "minor" | "major" | "stale";
 export const TONES: Tone[] = ["normal", "watch", "alert", "minor", "major"];
 const rank = (t: Tone) => TONES.indexOf(t);
@@ -269,21 +272,24 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     if (cross && lift) {
       const flood = cross.threshold !== "alert";
       const h = lift.etaHours;
-      const small = lift.verdict === "watch";
+      const small = lift.why === "small";
       const key = `r.forecast${small ? "Small" : ""}${flood ? "Flood" : "Alert"}${h == null ? "Day" : ""}`;
       forecastReason = { kind: "forecast", key, vars: h == null ? { gauge: gauge.name } : { gauge: gauge.name, h }, warn: false };
       if ((river === "normal" || river === "watch") && lift.verdict === "alert") {
         river = "alert";
         forecastReason.warn = true;
-      } else if (river === "normal" && small) {
+      } else if (river === "normal" && lift.verdict === "watch") {
+        // forecast only (likely or small chance): Keep an eye on it, and the rules below must not turn it into Get ready
         river = "watch";
         smallChanceWatch = true;
+        forecastReason.warn = !small;
       }
     }
     // confirmed release upstream, river rising and already near/at alert
-    if (release?.confirmed && drainage !== "upland" && rising && !smallChanceWatch && rank(river) >= rank("watch") && rank(river) < rank("alert")) river = "alert";
+    // (26 Oct 2026: a release or rising canals no longer make "Get ready" before the gauge's alert level; they stay reasons/notes)
+    if (PRE_ALERT_LIFTS && release?.confirmed && drainage !== "upland" && rising && !smallChanceWatch && rank(river) >= rank("watch") && rank(river) < rank("alert")) river = "alert";
     // canals back up before the gauge reaches alert
-    if (drainage === "canal-backwater" && river === "watch" && rising && !smallChanceWatch) river = "alert";
+    if (PRE_ALERT_LIFTS && drainage === "canal-backwater" && river === "watch" && rising && !smallChanceWatch) river = "alert";
 
     // ---- 2. personal level
     if (myLevel != null && gauge.level != null) {

@@ -25,7 +25,9 @@ async function liftOne(s: NationalStation): Promise<StationVerdict> {
     now: f.asOfTs ?? s.latest.ts,
   });
   const v: Tier = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
-  return v === s.tier || !lift?.crossing ? { v } : { v, th: lift.crossing.threshold, h: lift.etaHours };
+  // th / h whenever the forecast says a crossing is likely (or close), even when the tier stays the same: the home page lists them
+  const strong = lift?.crossing && (lift.why === "likely" || lift.why === "close");
+  return strong ? { v, th: lift.crossing!.threshold, h: lift.etaHours } : { v };
 }
 
 /** Station name -> verdict tier. Cached 2 min (forecasts change only with a new hourly reading); a failed gauge keeps its own tier. */
@@ -36,6 +38,6 @@ export const getStationVerdicts = unstable_cache(
     await Promise.all(national.map(async (s) => (out[s.station] = await liftOne(s).catch(() => ({ v: s.tier })))));
     return out;
   },
-  ["station-verdicts-v2"],
+  ["station-verdicts-v3"],
   { revalidate: 120 },
 );
