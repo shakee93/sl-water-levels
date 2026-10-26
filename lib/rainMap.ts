@@ -14,6 +14,8 @@ import { unstable_cache } from "next/cache";
 import { COAST } from "./geo/geo";
 import { RAIN_BASINS, inBasin } from "./geo/rainBasins";
 import { getNational } from "./arcgis";
+import { getStationVerdicts, type StationVerdict } from "./stationVerdict";
+import { soft } from "./soft";
 import { getGsmap } from "./gsmap";
 import { getJson } from "./weather";
 import { orderStations } from "./basinOrder";
@@ -111,11 +113,13 @@ const r1 = (v: number | null | undefined) => (v == null ? null : Math.round(v * 
 
 async function build(): Promise<RainMapData> {
   const now = Date.now();
-  const [sat, fc, national, gsmap] = await Promise.all([
+  const [sat, fc, national, gsmap, verdicts] = await Promise.all([
     satelliteHours(now),
     forecastHours(now),
     getNational().catch(() => []),
     getGsmap(now),
+    // same verdict as the gauge pages, so a gauge listed here never reads calmer than its page; 4 s cap, else none
+    soft(getStationVerdicts().catch(() => ({}) as Record<string, StationVerdict>), 4000, {} as Record<string, StationVerdict>),
   ]);
   const gauges: RainMapGauge[] = national
     .filter((s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude))
@@ -130,6 +134,7 @@ async function build(): Promise<RainMapData> {
         lon: s.longitude,
         href: s.href,
         tier: s.tier,
+        getReady: (s.tier === "normal" || s.tier === "watch") && verdicts[s.station]?.v === "alert",
         level: s.latest && s.tier !== "stale" ? formatLevel(s.latest.water_level, s.unit, 1) : null,
         measured: m ? { mm1h: r1(m.mm1h), mm3h: r1(m.mm3h), mm24h: r1(m.mm24h), at: m.endTs } : null,
         noSensor: noRainSensor(s.station),
@@ -153,4 +158,4 @@ async function build(): Promise<RainMapData> {
 }
 
 /** The whole map payload, cached 5 minutes (the sources underneath have their own caches). */
-export const getRainMap = unstable_cache(build, ["rain-map-v2"], { revalidate: 300 });
+export const getRainMap = unstable_cache(build, ["rain-map-v3"], { revalidate: 300 });

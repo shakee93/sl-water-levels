@@ -15,6 +15,8 @@ export type RainMapGauge = {
   lon: number;
   href: string;
   tier: Tier;
+  /** True when the gauge page says "Get ready" from its forecast while the level is still below alert (lib/stationVerdict.ts). */
+  getReady?: boolean;
   /** Latest level as shown on the site (feet), null when there is no fresh reading. */
   level: string | null;
   /** Rain the gauge's own sensor measured (mm); null = no sensor or no fresh reading. */
