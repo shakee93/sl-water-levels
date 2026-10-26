@@ -1,0 +1,40 @@
+# One "how to use the site" post a day on @waterlevelslk (scripts/x-series.mjs, content/x-series.json), 19:30 Colombo.
+# Same switch as the X account: live only when the repository variable X_POSTING is "live" and the four X secrets exist;
+# otherwise it is a dry run to Slack. Manual run posts the next one now (still once per day).
+name: X series
+
+on:
+  schedule:
+    - cron: "0 14 * * *" # 19:30 Asia/Colombo
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: x-series
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Post
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          X_POSTING: ${{ vars.X_POSTING }}
+          X_MONTHLY_BUDGET_USD: ${{ vars.X_MONTHLY_BUDGET_USD }}
+          X_COST_LINK_POST: ${{ vars.X_COST_LINK_POST }}
+        run: |
+          [ -z "$CLOUDFLARE_API_TOKEN" ] && { echo "::warning::CLOUDFLARE_API_TOKEN missing: the series keeps its memory in D1, nothing posted."; exit 0; }
+          node --experimental-strip-types --no-warnings scripts/x-series.mjs
