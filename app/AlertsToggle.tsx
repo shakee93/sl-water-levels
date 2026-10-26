@@ -15,6 +15,12 @@ import { useAlertSettings } from "./AlertSettings";
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const btn = `inline-flex items-center justify-center gap-2 min-h-11 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-sm font-medium text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60 transition-colors ${ring}`;
 
+// For Umami: which kind of device subscribed (no identifiers).
+const deviceInfo = () => ({
+  device: /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : /android/i.test(navigator.userAgent) ? "android" : "desktop",
+  installed: window.matchMedia("(display-mode: standalone)").matches,
+});
+
 type Status = "loading" | "hidden" | "off" | "on" | "busy" | "denied" | "unsupported" | "error";
 
 const supported = () => typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -95,7 +101,10 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
     setStatus("busy");
     try {
       const perm = await Notification.requestPermission();
-      if (perm === "denied") return setStatus("denied");
+      if (perm === "denied") {
+        trackEvent("subscribe_failed", { reason: "denied", ...deviceInfo() });
+        return setStatus("denied");
+      }
       if (perm !== "granted") return setStatus("off");
       const reg = await registration();
       await navigator.serviceWorker.ready;
@@ -110,13 +119,16 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
       }
       if (!(await save(sub))) {
         await sub.unsubscribe().catch(() => {});
+        trackEvent("subscribe_failed", { reason: "save", ...deviceInfo() });
         return setStatus("error");
       }
       setStatus("on");
       trackEvent("alerts_on", { places: keys.length });
+      trackEvent("subscriber_added", { places: keys.length, lang, ...deviceInfo() });
       const t = rtFor(lang);
       reg.showNotification(t("pn.testTitle"), { body: t("pn.testBody"), icon: "/icons/icon-192.png", lang }).catch(() => {});
     } catch {
+      trackEvent("subscribe_failed", { reason: "error", ...deviceInfo() });
       setStatus("error");
     }
   }
@@ -131,6 +143,7 @@ export function AlertsToggle({ keys }: { keys: string[] }) {
         await sub.unsubscribe().catch(() => {});
       }
       trackEvent("alerts_off");
+      trackEvent("subscriber_removed", deviceInfo());
     } finally {
       setStatus("off");
     }
