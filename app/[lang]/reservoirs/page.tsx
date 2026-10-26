@@ -17,7 +17,7 @@ import { ReservoirFilter, type FilterItem } from "@/app/reservoirs/ReservoirFilt
 
 export const revalidate = 600;
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;

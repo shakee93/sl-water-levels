@@ -10,7 +10,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-SITE="https://sl-water-levels.vercel.app"
+SITE="https://waterlevels.lk"
 
 tmp="$(mktemp -d)"
 chmod 700 "$tmp"

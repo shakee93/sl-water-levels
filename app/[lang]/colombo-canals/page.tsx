@@ -16,7 +16,7 @@ import { TideLine, highTideTimes } from "@/app/colombo/TideLine";
 import { CanalLevels } from "@/app/colombo/CanalLevels";
 import { ColomboMap } from "@/app/colombo/ColomboMap";
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 type Params = { params: Promise<{ lang: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {

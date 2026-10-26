@@ -2,7 +2,7 @@
 // on their indexes (Copilot, ChatGPT search, Perplexity, DuckDuckGo) pick the change up in minutes.
 //
 // Usage:
-//   node scripts/indexnow.mjs https://sl-water-levels.vercel.app/ https://sl-water-levels.vercel.app/reservoirs/deduru-oya
+//   node scripts/indexnow.mjs https://waterlevels.lk/ https://waterlevels.lk/reservoirs/deduru-oya
 //   node scripts/indexnow.mjs --core            home, /flood, /reservoirs, /feed.xml, /llms.txt, /data
 //   node scripts/indexnow.mjs --dry-run ...     print what would be sent, send nothing
 //
@@ -11,7 +11,7 @@
 // 15-minute snapshot: use it for meaningful changes (a new warning, a reservoir starting to spill).
 import { readdirSync } from "node:fs";
 
-const SITE = (process.env.SITE_URL || "https://sl-water-levels.vercel.app").replace(/\/$/, "");
+const SITE = (process.env.SITE_URL || "https://waterlevels.lk").replace(/\/$/, "");
 const args = process.argv.slice(2);
 const dry = args.includes("--dry-run");
 const urls = args.includes("--core")

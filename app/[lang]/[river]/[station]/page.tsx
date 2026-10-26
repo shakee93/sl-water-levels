@@ -44,7 +44,7 @@ import { RiverMap } from "@/app/RiverMap";
 import { StationNearby } from "@/app/StationNearby";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 // Rendered per request (see `await connection()` in the page) and cached by the CDN for 60 s with a
 // 5 min stale window (proxy.ts sets the header), not prerendered and not ISR: an ISR render waits for
@@ -349,7 +349,7 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
     isAccessibleForFree: true,
     // Google's Dataset rich result only accepts Organization/Person for creator.
     // license: the agencies publish no licence text; this page states the sources and terms.
-    license: "https://sl-water-levels.vercel.app/about#data-sources",
+    license: "https://waterlevels.lk/about#data-sources",
     creator: { "@type": "Organization", name: "Department of Irrigation, Sri Lanka", url: "https://www.irrigation.gov.lk" },
     publisher: publisherLd(),
     isBasedOn: "https://www.irrigation.gov.lk/",

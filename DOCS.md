@@ -124,7 +124,7 @@ These cost real debugging time. Worth writing down:
   the main time-series chart. Basin-flow sparklines are hand-rolled SVG.
 - **mcp-handler** for the `/mcp` MCP server route.
 - No DB, no auth, no env vars. The ArcGIS endpoints are the source of truth.
-- Deployed on Vercel; production at <https://sl-water-levels.vercel.app>.
+- Deployed on Vercel; production at <https://waterlevels.lk>.
 
 ### File layout
 
@@ -568,7 +568,7 @@ data semantics stay in lockstep. Register in Claude Code with:
 
 ```bash
 claude mcp add --transport http sl-water-levels \
-  https://sl-water-levels.vercel.app/mcp
+  https://waterlevels.lk/mcp
 ```
 
 ---
@@ -964,15 +964,15 @@ announcements from the site (default on); and a "Send me a test alert" button.
 
 One message from the owner to every subscriber who has not turned off "Occasional announcements from the site". It never runs by itself: it exists only as a
 manual `workflow_dispatch` run, and the job refuses to start a broadcast from any other trigger. `dry_run` defaults to **true**, which prints only the recipient
-count (never an endpoint) and sends nothing. The url must be on `https://sl-water-levels.vercel.app` (empty = the home page); title up to 80 and body up to 240
+count (never an endpoint) and sends nothing. The url must be on `https://waterlevels.lk` (empty = the home page); title up to 80 and body up to 240
 characters; `language` is all, en, si or ta (by the language the person uses the site in; the text is sent as you wrote it). Announcements ignore quiet hours:
 send them in the daytime (Colombo). The dry run says how many recipients are in their quiet hours right now.
 
 ```
 # 1. count only (nothing is sent)
-gh workflow run push-notify.yml -f mode=broadcast -f title="New: choose your alerts" -f body="Open Alert settings to pick what you hear about." -f url="https://sl-water-levels.vercel.app/en" -f language=all
+gh workflow run push-notify.yml -f mode=broadcast -f title="New: choose your alerts" -f body="Open Alert settings to pick what you hear about." -f url="https://waterlevels.lk/en" -f language=all
 # 2. send for real
-gh workflow run push-notify.yml -f mode=broadcast -f title="New: choose your alerts" -f body="Open Alert settings to pick what you hear about." -f url="https://sl-water-levels.vercel.app/en" -f language=all -f dry_run=false
+gh workflow run push-notify.yml -f mode=broadcast -f title="New: choose your alerts" -f body="Open Alert settings to pick what you hear about." -f url="https://waterlevels.lk/en" -f language=all -f dry_run=false
 gh run list --workflow push-notify.yml --limit 3     # then: gh run view <id> --log
 ```
 
@@ -1056,11 +1056,11 @@ for new developers except approved public-utility apps. **Verify the current pri
 ### What the owner must do
 
 1. **Create the X account** (a new profile, e.g. "Sri Lanka Water Levels"). Suggested bio (143 characters):
-   `Automated Sri Lanka river & flood updates from Dept. of Irrigation data. Not official. Emergency: 117. By @shakeeb_x · sl-water-levels.vercel.app`
-   Avatar: the site icon (`app/icon.svg`) on a blue background. Pinned post: "Automated river-level alerts for Sri Lanka from Department of Irrigation gauges. Not an official warning service. Emergency: 117. Live levels: https://sl-water-levels.vercel.app".
+   `Automated Sri Lanka river & flood updates from Dept. of Irrigation data. Not official. Emergency: 117. By @shakeeb_x · waterlevels.lk`
+   Avatar: the site icon (`app/icon.svg`) on a blue background. Pinned post: "Automated river-level alerts for Sri Lanka from Department of Irrigation gauges. Not an official warning service. Emergency: 117. Live levels: https://waterlevels.lk".
 2. **Label it automated:** Settings and privacy, Your account, Account information, Automation: choose "Managing account" = your personal @shakeeb_x. (The "Automated" label then shows on the profile.)
 3. **Apply for developer access** at developer.x.com: first the free public-utility programme if offered, otherwise pay-per-use with a small credit. Use case text: "Automated public-safety river level and flood-status updates for Sri Lanka, from public government data; no replies, no mass mentions."
-4. **Create a project and app** in the developer console (console.x.com; sign in with your personal account, that is fine). In the app's **User authentication settings** choose permissions **Read and write**, enable **OAuth 1.0a** (pick the app type that supports OAuth 1.0a user context, e.g. "Web App, Automated App or Bot") and allow the **PIN-based (oob) callback** (a callback URL such as `https://sl-water-levels.vercel.app` and website URL are required by the form but are not used). Copy the **API Key** and **API Key Secret**. Do **not** use the console's own Access Token: it belongs to the account that owns the app (your personal one).
+4. **Create a project and app** in the developer console (console.x.com; sign in with your personal account, that is fine). In the app's **User authentication settings** choose permissions **Read and write**, enable **OAuth 1.0a** (pick the app type that supports OAuth 1.0a user context, e.g. "Web App, Automated App or Bot") and allow the **PIN-based (oob) callback** (a callback URL such as `https://waterlevels.lk` and website URL are required by the form but are not used). Copy the **API Key** and **API Key Secret**. Do **not** use the console's own Access Token: it belongs to the account that owns the app (your personal one).
 5. **Authorise the BOT account (one time):** `node scripts/x-authorize.mjs` (`scripts/x-authorize.mjs`). It asks for the API Key and Secret (typing is hidden), prints a link; open the link in a browser **logged in as the bot account**, press Authorize, paste the PIN back. It prints only the account name (check it is the bot) and stores `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` straight into GitHub secrets with `gh secret set`, never on screen or in a file. (By hand instead: `gh secret set X_API_KEY` etc.) Optional: `gh secret set OPENAI_API_KEY` so gpt-6-luna writes the posts (see Words above).
 6. **Review in dry-run first:** run `gh workflow run x-post.yml -f mode=sample` (3 sample posts from today's data to Slack), and watch the `DRY RUN` posts that arrive when something changes.
 7. **Buy API credits first** (console, Billing: pay-per-use credits; with $0 credits every post would fail). The pipeline stays in dry-run until you set the variable, so nothing is spent before you are ready. Then **go live:** `gh variable set X_POSTING --body live`. Optional: `gh variable set X_LINKS --body alerts`, `X_MONTHLY_BUDGET_USD`, `X_EVENING --body on`.

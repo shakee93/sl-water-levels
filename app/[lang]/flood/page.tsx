@@ -9,7 +9,7 @@ import { getI18n } from "@/lib/i18n/server";
 import TownIndex from "@/app/flood/TownIndex";
 
 export const revalidate = 600;
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 // Rendered on first request, then ISR-cached: not at build time, so a deploy never waits on the gauge feed.
 export async function generateStaticParams() {

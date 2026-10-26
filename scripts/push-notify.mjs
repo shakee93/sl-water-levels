@@ -28,7 +28,7 @@ import { evalSub, broadcastPayload, broadcastRecipients } from "./push-eval.mjs"
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
 
-const SITE = process.env.SITE_URL || "https://sl-water-levels.vercel.app";
+const SITE = process.env.SITE_URL || "https://waterlevels.lk";
 const CHUNK = 10;
 const CONCURRENCY = 8;
 const sha = (s) => createHash("sha256").update(s).digest("hex").slice(0, 12);

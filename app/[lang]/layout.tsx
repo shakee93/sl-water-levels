@@ -13,6 +13,7 @@ import { ThemeSync } from "../ThemeSync";
 import { ReturnShell } from "../ReturnShell";
 import { InstallProvider } from "../InstallProvider";
 import { SavedDataMarker } from "../SavedDataMarker";
+import { ImportHandover } from "../ImportHandover";
 import { AlertSettingsProvider } from "../AlertSettings";
 import { NavProgress } from "../NavProgress";
 import { BottomTabs } from "../BottomTabs";
@@ -48,7 +49,7 @@ const notoTamil = Noto_Sans_Tamil({
   preload: false,
 });
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 // viewport-fit=cover lets the pages use env(safe-area-inset-*) on notched phones.
 export const viewport: Viewport = {
@@ -146,6 +147,7 @@ export default async function RootLayout({
         <LocaleProvider lang={lang} dict={DICTS[lang]}>
           <InstallProvider>
             <SavedDataMarker />
+            <ImportHandover />
           <AlertSettingsProvider>
           <Suspense fallback={null}>
             <NavProgress />

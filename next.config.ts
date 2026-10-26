@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+// The old address and the paths that keep working there after the move (see redirects below).
+const SITE = "https://waterlevels.lk";
+const OLD_HOST = "sl-water-levels.vercel.app";
+const OLD_KEEP = "(?!api/|api$|mcp|_next/|sw\\.js|manifest|favicon|icon|apple-icon|robots\\.txt)";
+
 // Station, river, reservoir and town pages render per request and stream (heading and answer first),
 // so the CDN has to cache them from headers: 60 s fresh, then 5 min served stale while a new copy
 // renders. Vercel-CDN-Cache-Control is read only by Vercel's CDN (not sent to browsers) and wins over the
@@ -20,11 +25,30 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/commons/**", search: "" }],
   },
   async redirects() {
-    // /rain-map was shared as the rain map's address before the page settled on /rain.
     return [
+      // /rain-map was shared as the rain map's address before the page settled on /rain.
       { source: "/rain-map", destination: "/rain", permanent: true },
       { source: "/:lang(si|ta)/rain-map", destination: "/:lang/rain", permanent: true },
+      // The move to waterlevels.lk (MIGRATION.md): every page on the old address goes to the same page there, permanently,
+      // so search engines carry each page's ranking across. Left working on the old address: /api (apps, scripts, POSTs from
+      // pages already open), /mcp, Next's own files, the service worker and the manifest (installed apps and push alerts),
+      // and /api/move. Visitors whose phone keeps saved places (cookie sl_has_data, app/SavedDataMarker.tsx) are rewritten to
+      // /api/move instead (below), which carries their data across first.
+      {
+        source: `/:path(${OLD_KEEP}.*)`,
+        has: [{ type: "host", value: OLD_HOST }],
+        missing: [{ type: "cookie", key: "sl_has_data" }],
+        destination: `${SITE}/:path`,
+        permanent: true,
+      },
     ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: `/:path(${OLD_KEEP}.*)`, has: [{ type: "host", value: OLD_HOST }, { type: "cookie", key: "sl_has_data" }], destination: "/api/move?to=/:path" },
+      ],
+    };
   },
   async headers() {
     const lang = ["", "/:lang(si|ta)"];

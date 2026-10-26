@@ -37,7 +37,7 @@ export const X_SCHEMA = [
   "CREATE TABLE IF NOT EXISTS x_state (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_ms INTEGER NOT NULL)",
 ];
 
-const SITE_DEFAULT = "https://sl-water-levels.vercel.app";
+const SITE_DEFAULT = "https://waterlevels.lk";
 const RAIN_PLACES = ["colombo", "gampaha", "kalutara", "ratnapura", "kandy", "galle", "matara", "anuradhapura", "batticaloa", "jaffna"];
 const PENDING_MAX_AGE_MS = 2 * 3_600_000;
 

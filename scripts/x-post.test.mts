@@ -10,7 +10,7 @@ import { composeGaugeRise, composeGaugeClear, composeSummary, composeStorm, stor
 import { evaluate, applyCaps, emptyState } from "./x-engine.mjs";
 import { run, X_SCHEMA, prepare, linkWanted, isCritical, costOf } from "./x-post.mjs";
 
-const SITE = "https://sl-water-levels.vercel.app";
+const SITE = "https://waterlevels.lk";
 const NOW = Date.parse("2026-10-26T01:10:00Z"); // 6:40 am in Colombo
 const LATE = NOW + 6 * 3_600_000; // 12:40 pm: outside the morning-summary window
 const iso = (ms) => new Date(ms).toISOString();
@@ -64,7 +64,7 @@ assert.equal(gate({ X_POSTING: " LIVE ", X_API_KEY: "a", X_API_SECRET: "b", X_AC
 }
 
 // ---- length the way X counts it
-assert.equal(tweetLength("a".repeat(10) + " https://sl-water-levels.vercel.app/kelani-ganga/hanwella/very/long/path"), 10 + 1 + 23);
+assert.equal(tweetLength("a".repeat(10) + " https://waterlevels.lk/kelani-ganga/hanwella/very/long/path"), 10 + 1 + 23);
 assert.equal(tweetLength("සූදානම්"), 7, "Sinhala letters count 1 each");
 assert.equal(tweetLength("😀"), 2);
 assert.deepEqual(numbersIn("1,200 cusecs at 2:30 pm, 8.2 ft https://x.com/a1/b2"), [1200, 2, 30, 8.2]);

@@ -29,7 +29,7 @@ const flag = (f) => args.includes(f);
 const opt = (f) => (args.includes(f) ? args[args.indexOf(f) + 1] : undefined);
 const DRY = flag("--dry-run");
 const file = args.find((a) => !a.startsWith("--") && a !== opt("--state"));
-const SITE = process.env.SITE_URL || "https://sl-water-levels.vercel.app";
+const SITE = process.env.SITE_URL || "https://waterlevels.lk";
 const REPO = process.env.GITHUB_REPOSITORY || "shakee93/sl-water-levels";
 const TOKEN = process.env.GITHUB_TOKEN || "";
 const SLACK = process.env.SLACK_WEBHOOK_URL || "";

@@ -34,7 +34,7 @@ import type { TFn } from "@/lib/i18n/translate";
 
 const nowMs = () => Date.now();
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 const TIER_RANK: Record<Tier, number> = {
   major: 6, minor: 5, alert: 4, watch: 3, normal: 2, none: 1, stale: 0,

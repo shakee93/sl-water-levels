@@ -1,6 +1,6 @@
 // Checks every launch image: its media query (device-width/height x ratio) must equal the PNG's pixel size, and with a
 // URL argument the page must carry a matching <link rel="apple-touch-startup-image"> that returns 200.
-//   node --experimental-strip-types scripts/splash-check.mjs [https://sl-water-levels.vercel.app]
+//   node --experimental-strip-types scripts/splash-check.mjs [https://waterlevels.lk]
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";

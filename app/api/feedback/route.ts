@@ -160,7 +160,7 @@ async function details(body: Record<string, unknown>) {
   );
   if (isUrgent(String(row.answer), d.river)) {
     const name = row.page === "town" ? `${row.town}${row.station ? ` (gauge ${row.station})` : ""}` : String(row.station);
-    const link = `https://sl-water-levels.vercel.app${row.page === "town" ? `/flood/${row.town}` : "/"}`;
+    const link = `https://waterlevels.lk${row.page === "town" ? `/flood/${row.town}` : "/"}`;
     const text = `*Feedback: our verdict looks too mild.* Someone at ${name} says it is worse than shown and water is on roads or in homes${dist != null ? ` (about ${dist} km from the gauge)` : ""}.${d.note ? ` They wrote: ${d.note}` : ""} ${link}`;
     // 1 = sent now; 2 = ping still to send (no Slack webhook on this host): scripts/feedback-digest.mjs sends it
     await d1Query("UPDATE forecast_feedback SET notified = ? WHERE token = ?", [(await slack(text)) ? 1 : 2, d.token]);

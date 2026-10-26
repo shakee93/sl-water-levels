@@ -30,7 +30,7 @@ jobs:
       - name: Fetch forecasts from the live site
         run: |
           curl -fsS --retry 3 --retry-delay 20 --max-time 120 \
-            https://sl-water-levels.vercel.app/api/forecasts -o forecasts.json
+            https://waterlevels.lk/api/forecasts -o forecasts.json
       - name: Build SQL
         run: node scripts/store-forecasts.mjs forecasts.json forecasts.sql
       - name: Write to D1

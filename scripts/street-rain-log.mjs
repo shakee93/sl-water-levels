@@ -47,7 +47,7 @@ if (!dataDir) {
   console.error("usage: node --experimental-strip-types scripts/street-rain-log.mjs <dataDir> [--dry-run [--prev none|possible|likely]]");
   process.exit(1);
 }
-const SITE = process.env.SITE_URL || "https://sl-water-levels.vercel.app";
+const SITE = process.env.SITE_URL || "https://waterlevels.lk";
 const SLACK = process.env.SLACK_WEBHOOK_URL || "";
 const MAX_DATA_AGE_MS = 3 * 3_600_000;
 const NOW = Date.now();

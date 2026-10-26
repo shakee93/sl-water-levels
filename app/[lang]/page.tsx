@@ -33,7 +33,7 @@ import type { TFn } from "@/lib/i18n/translate";
 // No cookies()/searchParams on the server, so the page is ISR-cached.
 export const revalidate = 60;
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 const nowMs = () => Date.now();
 const STALE_MS = 3 * 3_600_000;
 

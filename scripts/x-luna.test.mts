@@ -8,7 +8,7 @@ import { DatabaseSync } from "node:sqlite";
 import { tweetLength, sharedWithRecent, composeRiversRising, MODEL_TARGET, composeGaugeRise, composeGaugeClear, composeStorm, composeSummary, composeWarning, lunaFacts, lunaWrite, validateLlmText, LUNA_INSTRUCTIONS, DISCLAIMER } from "../lib/xCompose.ts";
 import { run, prepare, makeLlm, dryRunMessage, X_SCHEMA } from "./x-post.mjs";
 
-const SITE = "https://sl-water-levels.vercel.app";
+const SITE = "https://waterlevels.lk";
 const NOW = Date.parse("2026-10-26T10:40:00Z"); // 4:10 pm in Colombo
 const gf = (o = {}) => ({ station: "Ratnapura", river: "Kalu Ganga", tier: "alert", level: 21.34, mark: 21, alertMark: 21, trend: "rising", nextHour: { level: 21.5, low: 21.3, high: 21.8, direction: "rising", crossing: null }, url: `${SITE}/kalu-ganga/ratnapura`, at: NOW, ...o });
 const ev = (o = {}) => ({ type: "gauge_rise", kind: "alert", gauges: [gf(o)] });
@@ -35,7 +35,7 @@ bad(good.replace("21.3 ft", "22.9 ft"), /number 22\.9/);
 bad(good.replace("4:10 pm", "5:45 pm"), /number 45|number 5\b/);
 bad(good.replace("this evening", "for the next 3 days"), /number 3 is not/);
 bad(good + " https://example.com", /link/);
-bad(good + " sl-water-levels.vercel.app", /link|web address/);
+bad(good + " waterlevels.lk", /link|web address/);
 bad(good + " cc @DMCSriLanka", /@mention/);
 // routine posts carry no disclaimer; serious ones the short closing only
 bad(good + " Not an official warning. Emergency: 117.", /routine post/);

@@ -23,7 +23,7 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 
 const outDir = process.argv[2];
-const base = (process.argv[3] ?? process.env.SITE_URL ?? "https://sl-water-levels.vercel.app").replace(/\/$/, "");
+const base = (process.argv[3] ?? process.env.SITE_URL ?? "https://waterlevels.lk").replace(/\/$/, "");
 if (!outDir) {
   console.error("usage: node scripts/releases-snapshot.mjs <outDir> [baseUrl]");
   process.exit(1);

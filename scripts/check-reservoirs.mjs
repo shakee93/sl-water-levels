@@ -1,7 +1,7 @@
 // Self-check for the reservoir pages: reads the raw sources itself (its own tiny parser, none of the
 // site's code) and flags any difference from what the deployed site parsed.
 //
-//   node scripts/check-reservoirs.mjs [baseUrl]        (default https://sl-water-levels.vercel.app)
+//   node scripts/check-reservoirs.mjs [baseUrl]        (default https://waterlevels.lk)
 //
 // 1. Irrigation Department sheet (Major + Medium CSV) vs /api/releases `sheet.rows`: spilling,
 //    spill cusecs, sluice cusecs, depth, full-supply depth and reading day, row by row.
@@ -15,7 +15,7 @@ import { writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const base = (process.argv[2] ?? "https://sl-water-levels.vercel.app").replace(/\/$/, "");
+const base = (process.argv[2] ?? "https://waterlevels.lk").replace(/\/$/, "");
 const SHEET = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTcSGhi9RESl7CMCl1TQnrKe07Gx5Q696YiSB9jneIHqIP9lifpqSErgI3D5k9KtQXSdW5JpycIIr5e";
 const TABS = [["Major", 1212294664], ["Medium", 562386515]];
 const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];

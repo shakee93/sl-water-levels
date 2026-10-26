@@ -5,7 +5,11 @@
 // the publisher is a person (the owner), because there is no company behind the site.
 import { localePath, type Locale } from "./i18n/config";
 
-export const SITE = "https://sl-water-levels.vercel.app";
+// The site's address. Moved from sl-water-levels.vercel.app to waterlevels.lk (MIGRATION.md); the old address redirects
+// page for page (next.config.ts) and keeps /api, push and the service worker working for phones that still use it.
+export const SITE = "https://waterlevels.lk";
+export const OLD_SITE = "https://waterlevels.lk";
+export const OLD_HOST = "sl-water-levels.vercel.app";
 export const SITE_NAME = "Sri Lanka Water Levels";
 export const OWNER = { name: "Shakeeb Sadikeen", x: "https://x.com/shakeeb_x", github: "https://github.com/shakee93" } as const;
 /**

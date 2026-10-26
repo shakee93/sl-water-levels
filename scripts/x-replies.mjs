@@ -22,7 +22,7 @@ import {
   buildAnswer, fixedReply, validateFixed, writeReply, mayReply, seedOf, scriptOf, mentionsIn,
 } from "../lib/xReply.ts";
 
-const SITE_DEFAULT = "https://sl-water-levels.vercel.app";
+const SITE_DEFAULT = "https://waterlevels.lk";
 const log = (...a) => console.log(...a);
 const STATIONS = JSON.parse(readFileSync(new URL("./fuzzy-stations.json", import.meta.url), "utf8"));
 

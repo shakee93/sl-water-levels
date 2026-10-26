@@ -183,12 +183,12 @@ assert.deepEqual(Object.keys(evalSub({ prefs: DEFAULT_PREFS, state: step(DEFAULT
 }
 
 // ---------- broadcast checks
-const ok = broadcastPayload({ title: " Hello ", body: "Body", url: "https://sl-water-levels.vercel.app/si/flood/wellampitiya?x=1", language: "si" });
+const ok = broadcastPayload({ title: " Hello ", body: "Body", url: "https://waterlevels.lk/si/flood/wellampitiya?x=1", language: "si" });
 assert.equal(ok.ok, true);
 assert.equal(ok.payload.url, "/si/flood/wellampitiya?x=1", "only the path travels");
 assert.equal(ok.payload.title, "Hello");
 assert.equal(broadcastPayload({ title: "t", body: "b", url: "", language: "all" }).payload.url, "/");
-for (const bad of ["https://evil.example.com/x", "http://sl-water-levels.vercel.app/", "https://sl-water-levels.vercel.app.evil.com/", "https://user:pw@sl-water-levels.vercel.app/", "https://sl-water-levels.vercel.app:8443/", "javascript:alert(1)", "/relative"]) {
+for (const bad of ["https://evil.example.com/x", "http://waterlevels.lk/", "https://waterlevels.lk.evil.com/", "https://user:pw@waterlevels.lk/", "https://waterlevels.lk:8443/", "javascript:alert(1)", "/relative"]) {
   assert.equal(broadcastPayload({ title: "t", body: "b", url: bad, language: "all" }).ok, false, "rejects " + bad);
 }
 assert.equal(broadcastPayload({ title: "", body: "b" }).ok, false);
@@ -286,7 +286,7 @@ assert.equal(sent.length, 0, "only once that day");
 
 // broadcast
 const before = (await d1Query("SELECT COUNT(*) AS n FROM push_log"))[0].n;
-const bc = { title: "New in the app", body: "You can now choose your alerts.", url: "https://sl-water-levels.vercel.app/en", language: "all" };
+const bc = { title: "New in the app", body: "You can now choose your alerts.", url: "https://waterlevels.lk/en", language: "all" };
 const lines = [];
 const origLog = console.log;
 console.log = (...a) => lines.push(a.join(" "));

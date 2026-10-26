@@ -7,7 +7,7 @@ import { CONTENT_UPDATED } from "@/lib/seo";
 import { WF_MODIFIED, WF_PATH } from "@/lib/research";
 import { LOCALES, localePath, type Locale } from "@/lib/i18n/config";
 
-const SITE = "https://sl-water-levels.vercel.app";
+import { SITE } from "@/lib/seo";
 
 export const revalidate = 3600;
 
