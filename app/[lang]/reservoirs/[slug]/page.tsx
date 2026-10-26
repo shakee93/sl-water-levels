@@ -36,6 +36,7 @@ import { reservoirFaq } from "@/lib/answers";
 import { faqLd, webPageLd, DATA_BRANCH, publisherLd } from "@/lib/seo";
 import { KnownChip, NearSpillChip } from "@/app/reservoirs/KnownChip";
 import { ReservoirPhotos } from "@/app/ReservoirPhotos";
+import { ReservoirRain } from "@/app/ReservoirRain";
 import { photoLd, photosFor } from "@/lib/reservoirPhotoData";
 
 
@@ -473,6 +474,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             </dd>
           </div>
         </dl>
+        <Suspense key={`rain-${slug}`} fallback={null}><ReservoirRain lang={lang} slug={slug} /></Suspense>
 
         {/* ---- history */}
         <section className={`mt-3 ${card}`} aria-label={rt("chart.title")}>

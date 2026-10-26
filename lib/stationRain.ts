@@ -7,7 +7,9 @@
 import { unstable_cache } from "next/cache";
 import { BASIN_ORDER, normaliseBasin } from "./basinOrder";
 import { getGsmap, type GsmapFile } from "./gsmap";
-import { gaugeRainNow, measuredInWindow, type RainRow } from "./measuredRain";
+import { gaugeRainNow, measuredInWindow, tripped, type RainRow } from "./measuredRain";
+import { rainTriggersFor } from "./rainTriggers";
+import { stationDisplayName } from "./displayName";
 import { noRainSensor } from "./rainSensors";
 import { rainWord } from "./rainWords";
 import { getBasinWeather, hasCatchment } from "./weather";
@@ -39,6 +41,23 @@ export function heaviestUpstream(all: Pick<NationalStation, "station" | "basin" 
     if (m && (m.mm24h ?? 0) >= (best?.mm24h ?? -1)) best = { gauge: g, ...m };
   }
   return best;
+}
+
+/**
+ * Heaviest measured rain on one river that reached the gauge's flood trigger (per-gauge threshold when lib/model/rain-thresholds.json
+ * has one, else 25 mm / 1 h or 40 mm / 3 h), for the Needs attention badge. null = none, or no gauge has a fresh rain reading.
+ */
+export function heavyMeasuredOnRiver(all: Pick<NationalStation, "station" | "basin" | "trend24h">[], basin: string, now = Date.now()): { gaugeName: string; hours: 1 | 3; mm: number; local: boolean } | null {
+  let best: { gaugeName: string; hours: 1 | 3; mm: number; local: boolean; score: number } | null = null;
+  for (const s of all) {
+    if (s.basin.trim() !== basin.trim() || noRainSensor(s.station)) continue;
+    const g = gaugeRainNow(s.station, s.trend24h, now);
+    if (!g) continue;
+    const tr = rainTriggersFor(s.station);
+    const hit = tripped(g, tr);
+    if (hit && (!best || (g.mm3h ?? 0) > best.score)) best = { gaugeName: stationDisplayName(s.station), hours: hit.hours, mm: hit.mm, local: tr.local, score: g.mm3h ?? 0 };
+  }
+  return best ? { gaugeName: best.gaugeName, hours: best.hours, mm: best.mm, local: best.local } : null;
 }
 
 export type ForecastRain = {

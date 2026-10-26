@@ -4,6 +4,7 @@ import {
   ArrowRight,
   ArrowUp,
   Clock,
+  CloudRain,
   Minus,
   ShieldCheck,
   TriangleAlert,
@@ -20,6 +21,7 @@ import {
 import { basinPath } from "@/lib/slug";
 import { detectUnit, formatDelta, formatLevel, type Unit } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
+import { heavyMeasuredOnRiver } from "@/lib/stationRain";
 import { TimeAgo } from "./TimeAgo";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
@@ -150,6 +152,7 @@ function BasinCard({
   b,
   rateM,
   serverNow,
+  rain,
 }: {
   t: TFn;
   p: (path: string) => string;
@@ -157,6 +160,8 @@ function BasinCard({
   b: BasinAttention;
   rateM: number | null;
   serverNow: number;
+  /** Heavy rain the gauges on this river measured (lib/stationRain.ts), or null. */
+  rain: ReturnType<typeof heavyMeasuredOnRiver>;
 }) {
   const style = TIER_STYLE[b.tier];
   const unit: Unit = detectUnit(b.lead.thresholds);
@@ -177,6 +182,16 @@ function BasinCard({
             {b.tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
             {tierText(t, b.tier)}
           </span>
+          {rain && (
+            <span
+              data-rain-badge
+              title={t("needs.rainTitle", { gauge: rain.gaugeName, mm: rain.mm, h: rain.hours })}
+              className="inline-flex items-center gap-1 rounded-full bg-sky-100 dark:bg-sky-900/40 px-2 py-0.5 text-xs font-medium text-sky-900 dark:text-sky-200"
+            >
+              <CloudRain className="size-3" aria-hidden />
+              {rain.local ? t("needs.rainLocal") : t("needs.rain")}
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 text-xs tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
             {b.lead.stale && <Clock className="size-3" aria-hidden />}
             <TimeAgo ts={b.lead.ts} serverNow={serverNow} short={b.lead.stale} />
@@ -311,6 +326,7 @@ export function NeedsAttention({
             b={b}
             rateM={rateByHref.get(b.lead.href) ?? null}
             serverNow={serverNow}
+            rain={heavyMeasuredOnRiver(snapshot, b.basin, serverNow)}
           />
         ))}
       </ul>
