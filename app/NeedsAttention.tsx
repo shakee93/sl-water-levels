@@ -177,21 +177,11 @@ function BasinCard({
       >
         <div className="flex items-center justify-between gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${style.pill}`}
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${style.pill}`}
           >
             {b.tier !== "watch" && <TriangleAlert className="size-3" aria-hidden />}
             {tierText(t, b.tier)}
           </span>
-          {rain && (
-            <span
-              data-rain-badge
-              title={t("needs.rainTitle", { gauge: rain.gaugeName, mm: rain.mm, h: rain.hours })}
-              className="inline-flex items-center gap-1 rounded-full bg-sky-100 dark:bg-sky-900/40 px-2 py-0.5 text-xs font-medium text-sky-900 dark:text-sky-200"
-            >
-              <CloudRain className="size-3" aria-hidden />
-              {rain.local ? t("needs.rainLocal") : t("needs.rain")}
-            </span>
-          )}
           <span className="inline-flex items-center gap-1 text-xs tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
             {b.lead.stale && <Clock className="size-3" aria-hidden />}
             <TimeAgo ts={b.lead.ts} serverNow={serverNow} short={b.lead.stale} />
@@ -221,11 +211,23 @@ function BasinCard({
 
         <ThresholdBar t={t} s={b.lead} style={style} />
 
-        <div className="mt-2">
+        {/* Trend and the measured-rain note share one quiet line under the bar (the header keeps only the tier pill,
+            which wrapped onto two lines when a rain chip sat beside it). */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           {b.lead.stale ? (
             <span className="text-xs text-slate-500 dark:text-slate-400">{t("needs.lastKnown")}</span>
           ) : (
             <Trend t={t} rateM={rateM} rate={b.lead.ratePerHour} unit={unit} />
+          )}
+          {rain && (
+            <span
+              data-rain-badge
+              title={t("needs.rainTitle", { gauge: rain.gaugeName, mm: rain.mm, h: rain.hours })}
+              className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-sky-700 dark:text-sky-300"
+            >
+              <CloudRain className="size-3.5" aria-hidden />
+              {rain.local ? t("needs.rainLocal") : t("needs.rain")}
+            </span>
           )}
         </div>
 
