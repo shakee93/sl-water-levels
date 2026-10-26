@@ -70,13 +70,15 @@ function FitToUser({ points }: { points: Array<[number, number]> | null }) {
   return null;
 }
 
+const CREDIT = "© OpenStreetMap contributors; rivers: Irrigation Department";
+
 /** Frame the whole island on load and on resize; that framing is also the minimum zoom. */
 function FitIsland() {
   const map = useMap();
   useEffect(() => {
-    // one credit line, no Leaflet flag: the land and rivers are OpenStreetMap data
+    // one credit line, no Leaflet flag: the land and most rivers are OpenStreetMap data, some tributaries the Irrigation Department's
     map.attributionControl.setPrefix(false);
-    map.attributionControl.addAttribution("© OpenStreetMap contributors");
+    map.attributionControl.addAttribution(CREDIT);
     const fit = () => {
       map.invalidateSize();
       map.setMinZoom(0);
@@ -90,7 +92,7 @@ function FitIsland() {
     const later = window.setTimeout(refit, 400);
     map.on("resize", refit);
     return () => {
-      map.attributionControl.removeAttribution("© OpenStreetMap contributors");
+      map.attributionControl.removeAttribution(CREDIT);
       window.clearTimeout(later);
       map.off("resize", refit);
     };

@@ -1,5 +1,6 @@
-// River centrelines for the home page map (Leaflet). Built from OpenStreetMap by
-// scripts/build-home-rivers.mjs, ~26 KB; imported only by the lazily loaded map module.
+// River centrelines for the home page map (Leaflet). Built from OpenStreetMap plus the Irrigation
+// Department's rivers layer (tributaries OSM lacks) by scripts/build-river-extras.mjs and
+// scripts/build-home-rivers.mjs, ~29 KB; imported only by the lazily loaded map module.
 // (c) OpenStreetMap contributors, ODbL.
 
 import json from "./home-rivers.json";

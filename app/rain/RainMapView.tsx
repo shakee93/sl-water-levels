@@ -393,7 +393,7 @@ export function RainMapView({ rivers }: RainMapStrings) {
                   }}
                 />
               ))}
-              <text x={W - 6} y={H - 6} textAnchor="end" fontSize={9 / scale} className="fill-slate-500 dark:fill-slate-400">© OpenStreetMap contributors</text>
+              <text x={W - 6} y={H - 6} textAnchor="end" fontSize={9 / scale} className="fill-slate-500 dark:fill-slate-400">© OpenStreetMap contributors; rivers: Irrigation Department</text>
             </svg>
           </div>
         </div>

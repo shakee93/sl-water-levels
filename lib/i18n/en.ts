@@ -40,7 +40,7 @@ export const en = {
   "footer.notOfficial": "Not an official warning service. In an emergency, call 117.",
   "footer.home": "Home",
   "footer.floodHistory": "Flood history",
-  "footer.credits": "Readings from the Department of Irrigation and the Mahaweli Authority. Warnings from the Disaster Management Centre. Rain forecasts from Open-Meteo. Map © OpenStreetMap contributors.",
+  "footer.credits": "Readings from the Department of Irrigation and the Mahaweli Authority. Warnings from the Disaster Management Centre. Rain forecasts from Open-Meteo. Map © OpenStreetMap contributors; some river lines from the Department of Irrigation.",
   "footer.copyright": "© {year} Sri Lanka Water Levels. Built in Sri Lanka.",
 
   // ---- dates and times -----------------------------------------------------------------------
