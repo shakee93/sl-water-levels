@@ -278,7 +278,7 @@ function noModelReason(station: string, hasGrid: boolean): string {
 }
 
 const rainBits = (r: NonNullable<Forecast["rain"]>) =>
-  `${r.past6hMm != null ? `${r.past6hMm.toFixed(1)} mm in the last 6 hours, ` : ""}${r.past24hMm != null ? `${r.past24hMm.toFixed(0)} mm in the last 24 hours` : ""}${r.next24hMm.det != null ? `, ${r.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}`.replace(/^, /, "");
+  `${r.past6hMm != null ? `${r.past6hMm.toFixed(1)} mm modelled for the last 6 hours, ` : ""}${r.past24hMm != null ? `${r.past24hMm.toFixed(0)} mm modelled for the last 24 hours` : ""}${r.next24hMm.det != null ? `, ${r.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}`.replace(/^, /, "");
 
 /** Trend-only forecast for stations without a fitted model. */
 function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number, anchor: number, weather: ForecastInput["weather"], steps: GaugeStep[] | null): Forecast {
@@ -301,7 +301,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
   // The headline is user-facing (and feeds the AI line); the method reason is in notes below.
   const notes = t.notes.filter((n) => !(w && n.startsWith("No rain data reported nearby")));
   if (w && rain) {
-    notes.unshift(`Catchment rain (area average over ${rain.cells} grid cells above this gauge, Open-Meteo): ${rainBits(rain)}. It is shown for context; this gauge's forecast does not use it.`);
+    notes.unshift(`Forecast model estimate of catchment rain (Open-Meteo, area average over ${rain.cells} grid cells above this gauge): ${rainBits(rain)}. The model's past hours often read lower than the gauges, so they are not what fell; this note is for context.`);
   } else if (weather && !weather.ok) {
     notes.unshift(`Catchment rain unavailable right now (${weather.reason}).`);
   }
@@ -513,7 +513,8 @@ function fromModel(
   if (w) {
     const n = w.next24hMm;
     const fmt = (v: number | null) => (v == null ? "n/a" : v.toFixed(0));
-    if (n.det != null && n.det >= 20) notes.push(`Heavy rain forecast over the catchment: about ${fmt(n.det)} mm in the next 24 hours${n.p10 != null ? ` (ensemble range ${fmt(n.p10)} to ${fmt(n.p90)} mm)` : ""}.`);
+    // 50 mm and more is the "heavy rain upstream" warning (lib/rainRisk.ts), so this softer note covers only 20 to 50 mm and does not say "heavy".
+    if (n.det != null && n.det >= 20 && n.det < 50) notes.push(`Some rain is forecast over the catchment: about ${fmt(n.det)} mm in the next 24 hours${n.p10 != null ? ` (ensemble range ${fmt(n.p10)} to ${fmt(n.p90)} mm)` : ""}.`);
   }
 
   // ---- headline
@@ -547,7 +548,7 @@ function fromModel(
   basis.push(leaders.length ? `Latest level at ${station} and recent change, plus upstream gauges: ${leaders.join(", ")}.` : `Latest level at ${station} and recent change. No gauge sits upstream of it (or none reports in step with it), so the catchment rain is its upstream signal.`);
   if (w) {
     const past = w.past24hMm;
-    basis.push(`Catchment rain from Open-Meteo (area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm in the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
+    basis.push(`Forecast model estimate of catchment rain (Open-Meteo, area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm modelled for the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
   }
   if (v2h.size) basis.push(`The ${[...v2h].sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings, including the November 2025 Ditwah floods); where this was tested against 'level stays the same' it missed by less.`);
   if (stormH.size) basis.push(`Heavy rain upstream is part of the ${[...stormH].sort((a, b) => a - b).join(", ")} hour steps: rain that has fallen or is forecast over the catchment above ${station} raises the level, and the top of the range allows for the heavier forecast rain. Tested storm by storm (leaving each storm out, Ditwah included) it was closer than the river's own trend alone.`);
