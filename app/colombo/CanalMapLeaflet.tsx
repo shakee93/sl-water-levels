@@ -205,7 +205,7 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
 
   const lineColor = dark ? "#38bdf8" : "#0284c7";
   const dim = (b: BasinId | null) => selBasin != null && b !== selBasin;
-  const flowColor = "#e0f2fe";
+  const flowColor = "#bae6fd";
 
   return (
     <div className="cc-map" lang={lang}>
