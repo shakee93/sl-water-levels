@@ -13,7 +13,7 @@ import { getNational } from "@/lib/arcgis";
 import { formatLevel } from "@/lib/units";
 import { soft } from "@/lib/soft";
 import { tierLabel } from "@/app/tierUi";
-import { toFt } from "@/lib/geo/colomboMap";
+import { toFt } from "@/lib/curwStatus";
 import type { CanalMapData } from "@/app/colombo/canalMapTypes";
 import { tideEvents } from "@/lib/tide";
 import { AnswerLine, JsonLd } from "@/app/Answer";
@@ -110,7 +110,8 @@ export default async function ColomboCanalsPage({ params }: Params) {
         <section className="mt-6" aria-label={cc("map.title")}>
           <h2 className="text-base font-semibold">{cc("map.title")}</h2>
           <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">{cc("map.lead")}</p>
-          <div className="mt-3"><CanalMap data={mapData} /></div>
+          {/* the map is the hero: wider than the text column on large screens */}
+          <div className="mt-3 lg:relative lg:left-1/2 lg:w-[min(76rem,calc(100vw-3rem))] lg:-translate-x-1/2"><CanalMap data={mapData} /></div>
         </section>
 
         {BASINS.map((b) => (

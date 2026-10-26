@@ -9,7 +9,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Crosshair, Layers, Waves } from "lucide-react";
+import { ArrowLeft, ChevronUp, Crosshair, Layers, Waves } from "lucide-react";
 import { useI18n } from "../LocaleProvider";
 import { useScheme } from "../useTheme";
 import { clock } from "@/lib/i18n/format";
@@ -36,7 +36,7 @@ const LAYERS: Layer[] = ["canals", "basins", "gauges", "works", "floods"];
 const STATE_HEX: Record<CanalState, string> = { normal: "#059669", rising: "#d97706", higher: "#ea580c", lower: "#475569", learning: "#94a3b8", offline: "#94a3b8" };
 const BASIN_HEX: Record<string, string> = { higher: "#f59e0b", normal: "#10b981", lower: "#64748b", learning: "#94a3b8", offline: "#94a3b8" };
 const BASIN_ORDER: BasinId[] = ["kolonnawa", "north", "parliament", "wellawatta"];
-const WEIGHT: Record<Line["k"], number> = { r: 3, c: 2, d: 1.4, s: 1, t: 1 };
+const WEIGHT: Record<Line["k"], number> = { r: 5.5, c: 3, d: 1.7, s: 1.1, t: 1 };
 // OpenStreetMap's own tiles (CARTO's now need an API key). Dark mode darkens them with a CSS filter.
 const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
@@ -57,12 +57,17 @@ const css = `
 .cc-work{display:grid;place-items:center;width:26px;height:26px;border-radius:9999px;background:#fff;color:#0f172a;border:2px solid #0369a1;box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .dark .cc-work{background:#0f172a;color:#e2e8f0;border-color:#38bdf8}
 .cc-wlabel{font-size:11px;font-weight:600;padding:1px 5px}
+.cc-blabel{background:transparent!important;border:0!important;box-shadow:none!important;color:#1e293b;font-weight:700;font-size:11px;letter-spacing:.03em;text-transform:uppercase;text-align:center;white-space:normal!important;width:96px;padding:0;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 5px #fff}
+.cc-blabel:before{display:none!important}
+.dark .cc-blabel{color:#f1f5f9;text-shadow:0 0 3px #0f172a,0 0 3px #0f172a,0 0 5px #0f172a}
 .cc-flow{stroke-dasharray:0.1 13;animation:cc-flow 1.8s linear infinite}
 @keyframes cc-flow{to{stroke-dashoffset:-13.1}}
-@media (prefers-reduced-motion:reduce){.cc-flow{animation:none;stroke-dasharray:7 9}}
+@media (prefers-reduced-motion:reduce){.cc-flow{animation:none;stroke-dasharray:6 9}}
 .cc-map .leaflet-container{font:inherit}
-.cc-tiles{filter:saturate(.55) brightness(1.04)}
-.dark .cc-tiles{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9) saturate(.5)}
+html .cc-map .leaflet-container{background:#e9edf1}
+html.dark .cc-map .leaflet-container{background:#111827}
+.cc-tiles{filter:grayscale(1) contrast(.5) brightness(1.22)}
+.dark .cc-tiles{filter:grayscale(1) invert(1) contrast(.55) brightness(.7)}
 `;
 
 const fmtFt = (v: number | null | undefined) => (v == null ? "-" : v.toFixed(1));
@@ -91,17 +96,24 @@ function Panes({ onReady }: { onReady: (r: { canvas: L.Canvas; svg: L.SVG }) => 
 function Camera({ target, resetKey }: { target: L.LatLngBoundsExpression | null; resetKey: number }) {
   const map = useMap();
   const base = useRef<number | null>(null);
+  const lastFit = useRef(0);
   useEffect(() => {
+    // on wide screens the "How Colombo drains" card floats over the right side: frame the system left of it
     const fit = (animate: boolean) => {
       map.invalidateSize();
-      map.fitBounds(target ?? MAP_BOUNDS, { padding: [16, 16], animate });
+      const wide = map.getSize().x >= 900;
+      map.fitBounds(target ?? MAP_BOUNDS, { paddingTopLeft: [16, 16], paddingBottomRight: [wide ? 372 : 16, 16], animate });
+      lastFit.current = map.getZoom();
     };
     fit(base.current != null);
     // the lazy chunk can mount before the box has its final size: frame again once it settles
     const first = base.current == null;
     const later = window.setTimeout(() => { if (first) { fit(false); base.current = map.getZoom(); } }, 350);
     if (first) base.current = map.getZoom();
-    return () => window.clearTimeout(later);
+    // a window resize re-frames the view unless the visitor has already zoomed or panned
+    const onResize = () => { if (!target && Math.abs(map.getZoom() - lastFit.current) < 0.01) { fit(false); base.current = map.getZoom(); } };
+    map.on("resize", onResize);
+    return () => { window.clearTimeout(later); map.off("resize", onResize); };
   }, [map, target, resetKey]);
   useEffect(() => {
     const coarse = window.matchMedia?.("(pointer: coarse)").matches;
@@ -191,9 +203,9 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
     );
   };
 
-  const lineColor = dark ? "#7dd3fc" : "#0369a1";
+  const lineColor = dark ? "#38bdf8" : "#0284c7";
   const dim = (b: BasinId | null) => selBasin != null && b !== selBasin;
-  const flowColor = dark ? "#e0f2fe" : "#075985";
+  const flowColor = "#e0f2fe";
 
   return (
     <div className="cc-map" lang={lang}>
@@ -238,15 +250,15 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
       </div>
       {msg && <p role="status" className="mb-2 text-sm text-slate-800 dark:text-slate-200">{msg}</p>}
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="relative">
         <div>
-          <div className="relative h-[460px] overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 sm:h-[560px] lg:h-[640px]">
+          <div className="relative h-[clamp(440px,65vh,560px)] overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 lg:h-[clamp(520px,70vh,780px)]">
             <MapContainer
               center={[6.92, 79.89]}
               zoom={12}
               zoomSnap={0.25}
               zoomDelta={0.5}
-              minZoom={11}
+              minZoom={10}
               maxZoom={17}
               maxBounds={[[6.78, 79.78], [7.05, 80.02]]}
               maxBoundsViscosity={0.8}
@@ -273,12 +285,12 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
                         pane="cc-canals"
                         renderer={rend.canvas}
                         bubblingMouseEvents={false}
-                        pathOptions={{ color: hex, weight: isSel ? 3 : 1.5, dashArray: isSel ? undefined : "6 5", fillColor: hex, fillOpacity: selBasin && selBasin !== b.id ? 0.03 : isSel ? 0.3 : 0.24, opacity: selBasin && selBasin !== b.id ? 0.4 : 0.9 }}
+                        pathOptions={{ color: hex, weight: isSel ? 3 : 1.5, dashArray: isSel ? undefined : "6 5", fillColor: hex, fillOpacity: selBasin && selBasin !== b.id ? 0.03 : isSel ? 0.34 : 0.2, opacity: selBasin && selBasin !== b.id ? 0.4 : 0.9 }}
                         eventHandlers={{ click: () => pick({ t: "basin", id: b.id }), add: (e) => (e.target as L.Polygon).bringToBack() }}
                       >
-                        <Tooltip permanent direction="center" opacity={0.85} className="cc-wlabel">
-                          {(d?.name ?? b.id).split(" (")[0]}
-                        </Tooltip>
+                        {!(selBasin && selBasin !== b.id) && (
+                          <Tooltip permanent direction="center" opacity={1} className="cc-blabel">{(d?.name ?? b.id).split(" (")[0]}</Tooltip>
+                        )}
                       </Polygon>
                     );
                   })}
@@ -288,13 +300,13 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
                   ))}
                   {/* lakes and marshes */}
                   {on.canals && WATERS.map((w, i) => (
-                    <Polygon key={i} positions={w.ring} pane="cc-water" interactive={false} pathOptions={{ stroke: false, fillColor: w.w ? (dark ? "#3f6b4f" : "#86c79a") : dark ? "#38bdf8" : "#7dd3fc", fillOpacity: w.w ? 0.38 : 0.6 }}>
+                    <Polygon key={i} positions={w.ring} pane="cc-water" interactive={false} pathOptions={{ stroke: false, fillColor: w.w ? (dark ? "#5eead4" : "#99f6e4") : dark ? "#38bdf8" : "#7dd3fc", fillOpacity: w.w ? 0.28 : 0.85 }}>
                     </Polygon>
                   ))}
                   {/* canal lines (OpenStreetMap) */}
                   {on.canals && LINES.map((l, i) => {
                     const isSel = sel?.t === "line" && sel.i === i;
-                    const w = WEIGHT[l.k];
+                    const w = WEIGHT[l.k] + (l.k === "c" && l.n ? 0.8 : 0);
                     return (
                       <Polyline
                         key={i}
@@ -315,7 +327,7 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
                   })}
                   {/* flow: moving dots along the main canals, towards their outfall (still dots when motion is reduced) */}
                   {on.canals && LINES.map((l, i) => l.flow && !dim(l.b) && (
-                    <Polyline key={`f${i}`} positions={l.pts} pane="cc-flow" renderer={rend.svg} interactive={false} pathOptions={{ color: flowColor, weight: 3.2, opacity: reduced ? 0.55 : 0.85, lineCap: "round", className: "cc-flow" }} />
+                    <Polyline key={`f${i}`} positions={l.pts} pane="cc-flow" renderer={rend.svg} interactive={false} pathOptions={{ color: flowColor, weight: 2.2, opacity: reduced ? 0.7 : 0.95, lineCap: "round", className: "cc-flow" }} />
                   ))}
                   {/* CUrW gauges */}
                   {on.gauges && GAUGE_POS.filter((g) => g.n !== "Mutwal Inlet").map((g) => {
@@ -353,12 +365,12 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
                   {/* flood-control works: static design context */}
                   {on.works && WORKS.filter((w) => w.id !== "nagalagam").map((w) => (
                     <Marker key={w.id} position={[w.lat, w.lon]} icon={workIcon(w.kind)} pane="cc-points" keyboard={false} bubblingMouseEvents={false} eventHandlers={{ click: () => pick({ t: "work", id: w.id }) }}>
-                      {zoom >= 13 && <Tooltip permanent direction="right" offset={[10, 0]} opacity={0.92} className="cc-wlabel">{cc(`work.${w.id}` as CKey)}</Tooltip>}
+                      <Tooltip key={zoom >= 14 ? "p" : "h"} permanent={zoom >= 14} direction="right" offset={[10, 0]} opacity={0.95} className="cc-wlabel">{cc(`work.${w.id}` as CKey)}</Tooltip>
                     </Marker>
                   ))}
                   {on.works && (() => { const w = WORKS.find((x) => x.id === "nagalagam")!; return (
                     <Marker position={[w.lat, w.lon]} icon={workIcon("gate")} pane="cc-points" keyboard={false} bubblingMouseEvents={false} eventHandlers={{ click: () => pick({ t: "work", id: w.id }) }}>
-                      {zoom >= 13 && <Tooltip permanent direction="left" offset={[-10, 0]} opacity={0.92} className="cc-wlabel">{cc("work.nagalagam")}</Tooltip>}
+                      <Tooltip key={zoom >= 14 ? "p" : "h"} permanent={zoom >= 14} direction="left" offset={[-10, 0]} opacity={0.95} className="cc-wlabel">{cc("work.nagalagam")}</Tooltip>
                     </Marker>
                   ); })()}
                   {me && (
@@ -371,10 +383,12 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
               )}
             </MapContainer>
           </div>
-          <Legend cc={cc} floods={on.floods} />
         </div>
+        <div className="mt-3 lg:absolute lg:right-3 lg:top-3 lg:z-[1000] lg:mt-0 lg:w-[340px]">
         <Panel data={data} cc={cc} sel={sel} setSel={pick} gauge={gauge} basin={basin} reset={reset} floods={on.floods} t={t} p={p} lang={lang} selId={selId} />
+        </div>
       </div>
+      <Legend cc={cc} floods={on.floods} />
       <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{cc("map.credit")} {cc("map.note")}</p>
     </div>
   );
@@ -388,7 +402,7 @@ function Legend({ cc, floods }: { cc: CC; floods: boolean }) {
   return (
     <div className="mt-2 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
       <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-200">{cc("map.key")}</h3>
-      <ul className="mt-1 grid grid-cols-1 gap-x-4 gap-y-1 text-xs text-slate-700 dark:text-slate-300 min-[420px]:grid-cols-2">
+      <ul className="mt-1 grid grid-cols-1 gap-x-4 gap-y-1 text-xs text-slate-700 dark:text-slate-300 min-[420px]:grid-cols-2 lg:grid-cols-4">
         <li className="flex items-center gap-1.5"><Dot hex={STATE_HEX.normal} /> {cc("map.k.normal")}</li>
         <li className="flex items-center gap-1.5"><Dot hex={STATE_HEX.higher} /> {cc("map.k.higher")}</li>
         <li className="flex items-center gap-1.5"><Dot hex={STATE_HEX.lower} /> {cc("map.k.lower")}</li>
@@ -424,6 +438,7 @@ type PanelProps = {
 
 /** "How Colombo drains": follows whatever is selected on the map. */
 function Panel({ data, cc, sel, setSel, gauge, basin, reset, floods, t, p }: PanelProps) {
+  const [open, setOpen] = useState(true);
   const card = "rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900";
   const h = "flex items-center gap-1.5 text-sm font-semibold";
   const read = (ms: number | null) => (ms ? clock(ms, t) : "");
@@ -574,8 +589,14 @@ function Panel({ data, cc, sel, setSel, gauge, basin, reset, floods, t, p }: Pan
     );
   }
   return (
-    <aside className={`${card} max-h-none overflow-y-auto lg:max-h-[640px]`} aria-live="polite">
-      <h2 className={h}><Waves className="size-4 text-sky-700 dark:text-sky-300" aria-hidden /> {cc("map.panel")}</h2>
+    <aside className={`${card} lg:bg-white/95 lg:shadow-lg lg:backdrop-blur dark:lg:bg-slate-900/95`} aria-live="polite">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className={h}><Waves className="size-4 text-sky-700 dark:text-sky-300" aria-hidden /> {cc("map.panel")}</h2>
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label={cc("map.panel")} className="hidden size-8 place-items-center rounded-full text-slate-600 hover:bg-slate-100 lg:grid dark:text-slate-300 dark:hover:bg-slate-800">
+          <ChevronUp className={`size-4 transition-transform ${open ? "" : "rotate-180"}`} aria-hidden />
+        </button>
+      </div>
+      <div className={`${open ? "" : "lg:hidden"} lg:max-h-[calc(clamp(520px,70vh,780px)-7rem)] lg:overflow-y-auto`}>
       <div className="mt-2">{body}</div>
       {floods && (
         <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50 p-2.5 text-xs text-violet-950 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-100">
@@ -583,6 +604,7 @@ function Panel({ data, cc, sel, setSel, gauge, basin, reset, floods, t, p }: Pan
           <p className="mt-0.5">{cc("map.flood.note")}</p>
         </div>
       )}
+      </div>
     </aside>
   );
 }

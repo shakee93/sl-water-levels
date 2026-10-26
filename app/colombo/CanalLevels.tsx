@@ -3,7 +3,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { clock } from "@/lib/i18n/format";
 import { ccFor } from "@/lib/i18n/colombo";
 import type { CanalGauge, Canals } from "@/lib/curw";
-import { CURW_URL } from "@/lib/curwStatus";
+import { CURW_URL, toFt } from "@/lib/curwStatus";
 
 const TONE: Record<string, string> = {
   higher: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-800",
@@ -51,7 +51,7 @@ export function CanalLevels({ lang, canals, names, title, showSea = true, notes 
                 g.observedMs ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{cc("canal.read", { time: clock(g.observedMs, t) })}</p> : null
               ) : (
                 <>
-                  <p className="mt-1 text-sm text-slate-800 dark:text-slate-200">{g.level != null && cc("canal.m", { m: g.level.toFixed(2) })}</p>
+                  <p className="mt-1 text-sm text-slate-800 dark:text-slate-200">{g.level != null && cc("canal.m", { m: toFt(g.level).toFixed(1) })}</p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">{g.observedMs ? cc("canal.read", { time: clock(g.observedMs, t) }) : ""}</p>
                   <Spark g={g} label={`${g.name}: ${cc("canal.spark")}`} />
                 </>

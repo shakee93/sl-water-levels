@@ -634,10 +634,13 @@ English advisory and no official warnings.
     streams dropped) and lakes/marshes inside 6.84-6.99 N, 79.84-79.95 E, one Overpass fetch (osm base 2026-10-26 11:14 UTC), simplified
     (about 7 m), delta-encoded in 1e-5 degrees. Rebuild: `node scripts/build-colombo-map.mjs` (Overpass; `--from raw.json` reuses an answer).
     Each line carries the basin its midpoint falls in. (c) OpenStreetMap contributors, ODbL, credited on the map.
-  - `lib/geo/colombo-basins.json`: **approximate** outlines of the four basins, drawn by hand along the OSM canal network and ridges
-    between the town centres in `lib/places.ts` (Kolonnawa basin: Kelani south bank to the Kotte ridge; Parliament: Diyawanna wetland and
-    Kotte; Wellawatta: Kirulapone/Wellawatta/Dehiwala; North: coast to Dematagoda). No official catchment boundary was found
-    (OSM has only Colombo ward boundaries). The map and legend say "approximate". Shared edges use identical vertices.
+  - `lib/geo/colombo-basins.json` (about 30 KB): **approximate** basin areas, smooth, no gaps and no overlaps. Built by
+    `node scripts/build-colombo-basins.mjs`: each 100 m cell that is inside the hand-drawn envelope (`colombo-basins-seed.json`, drawn
+    along the OSM canals and ridges between town centres), on land (`colombo-coast.json`, OSM coastline from
+    `scripts/build-colombo-coast.mjs`, simplified by hand through the port) and within 1 km of a canal or lake takes the basin of its
+    nearest canal; the divide between two basins therefore falls half way between their canals. Shared edges are traced once,
+    simplified and Chaikin-smoothed, so neighbours fit exactly. No official catchment boundary was found (OSM has only Colombo ward
+    boundaries; the Irrigation Department / SLLDC publish none), so the map and legend say "approximate".
   - `lib/geo/colombo-gauges.json`: **approximate** CUrW gauge positions (CUrW publishes none): placed from the gauge name, snapped to
     the nearest OSM canal within 600 m. Not surveyed; the gauge panel says so. Ranwala N, Kaduwela N and Awerihena Tank are outside
     the map and not drawn.

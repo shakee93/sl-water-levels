@@ -4,7 +4,7 @@
 // Run by hand when the map should be refreshed. NEVER called per request or from the browser.
 // Box 6.84-6.99 N, 79.84-79.95 E. Data (c) OpenStreetMap contributors (ODbL), credited on the map.
 // Each canal line is tagged with the basin it mostly lies in, using the approximate basin outlines in
-// lib/geo/colombo-basins.json (hand-drawn, see DOCS.md "Colombo canal map").
+// lib/geo/colombo-basins-seed.json (hand-drawn, see DOCS.md "Colombo canal map").
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,7 +58,7 @@ const geom = (g) => g.map((p) => [p.lat, p.lon]);
 const lenKm = (pts) => pts.reduce((s, p, i) => (i ? s + Math.hypot((p[0] - pts[i - 1][0]), (p[1] - pts[i - 1][1]) * KX) * 111.2 : 0), 0);
 const area = (pts) => Math.abs(pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + (p[1] * q[0] - q[1] * p[0]) * KX; }, 0) / 2) * 111.2 * 111.2; // km2
 
-const basins = fs.existsSync(path.join(ROOT, "lib/geo/colombo-basins.json")) ? JSON.parse(fs.readFileSync(path.join(ROOT, "lib/geo/colombo-basins.json"), "utf8")).basins : [];
+const basins = fs.existsSync(path.join(ROOT, "lib/geo/colombo-basins-seed.json")) ? JSON.parse(fs.readFileSync(path.join(ROOT, "lib/geo/colombo-basins-seed.json"), "utf8")).basins : [];
 const inside = (pt, ring) => { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [yi, xi] = ring[i], [yj, xj] = ring[j]; if ((yi > pt[0]) !== (yj > pt[0]) && pt[1] < ((xj - xi) * (pt[0] - yi)) / (yj - yi) + xi) c = !c; } return c; };
 const basinOf = (pts) => { const m = pts[Math.floor(pts.length / 2)]; return basins.find((b) => inside(m, b.ring))?.id ?? null; };
 
