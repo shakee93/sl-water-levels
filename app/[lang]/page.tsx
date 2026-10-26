@@ -1,3 +1,4 @@
+import { BringPlacesOver } from "../BringPlacesOver";
 import { getStationVerdicts, type StationVerdict } from "@/lib/stationVerdict";
 import { soft } from "@/lib/soft";
 import Link from "next/link";
@@ -134,6 +135,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <MyPlaces stations={home} />
             <HomeInstallCard />
 
+            <BringPlacesOver />
             <NearYou stations={home} />
 
             <NeedsAttention lang={lang} snapshot={national} serverNow={serverNow} verdicts={verdicts} />
