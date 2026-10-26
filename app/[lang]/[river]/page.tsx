@@ -14,6 +14,7 @@ import { RiverGauges } from "@/app/RiverGauges";
 import { TimeAgo } from "@/app/TimeAgo";
 import { colomboTime } from "@/app/tierUi";
 import { BasinDams } from "@/app/BasinDams";
+import { InTheNews } from "@/app/InTheNews";
 import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
@@ -273,6 +274,8 @@ export default async function BasinPage({
         <Suspense key={`dams-${basin}`} fallback={null}>
           <BasinDams basin={basin} lang={lang} />
         </Suspense>
+
+        <Suspense key={`news-${basin}`} fallback={null}><InTheNews lang={lang} basin={basin} /></Suspense>
 
         <Link
           href={p("/help")}

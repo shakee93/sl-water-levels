@@ -1,4 +1,5 @@
 import { SpillWatchChip } from "@/app/SpillWatchChip";
+import { InTheNews } from "@/app/InTheNews";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -498,6 +499,8 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
             </p>
           )}
         </section>
+
+        <Suspense key={`news-${rv.slug}`} fallback={null}><InTheNews lang={lang} reservoir={{ catalogueId: rv.catalogueId ?? null, name: rv.name }} /></Suspense>
 
         {/* ---- same river */}
         {ourBasin && (

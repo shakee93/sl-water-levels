@@ -10,6 +10,7 @@ import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import { rtFor } from "@/lib/i18n/reservoirs";
+import { nwFor } from "@/lib/i18n/news";
 import { getSearchStations, type SearchStation } from "./PlaceSearchData";
 import { X_HANDLE } from "@/lib/seo";
 import { XLogo } from "./XLogo";
@@ -82,6 +83,14 @@ export async function Header({ lang }: { lang: Locale }) {
             className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             {rtFor(lang)("nav")}
+          </Link>
+
+          <Link
+            href={p("/news")}
+            data-umami-event="news_nav_click"
+            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            {nwFor(lang)("nav")}
           </Link>
 
           <Link

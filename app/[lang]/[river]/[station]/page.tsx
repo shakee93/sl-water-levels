@@ -29,6 +29,7 @@ import { StationCardSkeleton, VerdictSkeleton } from "@/app/StationCardSkeleton"
 import { StationHelpCard } from "@/app/StationHelpCard";
 import { BasinFlow } from "@/app/BasinFlow";
 import { BasinDams } from "@/app/BasinDams";
+import { InTheNews } from "@/app/InTheNews";
 import { Forecast } from "@/app/Forecast";
 import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { Anomaly } from "@/app/Anomaly";
@@ -297,6 +298,8 @@ export default async function StationPage({
             <Suspense key={`dams-${station}`} fallback={null}>
               <BasinDams basin={basin} lang={lang} />
             </Suspense>
+
+            <Suspense key={`news-${station}`} fallback={null}><InTheNews lang={lang} basin={basin} /></Suspense>
 
             <TownsOnGauge lang={lang} station={station} />
 

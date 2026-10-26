@@ -68,6 +68,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...entry("/flood", newest),
     // A town page changes when its gauge reports.
     ...PLACES.flatMap((x) => entry(`/flood/${x.slug}`, stations.find((s) => s.station === x.stations[0])?.latest?.ts)),
+    // Recent news changes by the hour; the list is fetched live on the page, so no per-item entries.
+    ...entry("/news", Date.now()),
     ...entry("/help", contentDay),
     ...entry("/about", contentDay),
     ...entry("/research", Date.parse(`${WF_MODIFIED}T00:00:00+05:30`)),

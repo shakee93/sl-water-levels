@@ -90,6 +90,13 @@ lib/
   (Moussakele -> Maussakele, Castlereigh -> Castlereagh) in `wmsName()`.
 - **DMC Irrigation flood-warning PDFs**: `lib/warnings.ts` also extracts the
   release cusecs (`releaseCusecs`) from digits next to "ඝණ අඩි" / "கன அடி" / cusecs.
+- **Newswire** (newswire.lk/feed/, WordPress RSS, main news source; Ada Derana and Daily Mirror secondary):
+  `lib/newsFeeds.ts` fetches all three once per 10 min (UA with site URL + owner email, If-Modified-Since),
+  shared by the spill-gate detector below and the **Flood news board** (`lib/news.ts`: keyword rules in
+  `lib/newsClassify.ts`, optional gpt-6-luna for borderline items, max 8/refresh; `/news`, home card,
+  "In the news" on river/reservoir pages). The feed holds only ~12 h, so `/news` backfills 7 days from
+  Newswire's WordPress search API. We keep headline + link + a 20-word first sentence, never articles;
+  never NewsArticle markup. Health check `feed-newswire`. Tests: `node scripts/news.test.mts`.
 - **News RSS** (Ada Derana rss.php, Daily Mirror breaking-news/108): keyword match of
   "spill/sluice gates opened/closed" + a catalogue reservoir. Shown as "reported",
   never official, expires after 12 h. Ada Derana items have no date: the story

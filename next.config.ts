@@ -10,7 +10,7 @@ const headers = [
   { key: "CDN-Cache-Control", value: CDN },
 ];
 // /<river> and /<river>/<gauge>, minus the fixed top-level pages, the locale prefixes and the image routes.
-const FIXED = "about|help|status|data|history|flood|reservoirs|research|si|ta|en";
+const FIXED = "about|help|status|data|history|flood|reservoirs|research|news|si|ta|en";
 const river = `:river((?!(?:${FIXED})$)[^/]+)`;
 const leaf = ":leaf((?!opengraph-image|twitter-image)[^/]+)";
 
@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
       { source: `${l}/${river}/${leaf}`, headers },
       { source: `${l}/flood/:town`, headers },
       { source: `${l}/reservoirs/:slug`, headers },
+      { source: `${l}/news`, headers },
     ]);
   },
 };

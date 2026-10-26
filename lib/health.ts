@@ -14,6 +14,7 @@ import { getNational } from "./arcgis";
 import { sanitizeLevel } from "./readings";
 import { getReleaseSources, parseSheetTab, type SheetRow } from "./releases";
 import { aiConfigured } from "./openai";
+import { NEWSWIRE_UA } from "./newsFeeds";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
 
 /** Hours since `fromMs`, not counting Saturdays and Sundays in Sri Lanka time. */
@@ -62,7 +63,9 @@ const SHEET_TABS = [
 ];
 const WMS_PDF = "https://mahaweli.gov.lk/WMS%20DATA/Menue-WMS%20-%20E.pdf";
 const DMC_LIST = "https://www.dmc.gov.lk/index.php?option=com_dmcreports&view=reports&report_type_id=6&lang=en";
-const FEEDS = [
+const FEEDS: { name: string; url: string; ua?: string }[] = [
+  // Main news source (WordPress). Identify ourselves with the site and the owner's address; checked as feed-newswire.
+  { name: "Newswire", url: "https://www.newswire.lk/feed/", ua: NEWSWIRE_UA },
   { name: "Ada Derana", url: "https://adaderana.lk/rss.php" },
   { name: "Daily Mirror", url: "https://www.dailymirror.lk/rss/breaking-news/108" },
 ];
@@ -376,10 +379,17 @@ async function checkWeather(deep: boolean): Promise<HealthCheck[]> {
 async function checkFeeds(deep: boolean): Promise<HealthCheck[]> {
   return Promise.all(
     FEEDS.map((f) =>
-      run(`feed-${f.name.toLowerCase().replace(/\s+/g, "-")}`, `News feed: ${f.name}`, "Gate-opening news reports from this outlet are not picked up (official figures still show).", async () => {
-        const res = await fetch(f.url, fetchOpts(deep, 600));
+      run(`feed-${f.name.toLowerCase().replace(/\s+/g, "-")}`, `News feed: ${f.name}`, f.name === "Newswire" ? "The Flood news board and gate-opening news reports are missing the main news source (official figures still show)." : "Gate-opening news reports from this outlet are not picked up (official figures still show).", async () => {
+        const o = fetchOpts(deep, 600);
+        const res = await fetch(f.url, f.ua ? { ...o, headers: { "User-Agent": f.ua } } : o);
         if (!res.ok) return { ok: false, detail: `HTTP ${res.status}` };
-        const items = (await res.text()).match(/<item[\s>]/g)?.length ?? 0;
+        const xml = await res.text();
+        const items = xml.match(/<item[\s>]/g)?.length ?? 0;
+        // Newswire is the main source and a busy feed: a newest story older than 12 h means the feed is stuck.
+        if (f.name === "Newswire" && items > 0) {
+          const newest = Date.parse(/<pubDate>([^<]+)<\/pubDate>/.exec(xml)?.[1] ?? "");
+          if (Number.isFinite(newest) && Date.now() - newest > 12 * HOUR) return { ok: false, ...fresh(newest), detail: `newest story is ${words(mins(Date.now() - newest))} old (feed stuck?)` };
+        }
         return items > 0 ? { ok: true, detail: `${items} stories in feed` } : { ok: false, detail: "feed loads but has no stories (format changed?)" };
       }),
     ),

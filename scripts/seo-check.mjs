@@ -112,6 +112,8 @@ await page("home", "/", { });
 await page("about", "/about");
 await page("data", "/data", { noHreflang: true });
 await page("research index", "/research");
+await page("news", "/news");
+for (const n of flat(jsonLdOf((await get("/news")).text))) if (n["@type"] === "ItemList") check(n.itemListElement?.every((i) => /^https?:\/\//.test(i.url) && i.name) && !JSON.stringify(n).includes("NewsArticle"), "news: ItemList of external links, no NewsArticle markup");
 await page("research", "/research/wellampitiya-street-flooding", { answer: true });
 for (const n of flat(jsonLdOf((await get("/research/wellampitiya-street-flooding")).text))) if (n["@type"] === "ScholarlyArticle") check(n.author?.sameAs?.length && n.datePublished && n.dateModified && n.citation?.length, "research: article has author sameAs, dates and citations");
 if (station) await page("station", `/${station.id}`, { faq: true, answer: true });

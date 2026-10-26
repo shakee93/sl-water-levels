@@ -8,7 +8,7 @@
 //  2. Mahaweli Authority WMS PDF: spill/downstream discharge in m3/s and ft3/s for the CEB and
 //     Mahaweli reservoirs. Blank means unknown, never zero. Official numbers.
 //  3. DMC flood-warning PDFs (lib/warnings.ts): one headline cusec figure per bulletin.
-//  4. News RSS (Ada Derana, Daily Mirror): "spill gates opened/raised/closed" at a known reservoir.
+//  4. News RSS (Newswire is the main feed; Ada Derana and Daily Mirror are secondary; lib/newsFeeds.ts): "spill gates opened/raised/closed" at a known reservoir.
 //     The only early signal (hours ahead of the numbers). Shown as "reported by <outlet>", never as
 //     official, and expires after 12 hours.
 //
@@ -22,6 +22,7 @@ import { getDocumentProxy } from "unpdf";
 import { aiConfigured, decide } from "./openai";
 import { getOfficialWarnings } from "./warnings";
 import { matchGateStoryWith } from "./gateStory";
+import { articleTimeCached, getFeeds, type Outlet } from "./newsFeeds";
 import { RESERVOIRS, matchReservoir, reservoirsForStation, type Reservoir } from "./reservoirs";
 
 // ---------------------------------------------------------------- types
@@ -62,7 +63,7 @@ export type WmsData = { reportDate: string | null; rows: WmsRow[]; lastModified:
 export type NewsDetection = {
   reservoirId: string;
   action: "opened" | "closed";
-  outlet: "Ada Derana" | "Daily Mirror";
+  outlet: Outlet;
   headline: string;
   url: string;
   /** ISO with +05:30. */
@@ -113,10 +114,6 @@ const TABS = [
 ];
 const WMS_PDF = "https://mahaweli.gov.lk/WMS%20DATA/Menue-WMS%20-%20E.pdf";
 const WMS_PAGE = "https://mahaweli.gov.lk/wms.html";
-const FEEDS = [
-  { outlet: "Ada Derana" as const, url: "https://adaderana.lk/rss.php" },
-  { outlet: "Daily Mirror" as const, url: "https://www.dailymirror.lk/rss/breaking-news/108" },
-];
 const UA = "Mozilla/5.0 (compatible; sl-water-levels; +https://github.com/shakee93/sl-water-levels)";
 const CUSECS_PER_M3S = 35.3147;
 const TEN_MIN = 600;
@@ -362,30 +359,6 @@ const wmsCached = unstable_cache(loadWms, ["releases-wms-v1"], { revalidate: HOU
 
 // ---------------------------------------------------------------- news
 
-type FeedItem = { guid: string; title: string; desc: string; link: string; pubMs: number | null };
-
-function xmlText(block: string, tag: string): string {
-  const m = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i").exec(block);
-  if (!m) return "";
-  return m[1]
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;|&apos;|&#8217;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function parseFeed(xml: string): FeedItem[] {
-  return (xml.match(/<item[\s>][\s\S]*?<\/item>/gi) ?? []).map((b) => {
-    const pub = xmlText(b, "pubDate");
-    let pubMs: number | null = null;
-    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(pub)) pubMs = Date.parse(pub.replace(" ", "T") + (pub.length === 16 ? ":00" : "") + "+05:30"); // Daily Mirror: Colombo local time
-    else if (pub) pubMs = Date.parse(pub);
-    const link = xmlText(b, "link");
-    return { guid: xmlText(b, "guid") || link, title: xmlText(b, "title"), desc: xmlText(b, "description"), link, pubMs: pubMs != null && Number.isFinite(pubMs) ? pubMs : null };
-  });
-}
-
 /** Pure keyword matcher: the reservoir and direction of a gates story, or null (lib/gateStory.ts, unit tested). */
 export const matchGateStory = (title: string, desc: string) => matchGateStoryWith(matchReservoir, title, desc);
 
@@ -413,58 +386,37 @@ const classifyCached = unstable_cache(
   { revalidate: 7 * 24 * 3600 },
 );
 
-/** Ada Derana's feed has no timestamps: the story page carries datePublished. Cached per story. */
-const articleTimeCached = unstable_cache(
-  async (url: string): Promise<number> => {
-    const res = await fetch(url, { headers: { "User-Agent": UA }, cache: "no-store", signal: AbortSignal.timeout(12_000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const m = /"datePublished":"([^"]+)"/.exec(await res.text());
-    const ms = m ? Date.parse(m[1]) : NaN;
-    if (!Number.isFinite(ms)) throw new Error("no publish time");
-    return ms;
-  },
-  ["releases-news-time-v1"],
-  { revalidate: 30 * 24 * 3600 },
-);
-
 const newsCached = unstable_cache(
   async (): Promise<NewsDetection[]> => {
     const out: NewsDetection[] = [];
-    let anyOk = false;
-    const errors: string[] = [];
+    // One shared fetch of every feed (Newswire first); a feed that fails is skipped, all failing throws.
+    const { items } = await getFeeds();
     await Promise.all(
-      FEEDS.map(async (f) => {
+      items.map(async (it) => {
         try {
-          const res = await fetch(f.url, { headers: { "User-Agent": UA }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const items = parseFeed(await res.text());
-          anyOk = true;
-          for (const it of items) {
-            const hit = matchGateStory(it.title, it.desc);
-            if (!hit) continue;
-            let action = hit.action;
-            if (action === "unclear" && aiConfigured()) action = await classifyCached(it.guid, it.title, it.desc).catch(() => "unclear" as const);
-            if (action === "unclear") continue;
-            const ms = it.pubMs ?? (await articleTimeCached(it.link).catch(() => null));
-            if (ms == null || Date.now() - ms > NEWS_TTL_MS || ms - Date.now() > 3_600_000) continue;
-            out.push({
-              reservoirId: hit.reservoir.id,
-              action,
-              outlet: f.outlet,
-              headline: it.title,
-              url: it.link,
-              publishedAt: new Date(ms + COLOMBO_MS).toISOString().slice(0, 19) + "+05:30",
-            });
-          }
-        } catch (e) {
-          errors.push(`${f.outlet}: ${e instanceof Error ? e.message : "failed"}`);
+          const hit = matchGateStory(it.title, it.desc);
+          if (!hit) return;
+          let action = hit.action;
+          if (action === "unclear" && aiConfigured()) action = await classifyCached(it.guid, it.title, it.desc).catch(() => "unclear" as const);
+          if (action === "unclear") return;
+          const ms = it.pubMs ?? (await articleTimeCached(it.link).catch(() => null));
+          if (ms == null || Date.now() - ms > NEWS_TTL_MS || ms - Date.now() > 3_600_000) return;
+          out.push({
+            reservoirId: hit.reservoir.id,
+            action,
+            outlet: it.outlet,
+            headline: it.title,
+            url: it.link,
+            publishedAt: new Date(ms + COLOMBO_MS).toISOString().slice(0, 19) + "+05:30",
+          });
+        } catch {
+          /* one bad story never drops the rest */
         }
       }),
     );
-    if (!anyOk) throw new Error(errors.join("; ") || "no feed reachable");
     return out;
   },
-  ["releases-news-v1"],
+  ["releases-news-v2"],
   { revalidate: TEN_MIN },
 );
 

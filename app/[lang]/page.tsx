@@ -11,6 +11,7 @@ import { SriLankaMap } from "../SriLankaMap";
 import { NeedsAttention } from "../NeedsAttention";
 import { ReleaseLines } from "../ReleaseCard";
 import { SpillWatchLine } from "../SpillWatchLine";
+import { NewsCard } from "../NewsCard";
 import { HowItWorks } from "../HowItWorks";
 import { MyPlaces } from "../MyPlaces";
 import { HomeInstallCard } from "../HomeInstallCard";
@@ -134,6 +135,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <NeedsAttention lang={lang} snapshot={national} serverNow={serverNow} />
             <Suspense fallback={null}><ReleaseLines lang={lang} /></Suspense>
             <Suspense fallback={null}><SpillWatchLine lang={lang} /></Suspense>
+            {/* latest flood-related news reports; nothing when there are none in the last day or two */}
+            <Suspense fallback={null}><NewsCard lang={lang} /></Suspense>
 
             <HowItWorks lang={lang} className="mb-8" />
 

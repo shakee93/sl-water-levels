@@ -8,6 +8,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { FooterLangLinks } from "./FooterLangLinks";
 import { statusT } from "@/lib/i18n/status";
+import { nwFor } from "@/lib/i18n/news";
 import { ttFor } from "@/lib/i18n/town";
 
 import { MADE_BY, RESEARCH, STRIP } from "@/lib/i18n/footer";
@@ -94,6 +95,7 @@ async function FullFooter({ lang }: { lang: Locale }) {
               ["/", t("footer.home")],
               ["/reservoirs", rtFor(lang)("nav")],
               ["/flood", ttFor(lang)("crumb")],
+              ["/news", nwFor(lang)("crumb")],
               ["/history", t("footer.floodHistory")],
               ["/help", t("footer.floodHelp")],
               ["/about", t("footer.aboutMethod")],

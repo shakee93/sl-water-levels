@@ -59,6 +59,7 @@ Where to get it:
 - [Rivers](${SITE}/kelani-ganga): one page per river, one per gauge, each with the next-hour forecast (pattern: ${SITE}/<river>/<station>, e.g. ${SITE}/kelani-ganga/hanwella)
 - [Reservoirs](${SITE}/reservoirs): storage and spill/release for 170 reservoirs (pattern: ${SITE}/reservoirs/<name>)
 - [Past floods](${SITE}/history): how high past events reached at each gauge
+- [Flood news](${SITE}/news): an index of links to news reports (Newswire, Ada Derana, Daily Mirror) from the last 7 days about floods, rivers, spill gates, heavy rain, cyclones and landslides, tagged and linked to our river and reservoir pages. It is a news index, not a source of facts: the reports are by other outlets and are not official, so check the Disaster Management Centre (117) and the Irrigation Department
 - [Flood help and emergency contacts](${SITE}/help): who to call, what to do, by district
 - [How it works, next-hour forecast accuracy, sources and limits](${SITE}/about)
 - [Data and API for developers](${SITE}/data)
