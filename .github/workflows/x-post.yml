@@ -1,0 +1,79 @@
+# The site's X (Twitter) account: alerts, all-clears, storm updates and the morning summary (scripts/x-post.mjs).
+#   - DRY RUN by default: posts go to the owner's Slack (SLACK_WEBHOOK_URL) marked "DRY RUN", nothing goes to X.
+#   - LIVE only when the repository VARIABLE X_POSTING is "live" AND all four secrets exist (X_API_KEY, X_API_SECRET,
+#     X_ACCESS_TOKEN, X_ACCESS_SECRET). X_POSTING=off is the kill switch: the job does nothing.
+#   - Started after every satellite-rain snapshot (gsmap-snapshot.yml, every 30 min) and by the 06:30 Colombo cron below
+#     (GitHub's cron is best-effort: the morning summary is sent by the first run after 06:30 and only once a day).
+#   - Manual: mode "run" = one normal pass; mode "sample" = up to 3 sample posts from today's data to Slack only.
+# Optional variables: X_LINKS (off|alerts|all, default off), X_REPLIES (on), X_LANGS (en,si,ta), X_EVENING (on),
+# X_DAILY_MAX, X_MONTHLY_BUDGET_USD, X_COST_POST, X_COST_LINK_POST, X_AI_POLISH (off). Optional secret OPENAI_API_KEY
+# lets the posts be reworded (checked word for word against the facts; without it the plain templates are used).
+# See DOCS.md "X account".
+
+name: X account
+
+on:
+  schedule:
+    - cron: "0 1 * * *"
+    - cron: "40 1 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "run = one normal pass now; sample = up to 3 sample posts from today's data, to Slack only"
+        type: choice
+        options: [run, sample]
+        default: run
+
+permissions:
+  contents: read
+
+# One at a time, never cancelled half-way: two runs must not post the same thing.
+concurrency:
+  group: x-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Post
+        env:
+          MODE: ${{ github.event.inputs.mode || 'run' }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          X_POSTING: ${{ vars.X_POSTING }}
+          X_LINKS: ${{ vars.X_LINKS }}
+          X_REPLIES: ${{ vars.X_REPLIES }}
+          X_LANGS: ${{ vars.X_LANGS }}
+          X_EVENING: ${{ vars.X_EVENING }}
+          X_DAILY_MAX: ${{ vars.X_DAILY_MAX }}
+          X_MONTHLY_BUDGET_USD: ${{ vars.X_MONTHLY_BUDGET_USD }}
+          X_COST_POST: ${{ vars.X_COST_POST }}
+          X_COST_LINK_POST: ${{ vars.X_COST_LINK_POST }}
+          X_AI_POLISH: ${{ vars.X_AI_POLISH }}
+        run: |
+          if [ "$MODE" != "sample" ] && [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is missing: the X account keeps its memory in D1, so nothing is posted."
+            exit 0
+          fi
+          node --experimental-strip-types --no-warnings scripts/x-post.mjs --mode "$MODE"
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true

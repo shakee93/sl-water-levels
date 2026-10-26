@@ -11,6 +11,7 @@ import { statusT } from "@/lib/i18n/status";
 import { ttFor } from "@/lib/i18n/town";
 
 import { MADE_BY, RESEARCH, STRIP } from "@/lib/i18n/footer";
+import { X_HANDLE } from "@/lib/seo";
 
 // Phones (below sm) get a one-line strip instead of the big footer: apps do not have footers, and the links live in the
 // More sheet. Both are plain server HTML switched by CSS, so crawlers still get the full footer's internal links.
@@ -129,6 +130,15 @@ async function FullFooter({ lang }: { lang: Locale }) {
             <a href="https://x.com/shakeeb_x" target="_blank" rel="noreferrer" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-300 transition">
               @shakeeb_x
             </a>
+            {X_HANDLE && (
+              <>
+                <span aria-hidden> · </span>
+                Automated updates:{" "}
+                <a href={`https://x.com/${X_HANDLE}`} target="_blank" rel="noreferrer me" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-300 transition">
+                  @{X_HANDLE}
+                </a>
+              </>
+            )}
           </p>
           <FooterLangLinks lang={lang} label={t("lang.label")} />
         </div>

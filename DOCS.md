@@ -633,3 +633,87 @@ Umami events (already on the site): `alerts_on`, `alerts_off`, `share_places`, `
 (counts only). Active subscriptions: `SELECT COUNT(*) FROM push_subscriptions`. Return visits: Umami returning-visitor share on `/`
 before and after. Answers per month per town: `street_flood_reports`. Watch for: all-clear pushes outnumbering rises (hysteresis too loose),
 `gone` rising (people muting).
+
+## X account
+
+An automated X (Twitter) account that posts river alerts, all-clears, storm updates and a morning summary. Everything is
+built and runs in **dry-run**: each post is sent to the owner's Slack marked `DRY RUN`, nothing goes to X, until the owner
+creates the account, adds the keys and flips one switch.
+
+### How it works
+
+| Piece | Where |
+|---|---|
+| Decides what changed (gauges, reservoirs, street water, official bulletins, storm mode, morning/evening summary) | `scripts/x-engine.mjs` (reuses `pushStep` from `lib/myPlaces.ts`, so X and push alerts agree on rise / all-clear / flap) |
+| Writes the posts (templates, length, validation, optional AI reword) | `lib/xCompose.ts` |
+| Gate (off / dry / live), OAuth 1.0a signing, `POST /2/tweets` | `lib/xClient.ts` |
+| One run: read the site, decide, compose, send, remember | `scripts/x-post.mjs` |
+| Schedule | `.github/workflows/x-post.yml`: started after every satellite-rain snapshot (every 30 min), plus a 06:30 Colombo cron; one run at a time (`concurrency: x-post`) |
+| Memory | D1 tables `x_posts` (every post, status, estimated cost) and `x_state` (what was last said per gauge / reservoir / street zone / bulletin); `d1/0006_x_posts.sql`, created idempotently by each run |
+| Tests | `node --experimental-strip-types --no-warnings scripts/x-post.test.mts` |
+
+Data read: `/api/levels` (levels, status, next-hour forecast), `/api/reservoirs` (spill / release), `/api/warnings`
+(current DMC / Irrigation bulletins, new), `/api/places-state` (rain expected), and the street-flood rule's own log
+(D1 `street_rain_log`, only if under 3 h old). A source that cannot be read leaves its memory unchanged: unknown is never "calm".
+
+Post types: **alert** (a gauge rising to Alert / Minor flood / Major flood; gauges of one river rising together are one post),
+**all-clear** (after 2 calm checks, only for something we posted about), **reservoir** starts or stops letting water out
+(spill from 300 cusecs, gate release from 2,000), **street flooding likely** (canal towns), **official warning** (a new bulletin
+issued in the last 6 h, passed on once), **storm mode** (3+ gauges at Alert, any Minor/Major, 3+ rising towards a mark, or 100 mm
+forecast: hourly update per affected river, at most 3 rivers, an unchanged update waits 3 h; with its next-hour forecast and range, called
+a forecast) and the **morning summary** (06:30 to 11:00 Colombo, once a day; `X_EVENING=on` adds one at 18:00 to 21:00).
+Limit: 15 routine posts a day (`X_DAILY_MAX`); urgent ones (Minor/Major, street likely, storm, official warnings) up to 40.
+
+Words: the template prints only numbers from the data, and a checker re-reads every finished post: every number must appear
+in the data (117 aside), at most 280 characters the way X counts them (a link is 23), the disclaimer present, hashtags only the
+ones the template chose. If `OPENAI_API_KEY` is available the post may be reworded; the reworded text is accepted only if it passes the same
+checks (same numbers, names, status words, disclaimer, no new hashtag or emoji), else the template is posted. `OPENAI_API_KEY` is
+**not** in GitHub today (only in Vercel): to enable it run `gh secret set OPENAI_API_KEY`; without it the plain templates are used,
+which is fine. Official-warning relays are never reworded. Sinhala / Tamil: `gh variable set X_LANGS --body en,si,ta` adds short draft
+replies (needs `X_REPLIES=on`); off by default.
+
+### Cost controls (the X API is pay-per-use)
+
+Third-party reports of the 2026 pay-per-use prices: about $0.015 per post but about $0.20 per post containing a link, and no free tier
+for new developers except approved public-utility apps. **Verify the current prices on X's developer pricing page**, and first
+**apply for X's free public-utility access** (flood warnings should qualify). So, by default:
+
+- **Links are off.** Posts name the river / station / town; the site address lives in the bio and a pinned post. `gh variable set X_LINKS --body alerts` adds the page link to Major-flood rises, major official warnings and street-flood "likely" only; `all` adds it everywhere.
+- **No thread replies** (each reply is a paid post). `gh variable set X_REPLIES --body on` enables the detail reply.
+- **Monthly budget guard:** `X_MONTHLY_BUDGET_USD` (default 10) with estimates `X_COST_POST` (0.015) and `X_COST_LINK_POST` (0.20). At 80% of the budget routine posts (summaries, storm updates, reservoirs, minor rises) stop and Slack is told; Major-flood rises and all-clears always go out. The estimated cost of every post is stored in `x_posts.cost_usd` (dry runs too, so the dry-run Slack shows the estimate):
+  `npx wrangler d1 execute sl-water-levels --remote --command "SELECT substr(day,1,7) m, mode, COUNT(*) posts, ROUND(SUM(cost_usd),2) usd FROM x_posts WHERE status IN ('posted','dry') GROUP BY 1,2"`
+
+### What the owner must do
+
+1. **Create the X account** (a new profile, e.g. "Sri Lanka Water Levels"). Suggested bio (143 characters):
+   `Automated Sri Lanka river & flood updates from Dept. of Irrigation data. Not official. Emergency: 117. By @shakeeb_x · sl-water-levels.vercel.app`
+   Avatar: the site icon (`app/icon.svg`) on a blue background. Pinned post: "Automated river-level alerts for Sri Lanka from Department of Irrigation gauges. Not an official warning service. Emergency: 117. Live levels: https://sl-water-levels.vercel.app".
+2. **Label it automated:** Settings and privacy, Your account, Account information, Automation: choose "Managing account" = your personal @shakeeb_x. (The "Automated" label then shows on the profile.)
+3. **Apply for developer access** at developer.x.com: first the free public-utility programme if offered, otherwise pay-per-use with a small credit. Use case text: "Automated public-safety river level and flood-status updates for Sri Lanka, from public government data; no replies, no mass mentions."
+4. **Create a project and app**, set **User authentication settings** to **Read and write** (App permissions), Type of app "Web App / Automated App or Bot". Then generate the four values (regenerate the Access Token and Secret *after* setting Read and write):
+   API Key, API Key Secret, Access Token, Access Token Secret.
+5. **Add them** (from the repo folder):
+   ```
+   gh secret set X_API_KEY
+   gh secret set X_API_SECRET
+   gh secret set X_ACCESS_TOKEN
+   gh secret set X_ACCESS_SECRET
+   gh secret set OPENAI_API_KEY        # optional: rewording
+   ```
+6. **Review in dry-run first:** run `gh workflow run x-post.yml -f mode=sample` (3 sample posts from today's data to Slack), and watch the `DRY RUN` posts that arrive when something changes.
+7. **Go live:** `gh variable set X_POSTING --body live`. Optional: `gh variable set X_LINKS --body alerts`, `X_MONTHLY_BUDGET_USD`, `X_EVENING --body on`.
+8. **Show the account on the site:** add the handle (no `@`) as the Vercel environment variable `X_HANDLE` (Production) and redeploy: `vercel env add X_HANDLE production`. The footer and About page then show "Automated updates: @handle". Until it is set nothing is shown.
+
+### How to pause
+
+- **Kill switch:** `gh variable set X_POSTING --body off` (the job does nothing: no X, no Slack). Back to review mode: `gh variable set X_POSTING --body dry`.
+- After an X error (429 rate limit, 401/403) the job pauses itself (until the reset time, or 1 h / 6 h), tells Slack once, queues the post for one retry within 2 h, and never retries in a loop. `X_POSTING=live` with a missing key stays in dry-run and tells Slack which key is missing.
+- To stop the schedule entirely: `gh workflow disable x-post.yml`.
+
+### X automation rules (compliance notes)
+
+- Label the account as automated and tie it to a human managing account (step 2); the bio says so.
+- No duplicate or near-duplicate spam: every post is deduplicated (D1 `x_posts.dedupe_key`, claimed before sending), grouped (several gauges of one river = one post), flap-guarded (3 h) and limited per day; X also rejects exact duplicate text (403), which is skipped and reported.
+- No misleading claims: only data from the Department of Irrigation, Mahaweli Authority, DMC and the satellite rain rule, every number checked against the data, forecasts called forecasts, "Not an official warning. Emergency: 117." on every post (relayed bulletins say we are not the source).
+- No automated replies, mentions, follows or likes; the account posts only its own updates. No trending-hashtag piggybacking (at most `#SriLanka`, `#floods` and the river name).
+- Respect rate limits: one request per post, 429 and 403 pause the pipeline. Check X's current Automation rules and Developer Agreement when applying.

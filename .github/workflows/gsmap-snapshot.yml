@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write # to start the X account job below
 
 # Same group as the other snapshot jobs so none of them push to `data` at once.
 concurrency:
@@ -120,6 +121,15 @@ jobs:
           fi
           npm install --no-save --no-audit --no-fund web-push@3.6.7
           node --experimental-strip-types --no-warnings scripts/push-notify.mjs --mode check
+
+      # The X account (scripts/x-post.mjs): look for something worth posting (dry-run to Slack until the owner flips
+      # X_POSTING=live). A separate workflow with its own concurrency group so posts never double. Never fails the snapshot.
+      - name: Start the X account job
+        if: steps.secrets.outputs.ready == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run x-post.yml --repo "${{ github.repository }}"
 
       - name: Tell Slack the workflow failed
         if: failure()

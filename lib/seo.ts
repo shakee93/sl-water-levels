@@ -8,6 +8,14 @@ import { localePath, type Locale } from "./i18n/config";
 export const SITE = "https://sl-water-levels.vercel.app";
 export const SITE_NAME = "Sri Lanka Water Levels";
 export const OWNER = { name: "Shakeeb Sadikeen", x: "https://x.com/shakeeb_x", github: "https://github.com/shakee93" } as const;
+/**
+ * The site's own automated X account, shown in the footer and About ONLY when the env value X_HANDLE is set (Vercel
+ * environment variable, then redeploy; see DOCS.md "X account"). Nothing is shown, and no account is assumed, before that.
+ */
+export const X_HANDLE: string | null = (() => {
+  const h = (process.env.X_HANDLE ?? "").trim().replace(/^@/, "");
+  return /^[A-Za-z0-9_]{1,15}$/.test(h) ? h : null;
+})();
 export const REPO = "https://github.com/shakee93/sl-water-levels";
 export const DATA_BRANCH = `${REPO}/tree/data`;
 

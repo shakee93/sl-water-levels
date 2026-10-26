@@ -2,7 +2,7 @@
 // uses to decide whether the numbers can be trusted. Labels are inline in en/si/ta (si/ta drafts).
 import Link from "next/link";
 import { localePath, type Locale } from "@/lib/i18n/config";
-import { CONTENT_UPDATED, OWNER, REPO, RESEARCH_PAGE_LIVE } from "@/lib/seo";
+import { CONTENT_UPDATED, OWNER, REPO, RESEARCH_PAGE_LIVE, X_HANDLE } from "@/lib/seo";
 
 type L3 = Record<Locale, string>;
 const X: Record<string, L3> = {
@@ -38,6 +38,12 @@ export function AboutTrust({ lang }: { lang: Locale }) {
           <a className={link} href={OWNER.x} target="_blank" rel="noreferrer me">x.com/shakeeb_x</a>,{" "}
           <a className={link} href={`${REPO}/issues`} target="_blank" rel="noreferrer">{X.issues[lang]}</a>.
         </p>
+        {X_HANDLE && (
+          <p>
+            Automated alerts and daily updates (not official; emergency 117):{" "}
+            <a className={link} href={`https://x.com/${X_HANDLE}`} target="_blank" rel="noreferrer me">x.com/{X_HANDLE}</a>
+          </p>
+        )}
         <p className="flex flex-col gap-1.5">
           <Link className={link} href={localePath(lang, "/data")}>{X.data[lang]}</Link>
           {RESEARCH_PAGE_LIVE && <Link className={link} href={localePath(lang, "/research")}>{X.research[lang]}</Link>}
