@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { isLocale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { JsonLd } from "@/app/Answer";
+import { bestWindow, figure, getAccuracy, newModelFigure, spanText } from "@/lib/accuracy";
 import { CONTENT_UPDATED, DATA_BRANCH, OWNER, REPO, SITE, breadcrumbLd, publisherLd, siteDatasetLd, webPageLd } from "@/lib/seo";
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 // A developers' page: written in English for every language, and always canonical to the English URL.
 const TITLE = "Free data and API for Sri Lanka river levels and reservoirs";
@@ -30,6 +31,10 @@ export default async function DataPage({ params }: { params: Promise<{ lang: str
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
   const { t, p } = getI18n(lang);
+  const acc = await getAccuracy();
+  const win = acc ? bestWindow(acc) : "all";
+  const accRows = acc ? [1, 3, 6, 12, 24].map((h) => ({ h, f: figure(acc.overall, h, win) })).filter((r) => r.f) : [];
+  const nm1 = acc ? newModelFigure(acc.overall, 1, win) : null;
   return (
     <main className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
       <JsonLd
@@ -68,6 +73,25 @@ export default async function DataPage({ params }: { params: Promise<{ lang: str
             <p className="mb-2">Every gauge in <code>/api/levels</code> carries <code>nextHour</code>: where the river is expected to be in about an hour, with a range, refreshed hourly. As far as we know it is the only public next-hour river forecast for Sri Lanka. It is a forecast, not an official warning.</p>
             <code className={code}>GET {SITE}/api/levels?station=hanwella</code>
             <p className="mt-2">Fields: <code>level_ft</code> (expected level), <code>low_ft</code> and <code>high_ft</code> (the range it should stay inside; null for a simple trend estimate), <code>change_ft</code>, <code>direction</code> (rising, falling, steady), <code>crossing</code> (for example &ldquo;may reach alert level&rdquo;, else null), <code>issuedAt</code> (the reading it starts from, ISO 8601), <code>method</code> (<code>model</code>: upstream gauges and rain; <code>trend</code>: recent change carried forward) and <code>experimental</code>. The whole <code>nextHour</code> is null when the gauge is not reporting or has no forecast. How well it has done: <Link className="underline" href={p("/about#next-hour")}>{t("nav.about")}</Link>.</p>
+            <h3 className="mt-4 mb-1 font-semibold">How well it has done (live)</h3>
+            {acc && accRows.length ? (
+              <>
+                <p className="mb-2">Scored automatically from our prediction log every few hours: each forecast is checked against the gauge reading closest to its target time. As of {acc.asOf}, over {spanText(acc, win)}. Misses are in feet; &ldquo;no change&rdquo; means saying the level stays where it is. Further ahead is much less certain.</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs tabular-nums">
+                    <thead><tr className="text-slate-500"><th className="py-1 pr-3 font-medium">Ahead</th><th className="pr-3 font-medium">Checks</th><th className="pr-3 font-medium">Average miss</th><th className="pr-3 font-medium">&ldquo;No change&rdquo; miss</th><th className="pr-3 font-medium">Inside range</th><th className="pr-3 font-medium">Range width</th><th className="font-medium">Direction right</th></tr></thead>
+                    <tbody>
+                      {accRows.map(({ h, f }) => (
+                        <tr key={h} className="border-t border-slate-200 dark:border-slate-800"><td className="py-1 pr-3">{h} h</td><td className="pr-3">{f!.n}</td><td className="pr-3">{f!.maeFt?.toFixed(2)} ft</td><td className="pr-3">{f!.baseMaeFt?.toFixed(2)} ft</td><td className="pr-3">{f!.inBandPct}%</td><td className="pr-3">{f!.bandFt?.toFixed(2)} ft</td><td>{f!.dirPct}% (always &ldquo;steady&rdquo;: {f!.dirSteadyPct}%)</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-2">{nm1 && nm1.n >= 10 ? `The gauge-only model (next hour, 3 h, 6 h) has run since ${acc.gaugeModelSince}: ${nm1.n} next-hour checks, average miss ${nm1.maeFt?.toFixed(2)} ft against ${nm1.baseMaeFt?.toFixed(2)} ft for "no change".` : `The gauge-only model (live since ${acc.gaugeModelSince}) has only ${nm1?.n ?? 0} next-hour checks so far, too few to report separately.`} The raw file is <code>https://raw.githubusercontent.com/shakee93/sl-water-levels/data/accuracy/latest.json</code> (per gauge too).</p>
+              </>
+            ) : (
+              <p>The live accuracy figures are temporarily unavailable.</p>
+            )}
           </section>
 
           <section className={card} aria-labelledby="reservoirs">

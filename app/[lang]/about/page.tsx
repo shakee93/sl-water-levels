@@ -6,10 +6,10 @@ import { isLocale, pageAlternates } from "@/lib/i18n/config";
 import { AboutTrust } from "@/app/AboutTrust";
 import { JsonLd } from "@/app/Answer";
 import { breadcrumbLd, publisherLd, webPageLd, CONTENT_UPDATED, REPO } from "@/lib/seo";
-import { ACCURACY } from "@/lib/accuracy";
+import { MIN_CHECKS, bestWindow, figure, getAccuracy, newModelFigure, spanText } from "@/lib/accuracy";
 import { getI18n } from "@/lib/i18n/server";
 
-export const revalidate = 86400;
+export const revalidate = 3600;
 
 const SITE = "https://sl-water-levels.vercel.app";
 
@@ -40,6 +40,22 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
   const { t, p } = getI18n(lang);
+  const acc = await getAccuracy();
+  const win = acc ? bestWindow(acc) : "all";
+  const f1 = acc ? figure(acc.overall, 1, win) : null;
+  const nm1 = acc ? newModelFigure(acc.overall, 1, win) : null;
+  const nh =
+    acc && f1
+      ? {
+          asOf: new Date(acc.asOf + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }),
+          span: spanText(acc, win),
+          f1,
+          m: (h: number) => (figure(acc.overall, h, win)?.maeFt ?? 0).toFixed(1),
+          b24: (figure(acc.overall, 24, win)?.bandFt ?? 0).toFixed(1),
+          nm: nm1 && nm1.n >= MIN_CHECKS ? nm1 : null,
+          since: new Date(acc.gaugeModelSince + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
+        }
+      : null;
   return (
     <main className="bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
       <JsonLd
@@ -94,19 +110,27 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
           <div id="next-hour" className="scroll-mt-20">
             <Card icon={<Activity className="size-5" />} title={t("about.nh.h")}>
               <p>{t("about.nh.p1")}</p>
-              <p>
-                {t("about.nh.p2", {
-                  span: `${ACCURACY.from} – ${ACCURACY.to}`,
-                  n: ACCURACY.model.checked,
-                  g: ACCURACY.model.gauges,
-                  mae: ACCURACY.model.maeFt.toFixed(2),
-                  base: ACCURACY.model.noChangeMaeFt.toFixed(2),
-                  pct: ACCURACY.model.inRangePct,
-                  dir: ACCURACY.model.directionPct,
-                  dirb: ACCURACY.model.noChangeDirectionPct,
-                })}
-              </p>
-              <p>{t("about.nh.p3", { w: ACCURACY.model.rangeWidthFt })}</p>
+              {nh ? (
+                <>
+                  <p>
+                    {t("about.nh.p2", {
+                      asOf: nh.asOf,
+                      span: nh.span,
+                      n: nh.f1.n,
+                      g: nh.f1.gauges,
+                      mae: (nh.f1.maeFt ?? 0).toFixed(2),
+                      base: (nh.f1.baseMaeFt ?? 0).toFixed(2),
+                      pct: nh.f1.inBandPct ?? 0,
+                      dir: nh.f1.dirPct ?? 0,
+                      dirb: nh.f1.dirSteadyPct ?? 0,
+                    })}
+                  </p>
+                  <p>{t("about.nh.p3", { m3: nh.m(3), m6: nh.m(6), m12: nh.m(12), m24: nh.m(24), b24: nh.b24 })}</p>
+                  {nh.nm && <p>{t("about.nh.p4", { since: nh.since, n: nh.nm.n, mae: (nh.nm.maeFt ?? 0).toFixed(2), base: (nh.nm.baseMaeFt ?? 0).toFixed(2) })}</p>}
+                </>
+              ) : (
+                <p>{t("about.nh.unavail")}</p>
+              )}
               <p>
                 <a className="underline" href={`${REPO}/blob/main/DOCS.md`} target="_blank" rel="noreferrer">{t("about.nh.how")}</a>
                 {" · "}

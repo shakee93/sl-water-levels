@@ -128,6 +128,7 @@ export function LevelChart({
   const myPub = parseMyLevel(myRaw, station);
   const my = myPub == null ? null : toShown(myPub, pu); // stored in the gauge's own unit
   const narrow = w > 0 && w < 480;
+  const [tipOn, setTipOn] = useState(false); // tooltip open: the value pill gets out of its way
 
   const model = useMemo(() => {
     const valid = readings.filter((r) => r.water_level != null);
@@ -211,19 +212,13 @@ export function LevelChart({
     }
   }
 
-  // the "Now" pill sits on the side the line is not on
-  const ref3h = [...actual].reverse().find((r) => r.ts <= last.ts - 2.5 * HOUR);
-  const falling = ref3h ? last.level < ref3h.level - (dHi - dLo) * 0.01 : false;
   const nowX = xPx(last.ts);
-  const nowY = yPx(last.level);
   const pillText = withUnit(last.level);
-  const pillW = Math.round(pillText.length * 7.2 + 18);
-  const pillH = 22;
-  let pillBelow = falling;
-  if (nowY - 14 - pillH < M_TOP) pillBelow = true;
-  else if (nowY + 14 + pillH > M_TOP + plotH) pillBelow = false;
-  const pillX = Math.min(Math.max(nowX - pillW / 2, AXIS_W + 2), w - pillW - 2);
-  const pillY = pillBelow ? nowY + 13 : nowY - 13 - pillH;
+  // The current value is printed quietly beside the "Now" label at the top of the plot (no pill), and fades while the tooltip is open.
+  // Dropped when it would sit on a flood-mark label in the top strip at the right edge.
+  const labelRowsPx = [marks.alert, marks.minor, marks.major].filter((v): v is number => v != null && v >= dLo && v < dHi).map((v) => yPx(v));
+  const hitsLabel = nowX > w - 150 && labelRowsPx.some((r) => r >= M_TOP + 17 && r < M_TOP + 30);
+  const nowText = hitsLabel ? t("chart.now") : `${t("chart.now")} · ${pillText}`;
 
   // flood-mark label rows, so "Your street" can pick a free side
   const bandLabelRows = [marks.alert, marks.minor, marks.major]
@@ -281,6 +276,8 @@ export function LevelChart({
         )}
         {w > 0 && (
           <ComposedChart
+            onMouseMove={(st: { isTooltipActive?: boolean }) => setTipOn(!!st?.isTooltipActive)}
+            onMouseLeave={() => setTipOn(false)}
             width={w}
             height={h}
             data={rows}
@@ -408,7 +405,7 @@ export function LevelChart({
               <ReferenceDot key={i} x={c.ts} y={c.level} r={3.5} fill={ZONE_COLOR[zoneOf(c.level + 1e-9, thresholds)]} stroke="#fff" strokeWidth={1.5} />
             ))}
 
-            <ReferenceLine x={last.ts} stroke="currentColor" strokeOpacity={0.35} strokeDasharray="2 3" />
+            <ReferenceLine x={last.ts} stroke="currentColor" strokeOpacity={0.4} strokeDasharray="2 3" ifOverflow="visible" />
             <ReferenceDot
               x={last.ts}
               y={last.level}
@@ -418,12 +415,8 @@ export function LevelChart({
                 <g pointerEvents="none">
                   <circle cx={p.cx} cy={p.cy} r={10} fill={tier} fillOpacity={0.2} />
                   <circle cx={p.cx} cy={p.cy} r={5.5} fill={tier} stroke="#fff" strokeWidth={2} />
-                  <text x={(p.cx ?? 0) - 5} y={M_TOP + 11} textAnchor="end" fontSize={11} fontWeight={600} className="fill-slate-600 dark:fill-slate-300 stroke-white dark:stroke-slate-900" strokeWidth={3} paintOrder="stroke">
-                    {t("chart.now")}
-                  </text>
-                  <rect x={pillX} y={pillY} width={pillW} height={pillH} rx={11} className="fill-white dark:fill-slate-900" stroke={tier} strokeWidth={1.5} />
-                  <text x={pillX + pillW / 2} y={pillY + 15} textAnchor="middle" fontSize={12} fontWeight={700} className="fill-slate-900 dark:fill-slate-50 tabular-nums">
-                    {pillText}
+                  <text x={(p.cx ?? 0) - 5} y={M_TOP + 11} textAnchor="end" fontSize={11} fontWeight={500} className="fill-slate-500 dark:fill-slate-400 stroke-white dark:stroke-slate-900 tabular-nums" strokeWidth={3} paintOrder="stroke" style={{ opacity: tipOn ? 0 : 0.75, transition: "opacity 120ms" }}>
+                    {nowText}
                   </text>
                 </g>
               )}
@@ -456,6 +449,7 @@ export function LevelChart({
                 <line x1="0" y1="3" x2="18" y2="3" stroke={BLUE} strokeWidth="2" strokeDasharray="5 3" />
               </svg>
               {t("chart.forecast")}
+              {fcEnd && fcEnd.ts - last.ts > 6 * HOUR && <span className="text-slate-500 dark:text-slate-400">{" · "}{t("chart.fcLess")}</span>}
             </span>
           )}
           <MyLevelControl station={station} unit={pu} current={my} t={t} />

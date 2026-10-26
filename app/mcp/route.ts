@@ -13,7 +13,7 @@ import { getReleases } from "@/lib/releases";
 import { WEEKLY_PDF, getWeeklyOutcome, windowState } from "@/lib/wmsWeekly";
 import { reservoirById } from "@/lib/reservoirs";
 import { getNextHourForBasin, getNextHourForBasins, timeBox } from "@/lib/nextHour";
-import { ACCURACY } from "@/lib/accuracy";
+import { bestWindow, figure, getAccuracy, newModelFigure, spanText } from "@/lib/accuracy";
 
 const NEXT_HOUR_DOC =
   "next_hour = the next-hour river forecast (the headline feature of this service): level_ft is the expected level in about an hour from issuedAt, low_ft..high_ft the range it should stay in, direction rising/falling/steady, crossing a flood mark the range reaches, method model|trend. A forecast, not an official warning; null when not available.";
@@ -154,7 +154,8 @@ const handler = createMcpHandler(
         const b = basin?.trim().toLowerCase();
         const st = station?.trim().toLowerCase();
         const picked = all.filter((s) => (b ? s.basin.trim().toLowerCase().includes(b) : true) && (st ? s.station.toLowerCase() === st : true));
-        const nh = await timeBox(getNextHourForBasins(picked.map((s) => s.basin)), 8000);
+        const [nh, acc] = await Promise.all([timeBox(getNextHourForBasins(picked.map((s) => s.basin)), 8000), getAccuracy()]);
+        const win = acc ? bestWindow(acc) : "all";
         const forecasts = picked.map((s) => ({ station: s.station, river: s.basin.trim(), next_hour: nh?.[s.station] ?? null }));
         return {
           content: [
@@ -165,15 +166,24 @@ const handler = createMcpHandler(
                   count: forecasts.length,
                   ready: nh != null,
                   note: NEXT_HOUR_DOC,
-                  accuracy: {
-                    sample: `${ACCURACY.model.checked} one-hour forecasts at ${ACCURACY.model.gauges} gauges, ${ACCURACY.from} to ${ACCURACY.to} (small sample, early result)`,
-                    average_miss_ft: ACCURACY.model.maeFt,
-                    average_miss_if_no_change_ft: ACCURACY.model.noChangeMaeFt,
-                    share_inside_stated_range_pct: ACCURACY.model.inRangePct,
-                    direction_right_pct: ACCURACY.model.directionPct,
-                    direction_right_if_always_steady_pct: ACCURACY.model.noChangeDirectionPct,
-                    details: "https://sl-water-levels.vercel.app/about#next-hour",
-                  },
+                  accuracy: acc
+                    ? {
+                        as_of: acc.asOf,
+                        window: spanText(acc, win),
+                        note: "Measured live from the prediction log: each forecast checked against the gauge reading closest to its target time. Average miss in feet; direction = rising / falling / steady called right. Longer horizons are much less certain.",
+                        by_horizon_h: Object.fromEntries(
+                          [1, 3, 6, 12, 24].flatMap((h) => {
+                            const f = figure(acc.overall, h, win);
+                            return f ? [[h, { checks: f.n, gauges: f.gauges, average_miss_ft: f.maeFt, average_miss_if_no_change_ft: f.baseMaeFt, share_inside_stated_range_pct: f.inBandPct, range_width_ft: f.bandFt, direction_right_pct: f.dirPct, direction_right_if_always_steady_pct: f.dirSteadyPct }]] : [];
+                          }),
+                        ),
+                        gauge_only_model_next_hour: (() => {
+                          const f = newModelFigure(acc.overall, 1, win);
+                          return f ? { since: acc.gaugeModelSince, checks: f.n, average_miss_ft: f.maeFt, average_miss_if_no_change_ft: f.baseMaeFt } : null;
+                        })(),
+                        details: "https://sl-water-levels.vercel.app/about#next-hour",
+                      }
+                    : { unavailable: true, details: "https://sl-water-levels.vercel.app/about#next-hour" },
                   forecasts,
                 },
                 null,

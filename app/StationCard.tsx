@@ -1,5 +1,6 @@
 import { fetchBasinSnapshot, fetchStationData } from "@/lib/arcgis";
 import { loadForecast } from "@/lib/forecast";
+import { getAccuracy, stationSummary } from "@/lib/accuracy";
 import { isStale } from "@/lib/readings";
 import { detectUnit } from "@/lib/units";
 import { LevelChartLazy } from "./LevelChartLazy";
@@ -15,7 +16,18 @@ export async function StationCard({ lang, stationName, basin }: { lang: Locale; 
   const unit = detectUnit(data.thresholds, stationName);
   const th = data.thresholds;
   const hasT = th.alert != null || th.minor != null || th.major != null;
-  const forecast = basin && !isStale(data.latest) ? await chartForecast(basin, stationName) : null;
+  const [forecast, acc] = await Promise.all([basin && !isStale(data.latest) ? chartForecast(basin, stationName) : null, getAccuracy()]);
+  // One honest line about how this gauge's own forecasts have done (hidden below ~10 checks).
+  const sum = stationSummary(acc, stationName);
+  const fmt = (v: number) => (v < 0.095 ? v.toFixed(2) : v.toFixed(1));
+  const accLine = sum
+    ? t("acc.station", {
+        h1: fmt(sum.h1),
+        h24: sum.h24 != null ? t("acc.station24", { h24: fmt(sum.h24) }) : "",
+        span: sum.since ? t("acc.spanSince", { d: sum.since }) : t("acc.spanDays"),
+        n: sum.n,
+      })
+    : null;
 
   return (
     <section className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
@@ -25,6 +37,7 @@ export async function StationCard({ lang, stationName, basin }: { lang: Locale; 
       </div>
       <div className="px-2 sm:px-6 pb-4 sm:pb-6">
         <LevelChartLazy station={stationName} readings={data.readings} thresholds={th} unit={unit} forecast={forecast} />
+        {accLine && <p className="mt-2 px-2 sm:px-0 text-xs text-slate-500 dark:text-slate-400">{accLine}</p>}
         {!hasT && (
           <p className="mt-3 px-2 sm:px-0 text-sm text-slate-600 dark:text-slate-400">
             {t("card.noLevels")}

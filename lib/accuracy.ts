@@ -1,40 +1,102 @@
-// How well the next-hour forecast has done so far, measured from the prediction log (Cloudflare D1:
-// forecast_verification joined to forecast_runs, horizon 1 h, each forecast checked against the gauge
-// reading closest to the target time, within 40 minutes). Levels converted to feet; "steady" means a
-// change under 0.02 ft in the hour. Gauges whose unit is unknown are left out.
+// How well the forecasts have done, measured live from the prediction log (Cloudflare D1: forecast_verification).
+// scripts/accuracy-snapshot.mjs scores the log every 3 hours (.github/workflows/accuracy-snapshot.yml) and writes
+// accuracy/latest.json on the `data` branch; this file reads it (cached 1 h, time-boxed to 1.5 s, fails soft to
+// null). The browser never needs the D1 token and no page waits on the database.
 //
-// These are numbers we measured, not targets. Update them (and `measuredOn`) when the log has grown:
-//   scripts/export-predictions.sh YYYY-MM <dir>  ->  verification.json
-// The sample is small (a day and a half), so every page that shows them says so.
-export const ACCURACY = {
-  /** Sri Lanka time, first and last forecast in the sample. */
-  from: "2026-10-22",
-  to: "2026-10-24",
-  measuredOn: "2026-10-24",
-  /** All 1-hour forecasts checked, fitted-model and trend-only gauges together. */
-  checked: 516,
-  gauges: 39,
-  /** Gauges with a fitted model (the main forecast). */
-  model: {
-    checked: 420,
-    gauges: 30,
-    /** Average miss, feet. */
-    maeFt: 0.1,
-    /** The same average if we had simply said "no change", feet. */
-    noChangeMaeFt: 0.12,
-    /** Share of forecasts where the real level landed inside the stated range. */
-    inRangePct: 98,
-    /** Typical width of that range, feet. It is wide on purpose while the forecast is new. */
-    rangeWidthFt: 0.8,
-    /** Share where rising / falling / steady was called correctly. */
-    directionPct: 52,
-    /** Same, if we had always said "steady". */
-    noChangeDirectionPct: 24,
-  },
-  /** Gauges without a fitted model get a simple trend estimate; it has not beaten "no change" yet. */
-  trendOnly: { checked: 96, gauges: 9, maeFt: 0.38, noChangeMaeFt: 0.32 },
-} as const;
+// Each forecast point is checked against the gauge reading closest to its target time (within 40 minutes).
+// Levels are in feet. "No change" is the level at the time of the forecast. Segments:
+//   model        issued since the gauge-only 1/3/6 h model went live (24 Oct 2026; 12 / 24 h are still the older model)
+//   model-early  fitted-model forecasts before that
+//   trend        gauges without a fitted model (simple trend estimate)
 
-/** One plain sentence for pages and llms.txt. */
-export const accuracyLine = () =>
-  `Checked against what the gauges then read, ${ACCURACY.model.checked} one-hour forecasts at ${ACCURACY.model.gauges} gauges (${ACCURACY.from} to ${ACCURACY.to}, Sri Lanka time) missed by about ${ACCURACY.model.maeFt.toFixed(2)} ft on average, against ${ACCURACY.model.noChangeMaeFt.toFixed(2)} ft if we had said "no change". The real level was inside the stated range ${ACCURACY.model.inRangePct}% of the time (the range is about ${ACCURACY.model.rangeWidthFt} ft wide), and rising, falling or steady was called correctly ${ACCURACY.model.directionPct}% of the time, against ${ACCURACY.model.noChangeDirectionPct}% for always saying steady. That is only about a day and a half of data, so treat it as an early result, not a guarantee.`;
+const URL_ = process.env.ACCURACY_URL ?? "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/accuracy/latest.json";
+
+export type Stat = { n: number; gauges: number; maeFt: number | null; baseMaeFt: number | null; inBandPct: number | null; bandFt: number | null; dirPct: number | null; dirSteadyPct: number | null };
+type BySeg = Partial<Record<"model" | "model-early" | "trend", Record<string, Stat>>>;
+export type AccuracyFile = {
+  version: number;
+  generatedAt: string;
+  asOf: string; // Sri Lanka date
+  firstForecast: string;
+  gaugeModelSince: string;
+  overall: { d30?: BySeg; all?: BySeg };
+  stations: Record<string, { d30?: BySeg; all?: BySeg }>;
+};
+export type Win = "d30" | "all";
+
+export async function getAccuracy(ms = 1500): Promise<AccuracyFile | null> {
+  try {
+    const res = await fetch(URL_, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(ms) });
+    if (!res.ok) return null;
+    const j = (await res.json()) as AccuracyFile;
+    return j && j.overall ? j : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fitted-model checks pooled over both model segments (count-weighted means). */
+function pool(parts: (Stat | undefined)[]): Stat | null {
+  const ps = parts.filter((p): p is Stat => !!p && p.n > 0);
+  const n = ps.reduce((s, p) => s + p.n, 0);
+  if (!n) return null;
+  const w = (f: (p: Stat) => number | null, r = 2) => {
+    const xs = ps.filter((p) => f(p) != null);
+    const m = xs.reduce((s, p) => s + p.n, 0);
+    return m ? Math.round((xs.reduce((s, p) => s + (f(p) as number) * p.n, 0) / m) * 10 ** r) / 10 ** r : null;
+  };
+  return {
+    n, gauges: Math.max(...ps.map((p) => p.gauges)),
+    maeFt: w((p) => p.maeFt), baseMaeFt: w((p) => p.baseMaeFt), inBandPct: w((p) => p.inBandPct, 0), bandFt: w((p) => p.bandFt),
+    dirPct: w((p) => p.dirPct, 0), dirSteadyPct: w((p) => p.dirSteadyPct, 0),
+  };
+}
+
+type Scope = { d30?: BySeg; all?: BySeg };
+/** Pooled fitted-model figure for one horizon; falls back to the trend estimate when a scope has no model at all. */
+export function figure(scope: Scope | undefined, h: number, win: Win, withTrend = false): Stat | null {
+  const w = scope?.[win];
+  if (!w) return null;
+  const m = pool([w.model?.[h], w["model-early"]?.[h]]);
+  return m ?? (withTrend ? (w.trend?.[h] ?? null) : null);
+}
+/** Only the gauge-only model's own record (issued since it went live). */
+export const newModelFigure = (scope: Scope | undefined, h: number, win: Win): Stat | null => scope?.[win]?.model?.[h] ?? null;
+
+/** 30 days, unless that holds fewer than `min` one-hour checks (then everything since launch). */
+export function bestWindow(a: AccuracyFile, min = 30): Win {
+  return (figure(a.overall, 1, "d30")?.n ?? 0) >= min ? "d30" : "all";
+}
+export const MIN_CHECKS = 10;
+
+const ftx = (v: number | null) => (v == null ? "n/a" : v.toFixed(2));
+const day = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+
+/** Sentence for the window: "the last 30 days" or "since 22 Oct". */
+export function spanText(a: AccuracyFile, win: Win): string {
+  return win === "d30" ? "the last 30 days" : `${day(a.firstForecast).replace(/ \d{4}$/, "")} to ${day(a.asOf).replace(/ \d{4}$/, "")}`;
+}
+
+/** Plain sentences for llms.txt / the MCP: live, per horizon, with the date and number of checks. */
+export function accuracyLine(a: AccuracyFile | null): string {
+  if (!a) return "Live accuracy figures are temporarily unavailable; see https://sl-water-levels.vercel.app/about#next-hour.";
+  const win = bestWindow(a);
+  const h1 = figure(a.overall, 1, win);
+  if (!h1) return "Live accuracy figures are not available yet.";
+  const parts = [1, 3, 6, 12, 24].map((h) => ({ h, f: figure(a.overall, h, win) })).filter((x) => x.f);
+  const hs = parts.map(({ h, f }) => `${h} h: ${f!.n} checks, average miss ${ftx(f!.maeFt)} ft vs ${ftx(f!.baseMaeFt)} ft for "no change", real level inside the range ${f!.inBandPct}% of the time (range about ${ftx(f!.bandFt)} ft wide), direction right ${f!.dirPct}% vs ${f!.dirSteadyPct}% for always "steady"`);
+  const nm = newModelFigure(a.overall, 1, win);
+  const nmText = nm && nm.n >= MIN_CHECKS ? ` The gauge-only model that has run since ${day(a.gaugeModelSince)} (next hour, 3 h and 6 h) has its own record: ${nm.n} next-hour checks, average miss ${ftx(nm.maeFt)} ft vs ${ftx(nm.baseMaeFt)} ft for "no change".` : ` The newer gauge-only model (live since ${day(a.gaugeModelSince)}) has only ${nm?.n ?? 0} next-hour checks so far, too few to report on its own.`;
+  return `Measured live from our prediction log, as of ${day(a.asOf)}, over ${spanText(a, win)} (average miss in feet; each forecast checked against the gauge reading closest to its target time): ${hs.join("; ")}. Longer horizons are much less certain.${nmText} Do not quote these as a guarantee.`;
+}
+
+/** The small line under a gauge's chart, or null when that gauge has too few checks. */
+export function stationSummary(a: AccuracyFile | null, station: string): { h1: number; h24: number | null; n: number; since: string | null } | null {
+  const sc = a?.stations?.[station];
+  if (!a || !sc) return null;
+  const win: Win = (figure(sc, 1, "d30", true)?.n ?? 0) >= MIN_CHECKS ? "d30" : "all";
+  const f1 = figure(sc, 1, win, true);
+  if (!f1 || f1.n < MIN_CHECKS || f1.maeFt == null) return null;
+  const f24 = figure(sc, 24, win);
+  return { h1: f1.maeFt, h24: f24 && f24.n >= MIN_CHECKS ? f24.maeFt : null, n: f1.n, since: win === "all" ? day(a.firstForecast).replace(/ \d{4}$/, "") : null };
+}

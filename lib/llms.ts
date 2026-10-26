@@ -10,12 +10,12 @@ import { en } from "./i18n/en";
 import { OWNER, REPO, SITE, SITE_NAME, DATA_BRANCH, CONTENT_UPDATED } from "./seo";
 import type { ReservoirsData } from "./reservoirData";
 import { PLACES } from "./places";
-import { ACCURACY, accuracyLine } from "./accuracy";
+import { accuracyLine, type AccuracyFile } from "./accuracy";
 import type { NextHour } from "./nextHour";
 
 const t = makeT(en);
 
-export const llmsIntro = () => `# ${SITE_NAME}
+export const llmsIntro = (acc: AccuracyFile | null = null) => `# ${SITE_NAME}
 
 > Live river water levels and a next-hour forecast for every river gauge in Sri Lanka: where the river is expected to be in about an hour, with a range, updated hourly. As far as we know it is the only public next-hour river forecast for Sri Lanka. Also flood warnings and reservoir spill/release information, in English, Sinhala and Tamil. Built from the Department of Irrigation's river gauges and its daily reservoir sheet, the Mahaweli Authority's daily report and official Disaster Management Centre bulletins. Free to use. Independent, not an official warning service.
 
@@ -37,7 +37,7 @@ What it is: for every river gauge, the level the river is expected to reach in a
 
 How it is made, in plain terms: from how the river has been moving over the last hours, what the gauges upstream are doing (water takes hours to travel down a river) and the rain that has fallen and is forecast over the hills that drain into the gauge. Gauges without enough history get a simpler estimate that carries the recent change forward, and it says so (method "trend" instead of "model"). A gauge that has not reported in 3 hours gets no forecast.
 
-How accurate it has been (measured by checking each forecast against what the gauge then read; small sample, early result): ${accuracyLine()} Gauges using the simple trend estimate (${ACCURACY.trendOnly.checked} forecasts at ${ACCURACY.trendOnly.gauges} gauges) missed by ${ACCURACY.trendOnly.maeFt.toFixed(2)} ft on average, which is worse than saying "no change" (${ACCURACY.trendOnly.noChangeMaeFt.toFixed(2)} ft). Do not quote these as a guarantee. Plain-language version: ${SITE}/about#next-hour
+How accurate it has been: ${accuracyLine(acc)} Plain-language version: ${SITE}/about#next-hour
 
 How to quote it: "forecast, not an official warning", with the time it was issued (issuedAt, Sri Lanka time, UTC+5:30), in the form: "${SITE_NAME} forecasts <river> at <gauge> at about <level_ft> ft in the next hour (<low_ft> to <high_ft> ft), issued <time>; this is a forecast, not an official warning." Link the gauge page. For anything urgent point to the Disaster Management Centre, hotline 117.
 
@@ -118,7 +118,7 @@ export function nationalSummary(national: NationalStation[], now = Date.now(), n
 }
 
 /** The long version: every gauge with its marks, every reservoir and town page. */
-export function fullListing(national: NationalStation[], rsv: ReservoirsData | null, now = Date.now(), nh: Record<string, NextHour | null> | null = null): string {
+export function fullListing(national: NationalStation[], rsv: ReservoirsData | null, now = Date.now(), nh: Record<string, NextHour | null> | null = null, acc: AccuracyFile | null = null): string {
   const byRiver = new Map<string, NationalStation[]>();
   for (const s of national) byRiver.set(s.basin.trim(), [...(byRiver.get(s.basin.trim()) ?? []), s]);
   const g = [...byRiver.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([river, list]) => {
@@ -138,7 +138,7 @@ export function fullListing(national: NationalStation[], rsv: ReservoirsData | n
   const towns = PLACES.map((p) => `- [${p.name}, ${p.district}](${SITE}/flood/${p.slug})`);
   const rsvLines = (rsv?.items ?? []).map((r) => `- [${r.name}](${SITE}/reservoirs/${r.slug}): ${r.status}${r.storage ? `, ${Math.round(r.storage.pct)}% full` : ""}${r.latestDay ? ` (reading of ${r.latestDay})` : ""}${r.river ? `, ${r.river}` : ""}`);
   return [
-    llmsIntro(),
+    llmsIntro(acc),
     nationalSummary(national, now, nh),
     "## Every river gauge (levels in feet, next-hour forecast, official marks)",
     "",

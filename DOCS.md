@@ -301,8 +301,11 @@ and is about 0.07 m wide at 1 h (was ~0.25 m); rising / falling called right in 
 Nagalagam Street -61% (tide), Glencourse -47%. Not skilled: Horowpothana, Katharagama, Kuda Oya, Thaldena, Yaka Wewa and
 the sparse gauges Weraganthota, Thanthirimale, Galgamuwa. Catchment rain (Open-Meteo historical forecasts) was tested as an extra
 feature: it changed the 1 h error by < 1% and 6 h by ~1%, so it is not in this model; satellite (GSMaP) rain has only
-3 days of archive and was not testable. `lib/accuracy.ts` is still the LIVE verification only; refresh it from the
-prediction log in a few days. Refit: `git fetch origin data`, then the script (about a minute), commit the JSON.
+3 days of archive and was not testable. Live accuracy is now automatic: `.github/workflows/accuracy-snapshot.yml` (every 3 h) runs `scripts/accuracy-snapshot.mjs`, which scores the
+D1 prediction log (per horizon 1/3/6/12/24 h, all gauges and per gauge, last 30 days and since launch, split into `model` = issued since the
+gauge-only model went live 24 Oct, `model-early` and `trend`, with the "no change" baseline) into `accuracy/latest.json` on the `data` branch.
+`lib/accuracy.ts` reads it (1 h cache, 1.5 s time box, fails soft) for About #next-hour, /data, llms.txt, llms-full.txt, the MCP
+`get_next_hour_forecast` and the small line under each gauge chart (hidden below 10 checks). The 12 h / 24 h model was NOT changed. Refit: `git fetch origin data`, then the script (about a minute), commit the JSON.
 `snapshot.mjs` also archives hourly catchment rain and daily GloFAS discharge to `rain/` and `glofas/` on
 the `data` branch so later refits can use real history.
 

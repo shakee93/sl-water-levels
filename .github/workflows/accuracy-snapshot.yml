@@ -1,0 +1,58 @@
+# Live forecast accuracy: scores the Cloudflare D1 prediction log (forecast_verification) and writes a compact
+# accuracy/latest.json to the `data` branch, which the site reads (lib/accuracy.ts) for About, /data, llms.txt,
+# the MCP tool and the per-gauge line. Every 3 hours; no visitor and no D1 token in the browser needed.
+
+name: Accuracy snapshot
+
+on:
+  schedule:
+    - cron: "40 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Same group as the other snapshot jobs so none of them push to `data` at once.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  accuracy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out data branch
+        run: |
+          git fetch --depth=1 origin data
+          git worktree add archive FETCH_HEAD
+          git -C archive checkout -B data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Score the prediction log
+        run: node scripts/accuracy-snapshot.mjs archive
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "Accuracy $(date -u '+%F %H:%M') UTC"
+          git pull --rebase origin data || true
+          git push origin data
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true
