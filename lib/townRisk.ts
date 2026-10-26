@@ -200,7 +200,7 @@ export type TownRisk = {
   trend: "up" | "down" | "steady" | "unknown";
   reasons: Reason[];
   /** Next-hour line: key into the dictionary. */
-  hourKey: "dir.rising" | "dir.slow" | "dir.falling" | "dir.steady" | "dir.unknown";
+  hourKey: "dir.tide" | "dir.rising" | "dir.slow" | "dir.falling" | "dir.steady" | "dir.unknown";
   /** Next-24-hours line. */
   day: { key: string; vars: Record<string, string | number> };
   /** Action sentence key, or null. */
@@ -441,7 +441,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   if (gauge && forecast && forecast.h1Level != null && forecast.currentLevel != null) hourM = (forecast.h1Level - forecast.currentLevel) * forecast.metresPerUnit;
   else if (rate != null) hourM = rate;
   const hourKey: TownRisk["hourKey"] =
-    hourM == null ? "dir.unknown" : Math.abs(hourM) < RISING_M_PER_H ? "dir.steady" : hourM < 0 ? "dir.falling" : hourM < 0.05 ? "dir.slow" : "dir.rising";
+    hourM == null ? "dir.unknown" : Math.abs(hourM) < RISING_M_PER_H ? "dir.steady" : hourM < 0 ? "dir.falling" : gauge && isTidalStation(gauge.station) && !liftRising ? "dir.tide" : hourM < 0.05 ? "dir.slow" : "dir.rising";
 
   let day: TownRisk["day"] = { key: "n24.unknown", vars: {} };
   if (gauge || tone != null) {

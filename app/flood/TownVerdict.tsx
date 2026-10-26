@@ -39,6 +39,7 @@ const HOUR_ARROW: Partial<Record<TownRisk["hourKey"], TownRisk["trend"]>> = {
   "dir.slow": "up",
   "dir.falling": "down",
   "dir.steady": "steady",
+  "dir.tide": "steady",
 };
 
 export type TownVerdictProps = {

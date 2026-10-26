@@ -189,12 +189,14 @@ assert.equal(assessTown(base({ drainage: "upland", primary: g({ tier: "normal" }
   // unavailable forecast is ignored
   assert.equal(assessTown(base({ drainage: "riverbank", forecast: fc({ status: "unavailable", crossings: [cross()] }) })).tone, "normal");
   // trend-only forecast (no 24 h level): next hour comes from it, no crossing, still a sensible line
-  const t = assessTown(base({ drainage: "riverbank", forecast: fc({ status: "degraded", h24Level: null, maxLevel: 2.2, h1Level: 2.3 }) }));
+  const t = assessTown(base({ drainage: "riverbank", primary: g({ station: "Hanwella" }), forecast: fc({ status: "degraded", h24Level: null, maxLevel: 2.2, h1Level: 2.3 }) }));
   assert.equal(t.hourKey, "dir.rising");
   assert.equal(t.tone, "normal");
   // hour direction uses metres: 0.1 ft = 0.03 m/h -> slow; 0.4 ft = 0.12 m -> rising; 0.01 ft -> steady
-  assert.equal(assessTown(base({ forecast: fc({ h1Level: 2.1 }) })).hourKey, "dir.slow");
-  assert.equal(assessTown(base({ forecast: fc({ h1Level: 2.4 }) })).hourKey, "dir.rising");
+  assert.equal(assessTown(base({ primary: g({ station: "Hanwella" }), forecast: fc({ h1Level: 2.1 }) })).hourKey, "dir.slow");
+  assert.equal(assessTown(base({ primary: g({ station: "Hanwella" }), forecast: fc({ h1Level: 2.4 }) })).hourKey, "dir.rising");
+  // tidal gauge: a forecast rise that is the tide says so
+  assert.equal(assessTown(base({ forecast: fc({ h1Level: 2.4 }) })).hourKey, "dir.tide");
   assert.equal(assessTown(base({ forecast: fc({ h1Level: 2.01 }) })).hourKey, "dir.steady");
   assert.equal(assessTown(base({ forecast: fc({ h1Level: 1.7 }) })).hourKey, "dir.falling");
 }
