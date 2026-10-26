@@ -25,7 +25,7 @@ const OUT = path.join(ROOT, "lib/geo/rivers.json");
 const UA = "sl-water-levels-geo-build/1.0 (https://github.com/shakee93/sl-water-levels; shakee.zats@gmail.com)";
 const ARC = "https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/rivers/FeatureServer/0/query";
 const NEAR_M = 300; // a gauge closer than this to a drawn line needs nothing
-const JOIN_M = 60; // vertices of different ways closer than this count as joined
+const JOIN_DEFAULT = 60; // vertices of different ways closer than this count as joined
 const TARGET_M = 120; // a path ends when it comes this close to the drawn network
 const ARC_CACHE = path.join(os.tmpdir(), "sl-arcgis-rivers");
 const OSM_CACHE = path.join(os.tmpdir(), "sl-osm-cache");
@@ -33,7 +33,12 @@ fs.mkdirSync(ARC_CACHE, { recursive: true });
 fs.mkdirSync(OSM_CACHE, { recursive: true });
 
 // Full-length reaches to add besides the gauge paths: from a gauge to a point (the river mouth).
-const ROUTES = [{ basin: "Aththanagalu Oya", from: "aththanagalu-oya/dunamale", to: [80.0161, 7.1194] }, { basin: "Aththanagalu Oya", from: "aththanagalu-oya/dunamale", to: [80.1133, 7.1003] }];
+const ROUTES = [
+  // Aththanagalu Oya (Attanagalu Oya, then Dandugam Oya): headwaters east of Dunamale -> Dunamale -> Negombo lagoon,
+  // drawn as ONE main-river line (it is its own basin, it does not join the Kelani). Replaces the OSM pieces.
+  { basin: "Aththanagalu Oya", via: [[80.1859, 7.1033], "aththanagalu-oya/dunamale", [79.8952, 7.1618]], toSea: false, main: true, replace: true,
+    osm: ['way["waterway"~"^(river|stream|canal)$"]["name"~"Attanagalu|Aththanagalu|Dandugam|Attanagalla",i](6.9,79.75,7.4,80.3);', 'way["waterway"~"^(river|stream|canal)$"](7.0,79.78,7.3,79.95);'] },
+];
 
 const KX = Math.cos((7.8 * Math.PI) / 180);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -110,7 +115,7 @@ async function osmNear(g) {
 }
 
 // ------------------------------------------------------------------ graph + shortest path
-function makeGraph(ways) {
+function makeGraph(ways, JOIN_M = JOIN_DEFAULT) {
   const V = [], adj = [];
   for (const w of ways) {
     let prev = -1;
@@ -154,13 +159,15 @@ const nearestVertex = (G, p) => { let b = Infinity, bi = -1; G.V.forEach((v, i) 
 // ------------------------------------------------------------------ main
 const gauges = JSON.parse(fs.readFileSync(path.join(ROOT, "scripts/data/gauges.json"), "utf8"));
 const src = JSON.parse(fs.readFileSync(OUT, "utf8"));
-const base = src.rivers.filter((r) => !r.x);
+const REPLACED = ROUTES.filter((r) => r.replace).map((r) => r.basin);
+const base = src.rivers.filter((r) => !r.x && !REPLACED.includes(r.b));
 const drawn = base.filter((r) => r.b).map((r) => decode(r.d));
 const allDrawn = base.map((r) => decode(r.d));
 const coastPts = JSON.parse(fs.readFileSync(path.join(ROOT, "lib/geo/coast.json"), "utf8")).rings.flatMap(decode);
 
 const arc = await arcgisLines();
 const added = [];
+const near = (c, pts, r) => pts.some((p) => m(p, c) < r);
 const addPath = (basin, pts, why, main = 0) => {
   // keep only the stretches that are not already drawn (so no double lines), plus one point either side
   const far = pts.map((p) => distToLines(p, allDrawn) > 60);
@@ -176,7 +183,9 @@ const addPath = (basin, pts, why, main = 0) => {
   }
 };
 
+const replaced = new Set(ROUTES.filter((r) => r.replace).map((r) => r.basin));
 for (const g of gauges) {
+  if (replaced.has(g.river)) continue; // drawn by its route below
   const d0 = distToLines([g.lon, g.lat], drawn);
   if (d0 <= NEAR_M) continue;
   const arcNear = Math.min(...arc.map((p) => distToLines([g.lon, g.lat], [p])));
@@ -184,7 +193,6 @@ for (const g of gauges) {
   if (arcNear > NEAR_M) ways.push(...(await osmNear(g)));
   const G = makeGraph(ways);
   const s = nearestVertex(G, [g.lon, g.lat]);
-  const near = (c, pts, r) => pts.some((p) => m(p, c) < r);
   // the drawn network first; if no path reaches it (a river with no drawn line), the coast
   const drawnPts = drawn.flat();
   let r = shortest(G, s, (u) => near(G.V[u].c, drawnPts, TARGET_M));
@@ -205,12 +213,28 @@ for (const g of gauges) {
   addPath(g.river, r.path, g.station, end.startsWith("mouth") && !base.some((x) => x.b === g.river) ? 1 : 0);
 }
 for (const rt of ROUTES) {
-  const g = gauges.find((x) => x.id === rt.from);
-  const G = makeGraph([...arc, ...(await osmNear(g))]);
-  const r = shortest(G, nearestVertex(G, [g.lon, g.lat]), (u) => m(G.V[u].c, rt.to) < 400);
-  if (!r) { console.log(`route ${rt.basin}: no path`); continue; }
-  console.log(`route ${rt.basin} from ${g.station}: ${r.km.toFixed(1)} km`);
-  addPath(rt.basin, r.path, "route");
+  const wps = rt.via.map((v) => (typeof v === "string" ? (({ lon, lat }) => [lon, lat])(gauges.find((x) => x.id === v)) : v));
+  const g0 = gauges.find((x) => x.id === rt.via.find((v) => typeof v === "string"));
+  const osm = [];
+  for (const body of rt.osm ?? []) {
+    try { const j = await overpass(`extras-route-${rt.basin.replace(/\W/g, "_")}-${osm.length}`, `[out:json][timeout:90];${body}out geom;`); osm.push(...j.elements.filter((e) => e.geometry).map((e) => e.geometry.map((p) => [p.lon, p.lat]))); }
+    catch (e) { console.error(`  OSM unavailable for route ${rt.basin}: ${e.message}`); }
+  }
+  const G = makeGraph([...arc, ...osm, ...(await osmNear(g0))], 150);
+  let line = [];
+  for (let k = 0; k + 1 < wps.length; k++) {
+    const r = shortest(G, nearestVertex(G, wps[k]), (u) => m(G.V[u].c, wps[k + 1]) < 150);
+    if (!r) { console.log(`route ${rt.basin} leg ${k}: no path, bridged with a straight line`); line.push(wps[k], wps[k + 1]); continue; }
+    console.log(`route ${rt.basin} leg ${k}: ${r.km.toFixed(1)} km`);
+    line.push(...r.path);
+  }
+  if (rt.toSea) {
+    const r = shortest(G, nearestVertex(G, wps.at(-1)), (u) => near(G.V[u].c, coastPts, 400));
+    console.log(r ? `route ${rt.basin} to sea: ${r.km.toFixed(1)} km` : `route ${rt.basin}: no path from the lagoon to the sea (line ends at the lagoon)`);
+    if (r) line.push(...r.path);
+  }
+  const g = dp(line.filter((p, k, a) => k === 0 || m(p, a[k - 1]) > 1), 0.0005);
+  added.push({ n: "", b: rt.basin, m: rt.main ? 1 : 0, x: 1, d: encode(g) });
 }
 src.rivers = [...base, ...added.map(({ why, ...r }) => r)];
 fs.writeFileSync(OUT, JSON.stringify(src));

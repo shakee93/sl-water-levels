@@ -27,7 +27,7 @@ export const HOME_RIVERS: HomeRiver[] = (json as { rivers: { b: string; m: numbe
 }));
 
 /** The rivers drawn a little thicker and named on the map. */
-export const MAJOR_BASINS = ["Kelani Ganga", "Mahaweli Ganga", "Kalu Ganga", "Walawe Ganga", "Nilwala Ganga", "Deduru Oya"];
+export const MAJOR_BASINS = ["Kelani Ganga", "Mahaweli Ganga", "Kalu Ganga", "Walawe Ganga", "Nilwala Ganga", "Deduru Oya", "Maha Oya", "Aththanagalu Oya"];
 
 /** One line per river (the longest main line of its basin) to hang its name on, longest first. */
 export const RIVER_NAME_LINES: { basin: string; pts: [number, number][] }[] = [...new Set(HOME_RIVERS.map((r) => r.basin))]
