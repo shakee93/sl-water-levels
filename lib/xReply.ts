@@ -186,7 +186,9 @@ export type LevelStation = {
   id: string; station: string; river: string; level: number | null; unit: string | null;
   marks: { alert: number | null; minor: number | null; major: number | null };
   status: string; trend: string | null; observedAt: string | null; ageMinutes?: number | null;
-  nextHour?: { level_ft: number; low_ft: number | null; high_ft: number | null; direction: string; crossing: string | null } | null;
+  nextHour?: { level_ft: number; low_ft: number | null; high_ft: number | null; direction: string; crossing: string | null; rainRisk?: { line?: string } | null } | null;
+  /** The per-station rain block of /api/levels (lib/stationRain.ts): sensor = false means this gauge has no rain sensor. */
+  rain?: { sensor?: boolean; fallen_3h_mm?: number | null; fallen_24h_mm?: number | null; fallen_24h_word?: string | null; forecast_24h_mm?: number | null; forecast_24h_word?: string | null; satellite_24h_mm?: number | null } | null;
 };
 export type ReservoirRec = {
   id: string; name: string; river: string | null; district: string | null; status: string; storagePercent: number | null; storageFresh: boolean | null;
@@ -211,7 +213,10 @@ export type GaugeView = {
   station: string; river: string; state: "ok" | "stale" | "unmarked";
   status?: string; level?: number; alert?: number | null; trend?: string | null; at?: number;
   next?: { level: number; low: number | null; high: number | null; direction: string; crossing: string | null } | null;
+  /** Rain: what this gauge's sensor measured and what the weather model forecasts over the hills above it (mm, whole numbers; null = unknown). */
+  rain?: { fell3h: number | null; fell24h: number | null; fellWord: string | null; fc24h: number | null; fcWord: string | null; warning: string | null } | null;
 };
+const mmFact = (v: number | null | undefined): number | null => (v == null || !Number.isFinite(v) ? null : v < 10 ? Math.round(v * 10) / 10 : Math.round(v));
 
 function gaugeView(s: LevelStation, now: number): GaugeView {
   const base = { station: display(s.station), river: s.river.trim() };
@@ -219,8 +224,12 @@ function gaugeView(s: LevelStation, now: number): GaugeView {
   if (s.status === "stale" || s.level == null || !Number.isFinite(at) || now - at > STALE_MS) return { ...base, state: "stale" };
   if (s.status === "none" || s.unit !== "ft") return { ...base, state: "unmarked", at };
   const n = s.nextHour;
+  const r = s.rain;
+  const rain = r && s.rain?.sensor !== false || r?.forecast_24h_mm != null
+    ? { fell3h: mmFact(r?.fallen_3h_mm), fell24h: mmFact(r?.fallen_24h_mm), fellWord: r?.fallen_24h_word ?? null, fc24h: mmFact(r?.forecast_24h_mm), fcWord: r?.forecast_24h_word ?? null, warning: n?.rainRisk?.line ?? null }
+    : null;
   return {
-    ...base, state: "ok", status: s.status, level: s.level, alert: s.marks?.alert ?? null, trend: s.trend ?? null, at,
+    ...base, rain, state: "ok", status: s.status, level: s.level, alert: s.marks?.alert ?? null, trend: s.trend ?? null, at,
     next: n ? { level: n.level_ft, low: n.low_ft ?? null, high: n.high_ft ?? null, direction: n.direction, crossing: n.crossing ? n.crossing.replace(/^(expected to|may|will) reach/i, "could reach") : null } : null,
   };
 }
@@ -232,6 +241,9 @@ const gaugeLuna = (g: GaugeView) => {
     station: g.station, river: g.river, status: PHRASE[g.status!] ?? "no status", level_ft: r1(g.level!), alert_mark_ft: g.alert != null ? r1(g.alert) : undefined,
     trend: g.trend ?? undefined, reading_time_sri_lanka: clock(g.at!),
     next_hour_forecast: g.next ? { level_ft: r1(g.next.level), likely_low_ft: g.next.low != null ? r1(g.next.low) : undefined, likely_high_ft: g.next.high != null ? r1(g.next.high) : undefined, direction: g.next.direction, may_cross: g.next.crossing ?? undefined } : undefined,
+    rain_measured_at_this_gauge: g.rain && (g.rain.fell24h != null || g.rain.fell3h != null) ? { last_3_hours_mm: g.rain.fell3h ?? undefined, last_24_hours_mm: g.rain.fell24h ?? undefined, last_24_hours_is: g.rain.fellWord ?? undefined } : undefined,
+    rain_forecast_over_the_hills_above_next_24_hours_mm: g.rain?.fc24h ?? undefined,
+    heavy_rain_notice: g.rain?.warning ?? undefined,
   };
 };
 
@@ -405,6 +417,7 @@ ANSWER FIRST
 - The first sentence answers what they asked: where the gauge stands now, as given in the facts (below the alert level, at alert level, and so on), with its level and the time of the reading.
 - Then at most one more sentence: the trend or the next-hour forecast, or a second gauge. Do not list everything.
 - Say it is the river gauge (the facts' scope_note). Never say or hint whether a street, house or area is flooded, safe or at risk. Never talk about canals, low ground, drains or rain effects on streets.
+- Rain, only if the facts give it: say plainly what the gauge's own sensor measured (rain_measured_at_this_gauge) and, as a forecast, the rain over the hills above it (rain_forecast_over_the_hills_above_next_24_hours_mm). If heavy_rain_notice is present, you may say heavy rain is forecast or was measured upstream, in its words. Never turn rain into a claim about a street or area.
 - If matched_loosely is true, start with "Assuming you mean <name>:".
 
 FACTS ARE THE LAW

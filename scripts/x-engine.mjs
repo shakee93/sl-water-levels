@@ -293,7 +293,9 @@ export function summaryEvent(snap, period, now, b = bucket(now), site = snap.sit
     summary: {
       period, at: now, reporting: (snap.stations ?? []).filter((s) => s.status !== "stale").length, assessed: us.length,
       atAlert: atAlert.map((s) => ({ station: s.station, tier: s.status })), nearAlert: us.filter((s) => s.status === "watch").length,
-      rain: snap.rain ?? null, rainWindowH: 24, spilling, url: site || "https://sl-water-levels.vercel.app",
+      // the summary quotes the heaviest forecast figure we have: a town's point forecast or a catchment's (same numbers as the site)
+      rain: [snap.rain, snap.rainCatch].filter(Boolean).sort((a, c) => c.mm - a.mm)[0] ? { ...[snap.rain, snap.rainCatch].filter(Boolean).sort((a, c) => c.mm - a.mm)[0], over: [snap.rain, snap.rainCatch].filter(Boolean).sort((a, c) => c.mm - a.mm)[0] === snap.rainCatch && snap.rainCatch !== snap.rain } : null,
+      fallen: snap.fallen ?? null, rainWindowH: 24, spilling, url: site || "https://sl-water-levels.vercel.app",
     },
     dedupe: `${period}:${colomboDay(now).day}`,
   };

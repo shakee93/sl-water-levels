@@ -303,11 +303,16 @@ export type SummaryFact = {
   atAlert: { station: string; tier: string }[];
   nearAlert: number;
   /** Heaviest 24 h rain forecast among the places we check, or null when none could be read. */
-  rain: { mm: number; place: string } | null;
+  rain: { mm: number; place: string; /** true = the hills above a river gauge, not a town */ over?: boolean } | null;
+  /** Most rain a river gauge's own sensor measured in the last 24 h (the gauge's name), or null. */
+  fallen?: { mm: number; place: string } | null;
   rainWindowH: number;
   spilling: number;
   url: string;
 };
+
+/** 50 mm in 24 h = "heavy" (RAIN_BANDS["24h"].heavy in lib/rainWords.ts; this file imports nothing, scripts/x-post.test.mts checks they match). */
+const HEAVY_24H_MM = 50;
 
 export function composeSummary(f: SummaryFact): Composed {
   const hello = f.period === "morning" ? "Good morning." : "Evening update.";
@@ -318,12 +323,18 @@ export function composeSummary(f: SummaryFact): Composed {
     parts.push(`${f.atAlert.length} of ${f.assessed} river gauges are at Alert level or higher: ${names}.`);
   }
   if (f.nearAlert > 0) parts.push(`${f.nearAlert} more ${f.nearAlert === 1 ? "is" : "are"} close to Alert level.`);
-  const rain = f.rain && f.rain.mm >= 5 ? `Rain forecast, next ${f.rainWindowH} hours: up to ${int(f.rain.mm)} mm near ${f.rain.place}.` : f.rain ? `Little rain forecast for the next ${f.rainWindowH} hours.` : null;
+  // "Heavy" only from 50 mm in 24 h, the same bar as the site's heavy-rain warning (lib/rainWords.ts); measured rain is said as measured.
+  const heavy = f.rain != null && f.rain.mm >= HEAVY_24H_MM;
+  const fc = f.rain && f.rain.mm >= 5 ? `${heavy ? "Heavy rain" : "Rain"} forecast, next ${f.rainWindowH} hours: up to ${int(f.rain.mm)} mm ${f.rain.over ? "over the hills above" : "near"} ${f.rain.place}.` : f.rain ? `Little rain forecast for the next ${f.rainWindowH} hours.` : null;
+  const fell = f.fallen && f.fallen.mm >= 10 ? `River gauges measured up to ${int(f.fallen.mm)} mm of rain in the last 24 hours at ${f.fallen.place}.` : null;
+  const rain = [fell, fc].filter(Boolean).join(" ") || null;
   const res = f.spilling > 0 ? `${f.spilling} ${f.spilling === 1 ? "reservoir is" : "reservoirs are"} letting water out.` : null;
   const body = [`${hello} ${clock(f.at)}.`, ...parts, rain, res].filter(Boolean).join(" ");
   const short = [`${hello}`, ...parts, rain].filter(Boolean).join(" ");
   const must = f.atAlert.slice(0, 1).map((a) => a.station);
-  return assemble([{ body, short, link: f.url, must, tags: ["#SriLanka"] }, { body: [hello, ...parts].join(" "), link: f.url, must, tags: ["#SriLanka"] }]);
+  // when both rain clauses do not fit, keep the one that matters more: measured rain beats a forecast unless the forecast is heavy
+  const one = (heavy || !fell ? fc : fell) ?? null;
+  return assemble([{ body, short, link: f.url, must, tags: ["#SriLanka"] }, ...(fell && fc && one ? [{ body: [hello, ...parts, one].join(" "), link: f.url, must, tags: ["#SriLanka"] }] : []), { body: [hello, ...parts].join(" "), link: f.url, must, tags: ["#SriLanka"] }]);
 }
 
 export type StormFact = { river: string; at: number; gauges: (GaugeFact & { tier: string })[]; url: string };
@@ -427,7 +438,8 @@ export function lunaFacts(type: string, f: any): Record<string, unknown> {
         time_sri_lanka: clock(s.at), gauges_checked: s.assessed,
         gauges_at_alert_or_higher: s.atAlert.length, at_alert_stations: s.atAlert.slice(0, 3).map((a) => a.station),
         gauges_close_to_alert: s.nearAlert,
-        rain_forecast: s.rain ? { heaviest_mm: Math.round(s.rain.mm), near: s.rain.place, next_hours: s.rainWindowH } : "no rain figure available",
+        rain_forecast: s.rain ? { heaviest_mm: Math.round(s.rain.mm), [s.rain.over ? "over_the_hills_above" : "near"]: s.rain.place, next_hours: s.rainWindowH, heavy_rain_from_mm: HEAVY_24H_MM } : "no rain figure available",
+        rain_measured_by_river_gauges: s.fallen && s.fallen.mm >= 10 ? { most_mm: Math.round(s.fallen.mm), at_gauge: s.fallen.place, in_last_hours: 24 } : undefined,
         reservoirs_letting_water_out: s.spilling,
       };
     }

@@ -63,7 +63,7 @@ export async function buildSnapshot({ site = SITE_DEFAULT, now = Date.now(), doF
     getJson(`${site}/api/warnings`, doFetch),
   ]);
   const stations = levels?.stations
-    ? levels.stations.map((s) => ({ id: s.id, station: s.station, river: s.river, status: s.status, level: s.level, unit: s.unit, marks: s.marks, trend: s.trend, observedAt: s.observedAt, url: s.url, nextHour: s.nextHour }))
+    ? levels.stations.map((s) => ({ id: s.id, station: s.station, river: s.river, status: s.status, level: s.level, unit: s.unit, marks: s.marks, trend: s.trend, observedAt: s.observedAt, url: s.url, nextHour: s.nextHour, rain: s.rain ?? null }))
     : null;
   const reservoirs = rsv?.reservoirs ?? null;
 
@@ -78,7 +78,15 @@ export async function buildSnapshot({ site = SITE_DEFAULT, now = Date.now(), doF
       rain = { mm: Math.round(top.rainNext24), place: top.name };
     }
   }
-  return { now, site, stations, reservoirs, warnings: warn?.warnings ?? null, rain };
+  // The same catchment figures the site shows (/api/levels `rain`): the most rain forecast over the hills above any gauge, and the most a gauge's
+  // own sensor measured in the last 24 h. Used by the summaries only; the rain-watch trigger above still reads the town figure.
+  let rainCatch = null, fallen = null;
+  for (const s of stations ?? []) {
+    const f = s.rain?.forecast_24h_mm, m = s.rain?.fallen_24h_mm;
+    if (typeof f === "number" && (!rainCatch || f > rainCatch.mm)) rainCatch = { mm: Math.round(f), place: s.station };
+    if (typeof m === "number" && (!fallen || m > fallen.mm)) fallen = { mm: Math.round(m), place: s.station };
+  }
+  return { now, site, stations, reservoirs, warnings: warn?.warnings ?? null, rain, rainCatch, fallen };
 }
 
 // ---- words ---------------------------------------------------------------------------------------------------------

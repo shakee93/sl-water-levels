@@ -110,6 +110,15 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   const c = composeSummary(f);
   assert.deepEqual(validatePost({ kind: "morning", facts: f, ...c }), []);
   assert.ok(/1 of 38/.test(c.text) && /85 mm near Ratnapura/.test(c.text) && /4 reservoirs/.test(c.text), c.text);
+  // 50 mm is "heavy" (as on the site), under it just "rain"; measured rain is said as measured, and a catchment says "over the hills above"
+  assert.ok(/Heavy rain forecast/.test(c.text), c.text);
+  const mid = composeSummary({ ...f, rain: { mm: 30, place: "Holombuwa", over: true }, fallen: { mm: 66, place: "Holombuwa" } });
+  assert.ok(!/Heavy rain/.test(mid.text), mid.text);
+  const fo = composeSummary({ ...f, rain: { mm: 30, place: "Holombuwa", over: true }, fallen: null });
+  assert.ok(/Rain forecast, next 24 hours: up to 30 mm over the hills above Holombuwa/.test(fo.text) && !/Heavy rain/.test(fo.text), fo.text);
+  // both clauses are long: one is kept (a forecast under 50 mm yields to what was measured)
+  assert.ok(/River gauges measured up to 66 mm of rain in the last 24 hours at Holombuwa/.test(mid.text) || /up to 30 mm over the hills above Holombuwa/.test(mid.text), mid.text);
+  assert.deepEqual(validatePost({ kind: "morning", facts: { ...f, rain: { mm: 30, place: "Holombuwa", over: true }, fallen: { mm: 66, place: "Holombuwa" } }, ...mid }), []);
   const calmF = { ...f, atAlert: [], nearAlert: 0, spilling: 0, rain: null };
   const cc = composeSummary(calmF);
   assert.ok(/All 38 river gauges/.test(cc.text) && !/mm/.test(cc.text), "no rain claim without rain data");
