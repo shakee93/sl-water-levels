@@ -12,6 +12,8 @@ import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import { stationDisplayName } from "@/lib/displayName";
 import { formatKm } from "@/lib/nearby";
+import { YourRiver } from "@/app/flood/YourRiver";
+import { getNational, type NationalStation } from "@/lib/arcgis";
 import { StickyContext } from "@/app/StickyContext";
 import { colomboTime, tierLabel } from "@/app/tierUi";
 import { statusFor } from "@/lib/arcgis";
@@ -75,6 +77,7 @@ export default async function TownPage({ params }: Params) {
   // canal levels (our D1 archive of CUrW / SLLDC, time-boxed) only for canal-area towns; fails soft to nothing
   const [data, canals] = await Promise.all([loadTown(place, undefined, { budgetMs: PAGE_BUDGET_MS }), basinOfTown(place.slug) ? getCanals() : Promise.resolve(null)]);
   const g = data.gauge;
+  const national = await getNational().catch(() => [] as NationalStation[]); // already cached by loadTown
   const canonical = p(`/flood/${place.slug}`);
   const serverNow = data.input.now;
 
@@ -155,6 +158,8 @@ export default async function TownPage({ params }: Params) {
           serverNow={serverNow}
           href={canonical}
         />
+
+        <YourRiver primary={data.input.primary} secondary={data.input.secondary} national={national} lang={lang} t={t} tt={tt} p={p} />
 
         {/* heavy rain on a canal-flood town: the street-water card first (state + one switch), then ask about the street while people are looking (answers tune the street rule) */}
         {place.rainZone && data.input.streetRain !== undefined && risk.lowSpot && lowSpotCard}

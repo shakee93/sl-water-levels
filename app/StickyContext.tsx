@@ -8,16 +8,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { TierPill, type PillTier } from "./TierPill";
 
-export type StickyTier = "normal" | "alert" | "minor" | "major" | "none" | "stale";
-const PILL: Record<StickyTier, { dot: string; box: string }> = {
-  normal: { dot: "bg-emerald-500", box: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" },
-  alert: { dot: "bg-amber-500", box: "bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" },
-  minor: { dot: "bg-orange-500", box: "bg-orange-50 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300" },
-  major: { dot: "bg-red-500", box: "bg-red-50 text-red-800 dark:bg-red-950/60 dark:text-red-300" },
-  none: { dot: "bg-slate-400", box: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-  stale: { dot: "bg-slate-400", box: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-};
+export type StickyTier = PillTier;
 
 export function StickyContext({
   crumbs,
@@ -53,7 +46,6 @@ export function StickyContext({
   }, []);
 
   const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-  const pd = pill ? PILL[pill.tier] : null;
 
   return (
     <div
@@ -80,12 +72,7 @@ export function StickyContext({
             );
           })}
         </nav>
-        {pill && pd && (
-          <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${pd.box}`}>
-            <span className={`size-2 rounded-full ${pd.dot}`} aria-hidden />
-            {pill.label}
-          </span>
-        )}
+        {pill && <TierPill label={pill.label} tier={pill.tier} />}
         {chip && <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-900/50 dark:text-amber-200 ">{chip}</span>}
         {bits.length > 0 && (
           <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-slate-600 dark:text-slate-300">
