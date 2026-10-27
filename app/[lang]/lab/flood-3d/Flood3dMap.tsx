@@ -10,7 +10,7 @@ import { loadBaseStyle } from "./mapStyle";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
 import { makeT, type Lang } from "./strings";
 import { ReplayCard, replayTime, type ReplayData } from "./Replay";
-import { depthM, depthExpr, wetColorExpr } from "./depth";
+import { depthM, depthExpr, wetColorExpr, inPool } from "./depth";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
@@ -276,7 +276,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
       const i = y * g.w + x, L = g.L[i];
       if (g.river[i] || g.unc[i] || g.wet[i] || !Number.isFinite(L) || L > 12) continue;
       const w = m.png.west + x * deg, n = m.png.north - y * deg, e = w + deg, so = n - deg;
-      feats.push({ type: "Feature", properties: { L: Math.round(L * 10) / 10, b: g.built[i] }, geometry: { type: "Polygon", coordinates: [[[w, n], [e, n], [e, so], [w, so], [w, n]]] } });
+      feats.push({ type: "Feature", properties: { L: Math.round(L * 10) / 10, b: inPool(w + deg / 2, n - deg / 2) ? 2 : g.built[i] }, geometry: { type: "Polygon", coordinates: [[[w, n], [e, n], [e, so], [w, so], [w, n]]] } });
     }
     cellsShown.current = true;
     src.setData({ type: "FeatureCollection", features: feats } as never);
@@ -770,7 +770,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           add(nag.trend ? tr("River now {ft} ft and {trend}.", { ft: f1(st.level), trend: tr(nag.trend) }) : tr("River now {ft} ft", { ft: f1(st.level) }));
         } else add(L <= st.level ? tr("At {ft} ft this spot would be under water.", { ft: f1(st.level) }) : tr("At {ft} ft this spot would be dry.", { ft: f1(st.level) }));
         // how deep (an estimate, see depth.ts), tied to the replay time, the live reading or the chosen level
-        const dm = depthM(st.level, L, !!g.built[i]);
+        const dm = depthM(st.level, L, inPool(ev.lngLat.lng, ev.lngLat.lat) ? 2 : g.built[i] ? 1 : 0);
         if (dm > 0.05) {
           const ftw = Math.max(1, Math.round((dm / 0.3048) * 2) / 2);
           const when = replayRef.current && rp ? replayTime(rp, rpI, lang) : st.isLive && nag?.hourlyAt ? clock(nag.hourlyAt) : "";
@@ -935,6 +935,11 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   // ---- the panel body (one place for every control, in and out of full screen)
   const panelBody = (
     <div className="px-2 pb-3">
+      {isLive && nagUsable && nag && (
+        <p className="mx-1.5 mb-2 rounded-lg bg-slate-100 px-2.5 py-2 text-[11px] leading-snug text-slate-700 dark:bg-slate-800 dark:text-slate-200" data-testid="flood3d-live-note">
+          {level < (marks?.alert ?? 4) ? tr("River now: normal, {ft} ft. This map shows river flooding only; rain and canal water on streets is not shown.", { ft: f1(level) }) : tr("River now: {ft} ft, above normal. This map shows river flooding only; rain and canal water on streets is not shown.", { ft: f1(level) })}
+        </p>
+      )}
       <SectionTitle>{tr("River level on the map")}</SectionTitle>
       <div className="px-1.5">
         <Seg value={driver} onChange={(k) => { setDriver(k); setReplayOn(false); setPlaying(false); if (k !== "live") setChanceOn(false); }} label={tr("River level on the map")} items={[{ v: "live", t: tr("Live") }, { v: "nag", t: "Nagalagam" }, { v: "han", t: "Hanwella" }]} />

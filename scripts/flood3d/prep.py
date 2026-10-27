@@ -331,6 +331,40 @@ def to_wgs(a, fill, dtype=np.float32):
     out = np.full((gh, gw), fill, dtype)
     reproject(a.astype(dtype), out, src_transform=TR, src_crs="EPSG:32644", dst_transform=GTR, dst_crs="EPSG:4326", resampling=Resampling.nearest, dst_nodata=fill)
     return out
+# ---- Kolonnawa / Megoda Kolonnawa / Wellampitiya: a LEVEL POOL, not HAND from the nearest channel (28 Oct 2026, from reported Ditwah depths).
+# Behind the canals this ground floods as one flat water surface: a reported street depth, a bridge-deck reference (water 2-3 ft below the deck) and the Copernicus
+# 30 Nov map (best flat level 6.25 m on the 30 m DSM, 7.35 ft at Nagalagam) agree on about 6.25 m at the 1 Dec peak. The surface rises
+# 0.81 m per ft of Nagalagam stage up to 7.4 ft (fitted on the five dated points, 6 h lag, residual <= 0.5 m) and 0.25 m per ft above (plateau).
+# Fill level of a cell = lowest 'highest ground on the way' from the Kelani-side channels (priority flood), so a cell floods when the pool reaches it AND the pool is
+# connected to it. The satellite maps miss water between houses, so the pool only ADDS to the satellite-bounded level (min of the two) inside the zone.
+import heapq
+POOL_ZONE = (79.885, 79.925, 6.915, 6.955)   # lon0, lon1, lat0, lat1 (keep in step with POOL_ZONE in app/[lang]/lab/flood-3d/depth.ts)
+def pool_w(s):   # pool surface (m, DSM frame) at Nagalagam stage s (ft)
+    return 0.81 * np.minimum(s, 7.4) + 0.25 * np.maximum(0, s - 7.4)
+def pool_s(wm):  # inverse
+    return np.where(wm <= 0.81 * 7.4, wm / 0.81, 7.4 + (wm - 0.81 * 7.4) / 0.25)
+_zf = np.where(np.isfinite(z), z, 99.0).astype(float)
+_F = np.full(_zf.shape, np.inf); _hp = []
+for _r, _c in zip(*np.where(KNET)):
+    _F[_r, _c] = _zf[_r, _c]; heapq.heappush(_hp, (_F[_r, _c], _r, _c))
+while _hp:
+    _f, _r, _c = heapq.heappop(_hp)
+    if _f > _F[_r, _c]: continue
+    for _dr in (-1, 0, 1):
+        for _dc in (-1, 0, 1):
+            _rr, _cc = _r + _dr, _c + _dc
+            if (_dr or _dc) and 0 <= _rr < H and 0 <= _cc < W:
+                _nf = max(_f, _zf[_rr, _cc])
+                if _nf < _F[_rr, _cc]: _F[_rr, _cc] = _nf; heapq.heappush(_hp, (_nf, _rr, _cc))
+_rr_, _cc_ = np.mgrid[0:H, 0:W]
+_lon, _lat = Ti.transform(X0 + (_cc_ + 0.5) * RES, Y1 - (_rr_ + 0.5) * RES)
+PZ = (_lon >= POOL_ZONE[0]) & (_lon <= POOL_ZONE[1]) & (_lat >= POOL_ZONE[2]) & (_lat <= POOL_ZONE[3]) & LAND & ~DRAIN & np.isfinite(_F)
+_Lp = np.where(PZ, pool_s(_F), np.inf)
+_before = float(np.mean((Lft <= 8.5)[PZ & np.isfinite(Lft)]))
+_take = PZ & (_Lp < np.where(np.isfinite(Lft), Lft, 99.0))
+Lft = np.where(_take, _Lp, Lft)
+cls = np.where(_take, 1, cls)
+print("pool zone cells", int(PZ.sum()), "lowered", int(_take.sum()), "share flooded at 8.5 ft before/after", round(_before, 2), round(float(np.mean((Lft <= 8.5)[PZ])), 2))
 BAND = np.select([HAND <= 1, HAND <= 2, HAND <= 3, HAND <= 5], [0, 1, 2, 3], 4)
 valid = okall & np.isfinite(Lft)
 R = np.where(valid & (Lft < 25), np.clip(np.round((Lft - 2) * 10) + 1, 1, 250), 0)
