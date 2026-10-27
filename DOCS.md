@@ -659,6 +659,60 @@ English advisory and no official warnings.
   browser never calls pub.curwsl.org. Basin colour comes from `basinState()` in `lib/colombo.ts` (higher when 2 or more of its gauges
   are rising or higher; context only, never a flood verdict).
 
+## SEO (titles, headings, structured data; set up 27 Oct 2026)
+
+Why: Search Console (old domain, 90 days) showed people type "<river> river water level (today / live)", "<river> ganga water level
+today", "<gauge town> water level", "<town> flood level", "real time water levels", and never "basin". 88% mobile, 98% Sri Lanka. So
+every page's title, H1 and meta description lead with those words. Nothing is hand-written per page: strings are templates filled from
+live data and from alias tables.
+
+**Where things live (change them here, not in pages)**
+- `lib/seoNames.ts`: the spellings. `RIVER_NAMES` (lead name, other everyday name, extra spellings, romanised Sinhala), `DAM_EXTRA`
+  (dam spellings, on top of `lib/reservoirs.ts` aliases), `GAUGE_PRIORITY` (gauges named first in a river's meta description), town aliases
+  from `lib/places.ts`. A new spelling people search = one line here and every page of that kind has it.
+- `lib/i18n/seo.ts`: every title / H1 / meta description template in en, si, ta (si/ta are drafts that need native review).
+- `lib/seoMeta.ts`: `riverMeta`, `gaugeMeta`, `reservoirMeta`, `shortList`, `ogBase`. Pages call these; they never build a title themselves.
+- `lib/seo.ts`: JSON-LD builders (WebPage, BreadcrumbList, FAQPage, Place, Dataset). `lib/i18n/config.ts` `pageAlternates()`: canonical + hreflang.
+
+**Templates (English)**
+
+| Page | Title | H1 |
+|---|---|---|
+| Home | Sri Lanka River Water Levels Today (Live) & Flood Alerts | River water levels in Sri Lanka today |
+| /rivers | River Water Levels in Sri Lanka Today (Live) | same as H1 |
+| River | {Lead} Water Level Today (Live) – {Other name}, e.g. Kalu Ganga Water Level Today (Live) – Kalu River | {Lead} water level today, plus an "Also called ..." line |
+| Gauge | {Gauge} Water Level Today – {River} (Live) | {Gauge} water level today, plus a link up to the river |
+| Gauge of a one-gauge river | {River} Water Level Today – {Gauge} (Live) | {River} water level today at {Gauge} |
+| Town | Is {Town} flooding today? Live flood level | Is {Town} flooding today? |
+| Reservoir | {Name} Reservoir Water Level & Spill Today | {Name} Reservoir water level today, plus "Also searched as ..." |
+| Index pages | Reservoir & Dam Water Levels Sri Lanka Today; Is My Town Flooding? Live Flood Check, N Towns; Sri Lanka Rain Map (Live) – Rainfall Today; Flood News Sri Lanka Today – Latest Reports; Flood Help Sri Lanka: 117 DMC Emergency Number; Colombo Canal Water Levels Today & Tide | matching H1 |
+
+**Rules**
+- Titles are `title: { absolute }` (the layout's " — site name" suffix would push them past about 60 characters; phones cut at 55-60).
+  River titles drop the "– {Other name}" half automatically past 62 characters. No live number in a title (it goes stale in snippets).
+- "River", "water level", "today", "live", "flood level" are the words; never "basin" in a title, H1, meta or nav label (the data still
+  says basin internally; the public label is "Rivers" / "All rivers").
+- Meta descriptions: about 160 characters, the live status first ("Now: minor flood level"), official steps only (Normal, Alert, Minor
+  flood, Major flood; near alert reads Normal, as everywhere on the site). Never a forecast number or a verdict claim the page does not show.
+- Sinhala / Tamil: "අද" / "இன்று" (today) first, then the everyday words (ගඟේ ජල මට්ටම, ගංවතුර / ஆற்றின் நீர் மட்டம், வெள்ளம்), the river name
+  in its own script and the English name after the dash. Romanised Sinhala people type ("kalu gage jala mattama") goes in the Sinhala meta
+  description only. Slugs stay English in every locale. Mark new si/ta strings as drafts.
+- A page's own `openGraph` REPLACES the layout's (Next does not deep-merge), so every `openGraph` spreads `ogBase(lang)` for og:site_name and og:locale.
+- Every indexable page sets `alternates: pageAlternates(lang, path)` (self-canonical per locale, hreflang en/si/ta/x-default). Only
+  `/status` (noindex) and the 404 are excluded. A one-gauge river redirects (308) to its gauge page, so it is not in the sitemap.
+- Exactly one H1 per page, headings in order. Internal links use the words people search: "{River} water level", "{Gauge} water level",
+  "Is {Town} flooding?". River, gauge, towns on that gauge and reservoirs above it all link to each other.
+- JSON-LD per type: home WebSite + Dataset; river CollectionPage + BreadcrumbList (+ FAQPage); gauge WebPage + BreadcrumbList + Place + Dataset (+ FAQPage);
+  town WebPage + BreadcrumbList + Place (+ FAQPage); reservoir Reservoir + Dataset + WebPage (+ FAQPage); /rivers CollectionPage + ItemList. FAQPage only
+  for the visible "Common questions" block (same text). Never NewsArticle.
+- New page checklist: title/H1/description entries in `lib/i18n/seo.ts` (three languages), `pageAlternates`, `ogBase`, one H1, a sitemap entry in
+  `app/sitemap.ts` (with lastmod), a nav/footer link if it is a section (`lib/navGroups.ts`), a line in `lib/llms.ts`.
+- `/rivers` is server-rendered from the already-cached `getNational()`: no extra ArcGIS call.
+
+**Measuring** (Search Console, property https://waterlevels.lk/, compare 4 weeks after 27 Oct 2026): CTR and average position for "kalu ganga water level (today)"
+(was 36K impressions, 0.3% CTR), "kelani river water level today", "hanwella water level / flood level", "real time water levels", "river water level sri lanka";
+impressions and clicks of `/rivers`; the Sinhala and Tamil script queries; Pages report for `/si` and `/ta` indexing.
+
 ## Monitoring (data-source health)
 
 Sources break silently (a sheet layout change, a moved endpoint, stale data, an exhausted quota), so
