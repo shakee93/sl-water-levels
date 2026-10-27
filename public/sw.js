@@ -38,20 +38,26 @@ function withTimeout(p, ms) {
 
 async function networkFirst(req, cacheName, fallbackUrl) {
   const cache = await caches.open(cacheName);
-  try {
-    const res = await withTimeout(fetch(req), NET_TIMEOUT_MS);
-    if (res.ok) {
-      cache.put(req, res.clone()).then(() => trim(cacheName, MAX_PAGES)).catch(() => {});
-    }
+  const net = fetch(req).then((res) => {
+    if (res.ok) cache.put(req, res.clone()).then(() => trim(cacheName, MAX_PAGES)).catch(() => {});
     return res;
+  });
+  try {
+    return await withTimeout(net, NET_TIMEOUT_MS);
   } catch (_) {
+    // Slow network: show the saved copy if there is one, otherwise keep waiting. The offline page is only
+    // for a real network failure (it was shown to people who were online when a page took over 4 s).
     const hit = await cache.match(req);
     if (hit) return hit;
-    if (fallbackUrl) {
-      const off = await caches.match(fallbackUrl);
-      if (off) return off;
+    try {
+      return await net;
+    } catch (_) {
+      if (fallbackUrl) {
+        const off = await caches.match(fallbackUrl);
+        if (off) return off;
+      }
+      return new Response("offline", { status: 503, headers: { "Content-Type": "text/plain" } });
     }
-    return new Response("offline", { status: 503, headers: { "Content-Type": "text/plain" } });
   }
 }
 
