@@ -49,7 +49,7 @@ const f1 = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 export type SearchItem = { n: string; lat: number; lon: number; al?: string[] };
 type GazItem = [name: string, lat: number, lon: number, kind: number, si?: string, ta?: string];
 const KIND_LABEL = ["place", "landmark", "road"];
-const ORDER_RAMP: [number, number, number][] = [[49, 46, 129], [37, 99, 200], [56, 150, 210], [96, 196, 190], [190, 225, 160], [250, 222, 140]]; // "fills first" shading, dark to pale
+const ORDER_RAMP: [number, number, number][] = [[76, 29, 120], [150, 40, 140], [214, 70, 110], [244, 127, 80], [250, 185, 100], [252, 230, 150]]; // "fills first" shading, dark to pale
 
 export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang }) {
   const tr = useMemo(() => makeT(lang), [lang]);
@@ -839,6 +839,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     const on = past || !!nearShot;
     const f = !past && nearShot ? ["==", ["get", "event"], nearShot.ev] : null;
     for (const id of ["past-fill", "past-line"]) if (map.getLayer(id)) { map.setFilter(id, f as never); map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); }
+    if (map.getLayer("past-line")) { map.setPaintProperty("past-line", "line-width", nearShot && !past ? 2.4 : 1); map.setPaintProperty("past-line", "line-color", nearShot && !past ? "#312e81" : "#4f46e5"); }
   }, [ready, past, nearShot]);
 
   const legend = (
