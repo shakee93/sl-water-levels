@@ -380,11 +380,13 @@ json.dump({"type": "FeatureCollection", "features": past}, open(f"{OUT}/ems-2025
 # ---- roads tagged with estimated flood level + min HAND band
 rd = json.load(open(f"{WORK}/osm_roads.json"))["elements"]
 CLASS = {"motorway": 0, "motorway_link": 0, "trunk": 0, "trunk_link": 0, "primary": 1, "primary_link": 1, "secondary": 2, "secondary_link": 2, "tertiary": 3, "tertiary_link": 3, "unclassified": 4, "residential": 4}
-BINS = [5, 6, 7, 8, 9, 10, 12]
+# 1 ft bins from 3 ft, and a run is coloured by its MEDIAN cell level: with the old single bin up to 5 ft and the run's LOWEST cell, a street with one low cell
+# turned red along its whole length while the water fill (per cell) covered only that cell.
+BINS = [3, 4, 5, 6, 7, 8, 9, 10, 12]
 def lbin(l):
     for i, t in enumerate(BINS):
         if l <= t: return i
-    return 7
+    return len(BINS)
 def cell(x, y):
     c = int((x - X0) // RES); r = int((Y1 - y) // RES)
     return (r, c) if 0 <= r < H and 0 <= c < W else None
@@ -403,6 +405,7 @@ for w in rd:
         c = cell(x, y)
         if c and valid[c] and not DRAIN[c]: ls.append(Lft[c]); hs.append(HAND[c])
         else: ls.append(99.0); hs.append(99.0)
+    if len(ls) > 4: ls = [float(np.median(ls[max(0, i - 2):i + 3])) for i in range(len(ls))]   # 5-point running median: no one-cell flicker splitting a street into slivers
     br = 1 if tg.get("bridge") not in (None, "no") or tg.get("tunnel") not in (None, "no") else 0
     runs = []; cur = [0]; cb = lbin(ls[0])
     for i in range(1, len(dense)):
@@ -412,8 +415,8 @@ for w in rd:
             cur.append(i); runs.append((cb, cur)); cur = [i]; cb = b_
     runs.append((cb, cur))
     for b_, idx in runs:
-        if b_ > 6 or len(idx) < 2 or (CLASS[tg['highway']] == 4 and b_ > 4): continue   # local streets only up to the 9 ft bin: keeps the file small
-        lm = min(ls[i] for i in idx); hm = min(hs[i] for i in idx)
+        if b_ > 8 or len(idx) < 2 or (CLASS[tg['highway']] == 4 and b_ > 6): continue   # local streets only up to the 9 ft bin: keeps the file small
+        lm = float(np.median([ls[i] for i in idx])); hm = min(hs[i] for i in idx)
         if lm <= WET_FT: continue   # low paddy/marsh that is wet at normal river levels: not a flood, so no road colouring there
         band = 0 if hm <= 1 else 1 if hm <= 2 else 2 if hm <= 3 else 3
         coords = [[round(v, 5) for v in Ti.transform(*dense[i])] for i in idx]

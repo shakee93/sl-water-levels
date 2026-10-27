@@ -230,7 +230,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           if (d >= 0) {
             const k = Math.min(256, (d * 32) | 0) * 4;
             r = lut[k]; g = lut[k + 1]; b = lut[k + 2]; a = lut[k + 3];
-            if (d < 0.15) a = (a * d) / 0.15; // soft shoreline
+            if (d < 0.15) a = a * (0.45 + (0.55 * d) / 0.15); // soft shoreline that never vanishes: a street coloured as wet always has water on it
             if (cls2[i] === 0) a = (x + y) % 7 === 0 ? a * 0.9 : a * 0.45; // estimate only: a fine hatch, not stripes
           }
         }
