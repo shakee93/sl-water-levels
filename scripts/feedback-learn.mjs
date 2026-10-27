@@ -41,7 +41,7 @@ const q = (v) => (typeof v === "number" ? String(v) : `'${String(v).replace(/'/g
 
 function gather() {
   // person_day / water_at are added by the routes on the first answer after they shipped; until then fall back to the old columns
-  const withFallback = (sql, fallbackSql) => { try { return d1(sql)[0]; } catch (e) { if (!/no such column/i.test(String(e?.message ?? e))) throw e; return d1(fallbackSql)[0]; } };
+  const withFallback = (sql, fallbackSql) => { try { return d1(sql)[0]; } catch (e) { if (!/no such column/i.test(`${e?.message ?? e} ${e?.stdout ?? ""}`)) throw e; return d1(fallbackSql)[0]; } };
   const feedback = withFallback(
     `SELECT created_ms, day, page, station, town, answer, river_obs, water_at, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash, person_day FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`,
     `SELECT created_ms, day, page, station, town, answer, river_obs, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`);

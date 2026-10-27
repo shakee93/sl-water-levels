@@ -21,7 +21,7 @@ const t = (ms) => new Date(ms + 19_800_000).toISOString().slice(0, 16).replace("
 // water_at is added by the route on the first answer after it shipped: until then export without it (column stays null)
 const fbSql = (water) => `SELECT id, created_ms, day, page, station, town, answer, river_obs, ${water ? "water_at, " : ""}rain_obs, note, note_tags, dist_km, shown_tier, shown_level, shown_next_ft, shown_dir, lang, device FROM forecast_feedback ORDER BY created_ms`;
 let fbRows;
-try { fbRows = d1(fbSql(true)); } catch (e) { if (!/no such column/i.test(String(e?.message ?? e))) throw e; fbRows = d1(fbSql(false)); }
+try { fbRows = d1(fbSql(true)); } catch (e) { if (!/no such column/i.test(`${e?.message ?? e} ${e?.stdout ?? ""}`)) throw e; fbRows = d1(fbSql(false)); }
 const fb = fbRows
   .map((r) => ({ id: r.id, time: t(r.created_ms), day: r.day, page: r.page, place: r.page === "town" ? r.town : r.station, station: r.station, town: r.town, answer: r.answer,
     river_seen: r.river_obs, water_at: r.water_at ?? null, rain_seen: r.rain_obs, note: r.note, tags: r.note_tags, dist_km: r.dist_km, shown_step: r.shown_tier, shown_level: r.shown_level,
