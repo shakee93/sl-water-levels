@@ -44,6 +44,8 @@ export type RainMapData = {
   /** Forecast per hour, `end` = end of the hour; values per forecast point in `points` order (same encoding). */
   forecast: { grid: typeof FC_GRID; points: [number, number][]; hours: { end: number; v: string }[] } | null;
   gauges: RainMapGauge[];
+  /** Live ground rain gauges from HMIS (record under 3 h old) with 5 mm or more in 24 h: [name, institute, lat, lon, mm in 24 h]. Absent when HMIS is slow. */
+  ground?: [string, string, number, number, number][];
 };
 
 export const decodeFrame = (s: string): number[] => s.split(",").map((x) => (x === "" ? 0 : x === "x" ? -1 : Number(x) / 10));

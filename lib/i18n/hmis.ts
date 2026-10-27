@@ -10,6 +10,7 @@ const en = {
   "rain": "Measured {mm} mm in 24 h at {name} rain gauge ({inst})",
   "rainKm": "Measured {mm} mm in 24 h at {name} rain gauge ({inst}), {km} km away",
   "warn.h": "Official warning (HMIS)",
+  "map.ground": "Diamonds: ground rain gauges, last 24 h (HMIS – Irrigation Department: NBRO, Met Department)",
   "gauge.note": "Readings from the Irrigation Department's HMIS sensor network, shown in feet. Levels come every {n} minutes.",
   "gauge.upstream": "Karawanella is upstream of Glencourse and Hanwella on the Kelani Ganga: a rise here is an early sign for them.",
 };
@@ -22,6 +23,7 @@ const si: Record<K, string> = {
   "rain": "පැය 24 තුළ {mm} මි.මී. මනිනු ලැබිණි, {name} වර්ෂාමානය ({inst})",
   "rainKm": "පැය 24 තුළ {mm} මි.මී. මනිනු ලැබිණි, {name} වර්ෂාමානය ({inst}), කි.මී. {km} ක් ඈතින්",
   "warn.h": "නිල අනතුරු ඇඟවීම (HMIS)",
+  "map.ground": "දියමන්ති: බිම් වර්ෂාමාන, පසුගිය පැය 24 (HMIS – වාරිමාර්ග දෙපාර්තමේන්තුව: NBRO, කාලගුණ දෙපාර්තමේන්තුව)",
   "gauge.note": "වාරිමාර්ග දෙපාර්තමේන්තුවේ HMIS සංවේදක ජාලයෙන් ලැබෙන කියවීම්, අඩි වලින්. මිනිත්තු {n} කට වරක් ලැබේ.",
   "gauge.upstream": "කැලණි ගඟේ ග්ලෙන්කෝස් සහ හංවැල්ලට ඉහළින් කරවනැල්ල පිහිටා ඇත: මෙහි ඉහළ යාමක් ඔවුන්ට මුල් ඇඟවීමකි.",
 };
@@ -33,6 +35,7 @@ const ta: Record<K, string> = {
   "rain": "24 மணி நேரத்தில் {mm} மி.மீ. அளக்கப்பட்டது, {name} மழைமானி ({inst})",
   "rainKm": "24 மணி நேரத்தில் {mm} மி.மீ. அளக்கப்பட்டது, {name} மழைமானி ({inst}), {km} கி.மீ. தொலைவில்",
   "warn.h": "அதிகாரப்பூர்வ எச்சரிக்கை (HMIS)",
+  "map.ground": "வைரங்கள்: நிலமட்ட மழைமானிகள், கடந்த 24 மணி (HMIS – நீர்ப்பாசனத் திணைக்களம்: NBRO, வானிலை திணைக்களம்)",
   "gauge.note": "நீர்ப்பாசனத் திணைக்களத்தின் HMIS உணரி வலையமைப்பிலிருந்து அளவீடுகள், அடிகளில். ஒவ்வொரு {n} நிமிடமும் வரும்.",
   "gauge.upstream": "களனி கங்கையில் கிளென்கோர்ஸ், ஹன்வெல்லவுக்கு மேலே கரவனெல்ல உள்ளது: இங்கு உயர்வு அவர்களுக்கு முன்னறிகுறி.",
 };

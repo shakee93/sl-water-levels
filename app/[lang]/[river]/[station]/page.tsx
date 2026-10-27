@@ -46,6 +46,7 @@ import { StationNearby } from "@/app/StationNearby";
 import { StickyContext } from "@/app/StickyContext";
 import { colomboTime, tierLabel } from "@/app/tierUi";
 import { HmisGaugeNote } from "@/app/HmisGaugeNote";
+import { GroundRainLine } from "@/app/GroundRainLine";
 import { FasterReading } from "@/app/FasterReading";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
@@ -278,6 +279,11 @@ export default async function StationPage({
             </Suspense>
           )}
           {resolved && <HmisGaugeNote lang={lang} station={station} nat={nat} all={nationalAll} />}
+          {nat && (
+            <Suspense key={`ground-${station}`} fallback={null}>
+              <GroundRainLine lang={lang} lat={nat.latitude} lon={nat.longitude} className="mt-2" />
+            </Suspense>
+          )}
           <Suspense key={`fast-${station}`} fallback={null}>
             <FasterReading lang={lang} station={station} />
           </Suspense>

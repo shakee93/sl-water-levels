@@ -1,3 +1,4 @@
+import { GroundRainLine } from "@/app/GroundRainLine";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -180,6 +181,9 @@ export default async function TownPage({ params }: Params) {
 
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} learned={streetLevelOf(learned, g.station)} />}
 
+        <Suspense key={`ground-${place.slug}`} fallback={null}>
+          <GroundRainLine lang={lang} lat={place.lat} lon={place.lon} className="mt-4" />
+        </Suspense>
         <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} />
         <p className="mt-2"><RainMapLink lang={lang} /></p>
         {place.rainZone && data.input.streetRain !== undefined && !risk.lowSpot && lowSpotCard}

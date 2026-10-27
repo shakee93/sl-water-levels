@@ -14,6 +14,7 @@ import { ArrowRight, Pause, Play, X } from "lucide-react";
 import { HOME_COAST, HOME_RIVERS } from "@/lib/geo/homeRivers";
 import { RAIN_BASINS, inBasin } from "@/lib/geo/rainBasins";
 import { basinForecast, basinSatellite, decodeFrame, forecastTotal, satelliteTotal, type RainMapData, type RainMapGauge } from "@/lib/rainMapCalc";
+import { hmisT } from "@/lib/i18n/hmis";
 import { RAIN_BANDS, rainBand, rainWordOf, satelliteCaveat, type RainBand, type RainWindow } from "@/lib/rainWords";
 import { rmFor } from "@/lib/i18n/rainMap";
 import { clock } from "@/lib/i18n/format";
@@ -378,6 +379,18 @@ export function RainMapView({ rivers }: RainMapStrings) {
                   <path d={outline} strokeWidth={2.2} strokeLinejoin="round" className="fill-slate-900/5 stroke-slate-900 dark:fill-amber-300/5 dark:stroke-amber-300" />
                 </>
               )}
+              {labelWin?.key === "mm24h" &&
+                (data?.ground ?? []).map(([name, inst, lat, lon, mm], i) => {
+                  const band = rainBand("24h", mm) as keyof typeof BAND_CSS | null;
+                  if (!band || !BAND_CSS[band]) return null;
+                  const q = dotR * 0.8;
+                  return (
+                    <g key={`g${i}`} pointerEvents="none">
+                      <title>{`${name} rain gauge (${inst}): ${Math.round(mm)} mm in 24 h`}</title>
+                      <rect x={px(lon) - q} y={py(lat) - q} width={2 * q} height={2 * q} transform={`rotate(45 ${px(lon)} ${py(lat)})`} style={{ fill: BAND_CSS[band] }} className="stroke-white dark:stroke-slate-900" strokeWidth={1 / scale} />
+                    </g>
+                  );
+                })}
               {(data?.gauges ?? []).map((g) => (
                 <GaugeDot
                   t={t}
@@ -394,6 +407,9 @@ export function RainMapView({ rivers }: RainMapStrings) {
                 />
               ))}
               <text x={W - 6} y={H - 6} textAnchor="end" fontSize={9 / scale} className="fill-slate-500 dark:fill-slate-400">© OpenStreetMap contributors; rivers: Irrigation Department</text>
+              {labelWin?.key === "mm24h" && (data?.ground?.length ?? 0) > 0 && (
+                <text x={W - 6} y={H - 6 - 11 / scale} textAnchor="end" fontSize={9 / scale} className="fill-slate-500 dark:fill-slate-400">{hmisT(lang)("map.ground")}</text>
+              )}
             </svg>
           </div>
         </div>
