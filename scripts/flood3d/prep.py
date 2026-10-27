@@ -337,7 +337,15 @@ R = np.where(valid & (Lft < 25), np.clip(np.round((Lft - 2) * 10) + 1, 1, 250), 
 R = np.where(DRAIN | sea, 255, R)
 Rw = to_wgs(R, 0); Gw = to_wgs(np.clip(np.round(half * 10), 0, 250), 0); UNC = (LAND & ~COVER & ~DRAIN)
 WETL = (valid & (Lft <= WET_FT)) & ~DRAIN
-Bw = to_wgs(cls + 4 * BAND + 32 * UNC + 64 * WETL, 0)
+# built-up ground: a settled area (local streets within ~75 m of this cell), bit 7 of B. Only used for the depth estimate on buildings (see depth.ts): the
+# satellite sees water in the open much earlier than between houses, and GLO-30 reads roof height in housing, so depth in settled cells gets an extra offset.
+_bm = Image.new("L", (W, H), 0); _bd = ImageDraw.Draw(_bm)
+for e in json.load(open(f"{WORK}/osm_roads.json"))["elements"]:
+    if e["tags"].get("highway") in ("motorway", "trunk", "primary", "secondary") or len(e.get("geometry") or []) < 2: continue
+    _bd.line([px(g_["lon"], g_["lat"]) for g_ in e["geometry"]], fill=255, width=1)
+BUILT = ndi.uniform_filter((np.array(_bm) > 0).astype(float), 5) >= 0.03
+print("built-up share of land", float(BUILT[LAND].mean()))
+Bw = to_wgs(cls + 4 * BAND + 32 * UNC + 64 * WETL + 128 * BUILT, 0)
 img = np.stack([Rw, Gw, Bw], -1).astype(np.uint8)
 Image.fromarray(img).save(f"{OUT}/level.webp", "WEBP", lossless=True, quality=100, method=6)   # lossless WebP: 36% smaller than PNG
 print("webp", img.shape, os.path.getsize(f"{OUT}/level.webp"))
@@ -457,7 +465,7 @@ if os.path.exists(f"{WORK}/osm_places.json"):
     print("gazetteer", len(gz), os.path.getsize(f"{OUT}/gazetteer.json"))
 
 json.dump(dict(
-    reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)"),
+    reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)+128*settled (local streets nearby: depth estimate only)"),
     drainage=VLAB, minfilter=VSM, variants=variants, events={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EV.items()}, extra_bounds={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EXTRA.items()},
     zone_offset_m={str(k): round(v, 2) for k, v in CZ.items()}, global_offset_m=round(CG, 2), half_width_ft=HW,
     plain_bands=acc_bands, loeo=LOEO, insample_note='reproduces the two observed maps by construction (bounds clip); not an accuracy figure', insample=insample, reliability_cell_part=rel, chance_calibration=dict(a=CAL[0], b=CAL[1], sd_ft=round(float(np.sqrt(HW['interpolated'] ** 2 / 3)), 2)), ground_truth_points=len(PTS), points_learned=pts_learned, points_plain_bands=pts_plain, points_random_baseline=base),

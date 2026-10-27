@@ -10,6 +10,7 @@ import { loadBaseStyle } from "./mapStyle";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
 import { makeT, type Lang } from "./strings";
 import { ReplayCard, replayTime, type ReplayData } from "./Replay";
+import { depthM, depthExpr, wetColorExpr } from "./depth";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
@@ -59,7 +60,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const popRef = useRef<Popup | null>(null);
-  const grid = useRef<{ L: Float32Array; hw: Float32Array; cls: Uint8Array; band: Uint8Array; river: Uint8Array; unc: Uint8Array; wet: Uint8Array; w: number; h: number } | null>(null);
+  const cellsShown = useRef(false);
+  const grid = useRef<{ L: Float32Array; hw: Float32Array; cls: Uint8Array; band: Uint8Array; river: Uint8Array; unc: Uint8Array; wet: Uint8Array; built: Uint8Array; w: number; h: number } | null>(null);
   const meta = useRef<Meta | null>(null);
   const cv = useRef<{ out: HTMLCanvasElement; img: ImageData; lut: Uint8ClampedArray } | null>(null);
   const up = useRef<{ W2: number; H2: number; L2: Float32Array; hw2: Uint8Array; fl: Uint8Array; cls2: Uint8Array; band2: Uint8Array } | null>(null);
@@ -68,6 +70,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const roadsRef = useRef(true);
   const addLocalRef = useRef<(() => void) | null>(null);
   const paintRoadsRef = useRef<((lv: number) => void) | null>(null);
+  const paintDepthRef = useRef<((lv: number) => void) | null>(null);
+  const refreshCellsRef = useRef<(() => void) | null>(null);
 
   const [ready, setReady] = useState(false);
   // Full screen: the browser's Fullscreen API where it exists (desktop, Android); a fixed full-viewport layer otherwise (iPhone Safari
@@ -251,6 +255,33 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   }, []);
 
   useEffect(() => { paintRoadsRef.current = paintRoads; });
+  const paintDepth = useCallback((lv: number) => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer("f3d-depth")) return;
+    map.setPaintProperty("f3d-depth", "fill-extrusion-height", depthExpr(lv) as never);
+    map.setPaintProperty("f3d-depth", "fill-extrusion-color", wetColorExpr(lv) as never);
+  }, []);
+  useEffect(() => { paintDepthRef.current = paintDepth; });
+  // the cells under the view (grid cells that can flood at all), rebuilt after each move at street zoom
+  const refreshCells = useCallback(() => {
+    const map = mapRef.current, g = grid.current, m = meta.current;
+    const src = map?.getSource("f3d-cells") as GeoJSONSource | undefined;
+    if (!map || !g || !m || !src) return;
+    if (map.getZoom() < 15.5) { if (cellsShown.current) { src.setData({ type: "FeatureCollection", features: [] }); cellsShown.current = false; } return; }
+    const b = map.getBounds(), padX = (b.getEast() - b.getWest()) * 0.25, padY = (b.getNorth() - b.getSouth()) * 0.25, deg = m.png.deg;
+    const x0 = Math.max(0, Math.floor((b.getWest() - padX - m.png.west) / deg)), x1 = Math.min(g.w - 1, Math.floor((b.getEast() + padX - m.png.west) / deg));
+    const y0 = Math.max(0, Math.floor((m.png.north - (b.getNorth() + padY)) / deg)), y1 = Math.min(g.h - 1, Math.floor((m.png.north - (b.getSouth() - padY)) / deg));
+    const feats: unknown[] = [];
+    for (let y = y0; y <= y1 && feats.length < 9000; y++) for (let x = x0; x <= x1; x++) {
+      const i = y * g.w + x, L = g.L[i];
+      if (g.river[i] || g.unc[i] || g.wet[i] || !Number.isFinite(L) || L > 12) continue;
+      const w = m.png.west + x * deg, n = m.png.north - y * deg, e = w + deg, so = n - deg;
+      feats.push({ type: "Feature", properties: { L: Math.round(L * 10) / 10, b: g.built[i] }, geometry: { type: "Polygon", coordinates: [[[w, n], [e, n], [e, so], [w, so], [w, n]]] } });
+    }
+    cellsShown.current = true;
+    src.setData({ type: "FeatureCollection", features: feats } as never);
+  }, []);
+  useEffect(() => { refreshCellsRef.current = refreshCells; });
   // ---- animate to the new level (smooth rise / fall), redraw when other layers change
   useEffect(() => {
     if (!ready) return;
@@ -259,12 +290,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     const step = (t: number) => {
       const k = dur ? Math.min(1, (t - t0) / dur) : 1, e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       shown.current = from + (to - from) * e;
-      draw(shown.current); paintRoads(shown.current);
+      draw(shown.current); paintRoads(shown.current); paintDepth(shown.current);
       if (k < 1) raf.current = requestAnimationFrame(step);
     };
     raf.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf.current);
-  }, [ready, level, draw, paintRoads]);
+  }, [ready, level, draw, paintRoads, paintDepth]);
 
   // ---- layer toggles
   useEffect(() => { roadsRef.current = roadsOn; });
@@ -273,7 +304,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     if (!ready || !map) return;
     const vis = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
     vis("f3d-water", waterOn); vis("roads-main", roadsOn); vis("roads-local", roadsOn);
-  }, [ready, roadsOn, waterOn]);
+    vis("f3d-depth", waterOn && !chanceOn && !plain && !order); // the 3D depth only goes with the plain blue water, not the chance / elevation-band / fills-first views
+    if (ready) refreshCellsRef.current?.();
+  }, [ready, roadsOn, waterOn, chanceOn, plain, order]);
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -560,6 +593,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
             paintRoadsRef.current?.(shown.current);
           };
           addLocalRef.current = addLocal; addLocal();
+          // water standing on the ground in 3D: one translucent blue block per 30 m cell (height = estimated depth, see depth.ts), only from zoom 15.5 and only for the
+          // cells in view; it sits over the basemap's buildings so the water line shows on them. The cells are rebuilt after each move (refreshCellsRef), the level only
+          // changes the paint expressions.
+          map.addSource("f3d-cells", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+          map.addLayer({ id: "f3d-depth", type: "fill-extrusion", source: "f3d-cells", minzoom: 15.5, paint: { "fill-extrusion-color": wetColorExpr(shown.current) as never, "fill-extrusion-height": depthExpr(shown.current) as never, "fill-extrusion-base": 0, "fill-extrusion-opacity": 0.5, "fill-extrusion-vertical-gradient": false } }, before);
+          map.on("moveend", () => refreshCellsRef.current?.());
           // 3D buildings only from street level: keeps the first paint light on phones
           if (map.getLayer("building-3d")) map.setLayerZoomRange("building-3d", 15, 24);
           const empty = { type: "FeatureCollection" as const, features: [] };
@@ -730,6 +769,14 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           add(tr("Chance of water here in the next 6 hours: {w}.", { w: word[c.cls] }));
           add(nag.trend ? tr("River now {ft} ft and {trend}.", { ft: f1(st.level), trend: tr(nag.trend) }) : tr("River now {ft} ft", { ft: f1(st.level) }));
         } else add(L <= st.level ? tr("At {ft} ft this spot would be under water.", { ft: f1(st.level) }) : tr("At {ft} ft this spot would be dry.", { ft: f1(st.level) }));
+        // how deep (an estimate, see depth.ts), tied to the replay time, the live reading or the chosen level
+        const dm = depthM(st.level, L, !!g.built[i]);
+        if (dm > 0.05) {
+          const ftw = Math.max(1, Math.round((dm / 0.3048) * 2) / 2);
+          const when = replayRef.current && rp ? replayTime(rp, rpI, lang) : st.isLive && nag?.hourlyAt ? clock(nag.hourlyAt) : "";
+          add(when ? tr("About {ft} ft of water here at {when} (estimate).", { ft: String(ftw), when }) : tr("About {ft} ft of water here with the river at {lv} ft (estimate).", { ft: String(ftw), lv: f1(st.level) }), true);
+          add(tr("Rough guide only: the depth in streets between houses is hard to see from space."));
+        }
       }
     }
     const rb = document.createElement("button");
@@ -1087,12 +1134,12 @@ async function loadGrid() {
   const x = c.getContext("2d", { willReadFrequently: true })!; x.drawImage(img, 0, 0);
   const d = x.getImageData(0, 0, c.width, c.height).data;
   const n = c.width * c.height;
-  const L = new Float32Array(n), hw = new Float32Array(n), cls = new Uint8Array(n), band = new Uint8Array(n), river = new Uint8Array(n), unc = new Uint8Array(n), wet = new Uint8Array(n);
+  const L = new Float32Array(n), hw = new Float32Array(n), cls = new Uint8Array(n), band = new Uint8Array(n), river = new Uint8Array(n), unc = new Uint8Array(n), wet = new Uint8Array(n), built = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
     river[i] = r === 255 ? 1 : 0;
     L[i] = r === 0 || r === 255 ? Infinity : (r - 1) / PX.step + PX.lo;
-    hw[i] = g / 10; cls[i] = b & 3; band[i] = (b >> 2) & 7; unc[i] = (b >> 5) & 1; wet[i] = (b >> 6) & 1;
+    hw[i] = g / 10; cls[i] = b & 3; band[i] = (b >> 2) & 7; unc[i] = (b >> 5) & 1; wet[i] = (b >> 6) & 1; built[i] = (b >> 7) & 1;
   }
-  return { L, hw, cls, band, river, unc, wet, w: c.width, h: c.height };
+  return { L, hw, cls, band, river, unc, wet, built, w: c.width, h: c.height };
 }
