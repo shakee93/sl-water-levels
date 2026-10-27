@@ -23,7 +23,7 @@ export const HANWELLA_M_TO_NAG_FT = hanRel.table as [number, number][];
 export const HANWELLA_LAG_H = hanRel.lag_hours as number;
 
 export type { Horizon, GaugeLive, MapGauge, Flood3dLive } from "./flood3dCompose";
-import type { Horizon, GaugeLive, Flood3dLive } from "./flood3dCompose";
+import type { Horizon, Flood3dLive } from "./flood3dCompose";
 /** Gauges drawn on the map: Kelani gauges in and around the corridor, whichever source (ArcGIS or the HMIS-only ones). */
 export const GAUGE_BOX = { south: 6.8, north: 7.2, west: 79.75, east: 80.5 };
 
