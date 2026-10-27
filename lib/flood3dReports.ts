@@ -15,6 +15,8 @@ export const MIN_FILL_MS = 2000;
 export type Report = {
   kind: Kind; depth: string | null; event: string | null; lat: number; lon: number; acc: number | null; src: "gps" | "pin";
   mapRight: string | null; cellFt: number | null; lang: "en" | "si" | "ta";
+  /** A test report (owner checks of the pipeline): stored with status 'test', never counted or used for calibration. */
+  test: boolean;
 };
 export type Verdict = { ok: true; report: Report } | { ok: false; reason: "invalid" | "outside" | "bot" };
 
@@ -44,7 +46,7 @@ export function validateReport(body: unknown): Verdict {
     ok: true,
     report: {
       kind, depth: needsDepth ? (depth as string) : null, event: needsEvent ? (event as string) : null, lat, lon,
-      acc: num(body.acc, 0, 100_000), src, mapRight: typeof mapRight === "string" ? mapRight : null, cellFt: num(body.cellFt, -10, 40), lang: lg,
+      acc: num(body.acc, 0, 100_000), src, mapRight: typeof mapRight === "string" ? mapRight : null, cellFt: num(body.cellFt, -10, 40), lang: lg, test: body.test === true,
     },
   };
 }

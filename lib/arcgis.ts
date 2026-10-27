@@ -445,7 +445,7 @@ export const getNational = cache(async (): Promise<NationalStation[]> => {
   return [...arc, ...extra];
 });
 
-function buildHmisNational(def: HmisGaugeDef, dev: HmisDevice): NationalStation {
+export function buildHmisNational(def: HmisGaugeDef, dev: HmisDevice): NationalStation {
   const st = { basin: def.basin, station: def.station, latitude: def.lat, longitude: def.lon };
   const n = buildNational(st, hmisRows(def, dev));
   return { ...n, source: "hmis", institute: def.institute, cadenceMin: def.cadenceMin };

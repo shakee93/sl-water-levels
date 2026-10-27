@@ -13,7 +13,7 @@ const KINDS: [Kind, string][] = [["water_now", "Water here now"], ["past_wet", "
 
 const chip = (on: boolean) => `rounded-full border px-3 py-1 text-xs ${on ? "border-sky-600 bg-sky-600 text-white" : "border-slate-300 dark:border-slate-600"}`;
 
-export function ReportPanel({ pos, cell, onClose }: { pos: RepPos; cell: CellInfo; onClose: () => void }) {
+export function ReportPanel({ pos, cell, onClose, tr, lang }: { pos: RepPos; cell: CellInfo; onClose: () => void; tr: (en: string, vars?: Record<string, string | number>) => string; lang: "en" | "si" | "ta" }) {
   const [opened] = useState(() => performance.now());
   const [kind, setKind] = useState<Kind | null>(null);
   const [depth, setDepth] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function ReportPanel({ pos, cell, onClose }: { pos: RepPos; cell: CellInf
     try {
       const r = await fetch("/api/flood3d/report", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: kind ?? "map_check", depth: needsDepth ? depth : undefined, event: needsEvent ? event : undefined, lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, mapRight: mapRight ?? undefined, cellFt: cell.cellFt ?? undefined, lang: "en", consent: true, hp, ms: performance.now() - opened }),
+        body: JSON.stringify({ kind: kind ?? "map_check", depth: needsDepth ? depth : undefined, event: needsEvent ? event : undefined, lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, mapRight: mapRight ?? undefined, cellFt: cell.cellFt ?? undefined, lang, consent: true, hp, ms: performance.now() - opened }),
       });
       if (r.status === 429) return setState("limit");
       const j = await r.json().catch(() => ({}));
@@ -45,36 +45,36 @@ export function ReportPanel({ pos, cell, onClose }: { pos: RepPos; cell: CellInf
   }
 
   return (
-    <div role="dialog" aria-label="Report from this spot" className="absolute inset-x-0 bottom-0 z-20 max-h-[78%] overflow-y-auto rounded-t-xl border-t border-slate-300 bg-white p-3 text-sm text-slate-900 shadow-2xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+    <div role="dialog" aria-label={tr("Report from this spot")} className="absolute inset-x-0 bottom-0 z-20 max-h-[78%] overflow-y-auto rounded-t-xl border-t border-slate-300 bg-white p-3 text-sm text-slate-900 shadow-2xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
       <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold">Report from this spot</p>
-        <button type="button" onClick={onClose} className="rounded px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Close</button>
+        <p className="font-semibold">{tr("Report from this spot")}</p>
+        <button type="button" onClick={onClose} className="rounded px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">{tr("Close")}</button>
       </div>
       {state === "done" ? (
         <div className="space-y-1 py-2">
-          <p className="font-medium">Thank you. Your report will help improve the map.</p>
-          <p className="text-xs text-slate-600 dark:text-slate-400">{area ? `${area.n} reports so far around ${area.name}.` : "Reports are counted by area once there are at least 3."} Your exact spot stays private.</p>
-          <button type="button" onClick={onClose} className="mt-1 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white">Done</button>
+          <p className="font-medium">{tr("Thank you. Your report will help improve the map.")}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">{area ? tr("{n} reports so far around {area}.", { n: area.n, area: area.name === "Kelaniya" ? tr("Kelaniya") : area.name }) : tr("Reports are counted by area once there are at least 3.")} {tr("Your exact spot stays private.")}</p>
+          <button type="button" onClick={onClose} className="mt-1 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white">{tr("Done")}</button>
         </div>
       ) : (
         <div className="space-y-2 pt-1">
-          <p className="text-xs text-slate-600 dark:text-slate-400">{pos.src === "gps" ? `Using your location${pos.acc ? ` (accurate to about ${Math.round(pos.acc)} m)` : ""}. Drag the pin if it is not the right spot.` : "Drag the pin to the right spot."}</p>
-          {!cell.covered && <p className="rounded bg-slate-100 p-2 text-xs dark:bg-slate-800">The map does not cover this area yet. Your report is still welcome and helps us decide where to extend it.</p>}
-          <div className="flex flex-wrap gap-2">{KINDS.map(([k, t]) => <button key={k} type="button" aria-pressed={kind === k} className={chip(kind === k)} onClick={() => { setKind(k); setDepth(null); setEvent(null); }}>{t}</button>)}</div>
+          <p className="text-xs text-slate-600 dark:text-slate-400">{pos.src === "gps" ? (pos.acc ? tr("Using your location (accurate to about {m} m). Drag the pin if it is not the right spot.", { m: Math.round(pos.acc) }) : tr("Using your location. Drag the pin if it is not the right spot.")) : tr("Drag the pin to the right spot.")}</p>
+          {!cell.covered && <p className="rounded bg-slate-100 p-2 text-xs dark:bg-slate-800">{tr("The map does not cover this area yet. Your report is still welcome and helps us decide where to extend it.")}</p>}
+          <div className="flex flex-wrap gap-2">{KINDS.map(([k, label]) => <button key={k} type="button" aria-pressed={kind === k} className={chip(kind === k)} onClick={() => { setKind(k); setDepth(null); setEvent(null); }}>{tr(label)}</button>)}</div>
           {needsEvent && (
-            <div className="space-y-1"><p className="text-xs font-medium">Which flood?</p><div className="flex flex-wrap gap-2">{EVENTS.map(([k, t]) => <button key={k} type="button" aria-pressed={event === k} className={chip(event === k)} onClick={() => setEvent(k)}>{t}</button>)}</div></div>
+            <div className="space-y-1"><p className="text-xs font-medium">{tr("Which flood?")}</p><div className="flex flex-wrap gap-2">{EVENTS.map(([k, label]) => <button key={k} type="button" aria-pressed={event === k} className={chip(event === k)} onClick={() => setEvent(k)}>{tr(label)}</button>)}</div></div>
           )}
           {needsDepth && (
-            <div className="space-y-1"><p className="text-xs font-medium">{kind === "water_now" ? "How deep is it?" : "Roughly how high did it get?"}</p><div className="flex flex-wrap gap-2">{DEPTHS.map(([k, t]) => <button key={k} type="button" aria-pressed={depth === k} className={chip(depth === k)} onClick={() => setDepth(k)}>{t}</button>)}</div></div>
+            <div className="space-y-1"><p className="text-xs font-medium">{kind === "water_now" ? tr("How deep is it?") : tr("Roughly how high did it get?")}</p><div className="flex flex-wrap gap-2">{DEPTHS.map(([k, label]) => <button key={k} type="button" aria-pressed={depth === k} className={chip(depth === k)} onClick={() => setDepth(k)}>{tr(label)}</button>)}</div></div>
           )}
           {cell.shaded && (
-            <div className="space-y-1"><p className="text-xs font-medium">Is the map right here? (it shows water at this spot)</p><div className="flex flex-wrap gap-2">{([["yes", "Yes"], ["no", "No"], ["unsure", "Not sure"]] as const).map(([k, t]) => <button key={k} type="button" aria-pressed={mapRight === k} className={chip(mapRight === k)} onClick={() => setMapRight(mapRight === k ? null : k)}>{t}</button>)}</div></div>
+            <div className="space-y-1"><p className="text-xs font-medium">{tr("Is the map right here? (it shows water at this spot)")}</p><div className="flex flex-wrap gap-2">{([["yes", "Yes"], ["no", "No"], ["unsure", "Not sure"]] as const).map(([k, label]) => <button key={k} type="button" aria-pressed={mapRight === k} className={chip(mapRight === k)} onClick={() => setMapRight(mapRight === k ? null : k)}>{tr(label)}</button>)}</div></div>
           )}
           <input aria-hidden tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} className="absolute -left-[9999px] h-0 w-0 opacity-0" name="website" />
-          <p className="text-xs text-slate-600 dark:text-slate-400">Your exact spot is kept private and used only to improve the flood map. The public only ever sees counts for an area.</p>
-          {state === "error" && <p className="text-xs text-red-700">The report could not be sent. Please try again in a minute.</p>}
-          {state === "limit" && <p className="text-xs text-red-700">That is the daily limit for reports from one phone. Thank you for the ones you sent.</p>}
-          <button type="button" disabled={!ready || state === "sending"} onClick={send} className="rounded-md bg-sky-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">{state === "sending" ? "Sending…" : "Send report"}</button>
+          <p className="text-xs text-slate-600 dark:text-slate-400">{tr("Your exact spot is kept private and used only to improve the flood map. The public only ever sees counts for an area.")}</p>
+          {state === "error" && <p className="text-xs text-red-700">{tr("The report could not be sent. Please try again in a minute.")}</p>}
+          {state === "limit" && <p className="text-xs text-red-700">{tr("That is the daily limit for reports from one phone. Thank you for the ones you sent.")}</p>}
+          <button type="button" disabled={!ready || state === "sending"} onClick={send} className="rounded-md bg-sky-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">{state === "sending" ? tr("Sending…") : tr("Send report")}</button>
         </div>
       )}
     </div>

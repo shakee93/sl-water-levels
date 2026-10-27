@@ -37,3 +37,13 @@ assert.equal(hanwellaMToNagFt(2, T), 2.6);
 assert.equal(hanwellaMToNagFt(12, T), 7.4);
 assert.ok(Math.abs(nagFtToHanwellaM(hanwellaMToNagFt(8, T), T) - 8) < 1e-6);
 console.log("flood3d tests passed");
+
+import { makeT } from "../app/[lang]/lab/flood-3d/strings.ts";
+assert.equal(validateReport({ kind: "water_now", depth: "knee", lat: 6.95, lon: 79.9, src: "pin", consent: true, hp: "", ms: 5000, test: true }).report.test, true);
+assert.equal(validateReport({ kind: "water_now", depth: "knee", lat: 6.95, lon: 79.9, src: "pin", consent: true, hp: "", ms: 5000 }).report.test, false);
+const en = makeT("en"), si = makeT("si"), ta = makeT("ta");
+assert.equal(en("Updated {time} · next update in ~{min} min", { time: "6:00 pm", min: 5 }), "Updated 6:00 pm · next update in ~5 min");
+assert.ok(si("Locate me") !== "Locate me" && ta("Locate me") !== "Locate me");
+assert.equal(si("Not a known key"), "Not a known key");
+assert.ok(si("Nagalagam Street {ft} ft", { ft: "3.6" }).includes("3.6"));
+console.log("flood3d i18n + test flag passed");

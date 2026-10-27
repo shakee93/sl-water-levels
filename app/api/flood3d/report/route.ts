@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { d1Configured, d1Query, D1NotConfigured } from "@/lib/d1";
 import { personDay } from "@/lib/personDay";
 import { colomboDay } from "@/lib/floodReport";
-import { getFlood3dLive } from "@/lib/flood3d";
+import { getFlood3dLiveSafe } from "@/lib/flood3d";
 import { timeBox } from "@/lib/nextHour";
 import { AREAS, MAX_PER_PERSON_DAY, MIN_PUBLIC_COUNT, round3, validateReport } from "@/lib/flood3dReports";
 
@@ -27,7 +27,7 @@ const missingTable = (e: unknown) => /no such table/i.test(String(e instanceof E
 const ipHash = (ip: string, day: string) => createHmac("sha256", process.env.FLOOD_REPORT_SALT || process.env.CLOUDFLARE_API_TOKEN || "").update(`f3d|${day}|${ip}`).digest("hex").slice(0, 32);
 
 async function areaCount(a: (typeof AREAS)[number]): Promise<number> {
-  const rows = await d1Query("SELECT COUNT(*) AS n FROM flood3d_reports WHERE lat3 BETWEEN ? AND ? AND lon3 BETWEEN ? AND ? AND status != 'outlier'", [a.south, a.north, a.west, a.east]);
+  const rows = await d1Query("SELECT COUNT(*) AS n FROM flood3d_reports WHERE lat3 BETWEEN ? AND ? AND lon3 BETWEEN ? AND ? AND status NOT IN ('outlier', 'test')", [a.south, a.north, a.west, a.east]);
   return Number(rows[0]?.n ?? 0);
 }
 /** Public: counts per named area, only when at least MIN_PUBLIC_COUNT. Cached 5 min (a handful of indexed COUNTs). */
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   const ip = (req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown").trim();
   const person = personDay(ip, day);
   const hash = ipHash(ip, day);
-  const live = await timeBox(getFlood3dLive(), 3000); // levels at this moment, from our cache; the report is stored without them if it is slow
+  const live = await timeBox(getFlood3dLiveSafe(), 3000); // levels at this moment, from our cache; the report is stored without them if it is slow
   const insert = async () => {
     const [p, i10] = await Promise.all([
       d1Query("SELECT COUNT(*) AS n FROM flood3d_reports WHERE person_day = ? AND created_ms > ?", [person, now - 86_400_000]),
@@ -71,8 +71,8 @@ export async function POST(req: NextRequest) {
     ]);
     if (Number(p[0]?.n ?? 0) >= MAX_PER_PERSON_DAY || Number(i10[0]?.n ?? 0) >= 5) return false;
     await d1Query(
-      "INSERT INTO flood3d_reports (created_ms, day, kind, depth, event, lat, lon, lat3, lon3, acc_m, src, map_right, cell_ft, nag_ft, han_ft, han_fast_ft, person_day, ip_hash, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [now, day, r.kind, r.depth, r.event, r.lat, r.lon, round3(r.lat), round3(r.lon), r.acc, r.src, r.mapRight, r.cellFt, live?.nagalagam?.levelFt ?? null, live?.hanwella?.levelFt ?? null, live?.hanwella?.fastFt ?? null, person, hash, r.lang],
+      "INSERT INTO flood3d_reports (created_ms, day, kind, depth, event, lat, lon, lat3, lon3, acc_m, src, map_right, cell_ft, nag_ft, han_ft, han_fast_ft, person_day, ip_hash, lang, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [now, day, r.kind, r.depth, r.event, r.lat, r.lon, round3(r.lat), round3(r.lon), r.acc, r.src, r.mapRight, r.cellFt, live?.nagalagam?.levelFt ?? null, live?.hanwella?.levelFt ?? null, live?.hanwella?.fastFt ?? null, person, hash, r.lang, r.test ? "test" : "new"],
     );
     return true;
   };

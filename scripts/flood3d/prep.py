@@ -20,6 +20,7 @@ WORK, EMS, OUT = sys.argv[1:4]
 GT = sys.argv[4] if len(sys.argv) > 4 else None
 os.makedirs(OUT, exist_ok=True)
 FT = 0.3048
+WET_FT = 2.2   # cells whose fitted level is at or below the lowest river level on record (1.8 ft on 19 Dec 2025): usually-wet ground, never painted as flood
 RES = 30.0
 T = Transformer.from_crs(4326, 32644, always_xy=True)
 Ti = Transformer.from_crs(32644, 4326, always_xy=True)
@@ -209,7 +210,7 @@ used = dict(Kelaniya=0, Wellampitiya=0, corridor=0); flags = []; skipped = dict(
 if os.environ.get("REPORTS") and os.path.exists(os.environ["REPORTS"]):
     cand = []
     for r in json.load(open(os.environ["REPORTS"])):
-        if r.get("status") == "outlier": continue
+        if r.get("status") in ("outlier", "test"): continue
         k = r["kind"]
         if k == "water_now": st, wet = r.get("nag_ft"), True
         elif k == "past_wet": st, wet = REPORT_STAGE.get(r.get("event")), True
@@ -310,10 +311,11 @@ valid = okall & np.isfinite(Lft)
 R = np.where(valid & (Lft < 25), np.clip(np.round((Lft - 2) * 10) + 1, 1, 250), 0)
 R = np.where(DRAIN | sea, 255, R)
 Rw = to_wgs(R, 0); Gw = to_wgs(np.clip(np.round(half * 10), 0, 250), 0); UNC = (LAND & ~COVER & ~DRAIN)
-Bw = to_wgs(cls + 4 * BAND + 32 * UNC, 0)
+WETL = (valid & (Lft <= WET_FT)) & ~DRAIN
+Bw = to_wgs(cls + 4 * BAND + 32 * UNC + 64 * WETL, 0)
 img = np.stack([Rw, Gw, Bw], -1).astype(np.uint8)
-Image.fromarray(img).save(f"{OUT}/level.png", optimize=True)
-print("png", img.shape, os.path.getsize(f"{OUT}/level.png"))
+Image.fromarray(img).save(f"{OUT}/level.webp", "WEBP", lossless=True, quality=100, method=6)   # lossless WebP: 36% smaller than PNG
+print("webp", img.shape, os.path.getsize(f"{OUT}/level.webp"))
 
 # ---- accuracy of the final map in-sample (what the owner sees at the two observed levels)
 insample = []
@@ -387,6 +389,7 @@ for w in rd:
     for b_, idx in runs:
         if b_ > 6 or len(idx) < 2 or (CLASS[tg['highway']] == 4 and b_ > 4): continue   # local streets only up to the 9 ft bin: keeps the file small
         lm = min(ls[i] for i in idx); hm = min(hs[i] for i in idx)
+        if lm <= WET_FT: continue   # low paddy/marsh that is wet at normal river levels: not a flood, so no road colouring there
         band = 0 if hm <= 1 else 1 if hm <= 2 else 2 if hm <= 3 else 3
         coords = [[round(v, 5) for v in Ti.transform(*dense[i])] for i in idx]
         f = {"type": "Feature", "properties": {"n": tg.get("name") or tg.get("ref") or "", "c": CLASS[tg["highway"]], "l": round(float(lm), 1), "b": band, **({"br": 1} if br else {})}, "geometry": {"type": "LineString", "coordinates": coords}}
@@ -426,7 +429,7 @@ if os.path.exists(f"{WORK}/osm_places.json"):
     print("gazetteer", len(gz), os.path.getsize(f"{OUT}/gazetteer.json"))
 
 json.dump(dict(
-    reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)"),
+    reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)"),
     drainage=VLAB, minfilter=VSM, variants=variants, events={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EV.items()},
     zone_offset_m={str(k): round(v, 2) for k, v in CZ.items()}, global_offset_m=round(CG, 2), half_width_ft=HW,
     plain_bands=acc_bands, loeo=LOEO, insample_note='reproduces the two observed maps by construction (bounds clip); not an accuracy figure', insample=insample, reliability_cell_part=rel, chance_calibration=dict(a=CAL[0], b=CAL[1], sd_ft=round(float(np.sqrt(HW['interpolated'] ** 2 / 3)), 2)), ground_truth_points=len(PTS), points_learned=pts_learned, points_plain_bands=pts_plain, points_random_baseline=base),

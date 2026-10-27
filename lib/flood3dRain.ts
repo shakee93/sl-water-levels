@@ -22,6 +22,8 @@ export type RainNow = {
   grid: { west: number; north: number; south: number; east: number; step: number; nx: number; ny: number };
   v: string;
   satelliteHourStart: number | null;
+  /** Age of the satellite hour (minutes since the hour ENDED); the satellite part fades out between 2 h and 4 h old. */
+  satelliteAgeMin: number | null;
   groundGauges: number;
   gauges: RainGauge[];
   credit: string;
@@ -39,12 +41,15 @@ async function build(): Promise<RainNow | null> {
     const raw = hour.v.split(",").map((x) => (x === "x" ? -1 : x === "" ? 0 : Number(x)));
     const gain = map.corrected?.gain ? map.corrected.gain.split(",").map(num) : null;
     const g = map.grid;
+    // the satellite frame is 1-2 h old by the time it is published: full weight up to 2 h after its hour ended, then fading to nothing at 4 h
+    const ageMin = (now - (hour.start + 3_600_000)) / 60_000;
+    const fade = ageMin <= 120 ? 1 : Math.max(0, 1 - (ageMin - 120) / 120);
     const at = (r: number, c: number) => {
       if (r < 0 || c < 0 || r >= g.ny || c >= g.nx) return null;
       const i = r * g.nx + c;
       if (raw[i] < 0) return null;
       const f = gain && gain[i] != null ? Math.min(3, Math.max(0.1, (gain[i] as number) / 100)) : 1;
-      return (raw[i] / 10) * f; // mm/h
+      return (raw[i] / 10) * f * fade; // mm/h
     };
     sat = {
       at: hour.start,
@@ -92,10 +97,11 @@ async function build(): Promise<RainNow | null> {
     grid: { west: RAIN_BOX.west, north: RAIN_BOX.north, south: RAIN_BOX.south, east: RAIN_BOX.east, step: RAIN_BOX.step, nx: NX, ny: NY },
     v: out.map((x) => (x === 0 ? "" : String(x))).join(","),
     satelliteHourStart: sat?.at ?? null,
+    satelliteAgeMin: sat ? Math.round((now - (sat.at + 3_600_000)) / 60_000) : null,
     groundGauges: live.length,
     gauges: near.map(({ gg, t }) => ({ n: gg.n, i: gg.i, lat: Math.round(gg.lat * 1e4) / 1e4, lon: Math.round(gg.lon * 1e4) / 1e4, mm1h: t.mm1h, mm24h: t.mm24h, ageMin: t.ageMin })),
     credit: "Satellite: GSMaP (JAXA). Ground gauges: HMIS, Irrigation Department, Meteorology Department and NBRO.",
   };
 }
 
-export const getFlood3dRain = unstable_cache(async () => build(), ["flood3d-rain-v1"], { revalidate: 180 });
+export const getFlood3dRain = unstable_cache(async () => build(), ["flood3d-rain-v2"], { revalidate: 180 });

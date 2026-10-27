@@ -4,15 +4,21 @@
 // every ~5 min while the tab is visible). The browser never calls ArcGIS or HMIS; map tiles come from OpenFreeMap and AWS Terrarium.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MlMap, GeoJSONSource, CanvasSource, MapMouseEvent, Popup, GeolocateControl, Marker } from "maplibre-gl";
+import { preconnect } from "react-dom";
+import { Activity, Box, CloudRain, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Route, Search, SlidersHorizontal, Waves } from "lucide-react";
+import { useScheme } from "@/app/useTheme";
+import { loadBaseStyle } from "./mapStyle";
+import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
+import { makeT, type Lang } from "./strings";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
 type Horizon = { h: number; level: number; low: number | null; high: number | null };
 type Gauge = { station: string; levelFt: number | null; hourlyAt: string | null; marks: { alert: number | null; minor: number | null; major: number | null }; status: string; trend: string | null; changePerHourFt: number | null; fastFt: number | null; fastAt: string | null; horizons: Horizon[]; method: string | null };
 type MapGauge = { name: string; lat: number; lon: number; levelFt: number | null; status: string; statusLabel: string; trend: string | null; observedAt: string | null; url: string; fastFt: number | null };
-type RainNow = { generatedAt: string; grid: { west: number; north: number; south: number; east: number; step: number; nx: number; ny: number }; v: string; satelliteHourStart: number | null; groundGauges: number; gauges: { n: string; i: string; lat: number; lon: number; mm1h: number | null; mm24h: number; ageMin: number }[]; credit: string };
+type RainNow = { generatedAt: string; grid: { west: number; north: number; south: number; east: number; step: number; nx: number; ny: number }; v: string; satelliteHourStart: number | null; satelliteAgeMin?: number | null; groundGauges: number; gauges: { n: string; i: string; lat: number; lon: number; mm1h: number | null; mm24h: number; ageMin: number }[]; credit: string };
 const STEP_COLOR: Record<string, string> = { normal: "#16a34a", watch: "#ca8a04", alert: "#ea580c", minor: "#dc2626", major: "#7f1d1d", stale: "#64748b", none: "#64748b" };
-type Live = { gauges?: MapGauge[]; generatedAt: string; nagalagam: Gauge | null; hanwella: Gauge | null; hanwellaToNag: [number, number][] };
+type Live = { gauges?: MapGauge[]; hanwellaLagH?: number; stale?: boolean; partial?: boolean; generatedAt: string; nagalagam: Gauge | null; hanwella: Gauge | null; hanwellaToNag: [number, number][] };
 type Meta = { png: { w: number; h: number; west: number; east: number; south: number; north: number; deg: number }; chance_calibration: Calibration; cover_bounds: [number, number, number, number]; reports_used?: Record<string, number> };
 
 type Ml = typeof import("maplibre-gl");
@@ -26,7 +32,7 @@ function loadMl(): Promise<Ml> {
     const css = document.createElement("link"); css.rel = "stylesheet"; css.href = `/flood3d/ml/maplibre-gl.css?v=${ML_VERSION}`; document.head.appendChild(css);
     const sc = document.createElement("script"); sc.src = `/flood3d/ml/maplibre-gl-csp.js?v=${ML_VERSION}`; sc.async = true;
     sc.onload = () => { const ml = w.maplibregl!; ml.setWorkerUrl(`/flood3d/ml/maplibre-gl-csp-worker.js?v=${ML_VERSION}`); resolve(ml); };
-    sc.onerror = () => { mlPromise = null; reject(new Error("The map library could not load.")); };
+    sc.onerror = () => { mlPromise = null; reject(new Error("maplibre")); };
     document.head.appendChild(sc);
   });
   return mlPromise;
@@ -34,25 +40,31 @@ function loadMl(): Promise<Ml> {
 
 const POLL_MS = 5 * 60 * 1000;
 const CENTER: [number, number] = [79.922, 6.955]; // Kelaniya
-const STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const PX = { lo: 2, step: 10 }; // level.png: R = round((ft - 2) * 10) + 1
 
 const clock = (iso: string | number | null) => (iso == null ? "" : new Date(iso).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Colombo" }).replace(" ", " "));
+const ageText = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return m < 90 ? `${m} min` : `${Math.round(m / 6) / 10} h`; };
 const f1 = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 
 export type SearchItem = { n: string; lat: number; lon: number; al?: string[] };
 type GazItem = [name: string, lat: number, lon: number, kind: number, si?: string, ta?: string];
 const KIND_LABEL = ["place", "landmark", "road"];
 
-export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: SearchItem[]; gauges?: SearchItem[] }) {
+export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang }) {
+  const tr = useMemo(() => makeT(lang), [lang]);
+  preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com"); // start the tile connections while the map library loads
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const popRef = useRef<Popup | null>(null);
-  const grid = useRef<{ L: Float32Array; hw: Float32Array; cls: Uint8Array; band: Uint8Array; river: Uint8Array; unc: Uint8Array; w: number; h: number } | null>(null);
+  const grid = useRef<{ L: Float32Array; hw: Float32Array; cls: Uint8Array; band: Uint8Array; river: Uint8Array; unc: Uint8Array; wet: Uint8Array; w: number; h: number } | null>(null);
   const meta = useRef<Meta | null>(null);
-  const cv = useRef<{ out: HTMLCanvasElement; a: HTMLCanvasElement; b: HTMLCanvasElement; tmp: HTMLCanvasElement; hatch: CanvasPattern | null; scale: number } | null>(null);
+  const cv = useRef<{ out: HTMLCanvasElement; img: ImageData; lut: Uint8ClampedArray } | null>(null);
+  const up = useRef<{ W2: number; H2: number; L2: Float32Array; hw2: Uint8Array; fl: Uint8Array; cls2: Uint8Array; band2: Uint8Array } | null>(null);
   const shown = useRef(3); // level currently drawn (animated)
   const raf = useRef(0);
+  const roadsRef = useRef(true);
+  const addLocalRef = useRef<(() => void) | null>(null);
+  const paintRoadsRef = useRef<((lv: number) => void) | null>(null);
 
   const [ready, setReady] = useState(false);
   // Full screen: the browser's Fullscreen API where it exists (desktop, Android); a fixed full-viewport layer otherwise (iPhone Safari
@@ -64,7 +76,6 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
     const el = wrap.current;
     if (!full) {
       setFull(true);
-      setPanelOpen(window.innerWidth >= 768);
       el?.requestFullscreen?.().catch(() => {});
     } else {
       setFull(false);
@@ -85,6 +96,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   }, [full]);
   const [err, setErr] = useState<string | null>(null);
   const [live, setLive] = useState<Live | null>(null);
+  const [liveErr, setLiveErr] = useState(false);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [driver, setDriver] = useState<"live" | "nag" | "han">("live");
@@ -98,6 +110,12 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   const [threeD, setThreeD] = useState(false);
   const [waterOn, setWaterOn] = useState(true);
   const [legendNote, setLegendNote] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [snap, setSnap] = useState(0);
+  const [sheetPx, setSheetPx] = useState<number | null>(null);
+  const scheme = useScheme();
+  const schemeRef = useRef(scheme);
+  const firstStyle = useRef(true);
   const [gaugesOn, setGaugesOn] = useState(true);
   const [rainGaugesOn, setRainGaugesOn] = useState(false);
   const [rainOn, setRainOn] = useState(false);
@@ -109,20 +127,11 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   const table = useMemo<[number, number][]>(() => live?.hanwellaToNag ?? [[3, 2.6], [10, 7.4]], [live]);
 
   // ---- the level the map shows
-  const liveNag = useMemo(() => {
-    const n = live?.nagalagam, h = live?.hanwella;
-    if (!n || n.levelFt == null) return null;
-    let v = n.levelFt, est = false;
-    if (h && h.fastFt != null && h.levelFt != null) {
-      // Hanwella's 10-minute sensor moved since its hourly reading: carry that change down to Nagalagam at the table's slope (about 1 ft per m), capped
-      const dM = (h.fastFt - h.levelFt) * 0.3048;
-      const hm = h.fastFt * 0.3048;
-      const slope = hanwellaMToNagFt(hm + 0.5, table) - hanwellaMToNagFt(hm - 0.5, table);
-      v += Math.max(-1, Math.min(1, dM * slope)); est = Math.abs(dM) > 0.02;
-    }
-    return { ft: v, est };
-  }, [live, table]);
+  // Nagalagam's own hourly level, always. Hanwella (10-minute sensor) is shown as its own number and is only used to answer "what if Hanwella reaches X",
+  // because it leads Nagalagam by many hours at high flows (scripts/flood3d/fit-hanwella.py), so it says nothing about Nagalagam right now.
+  const liveNag = useMemo(() => (live?.nagalagam?.levelFt != null ? { ft: live.nagalagam.levelFt } : null), [live]);
   const level = driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
+  const lagH = live?.hanwellaLagH ?? 18;
   const isLive = driver === "live";
 
   // Deep link for testing and sharing a view: ?lv=7.2 (what-if Nagalagam ft) &chance=6 (horizon h) &past=1 &plain=1 &d3=0|1
@@ -147,8 +156,8 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
       let ok = false;
       try {
         const r = await fetch("/api/flood3d", { cache: "no-store" });
-        if (r.ok) { const d = (await r.json()) as Live; ok = true; if (!stop) { setLive(d); setFetchedAt(Date.now()); } }
-      } catch { /* keep the last good numbers */ }
+        if (r.ok) { const d = (await r.json()) as Live; ok = !d.partial; if (!stop && !d.partial) { setLive(d); setFetchedAt(Date.now()); setLiveErr(!!d.stale); } else if (!stop) setLiveErr(true); } else if (!stop) setLiveErr(true);
+      } catch { if (!stop) setLiveErr(true); /* keep the last good numbers */ }
       if (!stop && !document.hidden) timer = setTimeout(pull, ok ? POLL_MS : 20_000); // a cold server can miss its first answer: try again soon
     };
     const vis = () => {
@@ -163,47 +172,43 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
 
   // ---- render the water canvas for a level
   const draw = useCallback((lv: number) => {
-    const g = grid.current, c = cv.current, m = meta.current;
-    if (!g || !c || !m) return;
-    const { w, h, L, hw, cls, band, river, unc } = g;
-    const ia = c.a.getContext("2d")!.createImageData(w, h);
-    const ib = c.b.getContext("2d")!.createImageData(w, h);
-    const da = ia.data, db = ib.data;
+    const u = up.current, c = cv.current, m = meta.current;
+    if (!u || !c || !m) return;
+    const { W2, H2, L2, hw2, fl, cls2, band2 } = u;
+    const px = c.img.data; px.fill(0);
     const horizonData = live?.nagalagam?.horizons.find((x) => x.h === horizon);
     const gs = chanceOn && isLive ? (horizon === 0 || !horizonData ? gaugeSpread(lv, null, null, 0) : gaugeSpread(horizonData.level + (lv - (live?.nagalagam?.levelFt ?? lv)), horizonData.low, horizonData.high, horizon)) : null;
-    const cal = meta.current!.chance_calibration;
+    // chance classes per (level, half-width) from a small table: the cell level is quantised to 0.1 ft, so no per-pixel maths
+    const tables = new Map<number, Uint8Array>();
+    const tableFor = (hwx10: number) => { let t = tables.get(hwx10); if (!t) { t = new Uint8Array(420); for (let k = 0; k < 420; k++) { const ch = chanceClass(pWet(k / 10 + 2, hwx10 / 10, gs!), m.chance_calibration).cls; t[k] = ch === "low" ? 1 : ch === "medium" ? 2 : ch === "high" ? 3 : 0; } tables.set(hwx10, t); } return t; };
     const kBand = lv >= 7 ? 2 : lv >= 5 ? 1 : lv >= 4 ? 0 : -1; // plain elevation bands: alert 0-1 m, minor 0-2 m, major 0-3 m
-    for (let i = 0; i < L.length; i++) {
-      if (river[i]) continue;
-      let r = 0, gg = 0, b = 0, a = 0;
-      if (unc[i]) { r = 100; gg = 116; b = 139; a = 75; } // not covered yet: grey, never water
-      else if (gs) {
-        const ch = chanceClass(pWet(L[i], hw[i], gs), cal).cls;
-        if (ch === "low") { r = 250; gg = 204; b = 21; a = 105; }
-        else if (ch === "medium") { r = 249; gg = 115; b = 22; a = 150; }
-        else if (ch === "high") { r = 220; gg = 38; b = 38; a = 175; }
-      } else if (plain) {
-        if (band[i] <= kBand) { r = 168; gg = 85; b = 247; a = 150; }
-      } else if (L[i] <= lv) {
-        const d = Math.min(3, lv - L[i]);
-        r = 30 - d * 6; gg = 110 - d * 14; b = 210 - d * 10; a = 120 + d * 28;
+    const lut = c.lut;
+    for (let y = 0, i = 0; y < H2; y++) {
+      for (let x = 0; x < W2; x++, i++) {
+        const f = fl[i];
+        if (f & 1) continue; // river or sea
+        let r = 0, g = 0, b = 0, a = 0;
+        if (f & 2) { r = 100; g = 116; b = 139; a = 34; } // not covered yet: a faint grey, never water
+        else if (f & 4) { if (!gs) { r = 70; g = 140; b = 135; a = 64; } } // usually-wet ground: a quiet teal, never flood blue
+        else if (gs) {
+          const t = tableFor(hw2[i])[Math.min(419, Math.max(0, Math.round((L2[i] - 2) * 10)))];
+          if (t === 1) { r = 254; g = 222; b = 185; a = 150; } else if (t === 2) { r = 240; g = 150; b = 70; a = 165; } else if (t === 3) { r = 180; g = 60; b = 15; a = 185; }
+        } else if (plain) {
+          if (band2[i] <= kBand) { r = 99; g = 102; b = 241; a = 120; }
+        } else {
+          const d = lv - L2[i];
+          if (d >= 0) {
+            const k = Math.min(256, (d * 32) | 0) * 4;
+            r = lut[k]; g = lut[k + 1]; b = lut[k + 2]; a = lut[k + 3];
+            if (d < 0.15) a = (a * d) / 0.15; // soft shoreline
+            if (cls2[i] === 0) a = (x + y) % 7 === 0 ? a * 0.9 : a * 0.45; // estimate only: a fine hatch, not stripes
+          }
+        }
+        if (!a) continue;
+        const o = i * 4; px[o] = r; px[o + 1] = g; px[o + 2] = b; px[o + 3] = a;
       }
-      if (!a) continue;
-      const t = cls[i] === 0 ? db : da;
-      const o = i * 4; t[o] = r; t[o + 1] = gg; t[o + 2] = b; t[o + 3] = a;
     }
-    c.a.getContext("2d")!.putImageData(ia, 0, 0);
-    c.b.getContext("2d")!.putImageData(ib, 0, 0);
-    const o = c.out.getContext("2d")!;
-    o.clearRect(0, 0, c.out.width, c.out.height);
-    o.imageSmoothingEnabled = true; o.imageSmoothingQuality = "high";
-    o.drawImage(c.a, 0, 0, c.out.width, c.out.height);
-    // less certain (extrapolated) cells: hatched, so they cannot be read as solid water
-    const t2 = c.tmp.getContext("2d")!;
-    t2.globalCompositeOperation = "source-over"; t2.clearRect(0, 0, c.tmp.width, c.tmp.height);
-    t2.imageSmoothingEnabled = true; t2.drawImage(c.b, 0, 0, c.tmp.width, c.tmp.height);
-    if (c.hatch) { t2.globalCompositeOperation = "destination-out"; t2.fillStyle = c.hatch; t2.fillRect(0, 0, c.tmp.width, c.tmp.height); }
-    o.drawImage(c.tmp, 0, 0);
+    c.out.getContext("2d")!.putImageData(c.img, 0, 0);
     const src = mapRef.current?.getSource("f3d-water") as CanvasSource | undefined;
     if (src) { src.play(); requestAnimationFrame(() => requestAnimationFrame(() => src.pause())); }
   }, [chanceOn, isLive, horizon, plain, live]);
@@ -211,10 +216,11 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   const paintRoads = useCallback((lv: number) => {
     const map = mapRef.current;
     if (!map) return;
-    const col: unknown = ["case", ["<=", ["get", "l"], lv], "#dc2626", ["<=", ["get", "l"], lv + 1], "#f97316", ["<=", ["get", "l"], lv + 2], "#fbbf24", "rgba(0,0,0,0)"];
+    const col: unknown = ["case", ["<=", ["get", "l"], lv], "#b91c1c", ["<=", ["get", "l"], lv + 1], "#d97706", "rgba(0,0,0,0)"]; // deep red: under water at this level; amber: within a foot
     for (const id of ["roads-main", "roads-local"]) if (map.getLayer(id)) map.setPaintProperty(id, "line-color", col as never);
   }, []);
 
+  useEffect(() => { paintRoadsRef.current = paintRoads; });
   // ---- animate to the new level (smooth rise / fall), redraw when other layers change
   useEffect(() => {
     if (!ready) return;
@@ -231,6 +237,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   }, [ready, level, draw, paintRoads]);
 
   // ---- layer toggles
+  useEffect(() => { roadsRef.current = roadsOn; });
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -271,7 +278,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
       markerRef.current = mk;
     });
   }, [rep, ready]);
-  /* eslint-disable react-hooks/refs -- the grid is loaded once and never changes; reading it while rendering only decides labels */
+   
   const cellAtLL = (lon: number, lat: number): CellInfo => {
     const g = grid.current, m = meta.current;
     if (!g || !m) return { covered: false, shaded: false, cellFt: null };
@@ -283,7 +290,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
     return { covered: true, shaded: Number.isFinite(L) && L <= level, cellFt: Number.isFinite(L) ? L : null };
   };
   const cell: CellInfo = rep ? cellAtLL(rep.lon, rep.lat) : { covered: false, shaded: false, cellFt: null };
-  /* eslint-enable react-hooks/refs */
+   
   const locate = () => { if (!consented) setConsentAsk(true); else { setGeoMsg(null); geoRef.current?.trigger(); } };
   const startReport = () => {
     const map = mapRef.current;
@@ -308,7 +315,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
-    const feats = (rain?.gauges ?? []).map((g) => ({ type: "Feature" as const, geometry: { type: "Point" as const, coordinates: [g.lon, g.lat] }, properties: { name: g.n, inst: g.i, mm: g.mm1h ?? -1, mm24: g.mm24h, age: g.ageMin, stale: g.ageMin > 60 ? 1 : 0 } }));
+    const feats = (rain?.gauges ?? []).map((g) => ({ type: "Feature" as const, geometry: { type: "Point" as const, coordinates: [g.lon, g.lat] }, properties: { name: g.n, inst: g.i, mm: g.mm1h ?? -1, mm24: g.mm24h, age: g.ageMin, stale: g.ageMin > 60 ? 1 : 0, rain: g.ageMin <= 60 && (g.mm1h ?? 0) > 0 ? 1 : 0 } }));
     (map.getSource("f3d-rain-gauges") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: feats });
     if (map.getLayer("f3d-rain-gauges")) map.setLayoutProperty("f3d-rain-gauges", "visibility", rainGaugesOn ? "visible" : "none");
     if (map.getLayer("f3d-rain")) map.setLayoutProperty("f3d-rain", "visibility", rainOn ? "visible" : "none");
@@ -360,7 +367,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
     if (!ready || !map || !cvs || !rain || !rainOn) { if (cvs) cvs.getContext("2d")?.clearRect(0, 0, cvs.width, cvs.height); return; }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return; // static overlay only
-    const cap = window.innerWidth < 768 ? 120 : 300;
+    const cap = window.innerWidth < 768 ? 70 : 180;
     const { nx, ny, west, north, step } = rain.grid;
     const vals = rain.v.split(",").map((x) => (x === "" ? 0 : Number(x) / 10));
     const ctx = cvs.getContext("2d")!;
@@ -381,19 +388,19 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
         const k = v >= 7.6 ? 4 : v >= 2.5 ? 2 : 1;
         for (let i = 0; i < k; i++) cands.push({ x, y });
       }
-      const n = Math.min(cap, Math.round(cands.length * 0.3));
+      const n = Math.min(cap, Math.round(cands.length * 0.2));
       parts = Array.from({ length: n }, () => spawn(Math.random()));
     };
-    const spawn = (age: number): P => { const c = cands[Math.floor(Math.random() * cands.length)] ?? { x: 0, y: 0 }; return { x: c.x + (Math.random() - 0.5) * 16, y: c.y + (Math.random() - 0.5) * 16, l: 7 + Math.random() * 8, s: 260 + Math.random() * 160, life: age * 0.7 }; };
+    const spawn = (age: number): P => { const c = cands[Math.floor(Math.random() * cands.length)] ?? { x: 0, y: 0 }; return { x: c.x + (Math.random() - 0.5) * 16, y: c.y + (Math.random() - 0.5) * 16, l: 5 + Math.random() * 5, s: 120 + Math.random() * 90, life: age * 0.7 }; };
     const frame = (t: number) => {
       raf = requestAnimationFrame(frame);
-      if (t - last < 42) return; // about 24 fps at most (the owner does not want the laptop working hard)
+      if (t - last < 50) return; // about 20 fps at most: slow, faint streaks (the owner does not want the laptop working hard)
       const dt = Math.min(0.1, (t - last) / 1000); last = t;
       ctx.clearRect(0, 0, cvs.width, cvs.height);
-      ctx.strokeStyle = "rgba(70,110,190,0.55)"; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.strokeStyle = schemeRef.current === "dark" ? "rgba(186,210,255,0.3)" : "rgba(60,100,180,0.28)"; ctx.lineWidth = 0.8; ctx.beginPath();
       for (const p of parts) {
         p.life += dt; p.y += p.s * dt; p.x -= p.s * dt * 0.18;
-        if (p.life > 0.7) Object.assign(p, spawn(0));
+        if (p.life > 1.1) Object.assign(p, spawn(0));
         ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.l * 0.18, p.y - p.l);
       }
       ctx.stroke();
@@ -418,24 +425,34 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
         if (dead || !box.current) return;
         meta.current = m; grid.current = png;
         const phone = window.innerWidth < 768;
-        const scale = phone ? 2 : 3;
-        const mk = (w: number, h: number) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
-        const out = mk(png.w * scale, png.h * scale), tmp = mk(png.w * scale, png.h * scale);
-        const tile = mk(7, 7); const tc = tile.getContext("2d")!; tc.strokeStyle = "#000"; tc.lineWidth = 2.4; tc.beginPath(); tc.moveTo(-1, 8); tc.lineTo(8, -1); tc.stroke();
-        cv.current = { out, tmp, a: mk(png.w, png.h), b: mk(png.w, png.h), hatch: tmp.getContext("2d")!.createPattern(tile, "repeat"), scale };
-        map = new ml.Map({ container: box.current, style: STYLE, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true } });
+        const S = phone ? 2 : 3;
+        const W2 = png.w * S, H2 = png.h * S;
+        const out = document.createElement("canvas"); out.width = W2; out.height = H2;
+        // water colour ramp by depth below the level (0..8 ft, 1/32 ft steps): light to deep blue, about 60% opaque
+        const lut = new Uint8ClampedArray(257 * 4);
+        const stops: [number, number, number, number][] = [[0, 191, 219, 254], [1, 147, 197, 253], [2, 96, 165, 250], [4, 37, 99, 235], [8, 30, 64, 175]];
+        for (let k = 0; k <= 256; k++) { const d = k / 32; let j = 0; while (j < stops.length - 2 && d > stops[j + 1][0]) j++; const t = Math.min(1, (d - stops[j][0]) / (stops[j + 1][0] - stops[j][0])); for (let q = 0; q < 3; q++) lut[k * 4 + q] = stops[j][q + 1] + (stops[j + 1][q + 1] - stops[j][q + 1]) * t; lut[k * 4 + 3] = 150; }
+        cv.current = { out, img: out.getContext("2d")!.createImageData(W2, H2), lut };
+        up.current = buildUp(png, S);
+        schemeRef.current = document.documentElement.classList.contains("dark") ? "dark" : "light"; // the real theme now (the first render only knew the server default)
+        const base = await loadBaseStyle(schemeRef.current === "dark");
+        if (dead || !box.current) return;
+        map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true } });
         mapRef.current = map;
         if (new URLSearchParams(location.search).has("debug")) (window as unknown as { __f3d?: unknown }).__f3d = { map, cv: cv.current, grid: grid.current };
-        map.addControl(new ml.NavigationControl({ visualizePitch: true }), "top-right");
+        map.addControl(new ml.NavigationControl({ visualizePitch: true }), phone ? "top-right" : "bottom-left");
+        if (!phone) map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
         // Locate me: the control's own button is hidden (CSS below); our button asks for consent first, then triggers it. Never on load.
         const geo = new ml.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }, trackUserLocation: false, showAccuracyCircle: true, showUserLocation: true, fitBoundsOptions: { maxZoom: 16 } });
         map.addControl(geo, "top-right");
         geo.on("geolocate", (e: unknown) => { const c = (e as { coords: GeolocationCoordinates }).coords; gps.current = { lat: c.latitude, lon: c.longitude, acc: c.accuracy }; setGeoMsg(null); });
-        geo.on("error", () => setGeoMsg("Your location could not be read. Check that location is on for this browser."));
+        geo.on("error", () => setGeoMsg(tr("Your location could not be read. Check that location is on for this browser.")));
         geoRef.current = geo;
         setUsed(m.reports_used?.Kelaniya ?? 0);
+        let bound = false;
         map.on("style.load", () => {
           if (dead || !map) return;
+          const dark = schemeRef.current === "dark";
           const { west, east, south, north } = m.png;
           map.addSource("dem", { type: "raster-dem", tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"], encoding: "terrarium", tileSize: 256, maxzoom: 14, attribution: "Terrain: Mapzen/AWS Terrain Tiles (incl. Copernicus DEM)" });
           map.addSource("f3d-water", { type: "canvas", canvas: out, coordinates: [[west, north], [east, north], [east, south], [west, south]], animate: false });
@@ -444,44 +461,69 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
           // everything outside the calibrated picture is greyed: no estimate there
           const { west: bw, east: be, south: bs, north: bn } = m.png;
           map.addSource("f3d-outside", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]], [[bw, bs], [bw, bn], [be, bn], [be, bs], [bw, bs]]] } } });
-          map.addLayer({ id: "f3d-outside", type: "fill", source: "f3d-outside", paint: { "fill-color": "#64748b", "fill-opacity": 0.2 } }, before);
+          map.addLayer({ id: "f3d-outside", type: "fill", source: "f3d-outside", paint: { "fill-color": "#64748b", "fill-opacity": 0.12 } }, before);
           // rain now: a static, smooth canvas picture of the intensity field (drawn when data arrives); the falling streaks are a separate DOM canvas
           const rc = document.createElement("canvas"); rc.width = 360; rc.height = 200; rainCv.current = rc;
           map.addSource("f3d-rain", { type: "canvas", canvas: rc, coordinates: [[79.79, 7.05], [80.15, 7.05], [80.15, 6.85], [79.79, 6.85]], animate: false });
           map.addLayer({ id: "f3d-rain", type: "raster", source: "f3d-rain", paint: { "raster-opacity": 0.9, "raster-fade-duration": 0 }, layout: { visibility: "none" } }, before);
           map.addSource("past", { type: "geojson", data: "/flood3d/ems-2025.json" });
-          map.addLayer({ id: "past-fill", type: "fill", source: "past", paint: { "fill-color": "#7c3aed", "fill-opacity": 0.18 }, layout: { visibility: "none" } }, before);
-          map.addLayer({ id: "past-line", type: "line", source: "past", paint: { "line-color": "#6d28d9", "line-width": 1.2, "line-dasharray": [3, 2] }, layout: { visibility: "none" } }, before);
-          const lw: unknown = ["interpolate", ["linear"], ["zoom"], 11, 1.2, 15, 4];
+          map.addLayer({ id: "past-fill", type: "fill", source: "past", paint: { "fill-color": "#6366f1", "fill-opacity": 0.12 }, layout: { visibility: "none" } }, before);
+          map.addLayer({ id: "past-line", type: "line", source: "past", paint: { "line-color": "#4f46e5", "line-width": 1, "line-dasharray": [3, 2] }, layout: { visibility: "none" } }, before);
+          const lw: unknown = ["interpolate", ["linear"], ["zoom"], 11, 0.8, 15, 2.4];
           map.addSource("roads-main", { type: "geojson", data: "/flood3d/roads-main.json" });
-          map.addLayer({ id: "roads-main", type: "line", source: "roads-main", paint: { "line-color": "rgba(0,0,0,0)", "line-width": lw as never, "line-dasharray": [1, 0] }, layout: { "line-cap": "round" } });
-          map.addSource("roads-local", { type: "geojson", data: "/flood3d/roads-local.json" });
-          map.addLayer({ id: "roads-local", type: "line", source: "roads-local", minzoom: 13, paint: { "line-color": "rgba(0,0,0,0)", "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1, 16, 3] as never }, layout: { "line-cap": "round" } });
+          map.addLayer({ id: "roads-main", type: "line", source: "roads-main", paint: { "line-color": "rgba(0,0,0,0)", "line-width": lw as never }, layout: { "line-cap": "round" } });
+          // local streets (660 KB) are fetched only once the map is zoomed in to street level
+          const addLocal = () => {
+            if (!mapRef.current || map!.getSource("roads-local") || map!.getZoom() < 15.5) return;
+            map!.addSource("roads-local", { type: "geojson", data: "/flood3d/roads-local.json" });
+            map!.addLayer({ id: "roads-local", type: "line", source: "roads-local", paint: { "line-color": "rgba(0,0,0,0)", "line-width": ["interpolate", ["linear"], ["zoom"], 16, 0.9, 18, 1.8] as never }, minzoom: 16, layout: { "line-cap": "round", visibility: roadsRef.current ? "visible" : "none" } });
+            paintRoadsRef.current?.(shown.current);
+          };
+          addLocalRef.current = addLocal; addLocal();
+          // 3D buildings only from street level: keeps the first paint light on phones
+          if (map.getLayer("building-3d")) map.setLayerZoomRange("building-3d", 15, 24);
           const empty = { type: "FeatureCollection" as const, features: [] };
           map.addSource("f3d-rain-gauges", { type: "geojson", data: empty });
-          map.addLayer({ id: "f3d-rain-gauges", type: "circle", source: "f3d-rain-gauges", paint: { "circle-radius": 4.5, "circle-color": ["case", ["==", ["get", "mm"], -1], "#94a3b8", [">=", ["get", "mm"], 7.6], "#1e3a8a", [">=", ["get", "mm"], 2.5], "#2563eb", [">", ["get", "mm"], 0], "#60a5fa", "#e2e8f0"], "circle-stroke-color": "#1e293b", "circle-stroke-width": 1, "circle-opacity": ["case", ["==", ["get", "stale"], 1], 0.35, 1] }, layout: { visibility: "none" } });
+          map.addLayer({ id: "f3d-rain-gauges", type: "circle", source: "f3d-rain-gauges", paint: { "circle-radius": ["case", ["==", ["get", "rain"], 1], 6, 3.5], "circle-color": ["case", ["==", ["get", "mm"], -1], "#94a3b8", [">=", ["get", "mm"], 7.6], "#1e3a8a", [">=", ["get", "mm"], 2.5], "#2563eb", [">", ["get", "mm"], 0], "#60a5fa", "#e2e8f0"], "circle-stroke-color": ["case", ["==", ["get", "rain"], 1], "#0ea5e9", dark ? "#0f172a" : "#ffffff"], "circle-stroke-width": ["case", ["==", ["get", "rain"], 1], 2.5, 1], "circle-opacity": ["case", ["==", ["get", "stale"], 1], 0.35, 1] }, layout: { visibility: "none" } });
           map.addSource("f3d-gauges", { type: "geojson", data: empty });
-          map.addLayer({ id: "f3d-gauges", type: "circle", source: "f3d-gauges", paint: { "circle-radius": 8, "circle-color": ["get", "color"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5 } });
-          map.addLayer({ id: "f3d-gauges-label", type: "symbol", source: "f3d-gauges", layout: { "text-field": ["get", "label"], "text-size": 11, "text-offset": [0, 1.6], "text-anchor": "top", "text-font": ["Noto Sans Bold"], "text-allow-overlap": true }, paint: { "text-color": "#0f172a", "text-halo-color": "#ffffff", "text-halo-width": 2 } });
+          // river gauges: a small white disc with a ring in the official step colour, and a compact label that yields to others when crowded
+          map.addLayer({ id: "f3d-gauges", type: "circle", source: "f3d-gauges", paint: { "circle-radius": 5, "circle-color": dark ? "#0f172a" : "#ffffff", "circle-stroke-color": ["get", "color"], "circle-stroke-width": 3 } });
+          map.addLayer({ id: "f3d-gauges-label", type: "symbol", source: "f3d-gauges", layout: { "text-field": ["get", "label"], "text-size": 11, "text-offset": [0, 1.3], "text-anchor": "top", "text-font": ["Noto Sans Bold"], "text-padding": 4, "text-optional": true }, paint: { "text-color": dark ? "#e2e8f0" : "#0f172a", "text-halo-color": dark ? "#0f172a" : "#ffffff", "text-halo-width": 2.2 } });
+          if (!bound) {
+          bound = true;
+          map.on("zoomend", () => addLocalRef.current?.());
           map.on("click", (ev) => tapRef.current?.(ev));
           for (const id of ["roads-main", "roads-local", "f3d-gauges", "f3d-rain-gauges"]) { map.on("mouseenter", id, () => (map!.getCanvas().style.cursor = "pointer")); map.on("mouseleave", id, () => (map!.getCanvas().style.cursor = "")); }
           if (startView.current) map.jumpTo({ center: [startView.current[0], startView.current[1]], zoom: startView.current[2] });
           setThreeD(forced3d.current ?? !phone);
+          }
           setReady(true);
         });
-        map.on("error", (e) => { if (!dead && /style|tiles\.openfreemap/i.test(String(e?.error?.message ?? ""))) setErr("The base map could not load."); });
+        map.on("error", (e) => { if (!dead && /style|tiles\.openfreemap/i.test(String(e?.error?.message ?? ""))) setErr(tr("The base map could not load.")); });
       } catch (e) {
-        if (!dead) setErr(e instanceof Error ? e.message : "The map could not start.");
+        if (!dead) setErr(e instanceof Error && e.message === "maplibre" ? tr("The map library could not load.") : tr("The map could not start."));
       }
     })();
     return () => { dead = true; cancelAnimationFrame(raf.current); popRef.current?.remove(); map?.remove(); mapRef.current = null; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- builds the map once; strings are read at creation
   }, []);
+
+  // ---- follow the site theme: swap the base style, our layers are re-added on style.load (which sets ready again)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) { schemeRef.current = scheme; return; }
+    if (schemeRef.current === scheme) return;
+    schemeRef.current = scheme;
+    firstStyle.current = false;
+    setReady(false);
+    void loadBaseStyle(scheme === "dark").then((st) => { if (mapRef.current === map) map.setStyle(st as never); });
+  }, [scheme]);
 
   // ---- tap: road name + level, or what the water here does
   const stateRef = useRef({ level, isLive, live, horizon });
   useEffect(() => { stateRef.current = { level, isLive, live, horizon }; });
   const tapRef = useRef<((ev: MapMouseEvent) => void) | null>(null);
-  // eslint-disable-next-line react-hooks/immutability -- latest-callback ref for the map click handler
+   
   useEffect(() => { tapRef.current = (ev: MapMouseEvent) => {
     const map = mapRef.current, g = grid.current, m = meta.current;
     if (!map || !g || !m) return;
@@ -493,12 +535,12 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
       const pr = gh.properties as Record<string, string | number>;
       if (gh.layer.id === "f3d-gauges") {
         add(String(pr.name), true);
-        add(`${pr.level} ${pr.fast ? "(10-minute sensor) " : ""}· ${pr.statusLabel}${pr.trend ? `, ${pr.trend}` : ""}`);
-        if (pr.at) add(`Hourly reading from ${clock(String(pr.at))}.`);
-        const a = document.createElement("a"); a.href = String(pr.url); a.textContent = "Open the gauge page"; a.style.cssText = "color:#0369a1;font-size:12px;text-decoration:underline"; lines.appendChild(a);
+        add(`${pr.level} ${pr.fast ? tr("(10-min sensor)") + " " : ""}· ${pr.statusLabel}${pr.trend ? `, ${tr(String(pr.trend))}` : ""}`);
+        if (pr.at) add(tr("Hourly reading from {time}.", { time: clock(String(pr.at)) }));
+        const a = document.createElement("a"); a.href = String(pr.url); a.textContent = tr("Open the gauge page"); a.style.cssText = "color:#0369a1;font-size:12px;text-decoration:underline"; lines.appendChild(a);
       } else {
         add(String(pr.name), true);
-        add(`${pr.inst}. Last hour: ${Number(pr.mm) < 0 ? "not known" : `${pr.mm} mm (at least)`}, 24 h: ${pr.mm24} mm. Reported ${pr.age} min ago${Number(pr.stale) ? " (old)" : ""}.`);
+        add(`${pr.inst}. ${tr("Last hour: {x} mm (at least), 24 h: {y} mm. Reported {m} min ago.", { x: Number(pr.mm) < 0 ? tr("not known") : String(pr.mm), y: String(pr.mm24), m: String(pr.age) })}${Number(pr.stale) ? " " + tr("(old)") : ""}`);
       }
       popRef.current?.remove();
       void loadMl().then((ml) => { popRef.current = new ml.Popup({ closeButton: true, maxWidth: "270px" }).setLngLat(ev.lngLat).setDOMContent(lines).addTo(map); });
@@ -507,21 +549,22 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
     const road = map.queryRenderedFeatures(ev.point, { layers: ["roads-main", "roads-local"].filter((i) => map.getLayer(i)) })[0];
     if (road && road.properties && road.properties.l != null) {
       const l = Number(road.properties.l);
-      add(String(road.properties.n || "Unnamed road"), true);
-      add(`${road.properties.br ? "Bridge or tunnel. " : ""}Low section: the ground here is covered when Nagalagam Street reaches about ${f1(l)} ft (estimate from 30 m elevation).`);
+      add(String(road.properties.n || tr("Unnamed road")), true);
+      add(`${road.properties.br ? tr("Bridge or tunnel. ") : ""}${tr("Low section: the ground here is covered when Nagalagam Street reaches about {ft} ft (estimate from 30 m elevation).", { ft: f1(l) })}`);
     } else {
       const ix = Math.floor((ev.lngLat.lng - m.png.west) / m.png.deg), iy = Math.floor((m.png.north - ev.lngLat.lat) / m.png.deg);
       if (ix < 0 || iy < 0 || ix >= g.w || iy >= g.h) return;
       const i = iy * g.w + ix;
-      if (g.river[i]) add("River or canal.");
-      else if (g.unc[i]) add("Not covered yet: there is no calibration here, so the map shows no flood estimate for this spot.");
-      else if (!Number.isFinite(g.L[i])) add("Not expected to flood from the river at any level seen so far (estimate).");
+      if (g.river[i]) add(tr("River or canal."));
+      else if (g.unc[i]) add(tr("Not covered yet: there is no calibration here, so the map shows no flood estimate for this spot."));
+      else if (g.wet[i]) add(tr("Usually wet ground (marsh or paddy): the map does not count it as flood."));
+      else if (!Number.isFinite(g.L[i]) || g.L[i] > 12) add(tr("Not expected to flood from the river at any level seen so far (estimate)."));
       else {
         const L = g.L[i], hw = g.hw[i], cls = g.cls[i];
         const lo = Math.max(2, L - hw), hi = L + hw;
-        const kind = cls === 2 ? "backed by a satellite flood map" : cls === 1 ? "interpolated between past floods" : "the river would have to go higher (or lower) here than in any flood we have records for, so this is a guess from ground height";
-        add(`Floods when Nagalagam Street reaches about ${f1(L)} ft`, true);
-        add(`${cls === 0 ? "Estimate only" : "Estimate"}, range ${f1(lo)} to ${f1(hi)} ft (${kind}).`);
+        const kind = cls === 2 ? tr("backed by a satellite flood map") : cls === 1 ? tr("interpolated between past floods") : tr("the river would have to go higher (or lower) here than in any flood we have records for, so this is a guess from ground height");
+        add(tr("Floods when Nagalagam Street reaches about {ft} ft", { ft: f1(L) }), true);
+        add(`${cls === 0 ? tr("Estimate only") : tr("Estimate")}, ${tr("range {lo} to {hi} ft", { lo: f1(lo), hi: f1(hi) })} (${kind}).`);
         const nag = st.live?.nagalagam;
         if (st.isLive && nag?.levelFt != null) {
           const hz = st.horizon === 0 ? 6 : st.horizon;
@@ -530,14 +573,14 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
           const best = Math.max(pWet(L, hw, gs), pWet(L, hw, gaugeSpread(nag.levelFt, null, null, 0)));
           const c = chanceClass(best, m.chance_calibration);
           console.info("[flood3d] chance of water", { rawP: Math.round(best * 1000) / 1000, calibrated: Math.round(c.p * 1000) / 1000, class: c.cls, cellLevelFt: f1(L), halfWidthFt: hw });
-          const word: Record<Chance, string> = { none: "very low", low: "low", medium: "medium", high: "high" };
-          add(`Chance of water here in the next 6 hours: ${word[c.cls]}.`);
-          add(`River now ${f1(st.level)} ft${nag.trend ? ` and ${nag.trend}` : ""}.`);
-        } else add(`At ${f1(st.level)} ft this spot would be ${L <= st.level ? "under water" : "dry"}.`);
+          const word: Record<Chance, string> = { none: tr("very low"), low: tr("low"), medium: tr("medium"), high: tr("high") };
+          add(tr("Chance of water here in the next 6 hours: {w}.", { w: word[c.cls] }));
+          add(nag.trend ? tr("River now {ft} ft and {trend}.", { ft: f1(st.level), trend: tr(nag.trend) }) : tr("River now {ft} ft", { ft: f1(st.level) }));
+        } else add(L <= st.level ? tr("At {ft} ft this spot would be under water.", { ft: f1(st.level) }) : tr("At {ft} ft this spot would be dry.", { ft: f1(st.level) }));
       }
     }
     const rb = document.createElement("button");
-    rb.textContent = "Report here"; rb.style.cssText = "margin-top:6px;padding:4px 10px;border-radius:6px;background:#0284c7;color:#fff;font:600 12px system-ui,sans-serif;border:0;cursor:pointer";
+    rb.textContent = tr("Report here"); rb.style.cssText = "margin-top:6px;padding:4px 10px;border-radius:6px;background:#0284c7;color:#fff;font:600 12px system-ui,sans-serif;border:0;cursor:pointer";
     rb.onclick = () => { popRef.current?.remove(); openReportRef.current?.({ lat: ev.lngLat.lat, lon: ev.lngLat.lng, src: "pin", acc: null }); };
     lines.appendChild(rb);
     popRef.current?.remove();
@@ -570,7 +613,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
     if (gaz) take(gaz, (x) => [x[0], x[4], x[5]], (x) => ({ n: x[0], lat: x[1], lon: x[2], tag: KIND_LABEL[x[3]] ?? "place", zoom: x[3] === 2 ? 16 : x[3] === 1 ? 16 : 14.5 }), 8);
     return out.slice(0, 8);
   }, [q, towns, gauges, gaz]);
-  /* eslint-disable-next-line react-hooks/refs -- grid is read-only after load */
+   
   const hitCovered = hits.map((h) => cellAtLL(h.lon, h.lat).covered);
   const goTo = (h: Hit) => {
     const map = mapRef.current;
@@ -590,170 +633,247 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
     else if (e.key === "Escape" && qOpen) { e.stopPropagation(); e.nativeEvent.stopImmediatePropagation(); setQOpen(false); }
   };
 
-  const pill = (on: boolean, color = "sky") => `rounded-full border px-3 py-1 text-xs ${on ? (color === "sky" ? "border-sky-600 bg-sky-600 text-white" : "border-orange-600 bg-orange-600 text-white") : "border-slate-300 dark:border-slate-600"}`;
+  const arrow = (t: string | null | undefined) => (t == null ? "" : t.startsWith("rising") ? "↑" : t === "falling" ? "↓" : "→");
   const areaK = areas.find((x) => x.name === "Kelaniya");
+  const stepColor = STEP_COLOR[nag ? (live?.gauges?.find((g) => g.name === "Nagalagam Street")?.status ?? nag.status) : "none"] ?? "#64748b";
+  const dot = "·";
+
+  // ---- header strip: title, one live chip, one info chip that expands the test notice
+  const header = (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 className="text-base font-semibold md:text-lg tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map (test)")}</h1>
+        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
+          <span aria-hidden className="size-2 rounded-full" style={{ background: stepColor }} />
+          {nag?.levelFt != null ? (
+            <>
+              <span className="font-semibold">{tr("Nagalagam Street {ft} ft", { ft: f1(nag.levelFt) })}</span>
+              {nag.trend && <span>{dot} {tr(nag.trend)} {arrow(nag.trend)}</span>}
+              {nag.hourlyAt && <span className="text-slate-500 dark:text-slate-400">{dot} {clock(nag.hourlyAt)}</span>}
+            </>
+          ) : (
+            <span>{liveErr ? tr("Live readings unavailable") : tr("Loading the latest readings…")}</span>
+          )}
+        </span>
+        {han?.levelFt != null && (
+          <span className="hidden text-xs text-slate-600 dark:text-slate-300 sm:inline">{tr("Hanwella {ft} ft", { ft: f1(han.fastFt ?? han.levelFt) })}{han.fastFt != null ? ` ${tr("(10-min sensor)")}` : ""}</span>
+        )}
+        <button type="button" aria-expanded={infoOpen} onClick={() => setInfoOpen((v) => !v)} className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+          <Info className="size-3.5" aria-hidden /> {tr("Test map")}
+        </button>
+      </div>
+      {infoOpen && (
+        <p role="note" className="max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+          <strong>{tr("Test map.")}</strong> {tr("Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.")} {tr("In an emergency call 117.")}
+        </p>
+      )}
+    </div>
+  );
+
+  // ---- legend card with a depth gradient
   const legend = (
-    <div className="rounded bg-white/90 px-2 py-1 text-[11px] leading-tight text-slate-700 shadow dark:bg-slate-900/90 dark:text-slate-200">
-      <span className="mr-1 inline-block h-2.5 w-3 rounded-sm" style={{ background: "rgba(30,110,210,.75)" }} /> water at this river level{" "}
-      <button type="button" aria-expanded={legendNote} onClick={() => setLegendNote((v) => !v)} className="pointer-events-auto mx-1 inline-flex items-center gap-1 rounded underline decoration-dotted">
-        <span className="inline-block h-2.5 w-3 rounded-sm" style={{ background: "repeating-linear-gradient(135deg,rgba(30,110,210,.8) 0 2px,transparent 2px 5px)" }} /> Estimate only (beyond floods we&apos;ve seen)
-      </button>{" "}
-      <span className="mx-1 inline-block h-1 w-3 bg-red-600" /> low road{" "}
-      <span className="mx-1 inline-block h-2.5 w-3 rounded-sm" style={{ background: "rgba(100,116,139,.45)" }} /> not covered yet
-      {legendNote && <p className="mt-1 max-w-xs">Here the river would have to go higher (or lower) than in any flood we have records for, so this is a guess from ground height.</p>}
-    </div>
-  );
-  const statusBox = (
-    <div className="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700" aria-live="polite">
-      <p className="font-medium" data-testid="flood3d-now">
-        {nag?.levelFt != null ? `Nagalagam Street ${f1(nag.levelFt)} ft` : "Nagalagam Street: no reading"}
-        {han?.levelFt != null && <span className="font-normal text-slate-600 dark:text-slate-300"> · Hanwella {f1(han.fastFt ?? han.levelFt)} ft{han.fastFt != null ? " (10-min sensor)" : ""}</span>}
-      </p>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
-        {fetchedAt ? `Updated ${clock(fetchedAt)} · next update in ~${secs && secs > 0 ? secs : 1} min` : "Loading the latest readings…"}
-        {nag?.hourlyAt && ` · Nagalagam reading from ${clock(nag.hourlyAt)}`}
-        {liveNag?.est && " · level between hourly readings estimated from Hanwella"}
-      </p>
-      {marks && <p className="text-xs text-slate-500">Official steps at Nagalagam: Alert {marks.alert} ft · Minor flood {marks.minor} ft · Major flood {marks.major} ft. This map never changes them.</p>}
-      {areaK?.n != null && <p className="text-xs text-slate-500">{areaK.n} reports around Kelaniya so far.{used > 0 && ` Your reports improved this area: ${used} used in the latest update.`}</p>}
-    </div>
-  );
-  const controls = (
-    <fieldset className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
-      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-500">River level on the map</legend>
-      <div className="flex flex-wrap gap-2">
-        {([["live", "Live now"], ["nag", "What if Nagalagam reaches…"], ["han", "What if Hanwella reaches…"]] as const).map(([k, t]) => (
-          <button key={k} type="button" onClick={() => { setDriver(k); if (k !== "live") setChanceOn(false); }} aria-pressed={driver === k} className={pill(driver === k)}>{t}</button>
-        ))}
+    <div className="space-y-2 px-1.5 pb-1 text-[11px] text-slate-700 dark:text-slate-300">
+      <div>
+        <div className="h-2 rounded-full" style={{ background: "linear-gradient(90deg, rgb(191,219,254), rgb(96,165,250) 35%, rgb(37,99,235) 70%, rgb(30,64,175))" }} />
+        <div className="mt-0.5 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>{tr("shallow")}</span><span>{tr("water at this river level")}</span><span>{tr("deep")}</span></div>
       </div>
-      {driver === "nag" && (
+      {chanceOn && isLive && (
         <div>
-          <input aria-label="Nagalagam Street level in feet" type="range" min={2} max={10} step={0.1} value={whatNag} onChange={(e) => setWhatNag(+e.target.value)} className="w-full" />
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-semibold">{f1(whatNag)} ft</span>
-            {marks && ([["Alert", marks.alert], ["Minor", marks.minor], ["Major", marks.major]] as const).map(([t, v]) => v != null && <button key={t} type="button" className="rounded border border-slate-300 px-2 py-0.5 dark:border-slate-600" onClick={() => setWhatNag(v)}>{t} {v} ft</button>)}
-            <button type="button" className="rounded border border-slate-300 px-2 py-0.5 dark:border-slate-600" onClick={() => setWhatNag(8.4)}>Dec 2025 peak 8.4 ft</button>
+          <div className="h-2 rounded-full" style={{ background: "linear-gradient(90deg, rgb(254,222,185), rgb(240,150,70) 55%, rgb(180,60,15))" }} />
+          <div className="mt-0.5 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>{tr("low")}</span><span>{tr("Chance of water")}</span><span>{tr("high")}</span></div>
+        </div>
+      )}
+      <ul className="grid grid-cols-1 gap-1">
+        <li className="flex items-center gap-2"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "repeating-linear-gradient(135deg, rgba(37,99,235,.55) 0 1px, rgba(147,197,253,.3) 1px 6px)" }} />
+          <button type="button" aria-expanded={legendNote} onClick={() => setLegendNote((v) => !v)} className="text-left underline decoration-dotted underline-offset-2">{tr("Estimate only (beyond floods we've seen)")}</button></li>
+        {legendNote && <li className="pl-7 text-[10px] leading-snug text-slate-500 dark:text-slate-400">{tr("Here the river would have to go higher (or lower) than in any flood we have records for, so this is a guess from ground height.")}</li>}
+        <li className="flex items-center gap-2"><span className="inline-block h-0.5 w-5 rounded" style={{ background: "#d97706" }} /><span className="inline-block h-0.5 w-5 -ml-1 rounded" style={{ background: "#b91c1c" }} /> {tr("low road")}</li>
+        <li className="flex items-center gap-2"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "rgba(70,140,135,.45)" }} /> {tr("usually wet ground")}</li>
+        <li className="flex items-center gap-2"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "rgba(100,116,139,.3)" }} /> {tr("not covered yet")}</li>
+      </ul>
+    </div>
+  );
+
+  // ---- the panel body (one place for every control, in and out of full screen)
+  const panelBody = (
+    <div className="px-2 pb-3">
+      <SectionTitle>{tr("River level on the map")}</SectionTitle>
+      <div className="px-1.5">
+        <Seg value={driver} onChange={(k) => { setDriver(k); if (k !== "live") setChanceOn(false); }} label={tr("River level on the map")} items={[{ v: "live", t: tr("Live") }, { v: "nag", t: "Nagalagam" }, { v: "han", t: "Hanwella" }]} />
+        {driver === "nag" && (
+          <div className="pt-2">
+            <div className="flex items-baseline justify-between text-xs"><span className="text-slate-500 dark:text-slate-400">{tr("What if Nagalagam reaches…")}</span><span className="text-base font-semibold tabular-nums">{f1(whatNag)} ft</span></div>
+            <input aria-label={tr("Nagalagam Street level in feet")} type="range" min={2} max={10} step={0.1} value={whatNag} onChange={(e) => setWhatNag(+e.target.value)} className="mt-1 w-full accent-sky-600" />
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {marks && ([["Alert", marks.alert], ["Minor", marks.minor], ["Major", marks.major]] as const).map(([name, v]) => v != null && <button key={name} type="button" className="rounded-full border border-slate-300 px-2 py-0.5 text-[11px] text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800" onClick={() => setWhatNag(v)}>{tr(name)} {v}</button>)}
+              <button type="button" className="rounded-full border border-slate-300 px-2 py-0.5 text-[11px] text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800" onClick={() => setWhatNag(8.4)}>{tr("Dec 2025 peak 8.4 ft")}</button>
+            </div>
           </div>
-        </div>
-      )}
-      {driver === "han" && (
-        <div>
-          <input aria-label="Hanwella level in feet" type="range" min={10} max={36} step={0.5} value={whatHan} onChange={(e) => setWhatHan(+e.target.value)} className="w-full" />
-          <p className="text-xs"><span className="font-semibold">Hanwella {f1(whatHan)} ft</span> is roughly <span className="font-semibold">{f1(level)} ft</span> at Nagalagam Street (rough pairing from the past year; Hanwella peaks about a day before Nagalagam).</p>
-        </div>
-      )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs">
-        <label className="flex items-center gap-1"><input type="checkbox" checked={waterOn} onChange={(e) => setWaterOn(e.target.checked)} /> Water</label>
-        <label className={`flex items-center gap-1 ${isLive ? "" : "opacity-50"}`}><input type="checkbox" disabled={!isLive} checked={chanceOn && isLive} onChange={(e) => { setChanceOn(e.target.checked); if (e.target.checked) setPlain(false); }} /> Chance of water</label>
-        {chanceOn && isLive && (["0", "3", "6"] as const).map((h) => <button key={h} type="button" onClick={() => setHorizon(+h as 0 | 3 | 6)} aria-pressed={horizon === +h} className={pill(horizon === +h, "orange").replace("px-3", "px-2").replace("py-1", "py-0.5")}>{h === "0" ? "Now" : `+${h} h`}</button>)}
-        <label className="flex items-center gap-1"><input type="checkbox" checked={gaugesOn} onChange={(e) => setGaugesOn(e.target.checked)} /> River gauges</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={rainOn} onChange={(e) => setRainOn(e.target.checked)} /> Rain now</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={rainGaugesOn} onChange={(e) => setRainGaugesOn(e.target.checked)} /> Rain gauges</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={roadsOn} onChange={(e) => setRoadsOn(e.target.checked)} /> Low roads</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={past} onChange={(e) => setPast(e.target.checked)} /> Real flood, 30 Nov 2025 (satellite)</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={plain} onChange={(e) => { setPlain(e.target.checked); if (e.target.checked) setChanceOn(false); }} /> Plain elevation bands (compare)</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={threeD} onChange={(e) => setThreeD(e.target.checked)} /> 3D (off = 2D)</label>
+        )}
+        {driver === "han" && (
+          <div className="pt-2">
+            <div className="flex items-baseline justify-between text-xs"><span className="text-slate-500 dark:text-slate-400">{tr("What if Hanwella reaches…")}</span><span className="text-base font-semibold tabular-nums">{f1(whatHan)} ft</span></div>
+            <input aria-label={tr("Hanwella level in feet")} type="range" min={10} max={36} step={0.5} value={whatHan} onChange={(e) => setWhatHan(+e.target.value)} className="mt-1 w-full accent-sky-600" />
+            <p className="pt-1 text-[11px] leading-snug text-slate-500 dark:text-slate-400">{tr("Hanwella {han} ft is roughly {nag} ft at Nagalagam Street, about {h} hours later (rough, from the past year; Nagalagam's own level is always better).", { han: f1(whatHan), nag: f1(level), h: lagH })}</p>
+          </div>
+        )}
       </div>
-      {rainOn && <p className="text-xs text-slate-600 dark:text-slate-400">{rain ? `Rain now (estimate, updated ${clock(rain.generatedAt)}). Light, moderate and heavy blue shading; ${rain.groundGauges} ground gauge${rain.groundGauges === 1 ? "" : "s"} reported in the last hour, the rest is satellite${rain.satelliteHourStart ? ` for the hour from ${clock(rain.satelliteHourStart)}` : ""}.` : rainErr ? "Rain data is not available right now." : "Loading rain…"}</p>}
-      {chanceOn && isLive && <p className="text-xs text-slate-600 dark:text-slate-400">Shading: yellow low, orange medium, red high chance of water by then. River-driven only; heavy local rain can flood streets without the river.</p>}
-    </fieldset>
+
+      <SectionTitle>{tr("Layers")}</SectionTitle>
+      <div className="space-y-0.5">
+        <SwitchRow icon={<Waves className="size-4" />} label={tr("Water")} on={waterOn} onChange={setWaterOn} />
+        <SwitchRow icon={<Activity className="size-4" />} label={tr("Chance of water")} on={chanceOn && isLive} disabled={!isLive} onChange={(v) => { setChanceOn(v); if (v) setPlain(false); }} />
+        {chanceOn && isLive && <div className="px-1.5 pb-1 pt-0.5"><Seg tone="amber" value={horizon} onChange={setHorizon} label={tr("Chance of water")} items={[{ v: 0, t: tr("Now") }, { v: 3, t: tr("+{h} h", { h: 3 }) }, { v: 6, t: tr("+{h} h", { h: 6 }) }]} /><p className="pt-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400">{tr("Shading: yellow low, orange medium, red high chance of water by then. River-driven only; heavy local rain can flood streets without the river.")}</p></div>}
+        <SwitchRow icon={<Route className="size-4" />} label={tr("Low roads")} on={roadsOn} onChange={setRoadsOn} />
+        <SwitchRow icon={<Gauge className="size-4" />} label={tr("River gauges")} on={gaugesOn} onChange={setGaugesOn} />
+        <SwitchRow icon={<CloudRain className="size-4" />} label={tr("Rain now")} on={rainOn} onChange={setRainOn} />
+        {rainOn && <p className="px-1.5 pb-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400">{rain ? tr("Rain now (estimate, updated {time}). {g} ground gauge(s) reported in the last hour; the rest is satellite for the hour from {sat} ({age} old).", { time: clock(rain.generatedAt), g: rain.groundGauges, sat: rain.satelliteHourStart ? clock(rain.satelliteHourStart) : "-", age: rain.satelliteHourStart ? ageText(Date.parse(rain.generatedAt) - rain.satelliteHourStart - 3_600_000) : "-" }) : rainErr ? tr("Rain data is not available right now.") : tr("Loading rain…")}</p>}
+        <SwitchRow icon={<MapPin className="size-4" />} label={tr("Rain gauges")} on={rainGaugesOn} onChange={setRainGaugesOn} />
+        <SwitchRow icon={<History className="size-4" />} label={tr("Real flood, 30 Nov 2025 (satellite)")} on={past} onChange={setPast} />
+        <SwitchRow icon={<Layers className="size-4" />} label={tr("Plain elevation bands (compare)")} on={plain} onChange={(v) => { setPlain(v); if (v) setChanceOn(false); }} />
+        <SwitchRow icon={<Box className="size-4" />} label={tr("3D (off = 2D)")} on={threeD} onChange={setThreeD} />
+      </div>
+
+      <SectionTitle>{tr("Legend")}</SectionTitle>
+      {legend}
+
+      <div className="mt-3 space-y-1 border-t border-slate-200 px-1.5 pt-2 text-[11px] leading-snug text-slate-500 dark:border-slate-700 dark:text-slate-400">
+        <p>{fetchedAt ? tr("Updated {time} · next update in ~{min} min", { time: clock(fetchedAt), min: secs && secs > 0 ? secs : 1 }) : tr("Loading the latest readings…")}</p>
+        {marks && <p>{tr("Official steps at Nagalagam: Alert {a} ft · Minor flood {b} ft · Major flood {c} ft. This map never changes them.", { a: marks.alert ?? "", b: marks.minor ?? "", c: marks.major ?? "" })}</p>}
+        {areaK?.n != null && <p>{tr("{n} reports around Kelaniya so far.", { n: areaK.n })}{used > 0 && ` ${tr("Your reports improved this area: {n} used in the latest update.", { n: used })}`}</p>}
+        <p>{tr("Map data")}: &copy; OpenStreetMap contributors, OpenFreeMap, Copernicus DEM, GSMaP (JAXA), HMIS.</p>
+      </div>
+    </div>
+  );
+
+  // ---- bottom sheet (phones) drag with snap points; side panel (desktop) via CSS
+  const dragRef = useRef<{ y0: number; h0: number } | null>(null);
+  const sheetHeights = () => { const H = wrap.current?.clientHeight ?? 700; return [92, Math.round(H * 0.5), Math.round(H * 0.88)]; };
+  const onSheetDown = (e: React.PointerEvent) => { dragRef.current = { y0: e.clientY, h0: sheetPx ?? sheetHeights()[snap] }; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); };
+  const onSheetMove = (e: React.PointerEvent) => { if (!dragRef.current) return; const hs = sheetHeights(); setSheetPx(Math.max(hs[0], Math.min(hs[2], dragRef.current.h0 + (dragRef.current.y0 - e.clientY)))); };
+  const onSheetUp = () => {
+    if (!dragRef.current) return;
+    const hs = sheetHeights(), cur = sheetPx ?? hs[snap];
+    const moved = Math.abs(cur - dragRef.current.h0) > 6;
+    const nearest = hs.reduce((b, h, i) => (Math.abs(h - cur) < Math.abs(hs[b] - cur) ? i : b), 0);
+    dragRef.current = null; setSheetPx(null); setSnap(moved ? nearest : (snap + 1) % 3);
+  };
+
+  const mapH = full ? "h-full w-full" : "h-[calc(100svh-290px)] min-h-[440px] max-h-[900px] w-full overflow-hidden rounded-xl border border-slate-200 md:h-[calc(100svh-170px)] md:min-h-[520px] dark:border-slate-700";
+  const results = (
+    <>
+      {qOpen && q.trim().length >= 2 && hits.length === 0 && gaz && <p className={`mt-1 rounded-lg px-3 py-2 text-xs text-slate-600 dark:text-slate-300 ${GLASS}`}>{tr("No match. Try a town, road or landmark.")}</p>}
+      {qOpen && hits.length > 0 && (
+        <ul id="f3d-search-list" role="listbox" className={`mt-1 max-h-64 overflow-y-auto rounded-lg text-xs ${GLASS}`}>
+          {hits.map((h, i) => (
+            <li key={`${h.n}-${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); goTo(h); }} onMouseEnter={() => setActive(i)} className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 ${i === active ? "bg-sky-50 dark:bg-slate-800" : ""}`}>
+              <span className="truncate">{h.n}</span>
+              <span className="shrink-0 text-[10px] text-slate-500">{tr(h.tag)}{hitCovered[i] ? "" : ` ${dot} ${tr("not covered yet")}`}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 
   return (
     <div className="space-y-3">
+      {header}
       <div ref={wrap} className={full ? "fixed inset-0 z-[70] bg-slate-100 dark:bg-slate-950" : "relative"}>
-        <div ref={box} className={full ? "h-full w-full" : "h-[62vh] min-h-[380px] w-full overflow-hidden rounded-lg border border-slate-300 bg-slate-100 dark:border-slate-700"} data-testid="flood3d-map" />
+        <div ref={box} className={mapH} data-testid="flood3d-map" />
         <canvas ref={rainFx} className="pointer-events-none absolute inset-0 z-[5]" aria-hidden />
-        <button
-          type="button"
-          onClick={toggleFull}
-          aria-pressed={full}
-          className="absolute left-2 top-2 z-10 rounded-md bg-white/95 px-3 py-2 text-xs font-medium text-slate-800 shadow hover:bg-white dark:bg-slate-900/95 dark:text-slate-100"
-          style={full ? { top: "calc(env(safe-area-inset-top, 0px) + 8px)", left: "calc(env(safe-area-inset-left, 0px) + 8px)" } : undefined}
-        >
-          {full ? "Exit full screen" : "Full screen"}
-        </button>
-        <div className="absolute z-20" style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 8px)" : 8, left: full ? "calc(env(safe-area-inset-left, 0px) + 120px)" : 118, right: full ? "calc(env(safe-area-inset-right, 0px) + 52px)" : 52, maxWidth: 360 }}>
-          <input
-            type="search" role="combobox" aria-expanded={qOpen && hits.length > 0} aria-controls="f3d-search-list" aria-label="Search a place, road or gauge" placeholder="Search a place or road"
-            value={q} onChange={(e) => { setQ(e.target.value); setQOpen(true); setActive(0); }} onFocus={() => { loadGaz(); setQOpen(true); }} onKeyDown={onSearchKey}
-            className="w-full rounded-md border border-slate-300 bg-white/95 px-3 py-2 text-xs text-slate-900 shadow dark:border-slate-600 dark:bg-slate-900/95 dark:text-slate-100"
-          />
-          {qOpen && hits.length > 0 && (
-            <ul id="f3d-search-list" role="listbox" className="mt-1 max-h-64 overflow-y-auto rounded-md bg-white text-xs text-slate-900 shadow-lg dark:bg-slate-900 dark:text-slate-100">
-              {hits.map((h, i) => {
-                const cov = hitCovered[i];
-                return (
-                  <li key={`${h.n}-${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); goTo(h); }} onMouseEnter={() => setActive(i)} className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 ${i === active ? "bg-sky-50 dark:bg-slate-800" : ""}`}>
-                    <span className="truncate">{h.n}</span>
-                    <span className="shrink-0 text-[10px] text-slate-500">{h.tag}{cov ? "" : " · not covered yet"}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+
+        {/* top bar: search + map tools */}
+        <div className="absolute z-20 flex items-start gap-2" style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 12px)" : 12, left: full ? "calc(env(safe-area-inset-left, 0px) + 12px)" : 12, right: 12 }}>
+          <div className="w-full max-w-[22rem] min-w-0 flex-1">
+            <div className={`flex items-center gap-2 rounded-lg px-3 ${GLASS}`}>
+              <Search className="size-4 shrink-0 text-slate-500" aria-hidden />
+              <input
+                type="search" role="combobox" aria-expanded={qOpen && hits.length > 0} aria-controls="f3d-search-list" aria-label={tr("Search a place, road or gauge")} placeholder={tr("Search a place or road")}
+                value={q} onChange={(e) => { setQ(e.target.value); setQOpen(true); setActive(0); }} onFocus={() => { loadGaz(); setQOpen(true); }} onKeyDown={onSearchKey}
+                className="h-9 w-full min-w-0 bg-transparent text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-slate-100"
+              />
+            </div>
+            {results}
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button type="button" onClick={locate} className={ICON_BTN} aria-label={tr("Locate me")} title={tr("Locate me")}><LocateFixed className="size-4" /></button>
+            <button type="button" onClick={startReport} className={ICON_BTN} aria-label={tr("Report here")} title={tr("Report here")}><Flag className="size-4" /></button>
+            <button type="button" onClick={toggleFull} aria-pressed={full} className={ICON_BTN} aria-label={full ? tr("Exit full screen") : tr("Full screen")} title={full ? tr("Exit full screen") : tr("Full screen")}>{full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</button>
+          </div>
         </div>
-        <div className="absolute left-2 z-10 flex flex-col gap-2" style={full ? { top: "calc(env(safe-area-inset-top, 0px) + 52px)", left: "calc(env(safe-area-inset-left, 0px) + 8px)" } : { top: "52px" }}>
-          <button type="button" onClick={locate} className="rounded-md bg-white/95 px-3 py-2 text-xs font-medium text-slate-800 shadow hover:bg-white dark:bg-slate-900/95 dark:text-slate-100">Locate me</button>
-          <button type="button" onClick={startReport} className="rounded-md bg-sky-600 px-3 py-2 text-xs font-semibold text-white shadow hover:bg-sky-700">Report here</button>
-        </div>
-        {geoMsg && <p role="status" className="absolute left-2 right-14 z-10 rounded bg-slate-800/90 p-2 text-xs text-white shadow" style={{ top: 140 }}>{geoMsg}</p>}
+        {geoMsg && <p role="status" className={`absolute left-3 right-3 z-20 rounded-lg p-2 text-xs md:right-auto md:max-w-sm ${GLASS}`} style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 64px)" : 64 }}>{geoMsg}</p>}
+
         {consentAsk && (
-          <div role="dialog" aria-label="Use your location" className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
-            <div className="max-w-xs space-y-3 rounded-lg bg-white p-4 text-sm text-slate-900 shadow-xl dark:bg-slate-900 dark:text-slate-100">
-              <p className="font-semibold">Use your location?</p>
-              <p>Your exact spot is kept private and used only to improve the flood map. We only read it when you tap, and never show it to anyone.</p>
+          <div role="dialog" aria-label={tr("Use your location?")} className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+            <div className={`max-w-xs space-y-3 rounded-xl p-4 text-sm ${GLASS} bg-white dark:bg-slate-900`}>
+              <p className="font-semibold">{tr("Use your location?")}</p>
+              <p className="text-xs leading-relaxed">{tr("Your exact spot is kept private and used only to improve the flood map. We only read it when you tap, and never show it to anyone.")}</p>
               <div className="flex gap-2">
-                <button type="button" className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white" onClick={() => { setConsented(true); setConsentAsk(false); setGeoMsg(null); geoRef.current?.trigger(); }}>Use my location</button>
-                <button type="button" className="rounded-md border border-slate-300 px-3 py-1.5 text-xs dark:border-slate-600" onClick={() => setConsentAsk(false)}>Not now</button>
+                <button type="button" className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white" onClick={() => { setConsented(true); setConsentAsk(false); setGeoMsg(null); geoRef.current?.trigger(); }}>{tr("Use my location")}</button>
+                <button type="button" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs dark:border-slate-600" onClick={() => setConsentAsk(false)}>{tr("Not now")}</button>
               </div>
             </div>
           </div>
         )}
-        {rep && <ReportPanel pos={rep} cell={cell} onClose={() => setRep(null)} />}
-        {full && !rep && !panelOpen && (
-          <button type="button" onClick={() => setPanelOpen(true)} className="absolute z-10 rounded-md bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-lg md:right-2 md:top-28" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)", right: "calc(env(safe-area-inset-right, 0px) + 12px)" }}>Options</button>
-        )}
-        {full && !rep && panelOpen && (
-          <div role="region" aria-label="Map options" className="absolute inset-x-0 bottom-0 z-10 max-h-[62%] space-y-2 overflow-y-auto rounded-t-xl bg-white/97 p-2 text-slate-900 shadow-2xl dark:bg-slate-900/97 dark:text-slate-100 md:inset-x-auto md:bottom-2 md:right-2 md:top-28 md:max-h-none md:w-80 md:rounded-xl" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)", paddingRight: "calc(env(safe-area-inset-right, 0px) + 8px)" }}>
-            <div className="flex items-center justify-between gap-2">
-              <p className="rounded bg-amber-50 p-1.5 text-[11px] leading-tight text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"><strong>Test map.</strong> Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.</p>
-              <button type="button" onClick={() => setPanelOpen(false)} className="shrink-0 rounded border border-slate-300 px-2 py-1 text-xs dark:border-slate-600">Hide</button>
-            </div>
-            {statusBox}
-            {controls}
-            <div className="flex gap-2">
-              <button type="button" onClick={locate} className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium dark:border-slate-600">Locate me</button>
-              <button type="button" onClick={startReport} className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white">Report here</button>
-            </div>
-            {legend}
-          </div>
-        )}
-        <style>{".maplibregl-ctrl-group:has(.maplibregl-ctrl-geolocate){display:none!important}"}</style>
-        {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Loading map…</div>}
-        {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
-        {!full && <div className="absolute bottom-6 left-2">{legend}</div>}
-      </div>
+        {rep && <ReportPanel pos={rep} cell={cell} onClose={() => setRep(null)} tr={tr} lang={lang} />}
 
-      {statusBox}
-      {controls}
-      {/* TODO(si, ta): translate once the test is promoted; English only for the MVP. */}
+        {/* panel: bottom sheet on phones, side card on desktop */}
+        {!rep && (panelOpen ? (
+          <aside
+            aria-label={tr("Options")}
+            className={`absolute inset-x-0 bottom-0 z-10 flex flex-col rounded-t-2xl md:inset-x-auto md:bottom-11 md:right-3 md:top-16 md:w-80 md:rounded-xl h-[var(--sh)] md:h-auto ${GLASS}`}
+            style={{ ["--sh" as string]: `${sheetPx ?? sheetHeights()[snap]}px`, paddingBottom: "env(safe-area-inset-bottom, 0px)", transition: dragRef.current ? "none" : "height .2s ease" }}
+          >
+            <div className="flex shrink-0 items-center justify-between px-3 pt-1.5">
+              <button type="button" aria-label={tr("Options")} onPointerDown={onSheetDown} onPointerMove={onSheetMove} onPointerUp={onSheetUp} className="mx-auto flex h-5 w-16 touch-none items-center justify-center md:hidden"><span className="h-1 w-9 rounded-full bg-slate-300 dark:bg-slate-600" /></button>
+              <p className="hidden text-xs font-semibold md:block">{tr("Options")}</p>
+              <button type="button" onClick={() => setPanelOpen(false)} aria-label={tr("Hide")} title={tr("Hide")} className="hidden size-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 md:flex"><PanelRightClose className="size-4" /></button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{panelBody}</div>
+          </aside>
+        ) : (
+          <button type="button" onClick={() => setPanelOpen(true)} className={`absolute z-10 flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${GLASS}`} style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)", right: 12 }}><SlidersHorizontal className="size-4" aria-hidden /> {tr("Options")}</button>
+        ))}
+        <style>{".maplibregl-ctrl-group:has(.maplibregl-ctrl-geolocate){display:none!important} .maplibregl-ctrl-bottom-left{margin-bottom:44px} @media (max-width:767px){.maplibregl-ctrl-top-right{margin-top:60px}} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
+        {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{tr("Loading map…")}</div>}
+        {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
+      </div>
+      {/* TODO(si, ta): strings are drafts (strings.ts); review with a native speaker before this leaves /lab. */}
     </div>
   );
 }
 
+/** Upsample the level grid S times: levels bilinear (smooth shorelines, no blocky 30 m cells), flags nearest. */
+function buildUp(g: { L: Float32Array; hw: Float32Array; cls: Uint8Array; band: Uint8Array; river: Uint8Array; unc: Uint8Array; wet: Uint8Array; w: number; h: number }, S: number) {
+  const W2 = g.w * S, H2 = g.h * S;
+  const L2 = new Float32Array(W2 * H2), hw2 = new Uint8Array(W2 * H2), fl = new Uint8Array(W2 * H2), cls2 = new Uint8Array(W2 * H2), band2 = new Uint8Array(W2 * H2);
+  const cap = (v: number) => (Number.isFinite(v) ? v : 60);
+  for (let y = 0; y < H2; y++) {
+    const fy = Math.min(g.h - 1, Math.max(0, (y + 0.5) / S - 0.5)), y0 = Math.floor(fy), y1 = Math.min(g.h - 1, y0 + 1), ty = fy - y0;
+    const ny = Math.min(g.h - 1, Math.floor(y / S));
+    for (let x = 0; x < W2; x++) {
+      const fx = Math.min(g.w - 1, Math.max(0, (x + 0.5) / S - 0.5)), x0 = Math.floor(fx), x1 = Math.min(g.w - 1, x0 + 1), tx = fx - x0;
+      const i = y * W2 + x, n = ny * g.w + Math.min(g.w - 1, Math.floor(x / S));
+      L2[i] = (cap(g.L[y0 * g.w + x0]) * (1 - tx) + cap(g.L[y0 * g.w + x1]) * tx) * (1 - ty) + (cap(g.L[y1 * g.w + x0]) * (1 - tx) + cap(g.L[y1 * g.w + x1]) * tx) * ty;
+      hw2[i] = Math.round(g.hw[n] * 10); fl[i] = g.river[n] | (g.unc[n] << 1) | (g.wet[n] << 2); cls2[i] = g.cls[n]; band2[i] = g.band[n];
+    }
+  }
+  return { W2, H2, L2, hw2, fl, cls2, band2 };
+}
+
 async function loadGrid() {
-  const img = await createImageBitmap(await (await fetch("/flood3d/level.png")).blob(), { colorSpaceConversion: "none", premultiplyAlpha: "none" });
+  const img = await createImageBitmap(await (await fetch("/flood3d/level.webp")).blob(), { colorSpaceConversion: "none", premultiplyAlpha: "none" });
   const c = document.createElement("canvas"); c.width = img.width; c.height = img.height;
   const x = c.getContext("2d", { willReadFrequently: true })!; x.drawImage(img, 0, 0);
   const d = x.getImageData(0, 0, c.width, c.height).data;
   const n = c.width * c.height;
-  const L = new Float32Array(n), hw = new Float32Array(n), cls = new Uint8Array(n), band = new Uint8Array(n), river = new Uint8Array(n), unc = new Uint8Array(n);
+  const L = new Float32Array(n), hw = new Float32Array(n), cls = new Uint8Array(n), band = new Uint8Array(n), river = new Uint8Array(n), unc = new Uint8Array(n), wet = new Uint8Array(n);
   for (let i = 0; i < n; i++) {
     const r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
     river[i] = r === 255 ? 1 : 0;
     L[i] = r === 0 || r === 255 ? Infinity : (r - 1) / PX.step + PX.lo;
-    hw[i] = g / 10; cls[i] = b & 3; band[i] = (b >> 2) & 7; unc[i] = (b >> 5) & 1;
+    hw[i] = g / 10; cls[i] = b & 3; band[i] = (b >> 2) & 7; unc[i] = (b >> 5) & 1; wet[i] = (b >> 6) & 1;
   }
-  return { L, hw, cls, band, river, unc, w: c.width, h: c.height };
+  return { L, hw, cls, band, river, unc, wet, w: c.width, h: c.height };
 }

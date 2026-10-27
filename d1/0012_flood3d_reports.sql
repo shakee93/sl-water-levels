@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS flood3d_reports (
   person_day    TEXT    NOT NULL,
   ip_hash       TEXT    NOT NULL,
   lang          TEXT,
-  status        TEXT    NOT NULL DEFAULT 'new'   -- new | used | outlier (set by scripts/flood3d/prep.py's checks, owner-side)
+  status        TEXT    NOT NULL DEFAULT 'new'   -- new | used | outlier | test (owner pipeline checks: never counted or used) (set by scripts/flood3d/prep.py's checks, owner-side)
 );
 CREATE INDEX IF NOT EXISTS idx_f3r_area ON flood3d_reports (lat3, lon3);
 CREATE INDEX IF NOT EXISTS idx_f3r_person ON flood3d_reports (person_day, created_ms);

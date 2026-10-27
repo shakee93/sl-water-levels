@@ -24,7 +24,7 @@
   "south": 6.86,
   "north": 7.0,
   "deg": 0.00028,
-  "level": "R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)"
+  "level": "R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)"
  },
  "drainage": "Kelani + connected canals",
  "minfilter": 3,
