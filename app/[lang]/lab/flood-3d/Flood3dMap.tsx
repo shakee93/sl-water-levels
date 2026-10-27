@@ -334,8 +334,22 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
       console.warn("[flood3d] geolocation error", err.code, err.message, "stage", stage);
       if (stage === 0 && (err.code === 2 || err.code === 3)) { navigator.geolocation.getCurrentPosition(ok, (e) => fail(e, 1), { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }); return; }
       setGeoMsg(msgFor(err.code));
+      void approxCity();
     };
     navigator.geolocation.getCurrentPosition(ok, (e) => fail(e, 0), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  };
+  // Fallback when the device gives no position: the visitor's approximate city from the request headers (our own route, never stored, never a report position).
+  const approxCity = async () => {
+    try {
+      const r = await fetch("/api/flood3d/where", { cache: "no-store" });
+      const d = (await r.json()) as { city: string | null; lat?: number; lon?: number };
+      const map = mapRef.current, m = meta.current;
+      if (!d.city || d.lat == null || d.lon == null || !map || !m) return;
+      const inside = d.lon >= m.png.west - 0.03 && d.lon <= m.png.east + 0.17 && d.lat >= m.png.south - 0.03 && d.lat <= m.png.north + 0.03;
+      if (!inside) { setGeoMsg(tr("We couldn't get your exact location. Your connection looks like {city}, which is outside the covered area (Kelani corridor).", { city: d.city })); return; }
+      setGeoMsg(tr("We couldn't get your exact location, so we moved to {city} (approximate). Tap your street to check it.", { city: d.city }));
+      map.flyTo({ center: [d.lon, d.lat], zoom: 13, duration: 1400 });
+    } catch { /* keep the plain error message */ }
   };
   const showMe = (lat: number, lon: number, acc: number) => {
     const map = mapRef.current, m = meta.current;
