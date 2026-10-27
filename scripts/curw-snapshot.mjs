@@ -433,12 +433,15 @@ async function main() {
 SELECT station, grp, observed_ms - observed_ms % 3600000, observed_ms, level_m_msl FROM curw_levels WHERE observed_ms > ${fold} AND observed_ms % 3600000 < 900000 ORDER BY observed_ms DESC
 ON CONFLICT (station, hour_ms) DO UPDATE SET observed_ms = excluded.observed_ms, level_m_msl = excluded.level_m_msl WHERE excluded.observed_ms <= curw_hourly.observed_ms;`);
   sql.push(`DELETE FROM curw_hourly WHERE hour_ms < ${nowMs - 8 * 86_400_000};`);
-  sql.push(`INSERT OR REPLACE INTO curw_series (station, grp, pts, updated_ms)
+  // curw_series = the hourly history only, rebuilt once an hour (first run after the hour): the rebuild reads ~19k rows, so doing
+  // it every 15 minutes cost ~1.8M D1 rows a day. The site adds the newest 3 h straight from curw_levels (indexed, ~400 rows).
+  if (colomboMin < 15 || process.env.CURW_SERIES) {
+    sql.push(`INSERT OR REPLACE INTO curw_series (station, grp, pts, updated_ms)
 SELECT station, MAX(grp), json_group_array(json_array(ms, m)), ${nowMs} FROM (
-  SELECT station, grp, observed_ms AS ms, level_m_msl AS m FROM curw_hourly WHERE hour_ms > ${nowMs - 7 * 86_400_000} AND observed_ms <= ${nowMs - 3 * 3_600_000}
-  UNION ALL SELECT station, grp, observed_ms, level_m_msl FROM curw_levels WHERE observed_ms > ${nowMs - 3 * 3_600_000}
-  ORDER BY station, ms) GROUP BY station;`);
-  sql.push(`DELETE FROM curw_series WHERE updated_ms < ${nowMs};`);
+  SELECT station, grp, observed_ms AS ms, level_m_msl AS m FROM curw_hourly WHERE hour_ms > ${nowMs - 7 * 86_400_000} ORDER BY station, ms
+) GROUP BY station;`);
+    sql.push(`DELETE FROM curw_series WHERE updated_ms < ${nowMs};`);
+  }
   await writeFile(sqlFile, sql.join("\n") + "\n");
 
   if (statusFile) {

@@ -24,8 +24,14 @@ async function load(): Promise<Canals> {
   const now = Date.now();
   // One ready-made row per gauge, built by scripts/curw-snapshot.mjs every 15 min (hourly for 7 days + the newest 3 h in full).
   // Scanning curw_levels here instead read the whole archive on every refresh and used up D1's daily read limit (26 Oct 2026).
-  const [series, status] = await Promise.all([d1Query("SELECT station, grp, pts FROM curw_series"), d1Query("SELECT station, status FROM curw_status")]);
+  // curw_series holds the hourly history (rebuilt hourly); the newest 3 h come straight from curw_levels by its observed_ms index.
+  const [series, recent, status] = await Promise.all([
+    d1Query("SELECT station, grp, pts FROM curw_series"),
+    d1Query("SELECT station, grp, observed_ms AS ms, level_m_msl AS m FROM curw_levels WHERE observed_ms > ? ORDER BY station, observed_ms", [now - 3 * 3_600_000]),
+    d1Query("SELECT station, status FROM curw_status"),
+  ]);
   const rows: Row[] = [];
+  const cut = now - 3 * 3_600_000;
   for (const s of series) {
     let pts: [number, number][] = [];
     try {
@@ -33,8 +39,10 @@ async function load(): Promise<Canals> {
     } catch {
       /* skip a damaged row */
     }
-    for (const [ms, m] of pts) rows.push({ station: String(s.station), grp: String(s.grp), ms, m });
+    for (const [ms, m] of pts) if (ms <= cut) rows.push({ station: String(s.station), grp: String(s.grp), ms, m });
   }
+  for (const r of recent) rows.push({ station: String(r.station), grp: String(r.grp), ms: Number(r.ms), m: Number(r.m) });
+  rows.sort((a, b) => (a.station < b.station ? -1 : a.station > b.station ? 1 : a.ms - b.ms));
   const off = new Set(status.filter((s) => s.status !== "ok").map((s) => String(s.station)));
   const by = new Map<string, { group: string; pts: Pt[] }>();
   for (const r of rows) {
