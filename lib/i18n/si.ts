@@ -627,6 +627,10 @@ export const si: Dict = {
   "release.size.large": "විශාල", // needs native review
   "release.size.veryLarge": "ඉතා විශාල", // needs native review
   "release.sizeChip": "{size} · ලීටර් {n}/තත්. පමණ", // needs native review
+  "release.flow": "ලීටර් {n}/තත්. පමණ", // needs native review
+  "release.tile.title": "ජලය මුදාහරින ජලාශ", // needs native review
+  "release.tile.releasing": "ජලය මුදාහරිනවා", // needs native review
+  "release.tile.reported": "වාන් දොරටු විවෘත බව වාර්තා වේ", // needs native review
   "release.cusecs": "කියුසෙක් {n}", // needs native review
   "release.cusecHelp": "කියුසෙක් යනු කුමක්ද?", // needs native review
   "release.cusecExplain": "කියුසෙක් 1 = තත්පරයකට ඝන අඩියක ජලය, ලීටර් 28ක් පමණ.", // needs native review

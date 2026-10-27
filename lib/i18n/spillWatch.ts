@@ -16,6 +16,7 @@ const en = {
   "home.lead": "May spill soon (Mahaweli water managers' weekly plan, not a flood warning)",
   "home.item": "{name}: {range}",
   "watch.lead": "{name}: reservoir watch",
+  "watch.tag": "Reservoir watch",
   "watch.note": "Gates reported open. Its water goes into another reservoir, not straight into a river. Not a flood warning.",
   "warn.lead": "Spill warning reported (news, not official; gates not open)",
   "warn.item": "{name}: {outlet}, {when}",
@@ -35,6 +36,7 @@ const si: Record<K, string> = {
   "home.lead": "ඉක්මනින් පිටාර ගැලිය හැක (මහවැලි ජල කළමනාකරුවන්ගේ සතිපතා සැලසුම, ගංවතුර අනතුරු ඇඟවීමක් නොවේ)", // needs native review
   "home.item": "{name}: {range}", // needs native review
   "watch.lead": "{name}: ජලාශ නිරීක්ෂණය", // needs native review
+  "watch.tag": "ජලාශ නිරීක්ෂණය", // needs native review
   "watch.note": "වාන් දොරටු විවෘත වූ බව වාර්තා වේ. එහි ජලය ගංගාවකට නොව වෙනත් ජලාශයකට ගලා යයි. ගංවතුර අනතුරු ඇඟවීමක් නොවේ.", // needs native review
   "warn.lead": "පිටාර ගැලීමේ අනතුරු ඇඟවීමක් වාර්තා වී ඇත (පුවත්, නිල නොවේ; දොරටු විවෘත නැත)", // needs native review
   "warn.item": "{name}: {outlet}, {when}", // needs native review
@@ -53,6 +55,7 @@ const ta: Record<K, string> = {
   "home.lead": "விரைவில் நிரம்பி வழியக்கூடும் (மகாவலி நீர் மேலாளர்களின் வாராந்தரத் திட்டம், வெள்ள எச்சரிக்கை அல்ல)", // needs native review
   "home.item": "{name}: {range}", // needs native review
   "watch.lead": "{name}: நீர்த்தேக்க கண்காணிப்பு", // needs native review
+  "watch.tag": "நீர்த்தேக்க கண்காணிப்பு", // needs native review
   "watch.note": "வான்கதவுகள் திறக்கப்பட்டதாக அறிவிக்கப்பட்டுள்ளது. இதன் நீர் ஆற்றுக்கு அல்ல, மற்றொரு நீர்த்தேக்கத்துக்குச் செல்கிறது. இது வெள்ள எச்சரிக்கை அல்ல.", // needs native review
   "warn.lead": "நிரம்பி வழியும் எச்சரிக்கை செய்தியாக அறிவிக்கப்பட்டது (அதிகாரப்பூர்வமற்றது; கதவுகள் திறக்கப்படவில்லை)", // needs native review
   "warn.item": "{name}: {outlet}, {when}", // needs native review

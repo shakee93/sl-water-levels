@@ -627,6 +627,10 @@ export const ta: Dict = {
   "release.size.large": "பெரியது", // needs native review
   "release.size.veryLarge": "மிகப் பெரியது", // needs native review
   "release.sizeChip": "{size} · ~{n} லி/வி", // needs native review
+  "release.flow": "~{n} லி/வி", // needs native review
+  "release.tile.title": "நீரை வெளியேற்றும் நீர்த்தேக்கங்கள்", // needs native review
+  "release.tile.releasing": "நீரை வெளியேற்றுகிறது", // needs native review
+  "release.tile.reported": "வான் கதவுகள் திறப்பு எனச் செய்தி", // needs native review
   "release.cusecs": "{n} கியூசெக்", // needs native review
   "release.cusecHelp": "கியூசெக் என்றால் என்ன?", // needs native review
   "release.cusecExplain": "1 கியூசெக் = ஒரு வினாடிக்கு ஒரு கன அடி நீர், சுமார் 28 லிட்டர்.", // needs native review
