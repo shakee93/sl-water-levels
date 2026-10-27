@@ -174,6 +174,9 @@ lib/
   network inside the EMS footprints (the rest is greyed, no calibration); public reports (Locate me / Report here) go to D1 `flood3d_reports`
   (d1/0012, precise coordinates private, area counts of 3+ only; owner export `scripts/flood3d/reports-export.mjs` feeds `prep.py` via REPORTS=);
   `/api/flood3d/rain` blends satellite hour x gauge gain with live HMIS gauges for the optional Rain now layer.
+  Optional private report photos: browser resize to JPEG, `/api/flood3d/photo` strips metadata and stores via the `workers/flood-photos` Worker in the
+  private R2 bucket `sl-flood-photos` (needs Vercel env FLOOD_PHOTO_URL + FLOOD_PHOTO_SECRET; dormant without them; D1 columns photo_key, photo_count,
+  exif_agree). Live gauges: `lib/flood3d.ts` (one snapshot read; routes must stay dynamic: they read `headers()`).
 
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.
