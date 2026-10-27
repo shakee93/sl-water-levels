@@ -47,6 +47,32 @@ export default function Flood3dMap() {
   const raf = useRef(0);
 
   const [ready, setReady] = useState(false);
+  // Full screen: the browser's Fullscreen API where it exists (desktop, Android); a fixed full-viewport layer otherwise (iPhone Safari
+  // has no element fullscreen). Escape or the button leaves it; the map is resized after every change.
+  const wrap = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
+  const toggleFull = useCallback(() => {
+    const el = wrap.current;
+    if (!full) {
+      setFull(true);
+      el?.requestFullscreen?.().catch(() => {});
+    } else {
+      setFull(false);
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    }
+  }, [full]);
+  useEffect(() => {
+    const onFs = () => { if (!document.fullscreenElement) setFull(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); };
+    document.addEventListener("fullscreenchange", onFs);
+    window.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("fullscreenchange", onFs); window.removeEventListener("keydown", onKey); };
+  }, []);
+  useEffect(() => {
+    document.body.style.overflow = full ? "hidden" : "";
+    const t = setTimeout(() => mapRef.current?.resize(), 60);
+    return () => clearTimeout(t);
+  }, [full]);
   const [err, setErr] = useState<string | null>(null);
   const [live, setLive] = useState<Live | null>(null);
   const [fetchedAt, setFetchedAt] = useState<number | null>(null);
@@ -298,8 +324,17 @@ export default function Flood3dMap() {
 
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <div ref={box} className="h-[62vh] min-h-[380px] w-full overflow-hidden rounded-lg border border-slate-300 bg-slate-100 dark:border-slate-700" data-testid="flood3d-map" />
+      <div ref={wrap} className={full ? "fixed inset-0 z-[70] bg-slate-100 dark:bg-slate-950" : "relative"}>
+        <div ref={box} className={full ? "h-full w-full" : "h-[62vh] min-h-[380px] w-full overflow-hidden rounded-lg border border-slate-300 bg-slate-100 dark:border-slate-700"} data-testid="flood3d-map" />
+        <button
+          type="button"
+          onClick={toggleFull}
+          aria-pressed={full}
+          className="absolute left-2 top-2 z-10 rounded-md bg-white/95 px-3 py-2 text-xs font-medium text-slate-800 shadow hover:bg-white dark:bg-slate-900/95 dark:text-slate-100"
+          style={full ? { top: "calc(env(safe-area-inset-top, 0px) + 8px)", left: "calc(env(safe-area-inset-left, 0px) + 8px)" } : undefined}
+        >
+          {full ? "Exit full screen" : "Full screen"}
+        </button>
         {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Loading map…</div>}
         {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
         <div className="pointer-events-none absolute bottom-6 left-2 rounded bg-white/90 px-2 py-1 text-[11px] leading-tight text-slate-700 shadow dark:bg-slate-900/90 dark:text-slate-200">
