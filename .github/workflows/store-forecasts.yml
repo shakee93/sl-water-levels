@@ -15,6 +15,10 @@ concurrency:
 
 jobs:
   store:
+    # One heavy D1 writer at a time (curw-snapshot, store-forecasts, gsmap-snapshot share this group).
+    concurrency:
+      group: d1-writes
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -34,14 +38,29 @@ jobs:
       - name: Build SQL
         run: node scripts/store-forecasts.mjs forecasts.json forecasts.sql
       - name: Write to D1
-        run: npx -y wrangler@4 d1 execute sl-water-levels --remote --yes --file=forecasts.sql
+        run: node lib/d1Sql.mjs forecasts.sql
 
-      - name: Tell Slack the workflow failed
+      # Slack only hears about a workflow that has failed 3 runs in a row (the 3rd failure, then every 12th): a single D1 or API
+      # blip on a job that runs every 5-30 minutes fixes itself on the next run. Cancelled/skipped runs do not count either way.
+      # If the history cannot be read, it alerts (fail open).
+      - name: Tell Slack the workflow failed (3 in a row)
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          n=0
+          if hist=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "${{ github.workflow }}" --status completed --limit 30 --json databaseId,conclusion --jq '[.[] | select(.databaseId != ${{ github.run_id }}) | select(.conclusion == "success" or .conclusion == "failure") | .conclusion] | join(" ")' 2>/dev/null); then
+            for c in $hist; do [ "$c" = "failure" ] && n=$((n+1)) || break; done
+          else
+            n=2
+          fi
+          streak=$((n+1))
+          if [ "$streak" -ne 3 ] && [ $((streak % 12)) -ne 0 ]; then
+            echo "Failed run #$streak in a row: not alerting Slack until the 3rd."
+            exit 0
+          fi
           curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
-            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            --data "{\"text\":\"⚠️ Workflow failed $streak runs in a row: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
             "$SLACK_WEBHOOK_URL" || true

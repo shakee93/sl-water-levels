@@ -8,7 +8,7 @@
 // X_REPOST_DAILY_MAX (3), X_REPOST_READ_CAP (40 posts read a day), X_REPOST_MAX_AGE_MIN (360), X_MONTHLY_BUDGET_USD, X_COST_POST,
 // X_COST_READ, SLACK_WEBHOOK_URL / SLACK_X_WEBHOOK_URL, CLOUDFLARE_API_TOKEN, OPENAI_API_KEY.
 import { pathToFileURL } from "node:url";
-import { d1Query } from "../lib/d1.ts";
+import { d1Query, isD1ReadBlip } from "../lib/d1.ts";
 import { gate } from "../lib/xClient.ts";
 import { getMe, searchRecent, repostTweet } from "../lib/xRead.ts";
 import { colomboDay } from "../lib/xCompose.ts";
@@ -137,5 +137,11 @@ export async function run(o = {}) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  run().catch((e) => { console.error(`x-reposts failed: ${e instanceof Error ? e.message : e}`); process.exit(1); });
+  run().catch((e) => {
+    if (isD1ReadBlip(e)) {
+      console.warn(`::warning::x-reposts skipped this run: D1 timed out (${e.message}). The next run looks at the same posts.`);
+      process.exit(0);
+    }
+    console.error(`x-reposts failed: ${e instanceof Error ? e.message : e}`); process.exit(1);
+  });
 }

@@ -23,7 +23,7 @@
 // replies are OFF (X_REPLIES=on), and a monthly budget guard (X_MONTHLY_BUDGET_USD, default 10; X_COST_POST=0.015,
 // X_COST_LINK_POST=0.20 are estimates) stops everything except Major-flood rises and all-clears at 80% of the budget.
 import { pathToFileURL } from "node:url";
-import { d1Query } from "../lib/d1.ts";
+import { d1Query, isD1ReadBlip } from "../lib/d1.ts";
 import { gate, postTweet } from "../lib/xClient.ts";
 import {
   composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop,
@@ -524,6 +524,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (mode === "sample") for (const s of r) console.log(`\n${s.msg}`);
     })
     .catch(async (e) => {
+      if (isD1ReadBlip(e)) {
+        console.warn(`::warning::x-post skipped this run: D1 timed out (${e.message}). Nothing was posted; the next run looks again.`);
+        process.exit(0);
+      }
       console.error(`x-post failed: ${e instanceof Error ? e.message : e}`);
       process.exit(1);
     });

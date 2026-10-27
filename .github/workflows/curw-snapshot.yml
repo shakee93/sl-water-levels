@@ -29,6 +29,10 @@ concurrency:
 
 jobs:
   curw:
+    # One heavy D1 writer at a time (curw-snapshot, store-forecasts, gsmap-snapshot share this group).
+    concurrency:
+      group: d1-writes
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
@@ -80,7 +84,7 @@ jobs:
       # Write whatever was read even when the source looked unhealthy (some pages may have worked).
       - name: Write to D1 (private)
         if: steps.gap.outputs.go == 'true' && hashFiles('curw.sql') != ''
-        run: npx -y wrangler@4 d1 execute sl-water-levels --remote --yes --file=curw.sql
+        run: node lib/d1Sql.mjs curw.sql --soft
 
       # Source problems (nothing readable, a page missing, readings older than 2 h) fail the run so the health
       # check shows it; offline gauges alone never do.

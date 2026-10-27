@@ -11,7 +11,7 @@
 //      (0.015), X_COST_READ (0.005 per post read), X_CRITICAL_SLACK_MENTION (default <!channel>).
 import { pathToFileURL } from "node:url";
 import { readFileSync } from "node:fs";
-import { d1Query } from "../lib/d1.ts";
+import { d1Query, isD1ReadBlip } from "../lib/d1.ts";
 import { gate, postTweet } from "../lib/xClient.ts";
 import { getMe, getMentions, getDms, sendDm } from "../lib/xRead.ts";
 import { colomboDay, tweetLength, MAX_TWEET } from "../lib/xCompose.ts";
@@ -422,13 +422,17 @@ export async function run(o = {}) {
   }
   if (x.paused) await saveValue("meta", meta, now, query);
   // old mention text is not kept for long
-  await query("UPDATE x_replies SET text = '' WHERE ts < ? AND text <> ''", [now - 30 * 86_400_000]);
+  await query("UPDATE x_replies SET text = '' WHERE ts < ? AND text <> ''", [now - 30 * 86_400_000], { idempotent: true });
   log(`replies: handled ${handled}${mode === "live" ? "" : " (dry run)"}, ${JSON.stringify(counts)}, read ${used} post(s)`);
   return { mode, handled, counts, read: used };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   run().catch((e) => {
+    if (isD1ReadBlip(e)) {
+      console.warn(`::warning::x-replies skipped this run: D1 timed out (${e.message}). The next run picks up the same mentions.`);
+      process.exit(0);
+    }
     console.error(`x-replies failed: ${e instanceof Error ? e.message : e}`);
     process.exit(1);
   });

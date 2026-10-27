@@ -6,8 +6,8 @@
 // the site's /api/levels) = likely.
 //
 // Usage (CI, after scripts/gsmap-snapshot.mjs): node --experimental-strip-types scripts/street-rain-log.mjs <dataDir>
-//   reads <dataDir>/gsmap/latest.json (the file the website reads); writes to Cloudflare D1 "sl-water-levels" with
-//   wrangler (CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN) and posts to SLACK_WEBHOOK_URL (optional).
+//   reads <dataDir>/gsmap/latest.json (the file the website reads); writes to Cloudflare D1 "sl-water-levels" over the HTTP
+//   /query endpoint (lib/d1Sql.mjs; CLOUDFLARE_API_TOKEN) and posts to SLACK_WEBHOOK_URL (optional).
 //   Flags: --dry-run  print the SQL and the Slack text, touch nothing (also skips the D1 read: pass --prev none|possible|likely)
 //          --river 1|0  use this river-trigger value instead of asking SITE_URL/api/levels (tests, dry runs)
 //
@@ -28,13 +28,12 @@
 // (shadow_state, api_gauge_mm, gauge_source, api_ogimet_mm, api_arcgis_mm) and its changes in street_rain_shadow_changes.
 // No Slack or push of its own: only a "(Shadow rule: x.)" tail on a ping the live rule already sends, when they disagree.
 // shadow_state is NULL (unknown, never "none") when the answer depends on a gauge week we could not compute.
-import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { streetState, shadowStreetState, stateChange, isReportable, noticeFor, riverTrigger, STREET_POSSIBLE_MM_24H, STREET_LIKELY_MM_24H, STREET_HOURLY_CAP_MM } from "../lib/streetRainLog.ts";
 import { PLACES } from "../lib/places.ts";
+import { splitSql, runStatements, selectRows, D1HttpError } from "../lib/d1Sql.mjs";
 import { gaugeWetness, readGaugeArchive, colomboDay, API_WET_MM } from "../lib/gaugeRain.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -67,22 +66,29 @@ const LEAD_TOWN = "wellampitiya";
 const leadOf = (zone) => (zone === "colombo-east" ? LEAD_TOWN : townsOf(zone)[0] ?? LEAD_TOWN);
 const areaOf = (zone) => (zone === "colombo-east" ? "Wellampitiya and nearby" : PLACES.filter((p) => p.rainZone === zone).map((p) => p.name).join(", ") || zone);
 
-// ---- wrangler ---------------------------------------------------------------------------------
-function wrangler(wargs) {
-  return execFileSync("npx", ["-y", "wrangler@4", "d1", "execute", "sl-water-levels", "--remote", ...wargs], { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, stdio: ["ignore", "pipe", "inherit"] });
-}
-const rowsOf = (sql) => {
-  const out = wrangler(["--json", "--command", sql]);
-  return JSON.parse(out)[0]?.results ?? [];
+// ---- D1 (HTTP /query, never `wrangler d1 execute --file`: that is D1's import path and locks the database, see lib/d1Sql.mjs) ----
+// A transient D1 failure (timeout, 7429) means "skip this run": the next run re-reads the same latest.json and everything written is
+// idempotent, so nothing is lost; the job warns and exits 0 instead of paging Slack for a blip.
+const softExit = (e) => {
+  if (e instanceof D1HttpError && e.transient) {
+    console.warn(`::warning::D1 was slow or unavailable (${e.message}); the street-rain log skips this run and the next one catches up`);
+    process.exit(0);
+  }
+  throw e;
 };
+const run = (sql) => runStatements(splitSql(sql), { label: "street-rain-log" });
+const rowsOf = (sql) => selectRows(sql);
 
 if (!DRY) {
-  wrangler(["--yes", "--file", path.join(here, "../d1/0003_street_flood.sql")]);
-  wrangler(["--yes", "--file", path.join(here, "../d1/0005_street_shadow.sql")]);
-  // idempotent column migration: SQLite has no ADD COLUMN IF NOT EXISTS, so look first
-  for (const [table, cols] of [["street_rain_log", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"], ["api_gauge_mm", "REAL"], ["gauge_source", "TEXT"], ["shadow_state", "TEXT"], ["api_ogimet_mm", "REAL"], ["api_arcgis_mm", "REAL"]]], ["street_rain_changes", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"]]]]) {
-    const have = new Set(rowsOf(`PRAGMA table_info(${table})`).map((r) => r.name));
-    for (const [c, type] of cols) if (!have.has(c)) wrangler(["--yes", "--command", `ALTER TABLE ${table} ADD COLUMN ${c} ${type}`]);
+  try {
+    for (const f of ["../d1/0003_street_flood.sql", "../d1/0005_street_shadow.sql"]) await run(readFileSync(path.join(here, f), "utf8"));
+    // idempotent column migration: SQLite has no ADD COLUMN IF NOT EXISTS, so look first
+    for (const [table, cols] of [["street_rain_log", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"], ["api_gauge_mm", "REAL"], ["gauge_source", "TEXT"], ["shadow_state", "TEXT"], ["api_ogimet_mm", "REAL"], ["api_arcgis_mm", "REAL"]]], ["street_rain_changes", [["mm24h_clipped", "REAL"], ["river_trigger", "INTEGER"]]]]) {
+      const have = new Set((await rowsOf(`PRAGMA table_info(${table})`)).map((r) => r.name));
+      for (const [c, type] of cols) if (!have.has(c)) await run(`ALTER TABLE ${table} ADD COLUMN ${c} ${type}`);
+    }
+  } catch (e) {
+    softExit(e);
   }
 }
 
@@ -128,13 +134,17 @@ for (const [zone, z] of Object.entries(latest.zones ?? {})) {
     lastKnown = prevFlag && prevFlag !== "null" ? prevFlag : null;
   } else {
     const z1 = q(zone);
-    newestLogged = Number(rowsOf(`SELECT COALESCE(MAX(data_end_ms), 0) AS t FROM street_rain_log WHERE zone = ${z1}`)[0]?.t ?? 0);
-    lastKnown = rowsOf(`SELECT state FROM street_rain_log WHERE zone = ${z1} AND state IS NOT NULL ORDER BY data_end_ms DESC LIMIT 1`)[0]?.state ?? null;
-    lastShadow = rowsOf(`SELECT shadow_state AS s FROM street_rain_log WHERE zone = ${z1} AND shadow_state IS NOT NULL ORDER BY data_end_ms DESC LIMIT 1`)[0]?.s ?? null;
-    lastRiseNoticeMs = rowsOf(`SELECT MAX(notified_ms) AS t FROM street_rain_changes WHERE zone = ${z1} AND notified = 1 AND to_state <> 'none'`)[0]?.t ?? null;
-    pending = rowsOf(`SELECT changed_ms, from_state, to_state, mm1h, mm6h, mm24h, mm24h_clipped, river_trigger FROM street_rain_changes WHERE zone = ${z1} AND notified = 0 ORDER BY changed_ms`).map((r) => ({
-      zone, changedMs: Number(r.changed_ms), from: r.from_state, to: r.to_state, mm1h: r.mm1h, mm6h: r.mm6h, mm24h: r.mm24h, clipped: r.mm24h_clipped, river: Number(r.river_trigger) === 1, riverStation: null, riverFt: null,
-    }));
+    try {
+      newestLogged = Number((await rowsOf(`SELECT COALESCE(MAX(data_end_ms), 0) AS t FROM street_rain_log WHERE zone = ${z1}`))[0]?.t ?? 0);
+      lastKnown = (await rowsOf(`SELECT state FROM street_rain_log WHERE zone = ${z1} AND state IS NOT NULL ORDER BY data_end_ms DESC LIMIT 1`))[0]?.state ?? null;
+      lastShadow = (await rowsOf(`SELECT shadow_state AS s FROM street_rain_log WHERE zone = ${z1} AND shadow_state IS NOT NULL ORDER BY data_end_ms DESC LIMIT 1`))[0]?.s ?? null;
+      lastRiseNoticeMs = (await rowsOf(`SELECT MAX(notified_ms) AS t FROM street_rain_changes WHERE zone = ${z1} AND notified = 1 AND to_state <> 'none'`))[0]?.t ?? null;
+      pending = (await rowsOf(`SELECT changed_ms, from_state, to_state, mm1h, mm6h, mm24h, mm24h_clipped, river_trigger FROM street_rain_changes WHERE zone = ${z1} AND notified = 0 ORDER BY changed_ms`)).map((r) => ({
+        zone, changedMs: Number(r.changed_ms), from: r.from_state, to: r.to_state, mm1h: r.mm1h, mm6h: r.mm6h, mm24h: r.mm24h, clipped: r.mm24h_clipped, river: Number(r.river_trigger) === 1, riverStation: null, riverFt: null,
+      }));
+    } catch (e) {
+      softExit(e);
+    }
   }
   // gauges unreadable this run: do not let "river unknown" read as "river fell" and clear a likely that the river caused
   if (!river && zone === "colombo-east" && lastKnown === "likely" && state !== "likely") state = null;
@@ -165,13 +175,10 @@ if (sql.length) {
   const body = sql.join("\n") + "\n";
   if (DRY) console.log("--- SQL ---\n" + body);
   else {
-    const dir = mkdtempSync(path.join(tmpdir(), "street-log-"));
     try {
-      const f = path.join(dir, "log.sql");
-      writeFileSync(f, body);
-      wrangler(["--yes", "--file", f]);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
+      await run(body);
+    } catch (e) {
+      softExit(e);
     }
   }
 }
@@ -218,5 +225,11 @@ for (const n of notices) {
   }
   if (await slack(text(n))) updates.push(`UPDATE street_rain_changes SET notified = 1, notified_ms = ${NOW} WHERE zone = ${q(n.zone)} AND changed_ms = ${n.changedMs};`);
 }
-if (updates.length && !DRY) wrangler(["--yes", "--command", updates.join(" ")]);
+if (updates.length && !DRY) {
+  try {
+    await run(updates.join("\n"));
+  } catch (e) {
+    softExit(e);
+  }
+}
 else if (updates.length) console.log(updates.join("\n"));

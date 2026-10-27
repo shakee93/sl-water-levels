@@ -34,16 +34,29 @@ async function cf(path: string, init?: RequestInit): Promise<{ result?: unknown;
 }
 
 // Cloudflare's API sometimes stalls for a few seconds (26 Oct 2026: x-post and x-replies both hit the 8 s timeout in the same
-// second and emailed a failure). Reads are retried once after a timeout or network error; writes are not, because a write that
-// timed out may still have landed and must not run twice.
-const transient = (e: unknown) => e instanceof Error && !(e instanceof D1NotConfigured) && !e.message.startsWith("D1 HTTP");
+// second and emailed a failure; on 27 Oct a D1 import lock made every client time out for hours). Reads are retried twice after a
+// timeout, a network error or D1's own 5xx / "storage operation exceeded timeout" (1.5 s then 5 s apart); writes are not,
+// because a write that timed out may still have landed and must not run twice.
+/** A D1 call failed in a way that is worth "skip this run, try the next one": timeout, network error, 5xx, 429, D1 timeout/reset (7429). */
+export class D1Transient extends Error {
+  write: boolean;
+  constructor(message: string, write: boolean) {
+    super(message);
+    this.name = "D1Transient";
+    this.write = write;
+  }
+}
+const transient = (e: unknown) =>
+  e instanceof Error && !(e instanceof D1NotConfigured) && (!e.message.startsWith("D1 HTTP") || /D1 HTTP (5\d\d|429)\b|timeout|reset|7429|overloaded/i.test(e.message));
+const BACKOFF_MS = [1500, 5000];
 async function once<T>(f: () => Promise<T>, retry: boolean): Promise<T> {
-  try {
-    return await f();
-  } catch (e) {
-    if (!retry || !transient(e)) throw e;
-    await new Promise((r) => setTimeout(r, 1500));
-    return f();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await f();
+    } catch (e) {
+      if (!retry || !transient(e) || attempt >= BACKOFF_MS.length) throw e;
+      await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]));
+    }
   }
 }
 
@@ -58,11 +71,23 @@ async function databaseId(): Promise<string> {
 
 export type D1Row = Record<string, string | number | null>;
 
-/** Runs one statement with bound parameters and returns its rows. */
-export async function d1Query(sql: string, params: (string | number | null)[] = []): Promise<D1Row[]> {
-  const id = await databaseId();
-  const read = /^\s*(select|with|pragma)\b/i.test(sql);
-  const j = await once(() => cf(`/accounts/${ACCOUNT_ID}/d1/database/${id}/query`, { method: "POST", body: JSON.stringify({ sql, params }) }), read);
+/**
+ * Runs one statement with bound parameters and returns its rows. Reads, `CREATE ... IF NOT EXISTS` and statements the caller marks
+ * `{ idempotent: true }` (same result when run twice, e.g. housekeeping deletes) are retried twice on a timeout; other writes never are.
+ */
+export async function d1Query(sql: string, params: (string | number | null)[] = [], opts: { idempotent?: boolean } = {}): Promise<D1Row[]> {
+  const read = opts.idempotent === true || /^\s*(select|with|pragma|create\s+(table|index|unique\s+index)\s+if\s+not\s+exists)\b/i.test(sql);
+  let j;
+  try {
+    const id = await databaseId();
+    j = await once(() => cf(`/accounts/${ACCOUNT_ID}/d1/database/${id}/query`, { method: "POST", body: JSON.stringify({ sql, params }) }), read);
+  } catch (e) {
+    // scheduled jobs treat a transient read failure as "skip this run" (isD1ReadBlip); a write may or may not have landed, so it stays an error
+    throw transient(e) ? new D1Transient(e instanceof Error ? e.message : String(e), !read) : e;
+  }
   const first = (j.result as { results?: D1Row[] }[] | undefined)?.[0];
   return first?.results ?? [];
 }
+
+/** True for a D1 read (or idempotent statement) that kept timing out: a scheduled job logs a warning and exits 0 instead of paging anyone. Writes never qualify. */
+export const isD1ReadBlip = (e: unknown): boolean => e instanceof D1Transient && !e.write;

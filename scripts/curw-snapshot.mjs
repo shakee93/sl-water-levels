@@ -20,7 +20,7 @@
 //      so show up here as interpolated "curve" rows.
 //   3. Writes SQL: INSERT rows into curw_levels keyed by (station, observed_ms); an exact "title" row replaces
 //      a "curve" row, never the other way round. curw_status gets one row per station (ok / offline).
-//   4. Keeps the raw PNGs (base64 chunks in curw_raw, 14 days) once a day around 06:00 Colombo, when a level
+//   4. Keeps the raw PNGs (base64 chunks in curw_raw, 3 days) once a day around 06:00 Colombo, when a level
 //      passes a threshold or rises 1 m above its own 24 h minimum, or when a station could not be parsed,
 //      so a wrong parser can be re-run.
 //
@@ -54,6 +54,7 @@ const KNOWN = [
 // Save the raw PNGs when a level reaches this (m MSL), or rises RAW_RISE_M above its own 24 h minimum.
 // Canal gauges normally sit at 0.2-1.3 m; some pond/upland gauges live much higher (Ranwala N 8.5, Thalangama
 // Lake 6.6, Awerihena Tank 5.5), so those have their own numbers.
+const RAW_KEEP_MS = 3 * 86_400_000; // raw chart PNGs are kept 3 days
 const RAW_LEVEL_M = 2.5;
 const RAW_LEVEL_OVERRIDE = { "Salalihini Mw": 3.0, "Ambathale": 3.2, "Chandrika Kumarathunga Mw": 3.2, "Kimbulawela": 3.0, "Thalangama Lake": 7.6, "Awerihena Tank": 6.6, "Ranwala N": 11 };
 const RAW_RISE_M = 1.0;
@@ -408,12 +409,18 @@ async function main() {
       + `last_observed_ms = COALESCE(excluded.last_observed_ms, curw_status.last_observed_ms), checked_ms = excluded.checked_ms, detail = excluded.detail;`);
   }
 
-  // Raw PNGs: once a day just after 06:00 Colombo, on a high or fast-rising level, or when parsing was doubtful.
+  // Raw PNGs. Size lesson (27 Oct 2026): curw_raw held ~200 of the database's 214 MB (14 days of 48 KB base64 chunks) and every
+  // 15-minute run re-sent the whole PNG set as INSERT OR IGNORE even though the stamp is per hour, so most of that traffic was
+  // ignored rows. Now: a capture is only attempted in the first run of an hour (the stamp is hourly anyway), a "high level" alone
+  // only every third hour, the daily capture at 06:00 Colombo as before, and everything is kept 3 days, not 14.
   const bad = stations.filter((r) => r.status === "parse_error" || (r.status === "ok" && r.flag && r.flag !== "title_ocr_fixed"));
   const colomboNow = new Date(nowMs + COLOMBO_MS);
   const daily = colomboNow.getUTCHours() === 6 && colomboNow.getUTCMinutes() < 20;
+  const firstOfHour = colomboNow.getUTCMinutes() < 15;
   const high = stations.some((r) => r.status === "ok" && (r.level >= (RAW_LEVEL_OVERRIDE[r.station] ?? RAW_LEVEL_M) || (r.samples.length > 8 && r.level - Math.min(...r.samples.map((x) => x.level)) >= RAW_RISE_M)));
-  const reasons = [high && "high level", daily && "daily", bad.length && "parse doubts", errors.length && "errors"].filter(Boolean);
+  const highNow = high && firstOfHour && colomboNow.getUTCHours() % 3 === 0;
+  const doubtNow = firstOfHour && (bad.length > 0 || errors.length > 0);
+  const reasons = [highNow && "high level", daily && "daily", doubtNow && bad.length && "parse doubts", doubtNow && errors.length && "errors"].filter(Boolean);
   if (reasons.length || process.env.CURW_RAW) {
     const stamp = new Date(nowMs).toISOString().replace(/[-:]/g, "").slice(0, 13) + "00Z";
     for (const [page, buf] of Object.entries(buffers)) {
@@ -423,7 +430,12 @@ async function main() {
     }
     console.log(`Raw PNGs queued (${reasons.join(", ") || "manual"}).`);
   }
-  sql.push(`DELETE FROM curw_raw WHERE stored_ms < ${nowMs - 14 * 86_400_000};`);
+  // Retention 3 days, deleted in small slices: one DELETE of thousands of 48 KB rows holds the database for seconds. Each statement
+  // takes the oldest 60 rows through idx_curw_raw_stored (nothing to read when nothing is old), so the first runs after this change
+  // drain the old 14-day backlog 60 x 10 rows per run (once an hour, so ~7 h for ~4,000 rows) and afterwards cost 0 rows read.
+  if (firstOfHour || process.env.CURW_RAW_CLEAN) {
+    for (let i = 0; i < 10; i++) sql.push(`DELETE FROM curw_raw WHERE rowid IN (SELECT rowid FROM curw_raw WHERE stored_ms < ${nowMs - RAW_KEEP_MS} LIMIT 60);`);
+  }
   // Hourly table + ready-made series for the site (see the end of d1/0002_curw.sql). Only the last 4 h of readings are
   // folded in each run, so a run reads a few thousand rows, not the archive.
   // A constant bound, so SQLite uses idx_curw_levels_obs: the earlier CASE WHEN EXISTS(...) bound made it scan all of curw_levels

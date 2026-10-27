@@ -1,7 +1,7 @@
 // Turn /api/forecasts JSON into SQL for the Cloudflare D1 prediction log.
 //
 // Usage: node scripts/store-forecasts.mjs <forecasts.json> <out.sql>
-// Then:  wrangler d1 execute sl-water-levels --remote --file <out.sql>
+// Then:  node lib/d1Sql.mjs <out.sql>   (HTTP /query in batches; not `wrangler d1 execute --file`, which locks the database)
 //
 // Idempotent: a run is keyed by (station, issued_at), where issued_at is the
 // gauge reading the forecast started from, so hourly re-runs on an unchanged

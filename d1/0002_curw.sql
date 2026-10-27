@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS curw_status (
   detail           TEXT
 );
 
--- Raw chart PNGs (base64 in 48,000-character chunks, seq 0..n), kept 14 days: once a day, on high water or when
+-- Raw chart PNGs (base64 in 48,000-character chunks, seq 0..n), kept 3 days (was 14): once a day, on high water (every 3rd hour) or when
 -- parsing was doubtful. Re-assemble: SELECT group_concat(b64, '') FROM (SELECT b64 FROM curw_raw WHERE page = ? AND stamp = ? ORDER BY seq).
 CREATE TABLE IF NOT EXISTS curw_raw (
   page      TEXT    NOT NULL,

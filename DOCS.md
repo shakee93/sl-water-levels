@@ -713,6 +713,25 @@ live data and from alias tables.
 (was 36K impressions, 0.3% CTR), "kelani river water level today", "hanwella water level / flood level", "real time water levels", "river water level sri lanka";
 impressions and clicks of `/rivers`; the Sinhala and Tamil script queries; Pages report for `/si` and `/ta` indexing.
 
+## Cloudflare D1 write rules (27 Oct 2026 incident)
+
+- **Never `wrangler d1 execute --file` (or a multi-statement `--command`) in a scheduled job.** Wrangler sends those through D1's
+  import path ("your D1 database will be unavailable to serve queries"), which held the 200 MB database for minutes at a time; every
+  other client then timed out (`The operation was aborted due to timeout`, `D1 DB storage operation exceeded timeout`, code 7429).
+  Use `lib/d1Sql.mjs` (`node lib/d1Sql.mjs file.sql [--soft]`, or `splitSql` + `runStatements` in a script): HTTP `/query`, at
+  most 50 statements / 100 KB per request, 2 retries with backoff. Statements must be idempotent (INSERT OR IGNORE, ON CONFLICT,
+  DELETE by condition). Single-statement `wrangler ... --command` reads are fine.
+- **Reads in scheduled jobs** (`lib/d1.ts`): 2 retries (1.5 s, 5 s). A read that still times out is a "blip" (`isD1ReadBlip`): the X
+  jobs and the street-rain log log a warning and exit 0, because the next run does the same work. Plain writes are never retried.
+- **Slack "Workflow failed"** (x-post, x-replies, x-reposts, gsmap-snapshot, store-forecasts): only on the 3rd failed run in a row,
+  then every 12th. The rule is the inline step at the end of each of those workflows (it reads the run history with `gh run list`).
+- **Heavy writers** (curw-snapshot, store-forecasts, gsmap-snapshot) share the job-level concurrency group `d1-writes`
+  (`cancel-in-progress: false`; GitHub keeps one waiting run per group, so a third queued run replaces the older waiting one).
+- **Size**: `dbstat` is not available on D1. `curw_raw` (base64 chart PNGs, 48 KB per row) was ~95% of the 214 MB file. It is now
+  kept 3 days, captured at most once an hour (daily 06:00 Colombo; "high level" only every 3rd hour), and trimmed by
+  `DELETE ... WHERE rowid IN (SELECT rowid ... LIMIT 60)` slices (index `idx_curw_raw_stored`). D1 does not return freed pages to the
+  file size quickly; expect the reported size to plateau, not drop at once, while new data reuses the freed pages.
+
 ## Monitoring (data-source health)
 
 Sources break silently (a sheet layout change, a moved endpoint, stale data, an exhausted quota), so
