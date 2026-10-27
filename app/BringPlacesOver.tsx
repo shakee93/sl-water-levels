@@ -14,10 +14,15 @@ const COPY = {
   si: "පැරණි ලිපිනයේ (sl-water-levels.vercel.app) සුරැකි ස්ථාන තිබේද? ඒවා මෙහි ගෙන එන්න",
   ta: "பழைய முகவரியில் (sl-water-levels.vercel.app) சேமித்த இடங்கள் உள்ளதா? அவற்றை இங்கே கொண்டு வாருங்கள்",
 } as const;
+const NONE = {
+  en: "Nothing was saved on the old address in this browser. If you added the app to your Home Screen, open that app once: it moves your places and alerts by itself.",
+  si: "මෙම බ්‍රවුසරයේ පැරණි ලිපිනයේ සුරැකි කිසිවක් නැත. ඔබ යෙදුම Home Screen එකට එක් කළේ නම්, එය වරක් විවෘත කරන්න: ඔබේ ස්ථාන සහ ඇඟවීම් එය විසින්ම ගෙන එයි.",
+  ta: "இந்த உலாவியில் பழைய முகவரியில் எதுவும் சேமிக்கப்படவில்லை. செயலியை Home Screen இல் சேர்த்திருந்தால், அதை ஒருமுறை திறக்கவும்: உங்கள் இடங்களையும் எச்சரிக்கைகளையும் அதுவே கொண்டு வரும்.",
+} as const;
 
 export function BringPlacesOver() {
   const { lang } = useI18n();
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState<"link" | "none" | null>(null);
   useEffect(() => {
     if (Date.now() > UNTIL || location.hostname !== "waterlevels.lk") return;
     try {
@@ -25,13 +30,29 @@ export function BringPlacesOver() {
         const v = localStorage.getItem(k);
         return v != null && v !== "" && v !== "[]" && v !== "{}";
       });
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only check, read after hydration
-      if (!has) setShow(true);
+      if (has) return;
+      const checked = localStorage.getItem("sl_moved_checked");
+      if (!checked) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only check, read after hydration
+        setShow("link");
+        return;
+      }
+      // checked already and nothing came: say so once, then never again
+      if (!localStorage.getItem("sl_moved_note_seen")) {
+        localStorage.setItem("sl_moved_note_seen", "1");
+        setShow("none");
+      }
     } catch {
       /* storage blocked: nothing to bring */
     }
   }, []);
   if (!show) return null;
+  if (show === "none")
+    return (
+      <p className="mb-4 text-sm text-slate-600 dark:text-slate-400" lang={lang}>
+        {NONE[lang]}
+      </p>
+    );
   return (
     <p className="mb-4 text-sm" lang={lang}>
       <a href={OLD} className="inline-flex items-center gap-1.5 text-sky-700 dark:text-sky-300 underline underline-offset-2 hover:no-underline">

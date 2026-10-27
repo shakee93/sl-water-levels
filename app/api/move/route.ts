@@ -24,7 +24,8 @@ export function GET(req: Request) {
   function go(){
     document.cookie="sl_has_data=; max-age=0; path=/; SameSite=Lax; Secure";
     var url=${JSON.stringify(SITE)}+${JSON.stringify(to)};
-    if(Object.keys(data).length){ try{ url+= "#sl-import="+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(data))))); }catch(e){} }
+    // always send the fragment, even empty, so the new site knows the check ran (and stops offering it)
+    try{ url+= "#sl-import="+encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(data))))); }catch(e){}
     document.getElementById("go").href=url;
     location.replace(url);
   }

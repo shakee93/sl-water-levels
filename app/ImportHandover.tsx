@@ -15,13 +15,20 @@ export function ImportHandover() {
     try {
       const data = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(h.slice("#sl-import=".length)))))) as Record<string, unknown>;
       // sl_push_old: the old address's push endpoint, sent as `replaces` when alerts are turned on here (app/AlertsToggle.tsx)
+      const got: string[] = [];
       for (const k of [...CARRY_KEYS, "sl_push_old"]) {
         const v = data[k];
-        if (typeof v === "string" && v.length < 20_000 && localStorage.getItem(k) == null) localStorage.setItem(k, v);
+        if (typeof v === "string" && v.length < 20_000 && localStorage.getItem(k) == null) {
+          localStorage.setItem(k, v);
+          got.push(k);
+        }
       }
-      // the stored places and levels are read on load: reload once without the fragment so every card picks them up
+      // remember that the old address was checked from this browser (app/BringPlacesOver.tsx stops offering it), and what came
+      const saved = got.filter((k) => k === "sl_favourites" || k === "sl_my_levels" || k === "sl_low_spots" || k === "sl_push_old");
+      localStorage.setItem("sl_moved_checked", JSON.stringify({ at: Date.now(), saved }));
       history.replaceState(null, "", location.pathname + location.search);
-      location.reload();
+      // the stored places and levels are read on load: reload once so every card picks them up (only when something came)
+      if (got.length) location.reload();
     } catch {
       history.replaceState(null, "", location.pathname + location.search);
     }

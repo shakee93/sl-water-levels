@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 // The old address and the paths that keep working there after the move (see redirects below).
 const SITE = "https://waterlevels.lk";
 const OLD_HOST = "sl-water-levels.vercel.app";
+// An app opened from the iPhone/iPad Home Screen: its user agent names the device but has no "Safari" token (Safari's does).
+const IOS_HOME_SCREEN_APP = "^(?!.*Safari).*(iPhone|iPad).*$";
 const OLD_KEEP = "(?!api/|api$|mcp|_next/|sw\\.js|manifest|favicon|icon|apple-icon|robots\\.txt)";
 
 // Station, river, reservoir and town pages render per request and stream (heading and answer first),
@@ -39,7 +41,7 @@ const nextConfig: NextConfig = {
       {
         source: `/:path(${OLD_KEEP}.*)`,
         has: [{ type: "host", value: OLD_HOST }],
-        missing: [{ type: "cookie", key: "sl_has_data" }],
+        missing: [{ type: "cookie", key: "sl_has_data" }, { type: "header", key: "user-agent", value: IOS_HOME_SCREEN_APP }],
         destination: `${SITE}/:path`,
         permanent: true,
       },
@@ -49,6 +51,8 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         { source: `/:path(${OLD_KEEP}.*)`, has: [{ type: "host", value: OLD_HOST }, { type: "cookie", key: "sl_has_data" }], destination: "/api/move?to=/:path" },
+        // the app installed on an iPhone/iPad Home Screen keeps its own storage, and may never have got the cookie: always hand over
+        { source: `/:path(${OLD_KEEP}.*)`, has: [{ type: "host", value: OLD_HOST }, { type: "header", key: "user-agent", value: IOS_HOME_SCREEN_APP }], destination: "/api/move?to=/:path" },
       ],
     };
   },
