@@ -119,13 +119,15 @@ const en = {
   "r.releaseNews": "{res} reservoir is reported to be opening its gates (not yet confirmed)",
   "r.calm": "{river} is well below flood levels and no heavy rain is expected",
   "sec.why": "Why",
-  "sec.based": "Based on",
-  "sec.basedLine": "{gauge} gauge on the {river}, {km} away",
   "yr.title": "Your river",
   "yr.also": "Also watched",
   "yr.km": "{km} away",
   "yr.open": "Open the {gauge} gauge page",
   "yr.noReading": "No recent reading",
+  "yr.basis": "This town's estimate is based on the {gauge} gauge.",
+  "yr.basisBoth": "This town's estimate is based on the {gauge} gauge; the other gauge is also watched.",
+  "yr.differs": "The town is at {town} because of the warnings, forecast or rain on this page. This gauge's own official step is {gauge}.",
+  "yr.none": "No gauge close enough has a recent reading, so there is no river-based estimate for this town.",
   "sec.rain": "Rain in {town}",
   "sec.rainFail": "Rain data for {town} is not available right now.",
   "rain.now": "Now",
@@ -350,13 +352,16 @@ const si: D = {
   "r.releaseNews": "{res} ජලාශයේ දොරටු විවෘත කරන බව වාර්තා වේ (තවම තහවුරු නැත)",
   "r.calm": "{river} ගංවතුර මට්ටම්වලට වඩා බෙහෙවින් පහළයි, දැඩි වැසි අපේක්ෂා නොකෙරේ",
   "sec.why": "හේතු",
-  "sec.based": "පදනම",
-  "sec.basedLine": "{river} හි {gauge} මාපකය, {km} දුරින්",
   "yr.title": "ඔබේ ගඟ",
   "yr.also": "මෙයත් බලයි",
   "yr.km": "{km} දුරින්",
   "yr.open": "{gauge} මාපක පිටුව විවෘත කරන්න",
   "yr.noReading": "මෑත කියවීමක් නැත",
+  // si/ta: DRAFT translations, not yet reviewed by a native speaker.
+  "yr.basis": "මෙම නගරයේ තක්සේරුව {gauge} මාපකය මත පදනම් වේ.",
+  "yr.basisBoth": "මෙම නගරයේ තක්සේරුව {gauge} මාපකය මත පදනම් වේ; අනෙක් මාපකයද නිරීක්ෂණය කෙරේ.",
+  "yr.differs": "මෙම පිටුවේ ඇති අනතුරු ඇඟවීම්, අනාවැකිය හෝ වැසි නිසා නගරය {town} මට්ටමේ පවතී. මෙම මාපකයේ නිල මට්ටම {gauge} වේ.",
+  "yr.none": "ආසන්නයේ ඇති මාපකවල මෑත කියවීමක් නැත; එබැවින් මෙම නගරයට ගඟ මත පදනම් වූ තක්සේරුවක් නැත.",
   "sec.rain": "{town} හි වැසි",
   "sec.rainFail": "{town} සඳහා වැසි දත්ත දැන් ලබා ගත නොහැක.",
   "rain.now": "දැන්",
@@ -578,13 +583,16 @@ const ta: D = {
   "r.releaseNews": "{res} நீர்த்தேக்கத்தின் மதகுகள் திறக்கப்படுவதாகத் தகவல் (இன்னும் உறுதிப்படுத்தப்படவில்லை)",
   "r.calm": "{river} வெள்ள மட்டங்களுக்குக் கணிசமாகக் கீழே உள்ளது, கனமழை எதிர்பார்க்கப்படவில்லை",
   "sec.why": "காரணங்கள்",
-  "sec.based": "அடிப்படை",
-  "sec.basedLine": "{river} மீதுள்ள {gauge} மானி, {km} தொலைவில்",
   "yr.title": "உங்கள் ஆறு",
   "yr.also": "இதையும் கண்காணிக்கிறோம்",
   "yr.km": "{km} தொலைவில்",
   "yr.open": "{gauge} மானி பக்கத்தைத் திறக்க",
   "yr.noReading": "சமீபத்திய அளவீடு இல்லை",
+  // si/ta: DRAFT translations, not yet reviewed by a native speaker.
+  "yr.basis": "இந்த நகரின் மதிப்பீடு {gauge} மானியை அடிப்படையாகக் கொண்டது.",
+  "yr.basisBoth": "இந்த நகரின் மதிப்பீடு {gauge} மானியை அடிப்படையாகக் கொண்டது; மற்றொரு மானியும் கண்காணிக்கப்படுகிறது.",
+  "yr.differs": "இந்தப் பக்கத்தில் உள்ள எச்சரிக்கைகள், முன்னறிவிப்பு அல்லது மழை காரணமாக நகரம் {town} நிலையில் உள்ளது. இந்த மானியின் சொந்த அதிகாரப்பூர்வ நிலை {gauge}.",
+  "yr.none": "அருகிலுள்ள மானிகளில் சமீபத்திய அளவீடு இல்லை, எனவே இந்த நகருக்கு ஆற்றை அடிப்படையாகக் கொண்ட மதிப்பீடு இல்லை.",
   "sec.rain": "{town} இல் மழை",
   "sec.rainFail": "{town} க்கான மழைத் தரவு இப்போது கிடைக்கவில்லை.",
   "rain.now": "இப்போது",
@@ -697,6 +705,8 @@ export function ttFor(lang: Locale): TT {
   const d = DICTS[lang];
   return (key, vars) => {
     const s = d[key] ?? en[key];
-    return vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+    const out = vars ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : s;
+    // English plural: "in about 1 hours" -> "1 hour" (si/ta have no plural form here)
+    return lang === "en" && vars && Number(vars.h) === 1 ? out.replace(/\b1 hours\b/g, "1 hour") : out;
   };
 }

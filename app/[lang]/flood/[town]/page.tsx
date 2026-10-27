@@ -159,22 +159,13 @@ export default async function TownPage({ params }: Params) {
           href={canonical}
         />
 
-        <YourRiver primary={data.input.primary} secondary={data.input.secondary} national={national} lang={lang} t={t} tt={tt} p={p} />
+        <YourRiver primary={data.input.primary} secondary={data.input.secondary} townTone={risk.tone} national={national} lang={lang} t={t} tt={tt} p={p} />
 
         {/* heavy rain on a canal-flood town: the street-water card first (state + one switch), then ask about the street while people are looking (answers tune the street rule) */}
         {place.rainZone && data.input.streetRain !== undefined && risk.lowSpot && lowSpotCard}
         {d1Configured() && risk.lowSpot && <FloodReport slug={place.slug} town={place.name} urgent />}
 
         {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} />}
-
-        {g && (
-          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-            {tt("sec.based")}:{" "}
-            <Link href={p(g.href)} className="text-sky-700 dark:text-sky-300 underline underline-offset-2 hover:no-underline">
-              {tt("sec.basedLine", { gauge: g.name, river: riverName(g.basin, lang), km: formatKm(g.km, t) })}
-            </Link>
-          </p>
-        )}
 
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
 

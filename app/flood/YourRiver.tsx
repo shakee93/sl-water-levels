@@ -3,7 +3,7 @@
 // comes from the page (the national snapshot is already cached by loadTown).
 import Link from "next/link";
 import { ArrowDown, ArrowUp, ChevronRight, Minus } from "lucide-react";
-import type { GaugeIn } from "@/lib/townRisk";
+import { usableGauge, type GaugeIn, type Tone } from "@/lib/townRisk";
 import type { NationalStation } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
 import { formatDelta, formatLevel } from "@/lib/units";
@@ -79,16 +79,25 @@ function Row({ g, nat, lang, t, tt, p, small }: { g: GaugeIn; nat: NationalStati
   );
 }
 
-export function YourRiver({ primary, secondary, national, lang, t, tt, p }: { primary: GaugeIn | null; secondary: GaugeIn | null; national: NationalStation[]; lang: Locale; t: TFn; tt: TT; p: (x: string) => string }) {
+export function YourRiver({ primary, secondary, townTone, national, lang, t, tt, p }: { primary: GaugeIn | null; secondary: GaugeIn | null; townTone: Tone; national: NationalStation[]; lang: Locale; t: TFn; tt: TT; p: (x: string) => string }) {
   const rows = [primary, secondary].filter((g): g is GaugeIn => !!g);
   if (rows.length === 0) return null;
   const by = new Map(national.map((s) => [s.station, s]));
+  // Caption: which gauge the town's estimate rests on (replaces the old "Based on" line), and why the town's step can differ from the gauge's own.
+  const used = usableGauge(primary) ? primary : usableGauge(secondary) ? secondary : null;
+  const step = (x: string) => tierLabel(t, (x === "watch" ? "normal" : x) as PillTier);
+  const differs = used != null && townTone !== "stale" && step(townTone) !== step(used.tier);
+  const caption = used ? tt(rows.length > 1 ? "yr.basisBoth" : "yr.basis", { gauge: used.name }) : tt("yr.none");
   return (
     <section aria-label={tt("yr.title")} className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <h2 className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{tt("yr.title")}</h2>
       {rows.map((g, i) => (
         <Row key={g.station} g={g} nat={by.get(g.station)} lang={lang} t={t} tt={tt} p={p} small={i > 0} />
       ))}
+      <p className="border-t border-slate-100 px-4 py-2.5 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+        {caption}
+        {differs && <> {tt("yr.differs", { town: step(townTone), gauge: step(used.tier) })}</>}
+      </p>
     </section>
   );
 }
