@@ -99,11 +99,12 @@ export default function Flood3dMap() {
   useEffect(() => {
     let stop = false, timer: ReturnType<typeof setTimeout> | undefined;
     const pull = async () => {
+      let ok = false;
       try {
         const r = await fetch("/api/flood3d", { cache: "no-store" });
-        if (r.ok) { const d = (await r.json()) as Live; if (!stop) { setLive(d); setFetchedAt(Date.now()); } }
+        if (r.ok) { const d = (await r.json()) as Live; ok = true; if (!stop) { setLive(d); setFetchedAt(Date.now()); } }
       } catch { /* keep the last good numbers */ }
-      if (!stop && !document.hidden) timer = setTimeout(pull, POLL_MS);
+      if (!stop && !document.hidden) timer = setTimeout(pull, ok ? POLL_MS : 20_000); // a cold server can miss its first answer: try again soon
     };
     const vis = () => {
       if (document.hidden) { if (timer) clearTimeout(timer); timer = undefined; }
