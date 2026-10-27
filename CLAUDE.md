@@ -166,6 +166,12 @@ lib/
   GSMaP 24 h rain adjusted with the live HMIS gauges (class x region median factor, shrunk to 1, plus faded gauge residuals). A NOTE and a /rain toggle only:
   the street-water rule, heavy-rain warning, push and official steps stay on RAW GSMaP until the logged corrected series (`data:rain-correction/log/`) is backtested.
 
+- **3D flood test map** (unlisted, noindex): `/lab/flood-3d` (en only). Offline prep in `scripts/flood3d/` (fetch.py, prep.py; GLO-30 +
+  OSM via Overpass; run from a venv with rasterio/pyproj/shapely, small enough for the laptop) writes `public/flood3d/` (level.png =
+  per-cell flood level in ft at Nagalagam, fitted on the EMSR851 maps; roads tagged with level; accuracy.json). Live gauges via
+  `/api/flood3d` (`lib/flood3d.ts`, our caches only). MapLibre 5.24.0 is served from `public/flood3d/ml` (CSP build; the npm
+  package is a dev dependency for types only). Illustration, never an official step or verdict input.
+
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.
 
