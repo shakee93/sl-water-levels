@@ -80,7 +80,7 @@ export const riverName = (r: string) => `the ${r.replace(/\s+Ganga$/i, "").trim(
 const joinList = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 
 /** One sentence that says the same thing about several places; `entries` can be cut from the end, `say(k)` writes the first k. */
-export type Group = { river?: boolean; severity: number; serious: boolean; entries: number; say: (k: number) => string };
+export type Group = { river?: boolean; rain?: boolean; severity: number; serious: boolean; entries: number; say: (k: number) => string };
 
 /**
  * The sentences of a batch of events, most severe first. Rivers at the same step share a sentence ("X and Y have reached
@@ -140,12 +140,12 @@ export function groupsOf(events: Ev[]): Group[] {
       const rs = ev.reservoirs;
       groups.push({ severity: 12, serious: false, entries: rs.length, say: (k) => { const l = rs.slice(0, k); return `${joinList(l.map((r: any) => r.name))} ${l.length === 1 ? "has" : "have"} stopped letting water out.`; } });
     } else if (ev.type === "rainwatch") {
-      groups.push({ severity: 40, serious: false, entries: 1, say: () => `Heavy rain is forecast near ${ev.rainwatch.place}, up to ${int(ev.rainwatch.mm)} mm in the next ${ev.rainwatch.windowH} hours.` });
+      groups.push({ rain: true, severity: 40, serious: false, entries: 1, say: () => `Heavy rain is forecast near ${ev.rainwatch.place}, up to ${int(ev.rainwatch.mm)} mm in the next ${ev.rainwatch.windowH} hours.` });
     } else if (ev.type === "summary") {
       const s = ev.summary;
       const gaugeLines = rivers.size > 0;
       const bits = [!gaugeLines ? (s.atAlert.length ? `${s.atAlert.length} of ${s.assessed} river gauges are at alert level or higher.` : `All ${s.assessed} river gauges are below alert level.`) : null, s.rain && s.rain.mm >= 5 ? `Up to ${int(s.rain.mm)} mm of rain is forecast near ${s.rain.place} in the next ${s.rainWindowH} hours.` : null].filter(Boolean) as string[];
-      if (bits.length) groups.push({ severity: 20, serious: false, entries: 1, say: () => `${!gaugeLines && s.period === "morning" ? "Good morning. " : ""}${bits.join(" ")}` });
+      if (bits.length) groups.push({ rain: gaugeLines, severity: 20, serious: false, entries: 1, say: () => `${!gaugeLines && s.period === "morning" ? "Good morning. " : ""}${bits.join(" ")}` });
     }
   }
   if (clears.size) {
@@ -173,6 +173,7 @@ export function composeCombined(events: Ev[], o: { now: number; link?: string; l
   const actionable = groups.some((g) => g.severity >= 70 || (g.severity >= 100));
   const headAt = newestReading(events) ?? o.now;
   const total = groups.reduce((n, g) => n + g.entries, 0);
+  const atRisk = groups.reduce((n, g) => n + (g.river && g.severity >= 70 ? g.entries : 0), 0);
   const keep = groups.map((g) => g.entries);
   const build = () => {
     const kept = keep.reduce((x, y) => x + y, 0);
@@ -180,9 +181,16 @@ export function composeCombined(events: Ev[], o: { now: number; link?: string; l
     // what was cut: rivers only -> say rivers; long posts name the step they were at
     const cutRivers = groups.filter((g, i) => keep[i] < g.entries).every((g) => g.river);
     const cutRiverN = groups.reduce((n, g, i) => n + (g.river ? g.entries - keep[i] : 0), 0);
-    const more = rest > 0 ? (long ? ` ...and ${cutRiverN || rest} more ${cutRiverN ? "rivers at alert level or higher" : "updates"}, see waterlevels.lk.` : ` ...and ${rest} more on waterlevels.lk.`) : "";
+    const cutGroups = groups.filter((g, i) => keep[i] < g.entries);
+    const shortMore = () => {
+      const rivers = cutGroups.every((g) => g.river && g.severity >= 70);
+      if (rivers) return ` ${rest} more ${rest === 1 ? "river" : "rivers"} at alert level on waterlevels.lk.`;
+      if (cutGroups.every((g) => g.rain)) return " Rain outlook on waterlevels.lk.";
+      return " More on waterlevels.lk.";
+    };
+    const more = rest > 0 ? (long ? ` ...and ${cutRiverN || rest} more ${cutRiverN ? "rivers at alert level or higher" : "updates"}, see waterlevels.lk.` : shortMore()) : "";
     const say = (i: number) => (keep[i] > 0 ? groups[i].say(keep[i]) : null);
-    const action = [actionable ? "Near these rivers? Move valuables up." : null, serious ? "Emergency: 117." : null].filter(Boolean).join(" ");
+    const action = [actionable ? (atRisk === 1 ? "Near this river? Move valuables up." : "Near these rivers? Move valuables up.") : null, serious ? "Emergency: 117." : null].filter(Boolean).join(" ");
     if (long) {
       const p1 = groups.map((g, i) => (g.severity >= 80 ? say(i) : null)).filter(Boolean).join(" ");
       const p2 = (groups.map((g, i) => (g.severity < 80 ? say(i) : null)).filter(Boolean).join(" ") + more).trim();

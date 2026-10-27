@@ -32,9 +32,16 @@ const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, 
   const c0 = composeCombined([none], { now: AT });
   assert.ok(/Good morning\. All 38 river gauges are below alert level/.test(c0.text) && !/Move valuables|117/.test(c0.text), c0.text);
   const c1 = composeCombined([rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6)])], { now: AT });
-  assert.ok(/has reached alert level and is still rising\. Near these rivers\? Move valuables up\.$/.test(c1.text) && !/117/.test(c1.text), c1.text);
+  assert.ok(/has reached alert level and is still rising\. Near this river\? Move valuables up\.$/.test(c1.text) && !/117/.test(c1.text), c1.text);
   const cc = composeCombined([clear], { now: AT });
   assert.ok(/The Kelani is back below alert level at Norwood \(4\.2 ft\)/.test(cc.text) && !/Move valuables|117/.test(cc.text), cc.text);
+  // what was cut is said: rain only, one river, mixed
+  const rain = { type: "rainwatch", kind: "storm", priority: 24, dedupe: "rw", rainwatch: { mm: 85, place: "Ratnapura", windowH: 24, atAlert: 1, at: AT, url: SITE } };
+  const base = [rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6)])];
+  const fit = composeCombined([...base, rain], { now: AT });
+  assert.ok(/Heavy rain is forecast/.test(fit.text));
+  const cutRain = composeCombined([...base, rain, rise("Attanagalu Oya", [gf("Dunamale", "Attanagalu Oya", "alert", 8.3)], "z")], { now: AT, link: SITE });
+  assert.ok(/(Rain outlook on waterlevels\.lk\.|Heavy rain)/.test(cutRain.text), cutRain.text);
   // a rise and a storm update for the same river are ONE sentence
   const storm = { type: "storm", kind: "storm", priority: 25, dedupe: "s", storm: { river: "Kelani Ganga", at: AT, gauges: [gf("Hanwella", "Kelani Ganga", "minor", 10.6)], url: SITE } };
   assert.equal(groupsOf([evs[4], storm]).length, 1);
@@ -45,7 +52,7 @@ const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, 
   const c = composeCombined(many, { now: AT, link: SITE });
   assert.ok(tweetLength(c.text) <= MAX_TWEET, String(tweetLength(c.text)));
   assert.ok(c.shown < c.total && c.shown >= 1);
-  assert.match(c.text, new RegExp(`\\.\\.\\.and ${c.total - c.shown} more on waterlevels.lk`));
+  assert.match(c.text, new RegExp(`${c.total - c.shown} more rivers at alert level on waterlevels.lk\\.`));
   assert.ok(c.text.includes("River 7 Oya is in major flood at Gauge 7 (8.8 ft)"), "the most severe survives the cut: " + c.text);
   assert.equal(c.text.split(SITE).length - 1, 1, "link once");
   assert.ok(c.text.trimEnd().endsWith(SITE));
