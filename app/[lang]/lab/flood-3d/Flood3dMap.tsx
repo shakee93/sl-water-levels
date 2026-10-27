@@ -97,6 +97,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   const [roadsOn, setRoadsOn] = useState(true);
   const [threeD, setThreeD] = useState(false);
   const [waterOn, setWaterOn] = useState(true);
+  const [legendNote, setLegendNote] = useState(false);
   const [gaugesOn, setGaugesOn] = useState(true);
   const [rainGaugesOn, setRainGaugesOn] = useState(false);
   const [rainOn, setRainOn] = useState(false);
@@ -518,9 +519,9 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
       else {
         const L = g.L[i], hw = g.hw[i], cls = g.cls[i];
         const lo = Math.max(2, L - hw), hi = L + hw;
-        const kind = cls === 2 ? "backed by a satellite flood map" : cls === 1 ? "interpolated between past floods" : "a guess beyond the floods we have maps for";
+        const kind = cls === 2 ? "backed by a satellite flood map" : cls === 1 ? "interpolated between past floods" : "the river would have to go higher (or lower) here than in any flood we have records for, so this is a guess from ground height";
         add(`Floods when Nagalagam Street reaches about ${f1(L)} ft`, true);
-        add(`Estimate, range ${f1(lo)} to ${f1(hi)} ft (${kind}).`);
+        add(`${cls === 0 ? "Estimate only" : "Estimate"}, range ${f1(lo)} to ${f1(hi)} ft (${kind}).`);
         const nag = st.live?.nagalagam;
         if (st.isLive && nag?.levelFt != null) {
           const hz = st.horizon === 0 ? 6 : st.horizon;
@@ -594,9 +595,12 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
   const legend = (
     <div className="rounded bg-white/90 px-2 py-1 text-[11px] leading-tight text-slate-700 shadow dark:bg-slate-900/90 dark:text-slate-200">
       <span className="mr-1 inline-block h-2.5 w-3 rounded-sm" style={{ background: "rgba(30,110,210,.75)" }} /> water at this river level{" "}
-      <span className="mx-1 inline-block h-2.5 w-3 rounded-sm" style={{ background: "repeating-linear-gradient(135deg,rgba(30,110,210,.8) 0 2px,transparent 2px 5px)" }} /> less certain{" "}
+      <button type="button" aria-expanded={legendNote} onClick={() => setLegendNote((v) => !v)} className="pointer-events-auto mx-1 inline-flex items-center gap-1 rounded underline decoration-dotted">
+        <span className="inline-block h-2.5 w-3 rounded-sm" style={{ background: "repeating-linear-gradient(135deg,rgba(30,110,210,.8) 0 2px,transparent 2px 5px)" }} /> Estimate only (beyond floods we&apos;ve seen)
+      </button>{" "}
       <span className="mx-1 inline-block h-1 w-3 bg-red-600" /> low road{" "}
       <span className="mx-1 inline-block h-2.5 w-3 rounded-sm" style={{ background: "rgba(100,116,139,.45)" }} /> not covered yet
+      {legendNote && <p className="mt-1 max-w-xs">Here the river would have to go higher (or lower) than in any flood we have records for, so this is a guess from ground height.</p>}
     </div>
   );
   const statusBox = (
@@ -728,7 +732,7 @@ export default function Flood3dMap({ towns = [], gauges = [] }: { towns?: Search
         <style>{".maplibregl-ctrl-group:has(.maplibregl-ctrl-geolocate){display:none!important}"}</style>
         {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Loading map…</div>}
         {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
-        {!full && <div className="pointer-events-none absolute bottom-6 left-2">{legend}</div>}
+        {!full && <div className="absolute bottom-6 left-2">{legend}</div>}
       </div>
 
       {statusBox}
