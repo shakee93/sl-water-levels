@@ -12,6 +12,7 @@ import { personDay } from "@/lib/personDay";
 import { colomboDay } from "@/lib/floodReport";
 import { getFlood3dLiveSafe } from "@/lib/flood3d";
 import { timeBox } from "@/lib/nextHour";
+import { photoToken } from "@/lib/flood3dPhotoToken";
 import { AREAS, MAX_PER_PERSON_DAY, MIN_PUBLIC_COUNT, round3, validateReport } from "@/lib/flood3dReports";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +47,9 @@ const publicCounts = unstable_cache(
 
 export async function GET(req: NextRequest) {
   void req.url; // keeps the route dynamic: otherwise the build-time (empty) answer is served
-  if (!d1Configured()) return reply(200, { areas: [] });
-  return NextResponse.json({ areas: await publicCounts() }, { headers: { "Cache-Control": "public, s-maxage=300", "X-Robots-Tag": "noindex" } });
+  const photosEnabled = !!(process.env.FLOOD_PHOTO_URL && process.env.FLOOD_PHOTO_SECRET);
+  if (!d1Configured()) return reply(200, { areas: [], photosEnabled });
+  return NextResponse.json({ areas: await publicCounts(), photosEnabled }, { headers: { "Cache-Control": "public, s-maxage=300", "X-Robots-Tag": "noindex" } });
 }
 
 export async function POST(req: NextRequest) {
@@ -91,8 +93,14 @@ export async function POST(req: NextRequest) {
     if (!(e instanceof D1NotConfigured)) console.error("flood3d report: D1 write failed:", e instanceof Error ? e.message : e);
     return reply(e instanceof D1NotConfigured ? 503 : 502, { ok: false, error: "unavailable" });
   }
+  // the id and a 30-minute token let this browser attach photos to this report (see app/api/flood3d/photo/route.ts)
+  let photo: { id: number; token: string } | null = null;
+  try {
+    const row = (await d1Query("SELECT id FROM flood3d_reports WHERE person_day = ? AND created_ms = ? ORDER BY id DESC LIMIT 1", [person, now]))[0];
+    if (row) photo = { id: Number(row.id), token: photoToken(String(row.id), now) };
+  } catch { /* photos are optional */ }
   const areas = await publicCounts();
   const a = AREAS.find((x) => r.lat >= x.south && r.lat <= x.north && r.lon >= x.west && r.lon <= x.east);
   const hit = a ? areas.find((x) => x.name === a.name) : null;
-  return reply(200, { ok: true, area: hit?.n != null ? { name: hit.name, n: hit.n } : null });
+  return reply(200, { ok: true, area: hit?.n != null ? { name: hit.name, n: hit.n } : null, photo, photosEnabled: !!(process.env.FLOOD_PHOTO_URL && process.env.FLOOD_PHOTO_SECRET) });
 }

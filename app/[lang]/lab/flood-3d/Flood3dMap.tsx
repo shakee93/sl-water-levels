@@ -267,6 +267,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
   const [areas, setAreas] = useState<{ name: string; n: number | null }[]>([]);
   const [used, setUsed] = useState(0);
+  const [photosEnabled, setPhotosEnabled] = useState(false);
   const gps = useRef<{ lat: number; lon: number; acc: number } | null>(null);
   const meMarker = useRef<Marker | null>(null);
   const meData = useRef<GeoJSON.FeatureCollection | null>(null);
@@ -274,7 +275,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const openReportRef = useRef<((p: RepPos) => void) | null>(null);
   useEffect(() => { openReportRef.current = (p) => { setRep(p); setPanelOpen(false); }; });
   useEffect(() => {
-    fetch("/api/flood3d/report").then((r) => r.json()).then((d) => setAreas(d.areas ?? [])).catch(() => {});
+    fetch("/api/flood3d/report").then((r) => r.json()).then((d) => { setAreas(d.areas ?? []); setPhotosEnabled(!!d.photosEnabled); }).catch(() => {});
   }, []);
   useEffect(() => {
     const map = mapRef.current;
@@ -953,7 +954,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
             <button type="button" role="menuitem" onClick={() => { const c = ctx; setCtx(null); openReportRef.current?.({ lat: c.lat, lon: c.lon, src: "pin", acc: null }); }} className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800"><Flag className="size-4 text-slate-500" aria-hidden />{tr("Report here")}</button>
           </div>
         )}
-        {rep && <ReportPanel pos={rep} cell={cell} onClose={() => setRep(null)} tr={tr} lang={lang} />}
+        {rep && <ReportPanel pos={rep} cell={cell} onClose={() => setRep(null)} tr={tr} lang={lang} photosEnabled={photosEnabled} />}
 
         {/* panel: bottom sheet on phones, side card on desktop */}
         {!rep && (panelOpen ? (

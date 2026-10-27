@@ -1,0 +1,10 @@
+# Private photo store for the unlisted 3D flood test map reports (R2 bucket sl-flood-photos, never public-read).
+# Only our own server route talks to this Worker (shared secret header); the browser never does. Deploy: cd workers/flood-photos && npx wrangler deploy
+# Set the secret once: npx wrangler secret put PHOTO_SECRET (the same value is the FLOOD_PHOTO_SECRET env var on Vercel).
+name = "sl-flood-photos"
+main = "index.mjs"
+compatibility_date = "2026-10-01"
+
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "sl-flood-photos"

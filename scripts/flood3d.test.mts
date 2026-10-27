@@ -47,3 +47,22 @@ assert.ok(si("Locate me") !== "Locate me" && ta("Locate me") !== "Locate me");
 assert.equal(si("Not a known key"), "Not a known key");
 assert.ok(si("Nagalagam Street {ft} ft", { ft: "3.6" }).includes("3.6"));
 console.log("flood3d i18n + test flag passed");
+
+import { stripJpeg, exifAgree, distM } from "../lib/flood3dPhoto.ts";
+{
+  // a tiny fake JPEG: SOI, APP0, APP1 (EXIF with "GPS"), COM, DQT-like segment, SOS + data, EOI
+  const seg = (m: number, body: number[]) => [0xff, m, (body.length + 2) >> 8, (body.length + 2) & 255, ...body];
+  const exif = [...Buffer.from("Exif\0\0GPSSECRET")];
+  const jpeg = new Uint8Array([0xff, 0xd8, ...seg(0xe0, [1, 2, 3]), ...seg(0xe1, exif), ...seg(0xfe, [...Buffer.from("comment")]), ...seg(0xdb, [9, 9, 9]), 0xff, 0xda, 0, 4, 1, 2, 7, 7, 7, 0xff, 0xd9]);
+  const out = stripJpeg(jpeg)!;
+  assert.ok(out && out[0] === 0xff && out[1] === 0xd8);
+  assert.ok(!Buffer.from(out).includes(Buffer.from("GPSSECRET")) && !Buffer.from(out).includes(Buffer.from("comment")));
+  assert.ok(Buffer.from(out).includes(Buffer.from([0xff, 0xe0])) && Buffer.from(out).includes(Buffer.from([0xff, 0xdb])), "keeps APP0 and tables");
+  assert.ok(out.length < jpeg.length);
+  assert.equal(stripJpeg(new Uint8Array([1, 2, 3, 4, 5])), null);
+  assert.equal(exifAgree({ lat: 6.955, lon: 79.922 }, "6.9551,79.9221"), 1);
+  assert.equal(exifAgree({ lat: 6.955, lon: 79.922 }, "6.97,79.95"), 0);
+  assert.equal(exifAgree({ lat: 6.955, lon: 79.922 }, ""), null);
+  assert.ok(Math.abs(distM({ lat: 0, lon: 0 }, { lat: 0, lon: 0.001 }) - 111.2) < 1);
+  console.log("flood3d photo helpers passed");
+}

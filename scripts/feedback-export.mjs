@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Owner's private feedback dashboard (a claude.ai artifact): exports forecast_feedback and street_flood_reports from D1 as two
+// Owner's private feedback dashboard (a claude.ai artifact): exports forecast_feedback, street_flood_reports (and flood3d_reports as map-reports.json, with photo count and R2 key) from D1 as
 // JSON files the dashboard reads. Read-only: two small queries (~200 rows read) plus one indexed (station, ts) range query per located
 // "worse" answer (a handful of rows each). Leaves out IP hashes and tokens; locations only as stored (rounded to 0.01 degree, about 1 km);
 // notes are included because the dashboard is private to the owner. "Worse" answers also get the cross-check (lib/feedbackCheck.mjs):
@@ -55,6 +55,16 @@ const sr = d1("SELECT id, created_ms, day, town, answer, when_hint, lang FROM st
 
 writeFileSync(path.join(out, "feedback.json"), JSON.stringify(fb));
 writeFileSync(path.join(out, "street-reports.json"), JSON.stringify(sr));
+// 3D flood test map reports (private dashboard only): rounded position (0.001 degree), the photo columns carry the COUNT and the R2 KEY, never a public URL
+// (photos stay in the private bucket; review later). Test reports are left out. Falls back to no photo columns until the first photo upgrades the table.
+let mapReports = [];
+for (const cols of ["photo_key, photo_count, exif_agree", "NULL AS photo_key, 0 AS photo_count, NULL AS exif_agree"]) {
+  try {
+    mapReports = d1(`SELECT id, created_ms, kind, depth, event, lat3, lon3, acc_m, src, map_right, cell_ft, nag_ft, han_ft, han_fast_ft, status, ${cols} FROM flood3d_reports WHERE status != 'test' ORDER BY id LIMIT 5000`).map((r) => ({ ...r, time: t(r.created_ms) }));
+    break;
+  } catch { /* no such table or column yet */ }
+}
+writeFileSync(path.join(out, "map-reports.json"), JSON.stringify(mapReports));
 // learned.json: what the nightly pipeline (scripts/learn-all.mjs) learned: counts, values that changed, ground-rain proposals with their backtest,
 // the forecast tests, the 3D-map re-fit status and the areas that need more reports. Public-safe (it lives on the data branch); no D1 read.
 // The dashboard also gets `lines` (the same "What we learned" text as the Slack digest). Missing or unreadable = no file, nothing else changes.
