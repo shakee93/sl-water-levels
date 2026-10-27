@@ -826,6 +826,69 @@ gauge/satellite pairs. To switch: backtest the street-water-likely thresholds (6
 series against reported floods once the archive has a few events (the corrected series is a 24 h total, so the 15 mm/h hourly clip cannot be applied to it as is;
 decide how to clip first), compare hit and false-alarm rates with the raw series, and only then change `scripts/street-rain-log.mjs` / `lib/townRisk.ts`.
 
+## Ground-gauge street rain (27 Oct 2026)
+
+Why: Irrigation Department officials say local rain drives flooding in Kelaniya / Kolonnawa / Wellampitiya, and on 27 Oct the satellite over-read the ground
+gauges 3-10 times and arrives 1-4 h late, while HMIS ground gauges report every 5-60 minutes. So the site now prefers a live ground gauge near the
+town, as a NOTE on the town page and as a SHADOW rule. Official steps, town tones, the amber street-water card and push alerts are unchanged.
+
+**Source hierarchy** (`pickRain` in `lib/groundRain.ts`, always reports which one it used):
+1. ground: HMIS rain gauges within 5 km whose newest record is at most 60 minutes old; the nearest one, or the inverse-distance mean
+   (weight 1/d^2, d floored at 0.5 km) when two or more are in range;
+2. gauge-corrected satellite (`lib/rainCorrected.ts`, at most 3 h old);
+3. raw GSMaP.
+
+Coverage on 27 Oct: only two live gauges are near Colombo, the Met Dept head office "DOM HEAD OFFICE" (Colombo 7) and NBRO "Colombo - 5". Within 5 km: Colombo,
+Kolonnawa (3.5 km), Wellampitiya (4.1), Orugodawatta (4.0), Dematagoda (4.2), Grandpass (4.9), Kotikawatta (4.8), Meethotamulla (4.9), Sedawatta, Rajagiriya, Nawala,
+Borella, Maradana and the south Colombo canal towns. Outside 5 km (they fall back to the corrected satellite): Kelaniya (7.9 km), Angoda (6.5), Mulleriyawa (7.3),
+Gothatuwa (5.4), Wattala, Kaduwela, Biyagama, Malabe and every Puttalam / Maha Oya zone town (Ja-Ela 13 km). A gauge that goes offline simply drops out.
+
+**Deriving 1 h / 3 h / peak from HMIS.** `sum_diffval_in_period` is a ROLLING 24 h sum (record_count: NBRO 96, Met about 107, Irrigation 24); `latest_record_time` is real UTC.
+`last_value` / `second_last_value` are raw sensor readings (some gauges send running totals), so they are not used. `scripts/hmis-snapshot.mjs`
+keeps [epoch minute, 24 h sum] for every new record for 4.5 h (`hmis/rain-live.json`). S(t2) - S(t1) = rain in (t1, t2] minus the rain that left the window
+(t1-24h, t2-24h], so `max(0, S(t2) - S(t1))` is a LOWER BOUND of the rain in the interval: it can only miss rain that also fell at the same hour yesterday,
+never invent any. A window uses the older point nearest the span inside 0.75x-1.25x (shorter gaps scaled up, longer ones not scaled down); none in range =
+null (unknown, never 0). The 24 h figure is exact. Since 27 Oct the daily archive (`hmis/rain/`) also keeps the zero readings of gauges within 30 km of a
+rain-zone town, so a dry gauge can be told from a missing one.
+
+**Ground rule thresholds** (`GROUND_RULE` in `lib/groundRain.ts`, own marks, not the satellite 60 / 100; any one trigger is enough):
+
+| | 1 h | 3 h | 24 h |
+|---|---|---|---|
+| possible | 30 mm | 50 mm | 50 mm |
+| likely | 50 mm | 75 mm | 75 mm |
+
+Modifiers as in the live rule: the Kelani at its minor level (Nagalagam 5 ft / Hanwella's own mark) alone = likely; a wet week by gauges (antecedent index >= 96 mm)
+lowers the possible 3 h and 24 h marks to 75 %. No hourly clip (it exists to remove satellite spikes). Unknown is never "none": no figure at all, or a calm
+reading with a short total unknown (`partial`), gives null.
+
+Sources: Colombo storm drains are designed for the 10-year storm ("an accepted norm in Sri Lanka", ENGINEER, Univ. of Moratuwa); the MCUDP / SLLDC micro-drainage
+design storm is 1 h, 100.68 mm for 10 years, and 24 h rain for Metro Colombo is 144 / 197 / 256 mm for 2 / 5 / 10 years (CUrW/SLLDC completion report,
+pub.curwsl.org/dyn/PCR-2023_03-04_19_00_00.pdf, ch. 6); JICA Greater Colombo basin 24 h: 117 / 176 / 214 mm (supporting report 1, 3.3.3). The drains are
+"full" near 100 mm/h, but streets flood well below that (blocked outlets, full canals), so the marks come from the evidence: the 16-flood backtest
+(`research/wellampitiya-flood-rule-backtest.md`, V2: gauge-day mean >= 50 mm caught 12 of 16 at 4.4 unmatched a year, >= 75 mm 9 of 16 at 1.7 a year; the satellite's
+60 / 100 mm equal a gauge 42 / 76 mm day), peak 1 h AUC 0.83 for separating floods from other heavy days, and a 30-40 mm/h working figure. A single gauge is noisier than
+the 3-gauge mean, so expect more unmatched alarms than those figures until the shadow run says otherwise.
+
+**Public note** (`app/GroundRainLine.tsx`, `lib/groundRainLive.ts`, en/si/ta in `lib/i18n/hmis.ts`; si/ta are drafts): with a ground gauge in range and an hour figure:
+"Measured at Kolonnawa rain gauge (Met Department), 3.5 km away: about 18 mm in the last hour, 42 mm in 24 h" (several gauges: "Measured at 2 rain gauges within 5 km (nearest: ...)").
+Otherwise the older 24 h gauge line and the corrected-satellite line as before. It reads `hmis/rain-live.json` from the data branch (5 min cache) plus the existing `lib/hmis.ts` cache: no new request to HMIS.
+
+**Shadow run** (`scripts/ground-rain-shadow.mjs`, called at the end of every `scripts/street-rain-log.mjs` run, also when the satellite file is stale):
+per rain zone, each town's pick and verdict, zone = worst town. The rule is applied to the ground and corrected tiers (gauge-scale mm); raw-satellite zones log a source but no ground state.
+D1 (`d1/0011_street_ground_shadow.sql`): `street_rain_ground_log` (one row per zone per HMIS snapshot: source, gauge, km, 1 h / 3 h / 24 h / peak, state, live satellite state, corrected and raw 24 h)
+and `street_rain_ground_changes` (every state change). Slack, once per rise and per clear (same 3 h flap guard as the live pings):
+"Shadow (ground gauges): Wellampitiya and nearby street water likely — Kolonnawa Met gauge (3.5 km): 42 mm in 1 h (...). Live satellite rule: none. Not shown to anyone."
+Dry run: `node --experimental-strip-types scripts/street-rain-log.mjs <dataDir> --dry-run --prev none --prev-ground none --river 0`.
+
+**Backtest** (`scripts/ground-rain-backtest.mts <dataDir> --reports <csv>`): replays the archived HMIS rain and the rain-correction log against reported floods and prints hits, misses
+and unmatched alarm episodes for the raw-satellite, corrected-satellite and ground rules, possible and likely. Reports are private (never commit them or the output). Tests: `scripts/ground-rain.test.mts`.
+
+**Switch criteria** (shadow -> shown): at least 5 heavy-rain days (any rule at possible) with resident answers or reports covering the zone, and over those days the ground
+rule (a) catches at least as many reported floods as the live rule and (b) has fewer unmatched alarm episodes per heavy-rain day, with a fresh gauge within 5 km
+on at least 80 % of the steps; and the 1 h / 3 h lower bounds checked against a day that has both a gauge and a Met SYNOP total. Then: use the ground state for the card and
+push in towns with a gauge within 5 km, keep the satellite rule elsewhere, and leave the river steps alone.
+
 ## Street-flood validation (is the satellite-rain rule right?)
 
 **Status since 26 Oct 2026: the rain rule is a personal opt-in for low-lying spots, not a town warning.** The owner (who lives in

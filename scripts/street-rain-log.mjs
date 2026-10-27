@@ -35,13 +35,15 @@ import { streetState, shadowStreetState, stateChange, isReportable, noticeFor, r
 import { PLACES } from "../lib/places.ts";
 import { splitSql, runStatements, selectRows, D1HttpError } from "../lib/d1Sql.mjs";
 import { gaugeWetness, readGaugeArchive, colomboDay, API_WET_MM } from "../lib/gaugeRain.mjs";
+import { runGroundShadow } from "./ground-rain-shadow.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const DRY = args.includes("--dry-run");
 const prevFlag = args.includes("--prev") ? args[args.indexOf("--prev") + 1] : null;
 const riverFlag = args.includes("--river") ? args[args.indexOf("--river") + 1] : null;
-const dataDir = args.find((a) => !a.startsWith("--") && a !== prevFlag && a !== riverFlag);
+const prevGroundFlag = args.includes("--prev-ground") ? args[args.indexOf("--prev-ground") + 1] : null;
+const dataDir = args.find((a) => !a.startsWith("--") && a !== prevFlag && a !== riverFlag && a !== prevGroundFlag);
 if (!dataDir) {
   console.error("usage: node --experimental-strip-types scripts/street-rain-log.mjs <dataDir> [--dry-run [--prev none|possible|likely]]");
   process.exit(1);
@@ -55,9 +57,12 @@ const q = (v) => (v == null || (typeof v === "number" && !Number.isFinite(v)) ? 
 const latest = JSON.parse(readFileSync(path.join(dataDir, "gsmap/latest.json"), "utf8"));
 const dataEnd = Date.parse(latest.latestEnd);
 if (!Number.isFinite(dataEnd)) throw new Error("gsmap/latest.json has no latestEnd");
-if (NOW - dataEnd > MAX_DATA_AGE_MS) {
-  console.log(`latest.json is ${Math.round((NOW - dataEnd) / 60_000)} min old (limit 180): not logged, the site treats it as unavailable too`);
-  process.exit(0);
+// A stale satellite file switches the satellite rule off for this run (nothing logged, as before) but NOT the ground-gauge shadow
+// below, which reads the HMIS archive and is independent of GSMaP (that is its point).
+const satStale = NOW - dataEnd > MAX_DATA_AGE_MS;
+if (satStale) {
+  console.log(`latest.json is ${Math.round((NOW - dataEnd) / 60_000)} min old (limit 180): satellite rule not logged, the site treats it as unavailable too`);
+  latest.zones = {};
 }
 
 // zone -> the town slugs the rule covers (lib/places.ts rainZone), the town the Slack link points at first
@@ -120,6 +125,7 @@ const wet = gaugeWetness(readGaugeArchive(dataDir), colomboDay(dataEnd));
 console.log(`shadow: gauge antecedent index ${wet.apiMm ?? "unknown"} mm (${wet.source ?? "no source"}; ogimet ${wet.ogimetMm ?? "-"}, arcgis ${wet.arcgisMm ?? "-"}), wet at ${API_WET_MM} mm`);
 
 const sql = [];
+const liveStates = {}; // zone -> the live satellite rule's state this run, for the ground-gauge shadow
 const notices = []; // {zone, changedMs, from, to, mm1h, mm6h, mm24h, kind}
 for (const [zone, z] of Object.entries(latest.zones ?? {})) {
   // the rule's number is the clipped 24 h sum; a file from before the clip has none (rule off for the rain part)
@@ -151,6 +157,7 @@ for (const [zone, z] of Object.entries(latest.zones ?? {})) {
   // the candidate rule, with the same river-unknown guard as the live one
   let shadow = shadowStreetState(clipped, zoneRiverOn, wet.apiMm);
   if (!river && zone === "colombo-east" && lastShadow === "likely" && shadow !== "likely") shadow = null;
+  liveStates[zone] = state;
   const fresh = dataEnd > newestLogged;
   if (fresh) {
     sql.push(`INSERT OR IGNORE INTO street_rain_log (zone, data_end_ms, run_ms, rate_mm_h, mm1h, mm3h, mm6h, mm24h, mm24h_clipped, river_trigger, state, api_gauge_mm, gauge_source, shadow_state, api_ogimet_mm, api_arcgis_mm) VALUES (${[zone, dataEnd, NOW, z.rateMmPerHour, z.mm1h, z.mm3h, z.mm6h, z.mm24h, clipped, riverCol, state, wet.apiMm, wet.source, shadow, wet.ogimetMm, wet.arcgisMm].map(q).join(", ")});`);
@@ -233,3 +240,11 @@ if (updates.length && !DRY) {
   }
 }
 else if (updates.length) console.log(updates.join("\n"));
+
+// ---- SHADOW test of the ground-gauge rule (scripts/ground-rain-shadow.mjs; DOCS.md "Ground-gauge street rain"): logged and posted to Slack
+// as "Shadow (ground gauges): ..."; no public note, push or town tone reads it. Never lets a problem here fail the satellite job.
+try {
+  await runGroundShadow({ dataDir, nowMs: NOW, dry: DRY, river, wet, latest: satStale ? null : latest, liveStates, prevGround: prevGroundFlag, q, run, rowsOf, softExit, slack, site: SITE });
+} catch (e) {
+  console.warn(`ground shadow failed: ${e instanceof Error ? e.message : e}`);
+}

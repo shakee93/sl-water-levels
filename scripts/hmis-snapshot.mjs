@@ -2,6 +2,7 @@
 // and the ground rain gauges that reported. One request per endpoint per run (every 30 minutes), UA with the site URL and owner email.
 //   <outDir>/hmis/levels/YYYY/YYYY-MM-DD.json  { "<device>": { name, institute, pts: [[epochMs UTC, metres], ...] } }  (Colombo day of the reading)
 //   <outDir>/hmis/rain/YYYY/YYYY-MM-DD.json    { "<device>": { name, institute, lat, lon, pts: [[latest_record_ms UTC, mm in the last 24 h], ...] } }
+//     only gauges with rain, plus (since 27 Oct 2026) the zero readings of gauges within 30 km of a street-rain zone town
 //   <outDir>/hmis/rain-live.json   { updatedAt, devices: { "<device>": { n: name, i: institute, lat, lon, pts: [[epoch minutes UTC, mm in the last 24 h], ...] } } }
 //     EVERY live gauge (record under 3 h old), zeros included, last 4.5 h only: the input of scripts/rain-correct.mjs, which needs the gauge's
 //     24 h sum at the time the satellite window ends (1-2 h ago) and needs the dry gauges too (the satellite's false rain). Rewritten each run.
@@ -9,7 +10,7 @@
 // Usage: node --experimental-strip-types scripts/hmis-snapshot.mjs <outDir>
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { normaliseLevelRows, normaliseRain } from "../lib/hmisCalc.ts";
+import { normaliseLevelRows, normaliseRain, haversineKm } from "../lib/hmisCalc.ts";
 
 const outDir = process.argv[2];
 if (!outDir) {
@@ -45,6 +46,10 @@ async function merge(kind, entries) {
 }
 
 const now = Date.now();
+// Rain-zone towns (lib/places.ts rainZone): a gauge within 30 km of one keeps its ZERO readings in the daily archive too, so the backtest of the
+// ground-gauge street rule (scripts/ground-rain-backtest.mts) can tell a dry gauge from a missing one. Everywhere else zeros are skipped (size).
+const ZONE_CENTRES = [[6.93, 79.89], [7.07, 79.89], [7.21, 79.84], [7.35, 79.85], [7.58, 79.80]];
+const nearZone = (d) => ZONE_CENTRES.some(([lat, lon]) => haversineKm({ lat, lon }, d) <= 30);
 
 /** Rolling state for the gauge-corrected satellite rain (see the header). */
 async function writeLiveRain(rain) {
@@ -92,7 +97,7 @@ try {
   const rain = normaliseRain(await get("getrainfalldevices"));
   const by = new Map();
   for (const d of rain) {
-    if (now - d.latestTs > 3 * 3_600_000 || d.mm24h <= 0) continue;
+    if (now - d.latestTs > 3 * 3_600_000 || (d.mm24h <= 0 && !nearZone(d))) continue;
     const day = dayOf(d.latestTs);
     if (!by.has(day)) by.set(day, new Map());
     by.get(day).set(d.device, { meta: { name: d.name, institute: d.institute, lat: d.lat, lon: d.lon }, pts: [[d.latestTs, d.mm24h]] });
