@@ -6,8 +6,9 @@ import { orderStations } from "@/lib/basinOrder";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "404",
-  robots: { index: false, follow: true },
+  title: "Page not found",
+  // the layout says index + googleBot index: both must be overridden here or Google reads the 404 as indexable
+  robots: { index: false, follow: true, googleBot: { index: false, follow: true } },
 };
 
 

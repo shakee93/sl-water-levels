@@ -62,3 +62,8 @@ jobs:
       - name: SEO and AI-crawler check
         if: always()
         run: node scripts/seo-check.mjs
+
+      # Real 404s for junk addresses, case and old-name redirects, no redirect on real pages (~40 requests).
+      - name: Redirect and 404 check
+        if: always()
+        run: node scripts/redirect-check.mjs "$SITE_URL" --quick
