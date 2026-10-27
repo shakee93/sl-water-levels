@@ -1,6 +1,9 @@
 // POST /api/feedback  "Is this right?" on station and town pages. Two steps, one row:
 //   {op:"answer", page, station?, town?, answer, tone, lang, hp, ms}  -> stores the answer and what the page showed; returns {token, impact}
 //   {op:"details", token, river?, rain?, note?, lat?, lon?, hp}       -> adds what they see, a note and a rounded location, once
+//   {op:"water", token, water_at, hp}                                 -> "Where is the water now?" after "worse"
+//   {op:"where", token, lat+lon | place, hp}                          -> "Where are you?" after "worse": a phone position or a chosen town, stored rounded to 0.01 degree
+//     (about 1 km) with place_pick, the distance to the gauge the page showed and the satellite rain over that pixel (lib/feedbackCheck.mjs checks it later)
 // Table forecast_feedback (d1/0008_feedback.sql, created here when missing). What the page showed is read on the server
 // (gauge snapshot + next-hour forecast, both cached), never trusted from the browser, except the verdict tier, which is a
 // fixed list of words. Location arrives at full precision from the phone, is rounded to 0.01 degree (about 1 km) here and
@@ -18,10 +21,11 @@ import { getStationVerdicts } from "@/lib/stationVerdict";
 import { toShown } from "@/lib/units";
 import { personDay } from "@/lib/personDay";
 import { addColumns, isMissingColumn } from "@/lib/d1Migrate";
+import { getPointRain } from "@/lib/rainMap";
 import { weeklyImpact } from "@/lib/feedbackStats";
 import {
   LIMIT_PER_IP_PER_10_MIN, LIMIT_PER_IP_PER_DAY, LIMIT_PER_IP_PER_TARGET_DAY,
-  colomboDay, deviceOf, distKm, fbCookieName, isUrgent, noteTags, validateAnswer, validateDetails, validateWater,
+  colomboDay, deviceOf, distKm, fbCookieName, isUrgent, noteTags, validateAnswer, validateDetails, validateWater, validateWhere,
 } from "@/lib/feedback";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +40,11 @@ const SCHEMA = [
 ];
 
 // Columns added after the table first shipped (d1/0009_feedback_person_water.sql); applied on the first "no such column".
-const ADD_COLUMNS = [`ALTER TABLE forecast_feedback ADD COLUMN person_day TEXT`, `ALTER TABLE forecast_feedback ADD COLUMN water_at TEXT`];
+// 0010_feedback_where.sql: place_pick (town slug when the location came from the picker), rain_3h_mm / rain_24h_mm (satellite rain over the person's pixel when they answered).
+const ADD_COLUMNS = [
+  `ALTER TABLE forecast_feedback ADD COLUMN person_day TEXT`, `ALTER TABLE forecast_feedback ADD COLUMN water_at TEXT`,
+  `ALTER TABLE forecast_feedback ADD COLUMN place_pick TEXT`, `ALTER TABLE forecast_feedback ADD COLUMN rain_3h_mm REAL`, `ALTER TABLE forecast_feedback ADD COLUMN rain_24h_mm REAL`,
+];
 
 const reply = (status: number, body: Record<string, unknown>) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
@@ -87,7 +95,7 @@ export async function POST(req: NextRequest) {
   }
   if (!d1Configured()) return reply(503, { ok: false, error: "unavailable" });
   try {
-    return body.op === "details" ? await details(body) : body.op === "water" ? await water(body) : body.op === "answer" ? await answer(req, body) : reply(400, { ok: false, error: "invalid" });
+    return body.op === "details" ? await details(body) : body.op === "water" ? await water(body) : body.op === "where" ? await where(body) : body.op === "answer" ? await answer(req, body) : reply(400, { ok: false, error: "invalid" });
   } catch (e) {
     if (!(e instanceof D1NotConfigured)) console.error("feedback: failed:", e instanceof Error ? e.message : e);
     return reply(e instanceof D1NotConfigured ? 503 : 502, { ok: false, error: "unavailable" });
@@ -170,7 +178,7 @@ async function details(body: Record<string, unknown>) {
   }
   const tags = noteTags(d.note);
   await d1Query(
-    "UPDATE forecast_feedback SET river_obs = ?, rain_obs = ?, note = ?, note_tags = ?, lat_r = ?, lon_r = ?, dist_km = ?, details_ms = ? WHERE token = ? AND details_ms IS NULL",
+    "UPDATE forecast_feedback SET river_obs = ?, rain_obs = ?, note = ?, note_tags = ?, lat_r = COALESCE(?, lat_r), lon_r = COALESCE(?, lon_r), dist_km = COALESCE(?, dist_km), details_ms = ? WHERE token = ? AND details_ms IS NULL",
     [d.river, d.rain, d.note, tags.length ? tags.join(",") : null, lat, lon, dist, now, d.token],
   );
   if (isUrgent(String(row.answer), d.river)) {
@@ -194,4 +202,32 @@ async function water(body: Record<string, unknown>) {
   if (!row || row.answer !== "worse" || row.water_at != null || now - Number(row.created_ms) > 2 * 3_600_000) return reply(200, { ok: true });
   await d1Query("UPDATE forecast_feedback SET water_at = ? WHERE token = ? AND water_at IS NULL", [v.value.waterAt, v.value.token]);
   return reply(200, { ok: true });
+}
+
+/**
+ * "Where are you?" after "No, it's worse": a phone position (already rounded on the phone, rounded again here) or a chosen town. Stored once on
+ * the person's own row with the distance to the gauge the page showed and the satellite rain over their pixel. Optional: failing is harmless.
+ */
+async function where(body: Record<string, unknown>) {
+  const v = validateWhere(body, (slug) => { const p = placeBySlug(slug); return p ? { lat: p.lat, lon: p.lon } : null; });
+  if (!v.ok) return v.reason === "bot" ? reply(200, { ok: true }) : reply(400, { ok: false, error: "invalid" });
+  const now = Date.now();
+  const rows = await withSchema(() => d1Query("SELECT answer, station, lat_r, created_ms FROM forecast_feedback WHERE token = ?", [v.value.token]));
+  const row = rows[0];
+  // unknown token, not a "worse" answer, already has a location, or older than two hours: a quiet "thanks", nothing changes
+  if (!row || row.answer !== "worse" || row.lat_r != null || now - Number(row.created_ms) > 2 * 3_600_000) return reply(200, { ok: true });
+  const { loc, place } = v.value;
+  let dist: number | null = null;
+  if (row.station) {
+    const g = (await fetchStations().catch(() => [])).find((s) => s.station === row.station);
+    if (g) dist = distKm(loc, { lat: g.latitude, lon: g.longitude });
+  }
+  const rain = await timeBox(getPointRain(loc.lat, loc.lon, now));
+  await withSchema(() =>
+    d1Query(
+      "UPDATE forecast_feedback SET lat_r = ?, lon_r = ?, dist_km = ?, place_pick = ?, rain_3h_mm = ?, rain_24h_mm = ? WHERE token = ? AND lat_r IS NULL",
+      [loc.lat, loc.lon, dist, place, rain?.mm3h ?? null, rain?.mm24h ?? null, v.value.token],
+    ),
+  );
+  return reply(200, { ok: true, distKm: dist });
 }

@@ -140,3 +140,22 @@ export function validateWater(body: unknown): Verdict<FbWaterReq> {
   const w = oneOf(FB_WATER, body.water_at);
   return w ? { ok: true, value: { token: body.token, waterAt: w } } : { ok: false, reason: "invalid" };
 }
+
+/**
+ * "Where are you?" after "No, it's worse" (op "where"): either the phone's position (lat/lon, rounded here to 0.01 degree) or a town
+ * chosen from the gazetteer (`place` slug; its centre, rounded the same way, is what gets stored). `lookup` returns a place's centre
+ * or null. Anything outside Sri Lanka or unknown is invalid: the answer itself stays saved either way.
+ */
+export type FbWhereReq = { token: string; loc: { lat: number; lon: number }; place: string | null };
+export function validateWhere(body: unknown, lookup: (slug: string) => { lat: number; lon: number } | null): Verdict<FbWhereReq> {
+  if (!isObj(body)) return { ok: false, reason: "invalid" };
+  if (typeof body.token !== "string" || !/^[0-9a-f]{24}$/.test(body.token)) return { ok: false, reason: "invalid" };
+  if (body.hp != null && body.hp !== "") return { ok: false, reason: "bot" };
+  if (typeof body.place === "string") {
+    const c = body.place.length <= 80 ? lookup(body.place) : null;
+    const loc = c ? cleanLocation(c.lat, c.lon) : null;
+    return loc ? { ok: true, value: { token: body.token, loc, place: body.place } } : { ok: false, reason: "invalid" };
+  }
+  const loc = cleanLocation(body.lat, body.lon);
+  return loc ? { ok: true, value: { token: body.token, loc, place: null } } : { ok: false, reason: "invalid" };
+}

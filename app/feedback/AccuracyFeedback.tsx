@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { Check, CircleCheck, CircleHelp, MapPin, MessageCircleQuestion, TrendingDown, TrendingUp, X } from "lucide-react";
 import { FB_RAIN, FB_RIVER, FB_WATER, NOTE_MAX, colomboDay, fbCookieName, roundCoord, type FbAnswer, type FbPage, type FbRain, type FbRiver, type FbWater } from "@/lib/feedback";
 import { fbFor, type FKey } from "@/lib/i18n/feedback";
@@ -51,6 +51,10 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
   const [noteDropped, setNoteDropped] = useState(false);
   const [answer, setAnswer] = useState<FbAnswer | null>(null);
   const [water, setWater] = useState<"open" | "sending" | "sent">("open");
+  // "Where are you?" after "worse": a phone position (rounded here) or a town from the list; optional, the answer is kept either way
+  const [where, setWhere] = useState<"open" | "busy" | "off" | "sending" | "sent" | "skipped">("open");
+  const [placeQ, setPlaceQ] = useState("");
+  const [places, setPlaces] = useState<{ slug: string; name: string; district: string; keys: string[] }[] | null>(null);
 
   async function send(a: FbAnswer) {
     if (phase === "sending") return;
@@ -87,6 +91,43 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
     }
     setWater("sent");
   }
+
+  /** Saves "where are you" on the answer's own row; the server rounds it again and works out the distance to the gauge. Failing is harmless. */
+  async function sendWhere(p: { lat: number; lon: number } | { place: string }) {
+    if (!token) return;
+    setWhere("sending");
+    try {
+      await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "where", token, ...p, hp }) });
+      trackEvent("feedback_where", { page, how: "place" in p ? "place" : "gps", target });
+    } catch {
+      /* the answer itself is already saved */
+    }
+    setWhere("sent");
+  }
+
+  function shareMyLocation() {
+    if (!navigator.geolocation) return setWhere("off");
+    setWhere("busy");
+    navigator.geolocation.getCurrentPosition(
+      // rounded on the phone: the exact position never leaves it
+      (p) => void sendWhere({ lat: roundCoord(p.coords.latitude), lon: roundCoord(p.coords.longitude) }),
+      () => { setWhere("off"); trackEvent("feedback_where", { page, how: "gps_denied", target }); },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  }
+
+  /** The place list is loaded only when the person opens the search, so it is not part of every page's first load. */
+  function loadPlaces() {
+    if (places) return;
+    void import("@/lib/places").then((m) => setPlaces(m.PLACES.map((x) => ({ slug: x.slug, name: x.name, district: x.district, keys: [x.name, ...x.aliases].map((k) => k.toLowerCase()) }))));
+  }
+  const placeHits = useMemo(() => {
+    const q = placeQ.trim().toLowerCase();
+    if (!places || q.length < 2) return [];
+    const starts = places.filter((x) => x.keys.some((k) => k.startsWith(q)));
+    const has = places.filter((x) => !starts.includes(x) && x.keys.some((k) => k.includes(q)));
+    return [...starts, ...has].slice(0, 6);
+  }, [places, placeQ]);
 
   function askLocation() {
     if (!navigator.geolocation) return setLoc({ state: "off" });
@@ -161,6 +202,45 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
             </div>
           )}
 
+          {token && answer === "worse" && where !== "sent" && where !== "skipped" && (
+            <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800" role="group" aria-label={ft("fb.whereQ")}>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{ft("fb.whereQ")}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{where === "off" ? ft("fb.whereOff") : ft("fb.whereWhy")}</p>
+              <button type="button" onClick={shareMyLocation} disabled={where === "busy" || where === "sending"} className={`mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-left text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 ${ring}`}>
+                <MapPin className="size-4 shrink-0" aria-hidden /> {where === "busy" ? ft("fb.whereBusy") : ft("fb.whereBtn")}
+              </button>
+              <div className="mt-3">
+                <label htmlFor={`fb-place-${cookie}`} className="mb-1.5 block text-xs text-slate-500 dark:text-slate-400">{ft("fb.wherePick")}</label>
+                <input
+                  id={`fb-place-${cookie}`}
+                  type="search"
+                  value={placeQ}
+                  onFocus={loadPlaces}
+                  onChange={(e) => { setPlaceQ(e.target.value); loadPlaces(); }}
+                  placeholder={ft("fb.wherePh")}
+                  autoComplete="off"
+                  className={`w-full rounded-md border border-slate-300 bg-white p-2.5 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 ${ring}`}
+                />
+                {placeHits.length > 0 && (
+                  <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {placeHits.map((x) => (
+                      <li key={x.slug}>
+                        <button type="button" disabled={where === "sending"} onClick={() => sendWhere({ place: x.slug })} className={`${chip(false)} w-full justify-start rounded-xl py-2 text-left disabled:opacity-60`}>
+                          {x.name}<span className="text-xs text-slate-500 dark:text-slate-400">, {x.district}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {places && placeQ.trim().length >= 2 && placeHits.length === 0 && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{ft("fb.whereNone")}</p>}
+              </div>
+              <button type="button" onClick={() => setWhere("skipped")} className={`mt-2 min-h-11 rounded-md px-4 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${ring}`}>
+                {ft("fb.whereSkip")}
+              </button>
+            </div>
+          )}
+          {answer === "worse" && where === "sent" && <p className="mt-3 flex items-start gap-2 text-slate-600 dark:text-slate-400"><MapPin className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {ft("fb.whereDone")}</p>}
+
           {token && detail === "open" && (
             <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{ft("fb.more")}</p>
@@ -201,6 +281,7 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
                 <p className="mt-1 text-right text-xs text-slate-400 dark:text-slate-500">{ft("fb.noteCount", { n: note.length, max: NOTE_MAX })}</p>
               </div>
 
+              {answer !== "worse" && (
               <div className="mt-3">
                 {loc.state === "ok" ? (
                   <p className="flex flex-wrap items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
@@ -216,6 +297,7 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
                 )}
                 <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{loc.state === "off" ? ft("fb.locOff") : ft("fb.locWhy")}</p>
               </div>
+              )}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <button type="button" onClick={sendDetails} className={`min-h-11 rounded-md bg-sky-700 px-5 text-sm font-medium text-white hover:bg-sky-800 dark:bg-sky-600 dark:hover:bg-sky-500 ${ring}`}>

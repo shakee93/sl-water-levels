@@ -18,6 +18,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { PLACES } from "../lib/places.ts";
+import { FAR, checkWorse, stationInfo } from "../lib/feedbackCheck.mjs";
 import { HORIZONS, buildParams, colomboDay, feedbackWetness, learnedLines, nearest } from "../lib/learnedParams.mjs";
 
 const args = process.argv.slice(2);
@@ -40,11 +41,17 @@ function d1(sql) {
 const q = (v) => (typeof v === "number" ? String(v) : `'${String(v).replace(/'/g, "''")}'`);
 
 function gather() {
-  // person_day / water_at are added by the routes on the first answer after they shipped; until then fall back to the old columns
-  const withFallback = (sql, fallbackSql) => { try { return d1(sql)[0]; } catch (e) { if (!/no such column/i.test(`${e?.message ?? e} ${e?.stdout ?? ""}`)) throw e; return d1(fallbackSql)[0]; } };
+  // person_day / water_at / the location columns are added by the routes on the first answer after they shipped; until then fall back to the old columns
+  const withFallback = (...sqls) => {
+    for (let i = 0; i < sqls.length; i++) {
+      try { return d1(sqls[i])[0]; } catch (e) { if (i === sqls.length - 1 || !/no such column/i.test(`${e?.message ?? e} ${e?.stdout ?? ""}`)) throw e; }
+    }
+  };
+  const fbCols = "created_ms, day, page, station, town, answer, river_obs, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash";
   const feedback = withFallback(
-    `SELECT created_ms, day, page, station, town, answer, river_obs, water_at, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash, person_day FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`,
-    `SELECT created_ms, day, page, station, town, answer, river_obs, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`);
+    `SELECT ${fbCols}, water_at, person_day, lat_r, lon_r, rain_3h_mm, rain_24h_mm FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`,
+    `SELECT ${fbCols}, water_at, person_day FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`,
+    `SELECT ${fbCols} FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`);
   const reports = withFallback(
     `SELECT created_ms, day, town, answer, ip_hash, person_day FROM street_flood_reports WHERE created_ms >= ${SINCE} ORDER BY created_ms`,
     `SELECT created_ms, day, town, answer, ip_hash FROM street_flood_reports WHERE created_ms >= ${SINCE} ORDER BY created_ms`);
@@ -69,6 +76,19 @@ function gather() {
 
 const ev = FIXTURE ? JSON.parse(readFileSync(FIXTURE, "utf8")) : gather();
 
+// gauge coordinates and basins for the "worse" cross-check: stations.json from the data branch (the archive checkout, else the raw file)
+async function loadStations() {
+  if (ev.stations) return ev.stations;
+  try {
+    if (outDir && existsSync(path.join(outDir, "stations.json"))) return JSON.parse(readFileSync(path.join(outDir, "stations.json"), "utf8"));
+    return await (await fetch("https://raw.githubusercontent.com/shakee93/sl-water-levels/data/stations.json", { signal: AbortSignal.timeout(15_000) })).json();
+  } catch {
+    return [];
+  }
+}
+const stationList = (await loadStations()).map(stationInfo);
+const stationBy = new Map(stationList.map((s) => [s.station, s]));
+
 // ---- join
 const unitOf = {}, marks = {};
 for (const m of [...ev.marksRaw, ...ev.pts]) if (m.unit === "ft" || m.unit === "m") unitOf[m.station] = m.unit;
@@ -87,7 +107,7 @@ const placeOf = (slug) => PLACES.find((p) => p.slug === slug);
 
 /** One person per day across both forms: the shared person_day code; rows from before it existed fall back to their own form's hash (not linkable across forms). */
 const personKey = (row) => (row.person_day ? `p|${row.person_day}` : `${row.ip_hash}|${row.day}`);
-const answers = [], streetEvidence = [];
+const answers = [], streetEvidence = [], checks = {};
 for (const f of ev.feedback) {
   const key = personKey(f);
   let err1h = null;
@@ -99,7 +119,15 @@ for (const f of ev.feedback) {
   // "where is the water now" (road / yard / inside = street water, none = just a higher river) beats "what is the river/canal near you
   // doing" (flooding roads or homes = street water; normal / high / over its banks = none); both are read at the gauge level shown
   const w = f.station && f.shown_level != null ? feedbackWetness(f.water_at, f.river_obs) : null;
-  if (w) streetEvidence.push({ station: f.station, level: f.shown_level, wet: w.wet, strong: w.strong, day: f.day, key: `${key}|${f.station}` });
+  // A "worse" answer with a location is cross-checked (lib/feedbackCheck.mjs). One from far away or about another gauge says nothing about
+  // THIS gauge's street level, so it is left out of that evidence only; the answer itself still counts everywhere else.
+  let check = null;
+  if (f.answer === "worse" && f.lat_r != null && f.station && stationBy.has(f.station)) {
+    const g = stationBy.get(f.station);
+    check = checkWorse({ loc: { lat: f.lat_r, lon: f.lon_r }, shown: g, stations: stationList, rain: { mm3h: f.rain_3h_mm, mm24h: f.rain_24h_mm }, obs: series[f.station] ?? [], createdMs: f.created_ms, base: f.shown_level, marks: marks[f.station] ?? {}, now: NOW }).check;
+    checks[check ?? "none"] = (checks[check ?? "none"] ?? 0) + 1;
+  }
+  if (w && check !== FAR) streetEvidence.push({ station: f.station, level: f.shown_level, wet: w.wet, strong: w.strong, day: f.day, key: `${key}|${f.station}` });
 }
 const rainEvidence = [], reports = [];
 const rainByZone = {};
@@ -145,6 +173,7 @@ for (const [zone, z] of Object.entries(params.zones)) {
 }
 const text = news.length ? `*Learned from visitors' answers:* ${news.join("; ")}. Notes and heads-ups only; the verdict step is unchanged. ${process.env.SITE_URL || "https://waterlevels.lk"}/about` : "";
 
+console.error(`worse answers with a location, by check: ${JSON.stringify(checks)}`); // counts only; stderr so the JSON on stdout stays clean
 if (DRY) {
   console.log(JSON.stringify(params, null, 2));
   console.log("\n--- digest lines ---\n" + learnedLines(params).join("\n"));

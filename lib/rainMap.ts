@@ -24,6 +24,7 @@ import { noRainSensor } from "./rainSensors";
 import { stationDisplayName } from "./displayName";
 import { formatLevel } from "./units";
 import { isDryZoneBasin } from "./rainWords";
+import { pointRain } from "./pointRain.mjs";
 import { GRID, FC_GRID, type RainMapBasin, type RainMapData, type RainMapGauge } from "./rainMapCalc";
 
 const HOUR = 3_600_000;
@@ -72,6 +73,16 @@ const loadGrid = unstable_cache(
   ["rain-map-grid-v1"],
   { revalidate: 600 },
 );
+
+/** Satellite rain over the 0.1 degree pixel a point falls in: mm over the last 3 and 24 h. Reads the same cached grid as the map (no extra request); null when unavailable or older than 6 h. */
+export async function getPointRain(lat: number, lon: number, now = Date.now()): Promise<{ mm3h: number | null; mm24h: number | null } | null> {
+  try {
+    const r = pointRain(await loadGrid(), lat, lon);
+    return r && now - r.endMs <= SAT_MAX_AGE_MS ? { mm3h: r.mm3h, mm24h: r.mm24h } : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Satellite hours (clock hours, newest last) of the last 24 h: start ms and tenths of mm per pixel (-1 = missing). */
 async function satelliteHours(now: number): Promise<{ start: number; v: number[] }[] | null> {

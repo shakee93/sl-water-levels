@@ -971,6 +971,20 @@ Rows from before it keep NULL and fall back to their own form's `ip_hash` (not l
 Both columns are added by the routes on the first "no such column" (`lib/d1Migrate.ts`, statements recorded in `d1/0009_feedback_person_water.sql`); the learn and export
 scripts fall back to the old column list until then.
 
+**Location on "worse" and the cross-check (28 Oct 2026).** After "No, it's worse" the same follow-up asks "Where are you?": a "Use my location" button
+(browser geolocation, only on tap, rounded to 0.01 degree on the phone and again on the server) or a searchable town/area picker (`lib/places.ts`, loaded only when
+the search opens) for people who decline. Op `where` of `/api/feedback` stores `lat_r`, `lon_r`, `place_pick` (town slug when picked), `dist_km` (to the gauge the
+page showed, server-side) and `rain_3h_mm` / `rain_24h_mm` (satellite rain over that 0.1 degree pixel, read from the rain map's cached `gsmap/grid.json`, no new
+request; `lib/pointRain.mjs`). Optional and skippable; the answer is kept either way. The older location button in the "add more" form is hidden for "worse" so people
+are asked once. Columns are added by the route (`lib/d1Migrate.ts`, `d1/0010_feedback_where.sql`). `lib/feedbackCheck.mjs` (pure, `scripts/feedback-check.test.mts`)
+gives every located "worse" answer a verdict: **far from gauge / wrong gauge** (more than 5 km from the gauge shown, or another gauge is at least 2 km and twice as close, or the nearest gauge is on another river and nearer),
+else **river confirms** (the shown gauge rose 0.2 ft or more in the next 3 h, or reached its alert mark), else **local rain likely** (10 mm in 3 h or 60 mm in 24 h over the pixel),
+else **unexplained** (**pending** while the answer is under 3 h old and the gauge has not been heard from). The learning job leaves answers marked "far from gauge / wrong gauge" out of that gauge's
+street-level evidence only (they still count everywhere else); it prints the counts per verdict to stderr and writes none of it to the data branch. The owner's export
+(`scripts/feedback-export.mjs`, one indexed `(station, ts)` range query per located answer) adds the columns `place_pick, lat_r, lon_r, nearest_gauge, nearest_km, rain_3h_mm,
+rain_24h_mm, gauge_next3h_dir, gauge_next3h_max, gauge_next_mark, gauge_to_mark_ft, check, check_reasons` (`check` is "no location" for a "worse" answer without one); `dist_km` was already there.
+Coordinates never go beyond the 0.01 degree rounding, never to the public repo or the `data` branch. Notes and this check never change the verdict step.
+
 **Evidence rules.** A number appears only with at least `K_MIN` = 3 independent answers (one per person per day per target) on at least
 `MIN_DAYS` = 2 separate days; otherwise `pending` shows the progress and the default stays. Every value is clamped near its default:
 - `streetLevel` (feet): the second-lowest gauge level at which independent people reported water on roads or in homes ("flooding roads or
