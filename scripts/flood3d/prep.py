@@ -55,6 +55,12 @@ kel_els = [e for e in ww if e["tags"].get("waterway") == "river" and "Kelani" in
 if not kel_els: kel_els = [e for e in ww if e["tags"].get("waterway") == "river"]
 kel = lines_mask(kel_els, 3)
 allw = lines_mask([e for e in ww if e["tags"].get("waterway") in ("river", "canal", "drain")], 2)
+# Kelani-side network: the Kelani plus every canal/drain that connects to it (touching ways, 1 px tolerance). Canals that drain
+# elsewhere (Wellawatte/Dehiwala, Beira, coast) are NOT part of it: the calibration says nothing about them.
+_lab, _n = ndi.label(ndi.binary_dilation(allw | kel, iterations=1), structure=np.ones((3, 3)))
+_ids = np.unique(_lab[kel & (_lab > 0)])
+KNET = np.isin(_lab, _ids) & (allw | kel)
+print("Kelani-side network px", int(KNET.sum()), "of all waterway px", int((allw | kel).sum()))
 print("river ways", len(kel_els), "river px", kel.sum(), "all px", allw.sum())
 def hand(zz, drain, smooth=3):
     zm = ndi.minimum_filter(np.where(np.isfinite(zz), zz, 99), size=smooth)
@@ -112,7 +118,7 @@ def rnd(d): return {k: (round(float(v), 3) if isinstance(v, (float, np.floating)
 
 # ---- pick drainage variant by CSI on E1 (tuning only the variant and smoothing, not thresholds per band)
 best = None; variants = {}
-for lab, dr in [("Kelani only", kel), ("Kelani + canals/drains", kel | allw)]:
+for lab, dr in [("Kelani only", kel), ("Kelani + connected canals", KNET)]:
     for sm in (3, 7):
         h, dist, ix = hand(z, dr, sm)
         ok = EV["E1"]["foot"] & np.isfinite(h) & ~dr & ~sea
@@ -121,7 +127,15 @@ for lab, dr in [("Kelani only", kel), ("Kelani + canals/drains", kel | allw)]:
         if best is None or c[0] > best[0]: best = (c[0], lab, sm, dr)
 print("variants", variants); _, VLAB, VSM, DRAIN = best
 HAND, DIST, IX = hand(z, DRAIN, VSM)
-okall = np.isfinite(HAND) & ~DRAIN & ~sea
+# Coverage: only where the calibration applies = within 3 km of the Kelani-side network, inside the EMS analysed footprints
+# (the reaches we fitted, dilated 600 m) and north of 6.915 N (south Colombo, the coast and the Wellawatte/Dehiwala basins are out).
+_dK = ndi.distance_transform_edt(~KNET) * RES
+_fpu = ndi.binary_dilation(EV["E1"]["foot"] | EV["E3"]["foot"], iterations=20)
+_north = np.zeros((H, W), bool); _north[: int(px(80.0, 6.915)[1]), :] = True
+COVER = (_dK <= 3000) & _fpu & _north
+LAND = np.isfinite(z) & ~sea
+okall = np.isfinite(HAND) & ~DRAIN & ~sea & COVER
+print("covered cells", int(COVER.sum()), "of land", int(LAND.sum()), "| Wellawatte (6.875,79.860) covered:", bool(COVER[int(px(79.860, 6.875)[1]), int(px(79.860, 6.875)[0])]), "| Kelaniya covered:", bool(COVER[int(px(79.922, 6.955)[1]), int(px(79.922, 6.955)[0])]))
 
 # ---- plain HAND bands vs both events
 BANDS = [(0, 1), (1, 2), (2, 3), (3, 5)]
@@ -189,6 +203,37 @@ for ev in EV.values():
     s = ev["nag_ft"] * FT
     hi_b = np.where(ev["foot"] & ev["wet"], np.minimum(hi_b, s), hi_b)
     lo_b = np.where(ev["foot"] & ~ev["wet"], np.maximum(lo_b, s), lo_b)
+# public reports (REPORTS=path to the owner-side export of flood3d_reports; never committed): wet/dry bounds per cell at the reported stage
+REPORT_STAGE = {"ditwah_2025": 8.4, "may_2016": 7.64}   # peak Nagalagam of the named floods; June 2024 and "other" have no known stage, so are not used
+used = dict(Kelaniya=0, Wellampitiya=0, corridor=0); flags = []; skipped = dict(no_stage=0, low_river=0, inaccurate=0, outside=0, outlier=0)
+if os.environ.get("REPORTS") and os.path.exists(os.environ["REPORTS"]):
+    cand = []
+    for r in json.load(open(os.environ["REPORTS"])):
+        if r.get("status") == "outlier": continue
+        k = r["kind"]
+        if k == "water_now": st, wet = r.get("nag_ft"), True
+        elif k == "past_wet": st, wet = REPORT_STAGE.get(r.get("event")), True
+        elif k == "past_dry": st, wet = REPORT_STAGE.get(r.get("event")), False
+        else: continue
+        if st is None: skipped["no_stage"] += 1; continue
+        if k == "water_now" and st < 4.5: skipped["low_river"] += 1; continue       # river far below minor: rain or canal water, not a river-level bound
+        if r.get("acc_m") is not None and r["acc_m"] > 60: skipped["inaccurate"] += 1; continue
+        cx, cy = px(r["lon"], r["lat"])
+        if not (0 <= cx < W and 0 <= cy < H and COVER[int(cy), int(cx)]): skipped["outside"] += 1; continue
+        cand.append(dict(id=r["id"], r=int(cy), c=int(cx), st=float(st), wet=wet))
+    # outlier check: contradicting 3 or more neighbours within 400 m at a similar stage -> flagged, not used
+    for a in cand:
+        bad = sum(1 for b in cand if b is not a and (a["r"] - b["r"]) ** 2 + (a["c"] - b["c"]) ** 2 <= (400 / RES) ** 2 and ((a["wet"] and not b["wet"] and b["st"] >= a["st"] - 0.5) or ((not a["wet"]) and b["wet"] and b["st"] <= a["st"] + 0.5)))
+        a["bad"] = bad >= 3
+        if a["bad"]: flags.append(a["id"]); skipped["outlier"] += 1
+    for a in cand:
+        if a["bad"]: continue
+        sm = a["st"] * FT
+        if a["wet"]: hi_b[a["r"], a["c"]] = min(hi_b[a["r"], a["c"]], sm)
+        else: lo_b[a["r"], a["c"]] = max(lo_b[a["r"], a["c"]], sm)
+        used["corridor"] += 1; used["Kelaniya"] += int(KELANIYA[a["r"], a["c"]]); used["Wellampitiya"] += int(WELL[a["r"], a["c"]])
+    json.dump(flags, open(f"{WORK}/report_outlier_ids.json", "w"))
+    print("reports used", used, "skipped", skipped, "outlier ids ->", f"{WORK}/report_outlier_ids.json")
 Lf = np.minimum(np.maximum(Lm, lo_b + 0.02), np.where(hi_b < np.inf, np.maximum(hi_b, lo_b + 0.03), np.inf))
 Lft = Lf / FT
 # uncertainty class and half-width (ft). Widths from the leave-one-event-out spread (set below), observed bounds tighten.
@@ -264,7 +309,8 @@ BAND = np.select([HAND <= 1, HAND <= 2, HAND <= 3, HAND <= 5], [0, 1, 2, 3], 4)
 valid = okall & np.isfinite(Lft)
 R = np.where(valid & (Lft < 25), np.clip(np.round((Lft - 2) * 10) + 1, 1, 250), 0)
 R = np.where(DRAIN | sea, 255, R)
-Rw = to_wgs(R, 0); Gw = to_wgs(np.clip(np.round(half * 10), 0, 250), 0); Bw = to_wgs(cls + 4 * BAND, 0)
+Rw = to_wgs(R, 0); Gw = to_wgs(np.clip(np.round(half * 10), 0, 250), 0); UNC = (LAND & ~COVER & ~DRAIN)
+Bw = to_wgs(cls + 4 * BAND + 32 * UNC, 0)
 img = np.stack([Rw, Gw, Bw], -1).astype(np.uint8)
 Image.fromarray(img).save(f"{OUT}/level.png", optimize=True)
 print("png", img.shape, os.path.getsize(f"{OUT}/level.png"))
@@ -349,8 +395,38 @@ for nm, fs in (("roads-main", main), ("roads-local", local)):
     json.dump({"type": "FeatureCollection", "features": fs}, open(f"{OUT}/{nm}.json", "w"), separators=(",", ":"))
     print(nm, len(fs), os.path.getsize(f"{OUT}/{nm}.json"))
 
+_rows, _cols = np.where(COVER)
+_w_, _n_ = Ti.transform(X0 + _cols.min() * RES, Y1 - _rows.min() * RES); _e_, _s_ = Ti.transform(X0 + (_cols.max() + 1) * RES, Y1 - (_rows.max() + 1) * RES)
+COV_BOUNDS = [round(_w_ - 0.03, 3), round(_s_ - 0.03, 3), round(_e_ + 0.03, 3), round(_n_ + 0.03, 3)]
+print('covered bounds', COV_BOUNDS)
+# ---- gazetteer for the search box (no live geocoder): OSM places and landmarks with names (+ si/ta where present), and named roads
+gz = []
+if os.path.exists(f"{WORK}/osm_places.json"):
+    seen = set()
+    for e in json.load(open(f"{WORK}/osm_places.json"))["elements"]:
+        t = e.get("tags", {}); nm = t.get("name:en") or t.get("name")
+        c = e.get("center") or e
+        if not nm or "lat" not in c or not (S <= c["lat"] <= N and Wl <= c["lon"] <= E_): continue
+        kind = 0 if t.get("place") else 1
+        key = (nm.lower(), round(c["lat"], 2), round(c["lon"], 2))
+        if key in seen: continue
+        seen.add(key)
+        gz.append([nm, round(c["lat"], 4), round(c["lon"], 4), kind, t.get("name:si", ""), t.get("name:ta", "")])
+    best = {}
+    for w_ in rd:
+        tg = w_.get("tags", {}); nm = tg.get("name:en") or tg.get("name")
+        if not nm or not w_.get("geometry"): continue
+        g_ = w_["geometry"]; mid = g_[len(g_) // 2]
+        if not (S <= mid["lat"] <= N and Wl <= mid["lon"] <= E_): continue
+        prev = best.get(nm.lower())
+        if not prev or len(g_) > prev[0]: best[nm.lower()] = (len(g_), [nm, round(mid["lat"], 4), round(mid["lon"], 4), 2, tg.get("name:si", ""), tg.get("name:ta", "")])
+    gz += [v[1] for v in best.values()]
+    gz = [[*r[:4], *([r[4]] if r[4] or r[5] else []), *([r[5]] if r[5] else [])] if (r[4] or r[5]) else r[:4] for r in gz]
+    json.dump({"p": gz}, open(f"{OUT}/gazetteer.json", "w"), ensure_ascii=False, separators=(",", ":"))
+    print("gazetteer", len(gz), os.path.getsize(f"{OUT}/gazetteer.json"))
+
 json.dump(dict(
-    generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)"),
+    reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)"),
     drainage=VLAB, minfilter=VSM, variants=variants, events={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EV.items()},
     zone_offset_m={str(k): round(v, 2) for k, v in CZ.items()}, global_offset_m=round(CG, 2), half_width_ft=HW,
     plain_bands=acc_bands, loeo=LOEO, insample_note='reproduces the two observed maps by construction (bounds clip); not an accuracy figure', insample=insample, reliability_cell_part=rel, chance_calibration=dict(a=CAL[0], b=CAL[1], sd_ft=round(float(np.sqrt(HW['interpolated'] ** 2 / 3)), 2)), ground_truth_points=len(PTS), points_learned=pts_learned, points_plain_bands=pts_plain, points_random_baseline=base),

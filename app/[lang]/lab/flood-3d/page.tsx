@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLocale } from "@/lib/i18n/config";
 import Flood3dMap from "./Flood3dMap";
+import { PLACES } from "@/lib/places";
+import { BOUNDS } from "@/lib/flood3dReports";
 import acc from "@/public/flood3d/accuracy.json";
 
 // Unlisted test (owner, 27 Oct 2026): noindex, not in the sitemap or any menu. English only for now.
@@ -18,6 +20,10 @@ const pct = (v: number) => `${Math.round(v * 100)}%`;
 export default async function Flood3dPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
+  // Search index (towns with their Sinhala/Tamil aliases, and the gauges in this corridor): small, passed as props; the place and road names load on first focus.
+  const inside = (p: { lat: number; lon: number }) => p.lat >= BOUNDS.south && p.lat <= BOUNDS.north && p.lon >= BOUNDS.west && p.lon <= BOUNDS.east;
+  const towns = PLACES.filter(inside).map((p) => ({ n: p.name, lat: p.lat, lon: p.lon, al: p.aliases }));
+  const gauges = [{ n: "Nagalagam Street", lat: 6.958265, lon: 79.878642 }, { n: "Hanwella", lat: 6.9097, lon: 80.083126 }];
   const rows = (acc.loeo as Row[]).filter((r) => r.area === "Kelaniya");
   const avg = (pred: (r: Row) => boolean) => {
     const rs = rows.filter(pred);
@@ -33,7 +39,7 @@ export default async function Flood3dPage({ params }: { params: Promise<{ lang: 
       </div>
       <h1 className="text-xl font-semibold">Where the Kelani could flood: Kelaniya first</h1>
       <p className="text-sm text-slate-700 dark:text-slate-300">Move the river level, or leave it on live, and the blue fills the low ground. Tap anywhere for the level at which that spot floods. Roads turn orange and red where they sit on low ground.</p>
-      <Flood3dMap />
+      <Flood3dMap towns={towns} gauges={gauges} />
       <section className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700" data-testid="flood3d-accuracy">
         <h2 className="font-semibold">How good is it? (Kelaniya area, honest numbers)</h2>
         <p>

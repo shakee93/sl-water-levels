@@ -15,6 +15,7 @@ for t in ["N06_00_E079_00", "N06_00_E080_00"]:
 b = ",".join(map(str, BBOX))
 Q = {
  "waterways": f'[out:json][timeout:180];(way["waterway"~"^(river|canal|drain)$"]({b}););out geom;',
+ "places": f'[out:json][timeout:120];(nwr["place"~"^(suburb|neighbourhood|village|hamlet|town|quarter|locality)$"]["name"]({b});nwr["amenity"~"^(place_of_worship|school|college|university|hospital|bus_station|marketplace)$"]["name"]({b});nwr["railway"="station"]["name"]({b});nwr["man_made"="bridge"]["name"]({b});nwr["tourism"~"^(attraction|museum)$"]["name"]({b}););out center tags;',
  "roads": f'[out:json][timeout:240];(way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$"]({b}););out geom tags;',
 }
 for k, q in Q.items():

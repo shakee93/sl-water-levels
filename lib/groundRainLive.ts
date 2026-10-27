@@ -26,24 +26,30 @@ const loadState = unstable_cache(
   { revalidate: 300 },
 );
 
-/** The ground-gauge pick (lib/groundRain.ts pickRain) for a point: live gauges within 5 km, record at most 60 minutes old. null when there is none. */
-export async function getGroundRainAt(lat: number, lon: number, now = Date.now()): Promise<RainPick | null> {
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+/** Every live ground gauge with its newest point folded in (see above). Empty when the state file is missing. */
+export async function getGroundGauges(now = Date.now()): Promise<(GaugeState & { device: string })[]> {
   let state: (GaugeState & { device: string })[];
   try {
     state = await loadState();
   } catch {
-    return null;
+    return [];
   }
   // fold in the newest point the site's own HMIS read has, when newer than the archive's
   const fresh = await getHmisRain(1500).catch(() => null);
   const byDevice = new Map(fresh?.devices.map((d) => [d.device, d]) ?? []);
-  const gauges: GaugeState[] = state.map((g) => {
+  return state.map((g) => {
     const d = byDevice.get(g.device);
     const tm = d ? Math.round(d.latestTs / 60_000) : 0;
     const last = g.pts.length ? g.pts[g.pts.length - 1][0] : 0;
     return d && tm > last && d.latestTs <= now + 10 * 60_000 ? { ...g, pts: [...g.pts, [tm, d.mm24h]] } : g;
   });
+}
+
+/** The ground-gauge pick (lib/groundRain.ts pickRain) for a point: live gauges within 5 km, record at most 60 minutes old. null when there is none. */
+export async function getGroundRainAt(lat: number, lon: number, now = Date.now()): Promise<RainPick | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const gauges: GaugeState[] = await getGroundGauges(now);
+  if (!gauges.length) return null;
   const pick = pickRain({ lat, lon }, gauges, now);
   return pick.source === "ground" ? pick : null;
 }

@@ -170,7 +170,10 @@ lib/
   OSM via Overpass; run from a venv with rasterio/pyproj/shapely, small enough for the laptop) writes `public/flood3d/` (level.png =
   per-cell flood level in ft at Nagalagam, fitted on the EMSR851 maps; roads tagged with level; accuracy.json). Live gauges via
   `/api/flood3d` (`lib/flood3d.ts`, our caches only). MapLibre 5.24.0 is served from `public/flood3d/ml` (CSP build; the npm
-  package is a dev dependency for types only). Illustration, never an official step or verdict input.
+  package is a dev dependency for types only). Illustration, never an official step or verdict input. Coverage is limited to the Kelani-side
+  network inside the EMS footprints (the rest is greyed, no calibration); public reports (Locate me / Report here) go to D1 `flood3d_reports`
+  (d1/0012, precise coordinates private, area counts of 3+ only; owner export `scripts/flood3d/reports-export.mjs` feeds `prep.py` via REPORTS=);
+  `/api/flood3d/rain` blends satellite hour x gauge gain with live HMIS gauges for the optional Rain now layer.
 
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.

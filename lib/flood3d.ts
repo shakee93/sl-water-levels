@@ -33,7 +33,11 @@ export type GaugeLive = {
   horizons: Horizon[];
   method: string | null;
 };
-export type Flood3dLive = { generatedAt: string; nagalagam: GaugeLive | null; hanwella: GaugeLive | null; hanwellaToNag: [number, number][] };
+/** A river gauge for the map markers: official step, level and trend straight from levelRecord (the same words as the gauge pages). */
+export type MapGauge = { name: string; lat: number; lon: number; levelFt: number | null; status: string; statusLabel: string; trend: string | null; observedAt: string | null; url: string; fastFt: number | null; fastAt: string | null };
+export type Flood3dLive = { generatedAt: string; nagalagam: GaugeLive | null; hanwella: GaugeLive | null; hanwellaToNag: [number, number][]; gauges: MapGauge[] };
+/** Gauges drawn on the map: Kelani gauges in and around the corridor, whichever source (ArcGIS or the HMIS-only ones). */
+const GAUGE_BOX = { south: 6.8, north: 7.2, west: 79.75, east: 80.5 };
 
 function at(hs: { h: number; level: number; low: number | null; high: number | null }[], h: number, now: number): Horizon | null {
   const exact = hs.find((x) => x.h === h);
@@ -95,8 +99,17 @@ export const getFlood3dLive = unstable_cache(
   async (): Promise<Flood3dLive> => {
     const fast = HMIS_FAST.find((f) => f.station === "Hanwella")?.device ?? null;
     const [nagalagam, hanwella] = await Promise.all([gauge("Nagalagam Street", null).catch(() => null), gauge("Hanwella", fast).catch(() => null)]);
-    return { generatedAt: new Date().toISOString(), nagalagam, hanwella, hanwellaToNag: HANWELLA_M_TO_NAG_FT };
+    const national = await getNational().catch(() => []);
+    const now = Date.now();
+    const gauges: MapGauge[] = national
+      .filter((x) => x.latitude >= GAUGE_BOX.south && x.latitude <= GAUGE_BOX.north && x.longitude >= GAUGE_BOX.west && x.longitude <= GAUGE_BOX.east && x.basin.trim() === BASIN)
+      .map((x) => {
+        const r = levelRecord(x, now);
+        const fast = x.station === "Hanwella" ? hanwella : null;
+        return { name: r.station, lat: x.latitude, lon: x.longitude, levelFt: r.level, status: r.status, statusLabel: r.statusLabel, trend: r.trend, observedAt: r.observedAt, url: r.url, fastFt: fast?.fastFt ?? null, fastAt: fast?.fastAt ?? null };
+      });
+    return { generatedAt: new Date().toISOString(), nagalagam, hanwella, hanwellaToNag: HANWELLA_M_TO_NAG_FT, gauges };
   },
-  ["flood3d-live-v1"],
+  ["flood3d-live-v2"],
   { revalidate: 120 },
 );
