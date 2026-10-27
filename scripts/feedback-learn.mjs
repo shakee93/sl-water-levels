@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { PLACES } from "../lib/places.ts";
-import { HORIZONS, buildParams, colomboDay, learnedLines, nearest } from "../lib/learnedParams.mjs";
+import { HORIZONS, buildParams, colomboDay, feedbackWetness, learnedLines, nearest } from "../lib/learnedParams.mjs";
 
 const args = process.argv.slice(2);
 const FIXTURE = args.includes("--fixture") ? args[args.indexOf("--fixture") + 1] : null;
@@ -40,8 +40,14 @@ function d1(sql) {
 const q = (v) => (typeof v === "number" ? String(v) : `'${String(v).replace(/'/g, "''")}'`);
 
 function gather() {
-  const feedback = d1(`SELECT created_ms, day, page, station, town, answer, river_obs, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`)[0];
-  const reports = d1(`SELECT created_ms, day, town, answer, ip_hash FROM street_flood_reports WHERE created_ms >= ${SINCE} ORDER BY created_ms`)[0];
+  // person_day / water_at are added by the routes on the first answer after they shipped; until then fall back to the old columns
+  const withFallback = (sql, fallbackSql) => { try { return d1(sql)[0]; } catch (e) { if (!/no such column/i.test(String(e?.message ?? e))) throw e; return d1(fallbackSql)[0]; } };
+  const feedback = withFallback(
+    `SELECT created_ms, day, page, station, town, answer, river_obs, water_at, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash, person_day FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`,
+    `SELECT created_ms, day, page, station, town, answer, river_obs, shown_tier, shown_level, shown_next_ft, shown_dir, ip_hash FROM forecast_feedback WHERE created_ms >= ${SINCE} ORDER BY created_ms`);
+  const reports = withFallback(
+    `SELECT created_ms, day, town, answer, ip_hash, person_day FROM street_flood_reports WHERE created_ms >= ${SINCE} ORDER BY created_ms`,
+    `SELECT created_ms, day, town, answer, ip_hash FROM street_flood_reports WHERE created_ms >= ${SINCE} ORDER BY created_ms`);
   const marksRaw = d1(`SELECT r.station, r.unit, c.threshold, MAX(c.level) AS level FROM forecast_runs r JOIN forecast_crossings c ON c.run_id = r.id WHERE r.issued_at >= ${NOW - 12 * HOUR} GROUP BY r.station, r.unit, c.threshold`)[0];
   const observations = d1(`SELECT station, ts, level FROM observations WHERE ts >= ${NOW - 8 * DAY}`)[0];
   const pts = d1(`SELECT r.station, r.issued_at, r.unit, r.current_level AS c, p.horizon_h AS h, p.target_ts AS t, p.level AS p FROM forecast_runs r JOIN forecast_points p ON p.run_id = r.id WHERE r.issued_at >= ${BACKTEST_SINCE} AND r.method = 'model' AND p.horizon_h IN (${HORIZONS.join(",")})`)[0];
@@ -79,17 +85,21 @@ for (const o of ev.observations) {
 for (const s of Object.values(series)) s.sort((a, b) => a.ts - b.ts);
 const placeOf = (slug) => PLACES.find((p) => p.slug === slug);
 
+/** One person per day across both forms: the shared person_day code; rows from before it existed fall back to their own form's hash (not linkable across forms). */
+const personKey = (row) => (row.person_day ? `p|${row.person_day}` : `${row.ip_hash}|${row.day}`);
 const answers = [], streetEvidence = [];
 for (const f of ev.feedback) {
-  const key = `${f.ip_hash}|${f.day}`;
+  const key = personKey(f);
   let err1h = null;
   if (f.shown_next_ft != null && f.station && series[f.station]) {
     const o = nearest(series[f.station], f.created_ms + HOUR, 40 * 60_000);
     if (o) err1h = Math.round((o.v - f.shown_next_ft) * 100) / 100;
   }
   answers.push({ station: f.station, town: f.town, answer: f.answer, dir: f.shown_dir, riverObs: f.river_obs, tier: f.shown_tier, tierOk: f.page === "town" || f.created_ms >= SHOWN_TIER_FIXED_MS, err1h, day: f.day, key });
-  // "what is the river/canal near you doing": flooding roads or homes = street water; normal / high / over its banks = none
-  if (f.station && f.shown_level != null && f.river_obs) streetEvidence.push({ station: f.station, level: f.shown_level, wet: f.river_obs === "flooding", day: f.day, key: `${key}|${f.station}` });
+  // "where is the water now" (road / yard / inside = street water, none = just a higher river) beats "what is the river/canal near you
+  // doing" (flooding roads or homes = street water; normal / high / over its banks = none); both are read at the gauge level shown
+  const w = f.station && f.shown_level != null ? feedbackWetness(f.water_at, f.river_obs) : null;
+  if (w) streetEvidence.push({ station: f.station, level: f.shown_level, wet: w.wet, strong: w.strong, day: f.day, key: `${key}|${f.station}` });
 }
 const rainEvidence = [], reports = [];
 const rainByZone = {};
@@ -98,7 +108,7 @@ for (const r of ev.reports) {
   reports.push({ town: r.town, answer: r.answer, day: r.day });
   const place = placeOf(r.town), wet = r.answer === "deep" || r.answer === "little";
   const gauge = place?.stations.find((s) => series[s]?.length);
-  const key = `${r.ip_hash}|${r.day}`;
+  const key = personKey(r);
   if (gauge) {
     const o = nearest(series[gauge], r.created_ms, 90 * 60_000);
     if (o) streetEvidence.push({ station: gauge, level: o.v, wet, day: r.day, key: `${key}|${gauge}` });

@@ -15,6 +15,11 @@ const en = {
   "fb.limit": "That is enough for now. Thank you.",
   "fb.already": "You already answered here today. Thank you.",
   "fb.thanks": "Thank you. Your feedback helps improve the forecast for thousands of people across Sri Lanka.",
+  "fb.waterQ": "Where is the water now?",
+  "fb.water.road": "Road",
+  "fb.water.yard": "Garden or yard",
+  "fb.water.inside": "Inside the house",
+  "fb.water.none": "No water, just higher river",
   "fb.more": "Want to add more? (optional)",
   "fb.riverQ": "The river or canal near you is",
   "fb.river.normal": "Normal",
@@ -40,7 +45,7 @@ const en = {
   "fb.detailsDone": "Added. Thank you.",
   "fb.impact": "{n} people near {name} told us this week; {m} said it matched.",
   "fb.aboutTitle": "Your answers to \"Is this right?\"",
-  "fb.about": "When you answer, we store the answer, what the page showed at that moment, and only if you add them: what you see, a note and a spot rounded to about 1 km. We never store your exact position, your name or your IP address (a scrambled code that changes every day is used for one thing: stopping the same device from answering hundreds of times). Notes are read by the site owner and used only to improve the forecast; they are never shown publicly, and links, phone numbers and e-mail addresses are removed before saving. The only thing shown publicly is a total, such as \"9 of 12 people near Hanwella this week said it matched\", and only when at least 3 people answered.",
+  "fb.about": "When you answer, we store the answer, what the page showed at that moment, and only if you add them: what you see, where the water is, a note and a spot rounded to about 1 km. We never store your exact position, your name or your IP address (a scrambled code that changes every day is used for two things: stopping the same device from answering hundreds of times, and counting you once if you answer both our questions; it cannot be traced back to you and is never shown). Notes are read by the site owner and used only to improve the forecast; they are never shown publicly, and links, phone numbers and e-mail addresses are removed before saving. The only thing shown publicly is a total, such as \"9 of 12 people near Hanwella this week said it matched\", and only when at least 3 people answered.",
   "fb.privacy": "We keep only a spot rounded to about 1 km, never your exact position, address or device. Notes are read by the site owner and used only to improve the forecast, never shown publicly. Please don't type names, phone numbers or addresses.",
 } as const;
 export type FKey = keyof typeof en;
@@ -58,6 +63,11 @@ const si: Dict = {
   "fb.limit": "දැනට ප්‍රමාණවත්. ස්තූතියි.",
   "fb.already": "ඔබ අද මෙහි දැනටමත් පිළිතුරු දී ඇත. ස්තූතියි.",
   "fb.thanks": "ස්තූතියි. ඔබේ ප්‍රතිචාරය ශ්‍රී ලංකාව පුරා දහස් ගණන් මිනිසුන් සඳහා පුරෝකථනය වඩා හොඳ කිරීමට උපකාර වේ.",
+  "fb.waterQ": "දැන් ජලය තියෙන්නේ කොහේද?",
+  "fb.water.road": "මාර්ගයේ",
+  "fb.water.yard": "වත්තේ හෝ මිදුලේ",
+  "fb.water.inside": "නිවස ඇතුළත",
+  "fb.water.none": "ජලය නැත, ගඟ පමණක් ඉහළයි",
   "fb.more": "තව එක් කිරීමට කැමතිද? (අත්‍යවශ්‍ය නැත)",
   "fb.riverQ": "ඔබ අසල ගඟ හෝ ඇල",
   "fb.river.normal": "සාමාන්‍ය",
@@ -83,7 +93,7 @@ const si: Dict = {
   "fb.detailsDone": "එක් කළා. ස්තූතියි.",
   "fb.impact": "මේ සතියේ {name} අසල {n} දෙනෙක් අපට කීවා; {m} දෙනෙක් එය ගැලපුණා යැයි කීවා.",
   "fb.aboutTitle": "\"මෙය නිවැරදිද?\" සඳහා ඔබේ පිළිතුරු",
-  "fb.about": "ඔබ පිළිතුරු දුන් විට අපි පිළිතුර, එවේලේ පිටුව පෙන්වූ දේ, සහ ඔබ එක් කළහොත් පමණක් ඔබ දකින දේ, සටහනක් සහ කිලෝමීටරයකට පමණ වටකළ ස්ථානයක් ගබඩා කරමු. ඔබේ නිශ්චිත ස්ථානය, නම හෝ IP ලිපිනය කිසිවිටක ගබඩා නොකරමු (සෑම දිනකම වෙනස් වන කේතයක් භාවිතා කරන්නේ එකම උපාංගය සිය ගණනක් පිළිතුරු දීම වැළැක්වීමට පමණි). සටහන් කියවන්නේ අඩවි හිමිකරු පමණි, පුරෝකථනය වැඩිදියුණු කිරීමට පමණක් භාවිතා කරයි, පොදුවේ නොපෙන්වයි; සබැඳි, දුරකථන අංක සහ විද්‍යුත් තැපැල් ලිපින සුරැකීමට පෙර ඉවත් කරයි. පොදුවේ පෙන්වන්නේ එකතුවක් පමණි, උදා: \"මේ සතියේ Hanwella අසල 12 දෙනෙකුගෙන් 9 දෙනෙක් එය ගැලපුණා යැයි කීවා\", සහ එය පෙන්වන්නේ අවම වශයෙන් 3 දෙනෙක් පිළිතුරු දුන් විට පමණි.",
+  "fb.about": "ඔබ පිළිතුරු දුන් විට අපි පිළිතුර, එවේලේ පිටුව පෙන්වූ දේ, සහ ඔබ එක් කළහොත් පමණක් ඔබ දකින දේ, ජලය ඇති තැන, සටහනක් සහ කිලෝමීටරයකට පමණ වටකළ ස්ථානයක් ගබඩා කරමු. ඔබේ නිශ්චිත ස්ථානය, නම හෝ IP ලිපිනය කිසිවිටක ගබඩා නොකරමු (සෑම දිනකම වෙනස් වන කේතයක් භාවිතා කරන්නේ කරුණු දෙකකට: එකම උපාංගය සිය ගණනක් පිළිතුරු දීම වැළැක්වීමට, සහ ඔබ අපගේ ප්‍රශ්න දෙකටම පිළිතුරු දුන්නොත් ඔබව එක් වරක් පමණක් ගණන් ගැනීමට; එය ඔබව හඳුනාගැනීමට නොහැකි අතර කිසිවිටක නොපෙන්වයි). සටහන් කියවන්නේ අඩවි හිමිකරු පමණි, පුරෝකථනය වැඩිදියුණු කිරීමට පමණක් භාවිතා කරයි, පොදුවේ නොපෙන්වයි; සබැඳි, දුරකථන අංක සහ විද්‍යුත් තැපැල් ලිපින සුරැකීමට පෙර ඉවත් කරයි. පොදුවේ පෙන්වන්නේ එකතුවක් පමණි, උදා: \"මේ සතියේ Hanwella අසල 12 දෙනෙකුගෙන් 9 දෙනෙක් එය ගැලපුණා යැයි කීවා\", සහ එය පෙන්වන්නේ අවම වශයෙන් 3 දෙනෙක් පිළිතුරු දුන් විට පමණි.",
   "fb.privacy": "අපි තබා ගන්නේ කිලෝමීටරයකට පමණ වටකළ ස්ථානයක් පමණි; ඔබේ නිශ්චිත ස්ථානය, ලිපිනය හෝ උපාංගය කිසිවිටක නොවේ. සටහන් කියවන්නේ අඩවි හිමිකරු පමණි; පුරෝකථනය වැඩිදියුණු කිරීමට පමණක් භාවිතා කරයි, පොදුවේ නොපෙන්වයි. නම්, දුරකථන අංක හෝ ලිපින ටයිප් නොකරන්න.",
 };
 
@@ -99,6 +109,11 @@ const ta: Dict = {
   "fb.limit": "இப்போதைக்கு போதும். நன்றி.",
   "fb.already": "இன்று இங்கே ஏற்கனவே பதிலளித்துவிட்டீர்கள். நன்றி.",
   "fb.thanks": "நன்றி. உங்கள் கருத்து இலங்கை முழுவதும் உள்ள ஆயிரக்கணக்கான மக்களுக்கான முன்னறிவிப்பை மேம்படுத்த உதவுகிறது.",
+  "fb.waterQ": "இப்போது தண்ணீர் எங்கே இருக்கிறது?",
+  "fb.water.road": "சாலையில்",
+  "fb.water.yard": "தோட்டம் அல்லது முற்றத்தில்",
+  "fb.water.inside": "வீட்டுக்குள்",
+  "fb.water.none": "தண்ணீர் இல்லை, ஆறு மட்டும் உயர்வு",
   "fb.more": "மேலும் சேர்க்க விரும்புகிறீர்களா? (விருப்பம்)",
   "fb.riverQ": "உங்கள் அருகிலுள்ள ஆறு அல்லது கால்வாய்",
   "fb.river.normal": "இயல்பு",
@@ -124,7 +139,7 @@ const ta: Dict = {
   "fb.detailsDone": "சேர்க்கப்பட்டது. நன்றி.",
   "fb.impact": "இந்த வாரம் {name} அருகே {n} பேர் எங்களிடம் கூறினர்; {m} பேர் இது பொருந்தியது என்றனர்.",
   "fb.aboutTitle": "\"இது சரியா?\" க்கான உங்கள் பதில்கள்",
-  "fb.about": "நீங்கள் பதிலளிக்கும்போது, பதில், அப்போது பக்கம் காட்டியது, மற்றும் நீங்கள் சேர்த்தால் மட்டும்: நீங்கள் பார்ப்பது, ஒரு குறிப்பு, சுமார் 1 கி.மீ.க்கு வட்டமிட்ட இடம் ஆகியவற்றைச் சேமிக்கிறோம். உங்கள் துல்லிய இடம், பெயர் அல்லது IP முகவரியை ஒருபோதும் சேமிக்க மாட்டோம் (ஒவ்வொரு நாளும் மாறும் குறியீடு ஒரே சாதனம் நூற்றுக்கணக்கான முறை பதிலளிப்பதைத் தடுக்க மட்டும் பயன்படுகிறது). குறிப்புகளை தள உரிமையாளர் மட்டுமே படிப்பார், முன்னறிவிப்பை மேம்படுத்த மட்டும் பயன்படுத்துவார், பொதுவில் காட்டப்படாது; இணைப்புகள், தொலைபேசி எண்கள், மின்னஞ்சல் முகவரிகள் சேமிக்கும் முன் நீக்கப்படும். பொதுவில் காட்டப்படுவது மொத்தம் மட்டுமே, எ.கா. \"இந்த வாரம் Hanwella அருகே 12 பேரில் 9 பேர் பொருந்தியது என்றனர்\", குறைந்தது 3 பேர் பதிலளித்தால் மட்டும்.",
+  "fb.about": "நீங்கள் பதிலளிக்கும்போது, பதில், அப்போது பக்கம் காட்டியது, மற்றும் நீங்கள் சேர்த்தால் மட்டும்: நீங்கள் பார்ப்பது, தண்ணீர் இருக்கும் இடம், ஒரு குறிப்பு, சுமார் 1 கி.மீ.க்கு வட்டமிட்ட இடம் ஆகியவற்றைச் சேமிக்கிறோம். உங்கள் துல்லிய இடம், பெயர் அல்லது IP முகவரியை ஒருபோதும் சேமிக்க மாட்டோம் (ஒவ்வொரு நாளும் மாறும் குறியீடு இரண்டு விஷயங்களுக்கு: ஒரே சாதனம் நூற்றுக்கணக்கான முறை பதிலளிப்பதைத் தடுக்கவும், எங்கள் இரு கேள்விகளுக்கும் பதிலளித்தால் உங்களை ஒருமுறை மட்டும் எண்ணவும்; அதைக் கொண்டு உங்களை அடையாளம் காண முடியாது, காட்டப்படாது). குறிப்புகளை தள உரிமையாளர் மட்டுமே படிப்பார், முன்னறிவிப்பை மேம்படுத்த மட்டும் பயன்படுத்துவார், பொதுவில் காட்டப்படாது; இணைப்புகள், தொலைபேசி எண்கள், மின்னஞ்சல் முகவரிகள் சேமிக்கும் முன் நீக்கப்படும். பொதுவில் காட்டப்படுவது மொத்தம் மட்டுமே, எ.கா. \"இந்த வாரம் Hanwella அருகே 12 பேரில் 9 பேர் பொருந்தியது என்றனர்\", குறைந்தது 3 பேர் பதிலளித்தால் மட்டும்.",
   "fb.privacy": "சுமார் 1 கி.மீ.க்கு வட்டமிட்ட இடத்தை மட்டுமே வைத்திருக்கிறோம்; உங்கள் துல்லிய இடம், முகவரி, சாதனம் எதுவும் இல்லை. குறிப்புகளை தள உரிமையாளர் மட்டுமே படிப்பார், முன்னறிவிப்பை மேம்படுத்த மட்டும் பயன்படுத்துவார், பொதுவில் காட்டப்படாது. பெயர், தொலைபேசி எண், முகவரி எழுத வேண்டாம்.",
 };
 

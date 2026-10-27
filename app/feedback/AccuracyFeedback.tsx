@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { Check, CircleCheck, CircleHelp, MapPin, MessageCircleQuestion, TrendingDown, TrendingUp, X } from "lucide-react";
-import { FB_RAIN, FB_RIVER, NOTE_MAX, colomboDay, fbCookieName, roundCoord, type FbAnswer, type FbPage, type FbRain, type FbRiver } from "@/lib/feedback";
+import { FB_RAIN, FB_RIVER, FB_WATER, NOTE_MAX, colomboDay, fbCookieName, roundCoord, type FbAnswer, type FbPage, type FbRain, type FbRiver, type FbWater } from "@/lib/feedback";
 import { fbFor, type FKey } from "@/lib/i18n/feedback";
 import { trackEvent } from "@/lib/umami";
 import { useI18n } from "../LocaleProvider";
@@ -50,6 +50,7 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
   const [detail, setDetail] = useState<"open" | "sending" | "sent" | "skipped">("open");
   const [noteDropped, setNoteDropped] = useState(false);
   const [answer, setAnswer] = useState<FbAnswer | null>(null);
+  const [water, setWater] = useState<"open" | "sending" | "sent">("open");
 
   async function send(a: FbAnswer) {
     if (phase === "sending") return;
@@ -72,6 +73,19 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
     } catch {
       setPhase("error");
     }
+  }
+
+  /** "Where is the water now?" after "No, it's worse": one tap, saved on the answer's own row; failing is harmless. */
+  async function sendWater(w: FbWater) {
+    if (!token || water !== "open") return;
+    setWater("sending");
+    try {
+      await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "water", token, water_at: w, hp }) });
+      trackEvent("feedback_water", { page, water: w, target });
+    } catch {
+      /* the answer itself is already saved */
+    }
+    setWater("sent");
   }
 
   function askLocation() {
@@ -133,6 +147,19 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
             <CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {ft("fb.thanks")}
           </p>
           {impact && <p className="mt-1.5 pl-6 text-slate-600 dark:text-slate-400">{ft("fb.impact", { n: impact.n, m: impact.matched, name })}</p>}
+
+          {token && answer === "worse" && water !== "sent" && (
+            <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800" role="group" aria-label={ft("fb.waterQ")}>
+              <p className="mb-2 text-sm font-medium text-slate-800 dark:text-slate-200">{ft("fb.waterQ")}</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {FB_WATER.map((w) => (
+                  <button key={w} type="button" disabled={water === "sending"} onClick={() => sendWater(w)} className={`${chip(false)} justify-start rounded-xl py-2 text-left disabled:opacity-60`}>
+                    {ft(`fb.water.${w}` as FKey)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {token && detail === "open" && (
             <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">

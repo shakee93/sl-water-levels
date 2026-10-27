@@ -11,6 +11,8 @@
 import { createHmac } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { placeBySlug } from "@/lib/places";
+import { personDay } from "@/lib/personDay";
+import { addColumns, isMissingColumn } from "@/lib/d1Migrate";
 import { monthlyAnswers } from "@/lib/townOutcome";
 import { d1Configured, d1Query, D1NotConfigured } from "@/lib/d1";
 import {
@@ -29,6 +31,8 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_sfr_town_day ON street_flood_reports (town, day)`,
   `CREATE INDEX IF NOT EXISTS idx_sfr_ip ON street_flood_reports (ip_hash, created_ms)`,
 ];
+
+const ADD_COLUMNS = [`ALTER TABLE street_flood_reports ADD COLUMN person_day TEXT`];
 
 const reply = (status: number, body: Record<string, unknown>) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
@@ -69,6 +73,7 @@ export async function POST(req: NextRequest) {
 
   const ip = (req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown").trim();
   const hash = ipHash(ip, day);
+  const person = personDay(ip, day);
   try {
     const attempt = async () => {
       const [n10, nDay, nTown] = await Promise.all([
@@ -77,8 +82,8 @@ export async function POST(req: NextRequest) {
         count("SELECT COUNT(*) AS n FROM street_flood_reports WHERE ip_hash = ? AND day = ? AND town = ?", [hash, day, r.town]),
       ]);
       if (n10 >= LIMIT_PER_IP_PER_10_MIN || nDay >= LIMIT_PER_IP_PER_DAY || nTown >= LIMIT_PER_IP_PER_TOWN_DAY) return false;
-      await d1Query("INSERT INTO street_flood_reports (created_ms, day, town, answer, when_hint, lang, ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?)", [
-        now, day, r.town, r.answer, r.when, r.lang, hash,
+      await d1Query("INSERT INTO street_flood_reports (created_ms, day, town, answer, when_hint, lang, ip_hash, person_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+        now, day, r.town, r.answer, r.when, r.lang, hash, person,
       ]);
       return true;
     };
@@ -87,8 +92,14 @@ export async function POST(req: NextRequest) {
       stored = await attempt();
     } catch (e) {
       // first ever report before the migration ran: create the table, once, and retry
-      if (!/no such table/i.test(String(e instanceof Error ? e.message : e))) throw e;
-      for (const s of SCHEMA) await d1Query(s);
+      if (isMissingColumn(e)) {
+        // the table predates person_day (d1/0009_feedback_person_water.sql): add it once and retry
+        await addColumns(ADD_COLUMNS);
+      } else {
+        if (!/no such table/i.test(String(e instanceof Error ? e.message : e))) throw e;
+        for (const s of SCHEMA) await d1Query(s);
+        await addColumns(ADD_COLUMNS);
+      }
       stored = await attempt();
     }
     if (!stored) return reply(429, { ok: false, error: "rate_limited" });

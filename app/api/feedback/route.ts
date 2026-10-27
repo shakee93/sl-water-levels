@@ -16,10 +16,12 @@ import { fetchStations, getNational } from "@/lib/arcgis";
 import { getNextHourForBasin, timeBox } from "@/lib/nextHour";
 import { getStationVerdicts } from "@/lib/stationVerdict";
 import { toShown } from "@/lib/units";
+import { personDay } from "@/lib/personDay";
+import { addColumns, isMissingColumn } from "@/lib/d1Migrate";
 import { weeklyImpact } from "@/lib/feedbackStats";
 import {
   LIMIT_PER_IP_PER_10_MIN, LIMIT_PER_IP_PER_DAY, LIMIT_PER_IP_PER_TARGET_DAY,
-  colomboDay, deviceOf, distKm, fbCookieName, isUrgent, noteTags, validateAnswer, validateDetails,
+  colomboDay, deviceOf, distKm, fbCookieName, isUrgent, noteTags, validateAnswer, validateDetails, validateWater,
 } from "@/lib/feedback";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +34,9 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_ff_token ON forecast_feedback (token)`,
   `CREATE TABLE IF NOT EXISTS feedback_digest (day TEXT PRIMARY KEY, sent_ms INTEGER NOT NULL)`,
 ];
+
+// Columns added after the table first shipped (d1/0009_feedback_person_water.sql); applied on the first "no such column".
+const ADD_COLUMNS = [`ALTER TABLE forecast_feedback ADD COLUMN person_day TEXT`, `ALTER TABLE forecast_feedback ADD COLUMN water_at TEXT`];
 
 const reply = (status: number, body: Record<string, unknown>) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
@@ -47,8 +52,13 @@ async function withSchema<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (e) {
+    if (isMissingColumn(e)) {
+      await addColumns(ADD_COLUMNS);
+      return fn();
+    }
     if (!/no such table/i.test(String(e instanceof Error ? e.message : e))) throw e;
     for (const s of SCHEMA) await d1Query(s);
+    await addColumns(ADD_COLUMNS);
     return fn();
   }
 }
@@ -77,7 +87,7 @@ export async function POST(req: NextRequest) {
   }
   if (!d1Configured()) return reply(503, { ok: false, error: "unavailable" });
   try {
-    return body.op === "details" ? await details(body) : body.op === "answer" ? await answer(req, body) : reply(400, { ok: false, error: "invalid" });
+    return body.op === "details" ? await details(body) : body.op === "water" ? await water(body) : body.op === "answer" ? await answer(req, body) : reply(400, { ok: false, error: "invalid" });
   } catch (e) {
     if (!(e instanceof D1NotConfigured)) console.error("feedback: failed:", e instanceof Error ? e.message : e);
     return reply(e instanceof D1NotConfigured ? 503 : 502, { ok: false, error: "unavailable" });
@@ -98,6 +108,7 @@ async function answer(req: NextRequest, body: Record<string, unknown>) {
 
   const ip = (req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown").trim();
   const hash = ipHash(ip, day);
+  const person = personDay(ip, day);
   const col = r.page === "station" ? "station" : "town";
 
   // What the page showed, read here: gauge snapshot (level, tier) and the cached next-hour forecast for this gauge.
@@ -123,9 +134,9 @@ async function answer(req: NextRequest, body: Record<string, unknown>) {
     ]);
     if (n10 >= LIMIT_PER_IP_PER_10_MIN || nDay >= LIMIT_PER_IP_PER_DAY || nTarget >= LIMIT_PER_IP_PER_TARGET_DAY) return false;
     await d1Query(
-      `INSERT INTO forecast_feedback (token, created_ms, day, page, station, town, answer, shown_tier, shown_level, shown_issued_at, shown_next_ft, shown_low_ft, shown_high_ft, shown_dir, shown_method, shown_rain, lang, device, ip_hash)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [token, now, day, r.page, r.station, r.town, r.answer, shown.tier, shown.level, shown.issued, shown.next, shown.low, shown.high, shown.dir, shown.method, shown.rain, r.lang, deviceOf(req.headers.get("user-agent")), hash],
+      `INSERT INTO forecast_feedback (token, created_ms, day, page, station, town, answer, shown_tier, shown_level, shown_issued_at, shown_next_ft, shown_low_ft, shown_high_ft, shown_dir, shown_method, shown_rain, lang, device, ip_hash, person_day)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [token, now, day, r.page, r.station, r.town, r.answer, shown.tier, shown.level, shown.issued, shown.next, shown.low, shown.high, shown.dir, shown.method, shown.rain, r.lang, deviceOf(req.headers.get("user-agent")), hash, person],
     );
     return true;
   });
@@ -170,4 +181,17 @@ async function details(body: Record<string, unknown>) {
     await d1Query("UPDATE forecast_feedback SET notified = ? WHERE token = ?", [(await slack(text)) ? 1 : 2, d.token]);
   }
   return reply(200, { ok: true, noteDropped: !!d.noteReason && d.noteReason !== "empty" });
+}
+
+/** The "Where is the water now?" follow-up after "No, it's worse": one tap, stored once on the person's own row. */
+async function water(body: Record<string, unknown>) {
+  const v = validateWater(body);
+  if (!v.ok) return v.reason === "bot" ? reply(200, { ok: true }) : reply(400, { ok: false, error: "invalid" });
+  const now = Date.now();
+  const rows = await withSchema(() => d1Query("SELECT answer, water_at, created_ms FROM forecast_feedback WHERE token = ?", [v.value.token]));
+  const row = rows[0];
+  // unknown token, not a "worse" answer, already answered, or older than two hours: a quiet "thanks", nothing changes
+  if (!row || row.answer !== "worse" || row.water_at != null || now - Number(row.created_ms) > 2 * 3_600_000) return reply(200, { ok: true });
+  await d1Query("UPDATE forecast_feedback SET water_at = ? WHERE token = ? AND water_at IS NULL", [v.value.waterAt, v.value.token]);
+  return reply(200, { ok: true });
 }

@@ -962,6 +962,15 @@ matches readings itself).
 (how far each candidate is from the minimum), `forecast` (backtest). Counts and numbers only: no notes, places, coordinates, tokens or hashes
 (the per-day IP hash tells people apart inside the job and is dropped). A test checks this.
 
+**Two additions (28 Oct 2026).** (1) After "No, it's worse" the card asks "Where is the water now?" (Road / Garden or yard / Inside the house / No water,
+just higher river), saved as `forecast_feedback.water_at` (`road|yard|inside|none`, op `water` of `/api/feedback`). The job reads road, yard and inside as
+"water on streets" at the shown gauge level and `none` as dry, both stronger than the older river observation (`feedbackWetness` in
+`lib/learnedParams.mjs`; a person's strong answer wins over their weaker one). A bare "worse" gives no street evidence. (2) `person_day` (`lib/personDay.ts`):
+one salted per-day code, the same in `forecast_feedback` and `street_flood_reports`, so someone who answers both forms counts once per day per target.
+Rows from before it keep NULL and fall back to their own form's `ip_hash` (not linkable across forms). Neither code is ever exported or shown; rate limits still use `ip_hash`.
+Both columns are added by the routes on the first "no such column" (`lib/d1Migrate.ts`, statements recorded in `d1/0009_feedback_person_water.sql`); the learn and export
+scripts fall back to the old column list until then.
+
 **Evidence rules.** A number appears only with at least `K_MIN` = 3 independent answers (one per person per day per target) on at least
 `MIN_DAYS` = 2 separate days; otherwise `pending` shows the progress and the default stays. Every value is clamped near its default:
 - `streetLevel` (feet): the second-lowest gauge level at which independent people reported water on roads or in homes ("flooding roads or

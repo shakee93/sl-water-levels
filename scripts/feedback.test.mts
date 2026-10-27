@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  validateAnswer, validateDetails, cleanNote, cleanLocation, roundCoord, distKm, noteTags, isUrgent, deviceOf, colomboDay, fbCookieName,
+  validateAnswer, validateDetails, validateWater, cleanNote, cleanLocation, roundCoord, distKm, noteTags, isUrgent, deviceOf, colomboDay, fbCookieName,
   NOTE_MAX, MIN_FILL_MS, LIMIT_PER_IP_PER_TARGET_DAY, LIMIT_PER_IP_PER_DAY, LIMIT_PER_IP_PER_10_MIN,
 } from "../lib/feedback.ts";
 import { tally, obsVsVerdict, byDistance, againstForecast, publicFeedback, digestText, K_MIN } from "../lib/feedbackLearn.mjs";
@@ -163,6 +163,10 @@ for (const lang of ["en", "si", "ta"]) {
   assert.ok(!/\{\w+\}/.test(f("fb.noteCount", { n: 1, max: 500 })));
 }
 const src = readFileSync(new URL("../lib/i18n/feedback.ts", import.meta.url), "utf8");
+assert.deepEqual(validateWater({ token: tok, water_at: "inside", hp: "" }).value, { token: tok, waterAt: "inside" });
+assert.equal(validateWater({ token: tok, water_at: "roof" }).reason, "invalid");
+assert.equal(validateWater({ token: "x", water_at: "road" }).reason, "invalid");
+assert.equal(validateWater({ token: tok, water_at: "road", hp: "bot" }).reason, "bot");
 const keys = (blk) => [...blk.matchAll(/"(fb\.[\w.]+)":/g)].map((m) => m[1]);
 const [en, si, ta] = [src.split("const si")[0], src.split("const si")[1].split("const ta")[0], src.split("const ta")[1]].map(keys);
 assert.deepEqual(si, en);

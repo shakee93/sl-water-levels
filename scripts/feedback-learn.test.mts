@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import {
   K_MIN, MIN_DAYS, dedupe, nearest, streetLevelFact, rainFact, directionFact, seenFact, fitK, momentumBacktest, buildParams,
-  streetLevelOf, rainPossibleMm, streetRainLevel, streetLevelReached, learnedLines, colomboDay,
+  feedbackWetness, streetLevelOf, rainPossibleMm, streetRainLevel, streetLevelReached, learnedLines, colomboDay,
 } from "../lib/learnedParams.mjs";
 
 const wet = (level, day, key, w = true) => ({ level, wet: w, day, key });
@@ -107,6 +107,32 @@ assert.equal(fitK([]), 1);
 }
 // a single day of data has nothing to test on
 assert.equal(momentumBacktest([{ st: "A", t: Date.UTC(2026, 9, 20, 6), h: 1, c: 1, p: 2, y: 3 }]).horizons[1].n, 0);
+
+// ---- "where is the water now" is street-water evidence at the shown gauge level
+{
+  assert.deepEqual(feedbackWetness("road", null), { wet: true, strong: true });
+  assert.deepEqual(feedbackWetness("yard", "normal"), { wet: true, strong: true }, "water_at beats the river observation");
+  assert.deepEqual(feedbackWetness("inside", null), { wet: true, strong: true });
+  assert.deepEqual(feedbackWetness("none", "flooding"), { wet: false, strong: true });
+  assert.deepEqual(feedbackWetness(null, "flooding"), { wet: true, strong: false });
+  assert.deepEqual(feedbackWetness(null, "high"), { wet: false, strong: false });
+  assert.equal(feedbackWetness(null, null), null, "a bare worse says nothing about water");
+  // a person's strong answer wins over their weaker one (same key), and counts as the one observation
+  const items = [{ ...wet(23, "d1", "a"), strong: false }, { ...wet(21, "d1", "a"), strong: true }, wet(22, "d1", "b"), wet(22.5, "d2", "c")];
+  const f = streetLevelFact(items, 24.6).fact;
+  assert.equal(f.n, 3);
+  assert.equal(f.ft, 22, "levels 21 (strong, person a), 22, 22.5: second lowest is 22");
+  // a strong "no water" at a level counts as dry there
+  const dry = [wet(21, "d1", "a"), wet(22, "d1", "b"), wet(22.5, "d2", "c"), { ...wet(23, "d2", "d", false), strong: true }];
+  assert.equal(streetLevelFact(dry, 24.6).fact.dryBelowN, 0);
+}
+// ---- one person counts once across both forms: the shared per-day key is the dedupe key
+{
+  const rows = [wet(22, "d1", "p|X|G"), wet(22.1, "d1", "p|X|G"), wet(22.2, "d2", "p|Y|G"), wet(22.3, "d2", "p|Z|G")];
+  assert.equal(streetLevelFact(rows, 24.6).fact.n, 3, "the person who answered both forms is one");
+  // legacy rows (different hash per form) still count separately: documented fallback
+  assert.equal(dedupe([{ k: "h1|d1" }, { k: "h2|d1" }], (x) => x.k).length, 2);
+}
 
 // ---- the whole file, and what it must never contain
 {

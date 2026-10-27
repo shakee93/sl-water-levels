@@ -5,6 +5,9 @@
 
 export const FB_ANSWERS = ["yes", "worse", "better", "unsure"] as const;
 export const FB_RIVER = ["normal", "high", "banks", "flooding"] as const;
+/** "Where is the water now?" after "No, it's worse". none = no water, just a higher river. */
+export const FB_WATER = ["road", "yard", "inside", "none"] as const;
+export type FbWater = (typeof FB_WATER)[number];
 export const FB_RAIN = ["none", "light", "heavy"] as const;
 export const FB_PAGES = ["station", "town"] as const;
 export const FB_TONES = ["normal", "watch", "alert", "minor", "major", "stale"] as const;
@@ -128,3 +131,12 @@ export const colomboDay = (ms: number): string => new Date(ms + 5.5 * 3_600_000)
 
 /** Cookie that says "this browser already answered for this page today". */
 export const fbCookieName = (page: FbPage, target: string): string => `sl_fb_${page[0]}_${target.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40)}`;
+
+export type FbWaterReq = { token: string; waterAt: FbWater };
+export function validateWater(body: unknown): Verdict<FbWaterReq> {
+  if (!isObj(body)) return { ok: false, reason: "invalid" };
+  if (typeof body.token !== "string" || !/^[0-9a-f]{24}$/.test(body.token)) return { ok: false, reason: "invalid" };
+  if (body.hp != null && body.hp !== "") return { ok: false, reason: "bot" };
+  const w = oneOf(FB_WATER, body.water_at);
+  return w ? { ok: true, value: { token: body.token, waterAt: w } } : { ok: false, reason: "invalid" };
+}
