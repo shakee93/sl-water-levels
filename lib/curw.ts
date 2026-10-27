@@ -22,18 +22,22 @@ type Row = { station: string; grp: string; ms: number; m: number };
 
 async function load(): Promise<Canals> {
   const now = Date.now();
-  const since = now - 7 * 24 * 3_600_000;
-  const [rows, status] = await Promise.all([
-    // hourly sample (the reading nearest the top of each hour) plus the newest 3 h in full
-    d1Query(
-      "SELECT station, grp, observed_ms AS ms, level_m_msl AS m FROM curw_levels WHERE observed_ms > ? AND (observed_ms % 3600000 < 900000 OR observed_ms > ?) ORDER BY station, observed_ms",
-      [since, now - 3 * 3_600_000],
-    ),
-    d1Query("SELECT station, status FROM curw_status"),
-  ]);
+  // One ready-made row per gauge, built by scripts/curw-snapshot.mjs every 15 min (hourly for 7 days + the newest 3 h in full).
+  // Scanning curw_levels here instead read the whole archive on every refresh and used up D1's daily read limit (26 Oct 2026).
+  const [series, status] = await Promise.all([d1Query("SELECT station, grp, pts FROM curw_series"), d1Query("SELECT station, status FROM curw_status")]);
+  const rows: Row[] = [];
+  for (const s of series) {
+    let pts: [number, number][] = [];
+    try {
+      pts = JSON.parse(String(s.pts));
+    } catch {
+      /* skip a damaged row */
+    }
+    for (const [ms, m] of pts) rows.push({ station: String(s.station), grp: String(s.grp), ms, m });
+  }
   const off = new Set(status.filter((s) => s.status !== "ok").map((s) => String(s.station)));
   const by = new Map<string, { group: string; pts: Pt[] }>();
-  for (const r of rows as unknown as Row[]) {
+  for (const r of rows) {
     const g = by.get(r.station) ?? { group: r.grp, pts: [] };
     g.pts.push({ ms: Number(r.ms), m: Number(r.m) });
     by.set(r.station, g);

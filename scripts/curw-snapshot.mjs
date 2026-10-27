@@ -418,6 +418,19 @@ async function main() {
     console.log(`Raw PNGs queued (${reasons.join(", ") || "manual"}).`);
   }
   sql.push(`DELETE FROM curw_raw WHERE stored_ms < ${nowMs - 14 * 86_400_000};`);
+  // Hourly table + ready-made series for the site (see the end of d1/0002_curw.sql). Only the last 4 h of readings are
+  // folded in each run (8 days while curw_hourly is still empty, i.e. the first run), so a run reads a few thousand rows, not the archive.
+  const fold = `CASE WHEN EXISTS (SELECT 1 FROM curw_hourly) THEN ${nowMs - 4 * 3_600_000} ELSE ${nowMs - 8 * 86_400_000} END`;
+  sql.push(`INSERT INTO curw_hourly (station, grp, hour_ms, observed_ms, level_m_msl)
+SELECT station, grp, observed_ms - observed_ms % 3600000, observed_ms, level_m_msl FROM curw_levels WHERE observed_ms > ${fold} AND observed_ms % 3600000 < 900000 ORDER BY observed_ms DESC
+ON CONFLICT (station, hour_ms) DO UPDATE SET observed_ms = excluded.observed_ms, level_m_msl = excluded.level_m_msl WHERE excluded.observed_ms <= curw_hourly.observed_ms;`);
+  sql.push(`DELETE FROM curw_hourly WHERE hour_ms < ${nowMs - 8 * 86_400_000};`);
+  sql.push(`INSERT OR REPLACE INTO curw_series (station, grp, pts, updated_ms)
+SELECT station, MAX(grp), json_group_array(json_array(ms, m)), ${nowMs} FROM (
+  SELECT station, grp, observed_ms AS ms, level_m_msl AS m FROM curw_hourly WHERE hour_ms > ${nowMs - 7 * 86_400_000} AND observed_ms <= ${nowMs - 3 * 3_600_000}
+  UNION ALL SELECT station, grp, observed_ms, level_m_msl FROM curw_levels WHERE observed_ms > ${nowMs - 3 * 3_600_000}
+  ORDER BY station, ms) GROUP BY station;`);
+  sql.push(`DELETE FROM curw_series WHERE updated_ms < ${nowMs};`);
   await writeFile(sqlFile, sql.join("\n") + "\n");
 
   if (statusFile) {

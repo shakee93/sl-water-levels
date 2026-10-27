@@ -42,3 +42,20 @@ CREATE TABLE IF NOT EXISTS curw_raw (
   stored_ms INTEGER NOT NULL,
   PRIMARY KEY (page, stamp, seq)
 );
+
+-- Read budget (27 Oct 2026: the account hit D1's 5M rows-read/day limit). The site used to scan 7 days of curw_levels on
+-- every canal read (12k+ rows each). Now the snapshot keeps one row per gauge per hour (curw_hourly) and one ready-made
+-- series per gauge (curw_series, built at the end of every run); the site reads only curw_series (~33 rows).
+CREATE INDEX IF NOT EXISTS idx_curw_levels_obs ON curw_levels (observed_ms);
+CREATE INDEX IF NOT EXISTS idx_curw_raw_stored ON curw_raw (stored_ms);
+CREATE TABLE IF NOT EXISTS curw_hourly (
+  station     TEXT    NOT NULL,
+  grp         TEXT    NOT NULL,
+  hour_ms     INTEGER NOT NULL,            -- observed_ms rounded down to the hour
+  observed_ms INTEGER NOT NULL,            -- the reading nearest the top of the hour (within its first 15 min)
+  level_m_msl REAL    NOT NULL,
+  PRIMARY KEY (station, hour_ms)
+);
+CREATE INDEX IF NOT EXISTS idx_curw_hourly_hour ON curw_hourly (hour_ms);
+-- pts: JSON [[observed_ms, level_m_msl], ...] oldest first: hourly for 7 days plus every reading of the newest 3 h.
+CREATE TABLE IF NOT EXISTS curw_series (station TEXT PRIMARY KEY, grp TEXT NOT NULL, pts TEXT NOT NULL, updated_ms INTEGER NOT NULL);
