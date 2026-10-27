@@ -1075,12 +1075,19 @@ warning: the notification says "News: <headline>" and "Reported by <outlet>. A n
 - One alert per story: the board already merges identical headlines; the sender also merges re-worded copies (headline word overlap >= 0.6)
   within a batch and against what that person was already sent. Never sent twice to a person.
 - Never older than 3 h at send time, and never published before the person switched the alert on (no backlog).
-- At most 4 a day (Colombo day) and 2 per check per person. Quiet hours 22:00-06:00 Colombo (plus their own quiet hours): news is
-  DROPPED, not queued; a story from the night is still sent after 06:00 only while it is under 3 h old.
+- **Ranked by urgency** (`newsTier()` in `lib/newsClassify.ts`, headline keywords, no AI). Tier A = official warnings and orders: Irrigation Dept
+  flood warnings (minor / major / amber / red), NBRO / DMC landslide and evacuation warnings, spill-gate / sluice / reservoir release reports,
+  evacuations, deaths / missing. Tier B = everything else (weather outlooks, cyclone tracking, rain forecasts, disruption). Tier A does NOT count
+  toward the 4/day cap: it has its own safety cap of 6 a day (`na`) and is chosen first within a check; it still dedupes and keeps the 3 h freshness.
+  Tier B: at most 4 a day (Colombo day) and 2 per check per person. (On 26 Oct the 4/day cap was spent on cyclone and rain stories by 11:00 and
+  blocked the later Kalu Ganga / Mahaweli warnings, NBRO landslide warnings and the Kelani amber warning.)
+- Quiet hours 22:00-06:00 Colombo (plus their own quiet hours): news is DROPPED, not queued; a story from the night is still sent after 06:00 only
+  while it is under 3 h old. Exception: tier A evacuation, major-flood, red-alert and landslide-evacuation orders (`newsNightOk()`) may pass the
+  22:00-06:00 window; spill-gate reports, minor flood and amber warnings wait for the morning. The person's own quiet hours are always respected.
 - "Mine": the story must name one of the person's pinned towns (`NewsItem.towns`) or the river basin of one of their places (`Glance.basin`,
   `NewsItem.rivers`, which also holds the basin of a named reservoir). Names are matched by `namesIn()` in `lib/news.ts`; when a story names
   nothing we know it is not sent to "mine" people. No readable place = nothing, never everything.
-- Memory: `push_prefs.state.nw` = `{ since, d, n, s: [{ i, t, m }] }` (switch-on time, today's count, ids + word keys of the last 12 sent); dropped when the
+- Memory: `push_prefs.state.nw` = `{ since, d, n, na, s: [{ i, t, m }] }` (switch-on time, today's tier B count, tier A count, ids + word keys of the last 12 sent); dropped when the
   switch is turned off. No new table, lookups by endpoint only. If /api/news cannot be read nothing is sent and the memory is kept; if nobody has the
   switch on the news is not requested at all.
 - Tests: `scripts/push-news.test.mts` (rules) and the Flood news block of `scripts/push-prefs.test.mts` (through the sender).

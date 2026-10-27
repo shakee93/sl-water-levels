@@ -85,3 +85,43 @@ export function classifyNews({ title, desc = "" }: NewsInput): Verdict {
 
 /** Tags with their order for the filter chips. */
 export const tagIndex = (t: NewsTag) => NEWS_TAGS.indexOf(t);
+
+// ---- Urgency tier (used by the opt-in Flood news push, scripts/push-news.mjs). Same plain keyword style, headline only.
+//   "A" = an official warning or order, a release of water, an evacuation, or a death/missing report: always worth a push.
+//   "B" = everything else that is flood news (weather outlooks, cyclone tracking, rain forecasts, disruption).
+// A lone "flood" or "heavy rain" never makes tier A; a Met Department "heavy rain warning" is an outlook (B), while an
+// Irrigation Department flood warning, a DMC/NBRO landslide warning or an evacuation is A.
+export type NewsTier = "A" | "B";
+
+const A_OFFICIAL = [
+  // flood warning steps from the Irrigation Department: minor / major flood, amber / red alert or level
+  W("\\b(?:minor|major)\\s+flood\\w*"),
+  W("\\b(?:amber|red)\\s+(?:alert|warning|level|status)\\b|\\b(?:alert|warning)\\s+level\\b"),
+  W("\\bflood\\s+(?:warning|alert)s?\\b"),
+  W("\\bIrrigation\\s+Department\\b[^.]{0,60}\\b(?:warn\\w*|alert|advis\\w*)"),
+  // landslide / slope warnings (NBRO, DMC)
+  W("\\b(?:landslides?|land\\s*slips?|earth\\s*slips?|slope|NBRO)\\b[^.]{0,60}\\b(?:warn\\w*|alert|advis\\w*|evacuat\\w+|orders?)|\\b(?:warn\\w*|alert|evacuat\\w+)\\b[^.]{0,60}\\b(?:landslides?|land\\s*slips?|earth\\s*slips?|NBRO)\\b"),
+  // water released from a reservoir
+  W("\\b(?:spill\\s*gates?|sluice\\s*gates?|radial\\s*gates?)\\b[^.]{0,60}\\b(?:open\\w*|rais\\w+|lift\\w*|releas\\w+)|\\b(?:open\\w*|rais\\w+|lift\\w*)\\b[^.]{0,40}\\b(?:spill\\s*gates?|sluice\\s*gates?|radial\\s*gates?)|\\b(?:reservoir|tank|dam)\\b[^.]{0,40}\\b(?:spilling|overflow\\w*)|\\bgates?\\b[^.]{0,40}\\b(?:opened|raised|lifted)\\b|\\bspilling\\b|\\b(?:dam|reservoir|tank)\\s+releas\\w+|\\bwater\\s+release\\w*"),
+  // evacuations
+  W("\\bevacuat\\w+"),
+  // people hurt
+  W("\\b(?:dead|deaths?|died|killed|drown\\w*|missing|death\\s+toll|toll\\s+(?:rises?|climbs?))\\b"),
+];
+
+/** A or B for a headline. Call only for stories the caller already accepted as flood news. */
+export function newsTier(title: string): NewsTier {
+  return A_OFFICIAL.some((r) => r.test(title)) ? "A" : "B";
+}
+
+// Tier A stories that may still go out in the 22:00-06:00 quiet hours: orders that cannot wait until morning.
+const NIGHT_OK = [
+  W("\\bevacuat\\w+"),
+  W("\\bmajor\\s+flood\\w*"),
+  W("\\bred\\s+(?:alert|warning|level|status)\\b"),
+];
+
+/** Does this story justify waking someone in quiet hours? (evacuation, major flood, red alert, landslide evacuation) */
+export function newsNightOk(title: string): boolean {
+  return newsTier(title) === "A" && NIGHT_OK.some((r) => r.test(title));
+}

@@ -7,15 +7,21 @@
 //     borderline one; a bare "rain" story needs a heavy-rain / flood / warning word, a "cyclone" tag needs a storm word;
 //   - the same story from two outlets is one alert (title word overlap), and the same story is never sent twice to a person;
 //   - never older than 3 hours at send time, and never older than the moment the person switched the alert on;
-//   - at most 4 a day and 2 per check, per person (Colombo day);
+//   - RANKED BY URGENCY (lib/newsClassify.ts newsTier): tier A = official warnings and orders (Irrigation flood warnings,
+//     minor/major/amber/red, NBRO/DMC landslide and evacuation warnings, spill-gate/reservoir releases, evacuations, deaths/missing);
+//     tier B = everything else (outlooks, cyclone tracking, rain forecasts, disruption). Tier A is NOT counted in the 4/day cap
+//     (it has its own safety cap of 6/day) and is chosen first within a check; tier B is at most 4 a day and 2 per check;
 //   - quiet hours 22:00-06:00 Colombo (plus the person's own quiet hours): DROPPED, not queued. A story published in the
-//     night is still sent after 06:00 if it is then under 3 hours old; anything older is on /news only;
+//     night is still sent after 06:00 if it is then under 3 hours old; anything older is on /news only. Exception: tier A
+//     evacuation / major-flood / red-alert / landslide-evacuation orders may pass the Colombo night window (never the person's own quiet hours);
 //   - "mine" scope: only stories that name one of the person's pinned towns, or the river their gauge sits on.
-// The memory lives in the subscriber's existing push_prefs.state JSON under `nw`: { since, d, n, s: [{ i: id, t: title key, m: ms }] }.
+// The memory lives in the subscriber's existing push_prefs.state JSON under `nw`: { since, d, n, na, s: [{ i: id, t: title key, m: ms }] }.
 import { colombo, inQuiet, minutesOf } from "../lib/pushPrefs.ts";
+import { newsTier, newsNightOk } from "../lib/newsClassify.ts";
 
 export const NEWS_MAX_AGE_MS = 3 * 3_600_000;
-export const NEWS_PER_DAY = 4;
+export const NEWS_PER_DAY = 4; // tier B only
+export const NEWS_A_PER_DAY = 6; // tier A safety cap (a runaway guard, not a quota)
 export const NEWS_PER_CHECK = 2;
 export const NEWS_QUIET = { from: "22:00", to: "06:00" };
 const REMEMBER = 12;
@@ -91,26 +97,33 @@ export function evalNews({ prefs, nw, items, areas, now }) {
   const mem = {
     since: Number.isFinite(nw?.since) ? nw.since : now, // first look: nothing published before the switch was turned on
     d: day,
-    n: nw?.d === day ? Number(nw?.n) || 0 : 0,
+    n: nw?.d === day ? Number(nw?.n) || 0 : 0, // tier B sent today
+    na: nw?.d === day ? Number(nw?.na) || 0 : 0, // tier A sent today
     s: (Array.isArray(nw?.s) ? nw.s : []).filter((e) => e && typeof e.i === "string" && now - Number(e.m) < REMEMBER_MS),
   };
   const messages = [];
-  if (newsQuiet(now) || inQuiet(prefs, now) || mem.n >= NEWS_PER_DAY) return { messages, nw: mem };
+  if (inQuiet(prefs, now)) return { messages, nw: mem };
+  const night = newsQuiet(now);
   const cands = (Array.isArray(items) ? items : [])
     .filter((it) => it && typeof it.id === "string" && Number.isFinite(it.publishedAt))
     .filter((it) => newsWorthy(it) && now - it.publishedAt <= NEWS_MAX_AGE_MS && it.publishedAt - now <= 5 * 60_000 && it.publishedAt >= mem.since)
     .filter((it) => prefs.newsScope !== "mine" || touches(it, areas ?? { towns: new Set(), rivers: new Set() }))
-    .sort((a, b) => b.publishedAt - a.publishedAt);
+    .map((it) => ({ it, tier: newsTier(String(it.title ?? "")) }))
+    .filter(({ it, tier }) => !night || (tier === "A" && newsNightOk(String(it.title ?? ""))))
+    .sort((a, b) => (a.tier === b.tier ? 0 : a.tier === "A" ? -1 : 1) || b.it.publishedAt - a.it.publishedAt);
   const picked = [];
-  for (const it of cands) {
-    if (messages.length >= NEWS_PER_CHECK || mem.n + messages.length >= NEWS_PER_DAY) break;
+  let nA = 0, nB = 0;
+  for (const { it, tier } of cands) {
+    if (tier === "A" ? mem.na + nA >= NEWS_A_PER_DAY : nB >= NEWS_PER_CHECK || mem.n + nB >= NEWS_PER_DAY) continue;
     if (mem.s.some((e) => e.i === it.id || sameKey(e.t, it.title))) continue;
     if (picked.some((p) => Math.abs(p.publishedAt - it.publishedAt) < SAME_WINDOW_MS && sameStory(p.title, it.title))) continue;
     picked.push(it);
     messages.push(it);
+    if (tier === "A") nA++; else nB++;
   }
+  mem.na += nA;
+  mem.n += nB;
   for (const it of messages) mem.s.push({ i: it.id, t: titleKey(it.title), m: now });
-  mem.n += messages.length;
   mem.s = mem.s.slice(-REMEMBER);
   return { messages, nw: mem };
 }

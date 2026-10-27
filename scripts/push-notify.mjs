@@ -26,7 +26,8 @@ import { levelOf, pushStep, parseKey } from "../lib/myPlaces.ts";
 import { PUSH_SCHEMA, MAX_FAILS } from "../lib/pushSub.ts";
 import { parsePrefs, baseKey, morningDue, colombo, inQuiet, riverRank } from "../lib/pushPrefs.ts";
 import { evalSub, broadcastPayload, broadcastRecipients } from "./push-eval.mjs";
-import { evalNews, areasOf, fetchNewsItems, shortHeadline, newsWorthy, NEWS_PER_DAY } from "./push-news.mjs";
+import { evalNews, areasOf, fetchNewsItems, shortHeadline, newsWorthy, NEWS_PER_DAY, NEWS_A_PER_DAY } from "./push-news.mjs";
+import { newsTier } from "../lib/newsClassify.ts";
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
 
@@ -301,13 +302,13 @@ export async function newsPreview({ hours = 24, now = Date.now(), doFetch = fetc
   }
   const when = (ms) => new Date(ms + 330 * 60_000).toISOString().replace("T", " ").slice(5, 16);
   console.log(`${list.length} item(s) on the board in the last ${hours} h; replaying checks every 30 min (times are Colombo)`);
-  for (const { at, it } of sent) console.log(`WOULD SEND ${when(at)} | published ${when(it.publishedAt)} | ${it.source} | ${it.tag} | ${shortHeadline(it.title)}`);
+  for (const { at, it } of sent) console.log(`WOULD SEND ${when(at)} | published ${when(it.publishedAt)} | ${it.source} | tier ${newsTier(it.title)} | ${it.tag} | ${shortHeadline(it.title)}`);
   const ids = new Set(sent.map((x) => x.it.id));
   for (const it of list.filter((i) => !ids.has(i.id)).sort((a, b) => a.publishedAt - b.publishedAt)) {
     const why = !newsWorthy(it) ? (it.sure !== true ? "not a clear keyword match" : "tag too weak for a push") : "held back (quiet hours, older than 3 h by the next check, daily cap or a duplicate)";
-    console.log(`skipped    ${when(it.publishedAt)} | ${it.source} | ${it.tag} | ${shortHeadline(it.title)}  [${why}]`);
+    console.log(`skipped    ${when(it.publishedAt)} | ${it.source} | tier ${newsTier(it.title)} | ${it.tag} | ${shortHeadline(it.title)}  [${why}]`);
   }
-  console.log(`${sent.length} alert(s) would have gone to a person with "All of Sri Lanka" on (cap ${NEWS_PER_DAY}/day)`);
+  console.log(`${sent.length} alert(s) would have gone to a person with "All of Sri Lanka" on (tier A: safety cap ${NEWS_A_PER_DAY}/day, ${sent.filter((x) => newsTier(x.it.title) === "A").length} sent; tier B: cap ${NEWS_PER_DAY}/day, ${sent.filter((x) => newsTier(x.it.title) === "B").length} sent)`);
   return { sent: sent.length };
 }
 

@@ -334,13 +334,14 @@ sent.length = 0;
   await run({ doFetch: fetchNews });
   assert.equal(sent.length, 0, "never twice");
   const memory = JSON.parse((await d1Query("SELECT state FROM push_prefs WHERE endpoint LIKE '%/news'"))[0].state).nw;
-  assert.equal(memory.n, 1);
+  assert.equal(memory.na, 1, "a spill-gate report is tier A: counted apart from the 4/day cap");
+  assert.equal(memory.n, 0);
   assert.equal(memory.s[0].i, "new1");
   // not readable: nothing sent, memory kept
   items = [story("new2", "Landslide warning for Kegalle", 0)];
   await run({ doFetch: async (u) => (String(u).includes("/api/news") ? { ok: false, status: 502, json: async () => ({ ok: false }) } : doFetch(u)) });
   assert.equal(sent.length, 0);
-  assert.equal(JSON.parse((await d1Query("SELECT state FROM push_prefs WHERE endpoint LIKE '%/news'"))[0].state).nw.n, 1);
+  assert.equal(JSON.parse((await d1Query("SELECT state FROM push_prefs WHERE endpoint LIKE '%/news'"))[0].state).nw.na, 1);
   // switched off: memory dropped; and with nobody opted in the news is not even requested
   await d1Query("UPDATE push_prefs SET prefs = ? WHERE endpoint LIKE '%/news'", [JSON.stringify({ news: false })]);
   asked = 0;
