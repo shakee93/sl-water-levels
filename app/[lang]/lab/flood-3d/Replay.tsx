@@ -31,7 +31,7 @@ export function ReplayCard({ data, idx, setIdx, playing, setPlaying, onClose, tr
     const lo = 1.5, hi = 9, x = (k: number) => (k / (data.hours - 1)) * W, y = (v: number) => Hh - 2 - ((v / 100 - lo) / (hi - lo)) * (Hh - 6);
     const line = data.nag.map((v, k) => `${k ? "L" : "M"}${x(k).toFixed(1)} ${y(v).toFixed(1)}`).join("");
     chart = (
-      <svg viewBox={`0 0 ${W} ${Hh}`} className="mt-1 h-10 w-full" role="img" aria-label={tr("River level at Nagalagam Street, hour by hour, with rain")}>
+      <svg viewBox={`0 0 ${W} ${Hh}`} className="mt-1 h-8 w-full sm:h-10" role="img" aria-label={tr("River level at Nagalagam Street, hour by hour, with rain")}>
         {data.rain.map((r, k) => (r > 0 ? <rect key={k} x={x(k) - 0.5} y={0} width={1.2} height={Math.min(14, r / 10 * 1.6)} fill="rgb(100,140,200)" opacity={0.55} /> : null))}
         <path d={line} fill="none" stroke="rgb(15,90,180)" strokeWidth={1.6} strokeLinejoin="round" />
         {data.shots.map((s) => <circle key={s.ev} cx={x(s.h)} cy={y(data.nag[Math.max(0, Math.min(data.hours - 1, s.h))])} r={2.6} fill="#fff" stroke="#4f46e5" strokeWidth={1.4} />)}
@@ -61,7 +61,7 @@ export function ReplayCard({ data, idx, setIdx, playing, setPlaying, onClose, tr
             <input type="range" min={0} max={data.hours - 1} step={1} value={i} onChange={(e) => { setPlaying(false); setIdx(+e.target.value); }} aria-label={tr("Time")} aria-valuetext={replayTime(data, i, lang)} className="w-full accent-sky-600" />
           </div>
           {chart}
-          <div className="flex flex-wrap gap-1.5 pt-1.5">
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 pt-1.5 sm:flex-wrap sm:overflow-visible [&>button]:shrink-0 [&>button]:whitespace-nowrap">
             <button type="button" className={chip} onClick={() => { setPlaying(false); setIdx(data.hours > 60 ? 54 : 0); }}>{tr("Rain, 27 Nov")}</button>
             <button type="button" className={chip} onClick={() => { setPlaying(false); setIdx(peak); }}>{tr("River peak, 1 Dec")}</button>
             {data.shots.map((s) => <button key={s.ev} type="button" className={chip} onClick={() => { setPlaying(false); setIdx(s.h); }}>{tr("Satellite photo, {when}", { when: shotWhen(s.ev) })}</button>)}
@@ -69,7 +69,7 @@ export function ReplayCard({ data, idx, setIdx, playing, setPlaying, onClose, tr
           {near ? (
             <p className="pt-1.5 text-[11px] leading-snug text-indigo-800 dark:text-indigo-200">{tr("The dashed outline is the real flood seen from space at {when}.", { when: shotWhen(near.ev) })}</p>
           ) : (
-            <p className="pt-1.5 text-[10px] leading-snug text-slate-500 dark:text-slate-400">{tr("Estimate from the river level. It was checked against satellite photos on 30 Nov, 2 Dec and 3 Dec; the hours between are our best guess. The water followed the river, not the local rain (blue bars).")}</p>
+            <p className="hidden pt-1.5 text-[10px] leading-snug text-slate-500 sm:block dark:text-slate-400">{tr("Estimate from the river level. It was checked against satellite photos on 30 Nov, 2 Dec and 3 Dec; the hours between are our best guess. The water followed the river, not the local rain (blue bars).")}</p>
           )}
         </>
       )}
