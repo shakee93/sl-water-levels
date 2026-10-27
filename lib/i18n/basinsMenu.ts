@@ -1,4 +1,4 @@
-// Strings for the desktop Basins mega-menu (app/BasinsMenu.tsx). si/ta are drafts: need native review.
+// Strings for the desktop Rivers mega-menu (app/BasinsMenu.tsx). si/ta are drafts: need native review.
 import type { Locale } from "./config";
 
 export type BasinsMenuStrings = {

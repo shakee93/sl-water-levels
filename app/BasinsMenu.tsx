@@ -1,6 +1,6 @@
 "use client";
 
-// Desktop header "Basins" mega-menu. The list (name, worst official step, gauge count) is computed on the server from the
+// Desktop header "Rivers" mega-menu. The list (name, worst official step, gauge count) is computed on the server from the
 // already-cached national fetch and passed in as props: opening it never makes a request. Closes on outside pointer-down,
 // Escape (focus returns to the button), focus leaving, choosing a river and any route change.
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";

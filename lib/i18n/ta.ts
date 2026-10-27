@@ -23,7 +23,7 @@ export const ta: Dict = {
   "lang.suggest.si": "සිංහලෙන් බලන්න",
   "lang.suggest.ta": "தமிழில் பார்க்க",
   "lang.suggest.dismiss": "மூடு",
-  "crumb.allBasins": "எல்லா ஆறுகளும்",
+  "crumb.allBasins": "அனைத்து ஆறுகள்",
   "crumb.home": "முகப்பு",
   "sticky.back": "மேலே செல்ல",
   "sticky.label": "இந்தப் பக்கம் ஒரு பார்வையில்",
@@ -618,7 +618,7 @@ export const ta: Dict = {
   "nf.title": "அந்த ஆறு எங்கள் வரைபடத்தில் இல்லை.",
   "nf.body": "அந்தப் பக்கம் கிடைக்கவில்லை. முகவரியைச் சரிபார்க்கவும், அல்லது கீழே ஒரு ஆறு அல்லது நிலையத்தைத் தேர்ந்தெடுக்கவும்.", // needs native review
   "nf.popular": "பிரபல நிலையங்கள்",
-  "nf.allBasins": "எல்லா ஆறுகளும்",
+  "nf.allBasins": "அனைத்து ஆறுகள்",
   "nf.back": "← எல்லா நிலையங்களுக்கும் திரும்பு",
   // ---- reservoir releases ----
   "release.lead": "{name} நீர்த்தேக்கம் நீரை வெளியேற்றுகிறது", // needs native review
