@@ -5,8 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MlMap, GeoJSONSource, CanvasSource, MapMouseEvent, Popup, Marker } from "maplibre-gl";
 import { preconnect } from "react-dom";
-import { Activity, Box, CloudRain, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Route, Search, SlidersHorizontal, Waves } from "lucide-react";
-import { useScheme } from "@/app/useTheme";
+import { Activity, Box, CloudRain, Copy, ExternalLink, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Route, Search, SlidersHorizontal, Waves, X } from "lucide-react";
 import { loadBaseStyle } from "./mapStyle";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
 import { makeT, type Lang } from "./strings";
@@ -70,6 +69,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   // Full screen: the browser's Fullscreen API where it exists (desktop, Android); a fixed full-viewport layer otherwise (iPhone Safari
   // has no element fullscreen). Escape or the button leaves it; the map is resized after every change.
   const [panelOpen, setPanelOpen] = useState(true);
+  const ctxOpen = useRef(false);
+  const [ctx, setCtx] = useState<{ x: number; y: number; lat: number; lon: number; line: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const setCtxRef = useRef<((v: null) => void) | null>(null);
+  const openCtxRef = useRef<((x: number, y: number, lng: number, lat: number) => void) | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
   const toggleFull = useCallback(() => {
@@ -84,7 +89,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   }, [full]);
   useEffect(() => {
     const onFs = () => { if (!document.fullscreenElement) setFull(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (popRef.current) { popRef.current.remove(); return; }
+      if (ctxOpen.current) { setCtx(null); return; }
+      setLegendNote(false); setFull(false);
+    };
     document.addEventListener("fullscreenchange", onFs);
     window.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("fullscreenchange", onFs); window.removeEventListener("keydown", onKey); };
@@ -113,9 +123,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const [infoOpen, setInfoOpen] = useState(false);
   const [snap, setSnap] = useState(0);
   const [sheetPx, setSheetPx] = useState<number | null>(null);
-  const scheme = useScheme();
-  const schemeRef = useRef(scheme);
-  const firstStyle = useRef(true);
+  const [mapTheme, setMapTheme] = useState<"light" | "dark">("light"); // the basemap is light by default whatever the site theme (owner, 27 Oct 2026); only the panels follow the site
+  const schemeRef = useRef<"light" | "dark">("light");
   const [gaugesOn, setGaugesOn] = useState(true);
   const [rainGaugesOn, setRainGaugesOn] = useState(false);
   const [rainOn, setRainOn] = useState(false);
@@ -466,13 +475,13 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         const S = phone ? 2 : 3;
         const W2 = png.w * S, H2 = png.h * S;
         const out = document.createElement("canvas"); out.width = W2; out.height = H2;
-        // water colour ramp by depth below the level (0..8 ft, 1/32 ft steps): light to deep blue, about 60% opaque
+        // water colour by depth below the level (0..8 ft, 1/32 ft steps): the natural blue (30,110,210) deepening with depth
         const lut = new Uint8ClampedArray(257 * 4);
-        const stops: [number, number, number, number][] = [[0, 191, 219, 254], [1, 147, 197, 253], [2, 96, 165, 250], [4, 37, 99, 235], [8, 30, 64, 175]];
-        for (let k = 0; k <= 256; k++) { const d = k / 32; let j = 0; while (j < stops.length - 2 && d > stops[j + 1][0]) j++; const t = Math.min(1, (d - stops[j][0]) / (stops[j + 1][0] - stops[j][0])); for (let q = 0; q < 3; q++) lut[k * 4 + q] = stops[j][q + 1] + (stops[j + 1][q + 1] - stops[j][q + 1]) * t; lut[k * 4 + 3] = 150; }
+        for (let k = 0; k <= 256; k++) { const d = Math.min(3, k / 32); lut[k * 4] = 30 - d * 6; lut[k * 4 + 1] = 110 - d * 14; lut[k * 4 + 2] = 210 - d * 10; lut[k * 4 + 3] = 120 + d * 28; }
         cv.current = { out, img: out.getContext("2d")!.createImageData(W2, H2), lut };
         up.current = buildUp(png, S);
-        schemeRef.current = document.documentElement.classList.contains("dark") ? "dark" : "light"; // the real theme now (the first render only knew the server default)
+        try { schemeRef.current = localStorage.getItem("f3d-map-theme") === "dark" ? "dark" : "light"; } catch { schemeRef.current = "light"; }
+        setMapTheme(schemeRef.current);
         const base = await loadBaseStyle(schemeRef.current === "dark");
         if (dead || !box.current) return;
         map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true } });
@@ -489,7 +498,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           map.addSource("dem", { type: "raster-dem", tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"], encoding: "terrarium", tileSize: 256, maxzoom: 14, attribution: "Terrain: Mapzen/AWS Terrain Tiles (incl. Copernicus DEM)" });
           map.addSource("f3d-water", { type: "canvas", canvas: out, coordinates: [[west, north], [east, north], [east, south], [west, south]], animate: false });
           const before = map.getStyle().layers.find((l) => l.type === "symbol")?.id;
-          map.addLayer({ id: "f3d-water", type: "raster", source: "f3d-water", paint: { "raster-opacity": 0.85, "raster-fade-duration": 0, "raster-resampling": "linear" } }, before);
+          map.addLayer({ id: "f3d-water", type: "raster", source: "f3d-water", paint: { "raster-opacity": 0.88, "raster-fade-duration": 0, "raster-resampling": "linear" } }, before);
           // everything outside the calibrated picture is greyed: no estimate there
           const { west: bw, east: be, south: bs, north: bn } = m.png;
           map.addSource("f3d-outside", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]], [[bw, bs], [bw, bn], [be, bn], [be, bs], [bw, bs]]] } } });
@@ -528,6 +537,14 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           bound = true;
           map.on("zoomend", () => addLocalRef.current?.());
           map.on("click", (ev) => tapRef.current?.(ev));
+          map.on("contextmenu", (ev) => { ev.preventDefault(); openCtxRef.current?.(ev.point.x, ev.point.y, ev.lngLat.lng, ev.lngLat.lat); });
+          // long press (about half a second, finger still): opens the same menu on phones without fighting pan or pinch
+          let lp: ReturnType<typeof setTimeout> | undefined, p0: { x: number; y: number } | null = null;
+          const cancel = () => { if (lp) clearTimeout(lp); lp = undefined; p0 = null; };
+          map.on("touchstart", (ev) => { cancel(); if ((ev.originalEvent as TouchEvent).touches?.length !== 1) return; p0 = { x: ev.point.x, y: ev.point.y }; const { lng, lat } = ev.lngLat, { x, y } = ev.point; lp = setTimeout(() => { lp = undefined; openCtxRef.current?.(x, y, lng, lat); }, 500); });
+          map.on("touchmove", (ev) => { if (p0 && Math.hypot(ev.point.x - p0.x, ev.point.y - p0.y) > 10) cancel(); });
+          for (const t of ["touchend", "touchcancel", "dragstart", "zoomstart"] as const) map.on(t, cancel);
+          map.on("movestart", () => { if (!adjusting.current) setCtxRef.current?.(null); });
           for (const id of ["roads-main", "roads-local", "f3d-gauges", "f3d-rain-gauges"]) { map.on("mouseenter", id, () => (map!.getCanvas().style.cursor = "pointer")); map.on("mouseleave", id, () => (map!.getCanvas().style.cursor = "")); }
           if (startView.current) map.jumpTo({ center: [startView.current[0], startView.current[1]], zoom: startView.current[2] });
           setThreeD(forced3d.current ?? !phone);
@@ -543,21 +560,85 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   // eslint-disable-next-line react-hooks/exhaustive-deps -- builds the map once; strings are read at creation
   }, []);
 
-  // ---- follow the site theme: swap the base style, our layers are re-added on style.load (which sets ready again)
+  // ---- basemap Light / Dark (remembered): swap the base style, our layers are re-added on style.load (which sets ready again)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) { schemeRef.current = scheme; return; }
-    if (schemeRef.current === scheme) return;
-    schemeRef.current = scheme;
-    firstStyle.current = false;
+    if (!map || schemeRef.current === mapTheme) return;
+    schemeRef.current = mapTheme;
+    try { localStorage.setItem("f3d-map-theme", mapTheme); } catch { /* private mode: not remembered */ }
     setReady(false);
-    void loadBaseStyle(scheme === "dark").then((st) => { if (mapRef.current === map) map.setStyle(st as never); });
-  }, [scheme]);
+    void loadBaseStyle(mapTheme === "dark").then((st) => { if (mapRef.current === map) map.setStyle(st as never); });
+  }, [mapTheme]);
 
   // ---- tap: road name + level, or what the water here does
   const stateRef = useRef({ level, isLive, live, horizon });
   useEffect(() => { stateRef.current = { level, isLive, live, horizon }; });
   const tapRef = useRef<((ev: MapMouseEvent) => void) | null>(null);
+  const adjusting = useRef(false);
+  /** One line about the cell at a point (same words as the tap popup). Called from event handlers only. */
+  const infoAt = (lng: number, lat: number): string => {
+    const g = grid.current, m = meta.current;
+    if (!g || !m) return "";
+    const ix = Math.floor((lng - m.png.west) / m.png.deg), iy = Math.floor((m.png.north - lat) / m.png.deg);
+    if (ix < 0 || iy < 0 || ix >= g.w || iy >= g.h) return tr("Not covered yet: there is no calibration here, so the map shows no flood estimate for this spot.");
+    const i = iy * g.w + ix;
+    if (g.river[i]) return tr("River or canal.");
+    if (g.unc[i]) return tr("Not covered yet: there is no calibration here, so the map shows no flood estimate for this spot.");
+    if (g.wet[i]) return tr("Usually wet ground (marsh or paddy): the map does not count it as flood.");
+    const L = g.L[i];
+    if (!Number.isFinite(L) || L > 12) return tr("Not expected to flood from the river at any level seen so far (estimate).");
+    return `${tr("Floods when Nagalagam Street reaches about {ft} ft", { ft: f1(L) })}${g.cls[i] === 0 ? ` (${tr("Estimate only")})` : ""}`;
+  };
+  useEffect(() => {
+    openCtxRef.current = (x, y, lng, lat) => { popRef.current?.remove(); ctxOpen.current = true; setCopied(false); setCtx({ x, y, lat, lon: lng, line: infoAt(lng, lat) }); };
+  });
+  useEffect(() => { setCtxRef.current = setCtx; }, []);
+  useEffect(() => { ctxOpen.current = !!ctx; if (ctx) menuRef.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus(); }, [ctx]);
+  useEffect(() => {
+    if (!ctx) return;
+    const down = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) setCtx(null); };
+    document.addEventListener("pointerdown", down);
+    return () => document.removeEventListener("pointerdown", down);
+  }, [ctx]);
+  const copyCoords = async () => {
+    if (!ctx) return;
+    const text = `${ctx.lat.toFixed(5)}, ${ctx.lon.toFixed(5)}`;
+    try { await navigator.clipboard.writeText(text); } catch {
+      const ta = document.createElement("textarea"); ta.value = text; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch { /* nothing more to try */ } ta.remove();
+    }
+    setCopied(true); setTimeout(() => setCtx(null), 900);
+  };
+  const onMenuKey = (e: React.KeyboardEvent) => {
+    const items = [...(menuRef.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length]?.focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length]?.focus(); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setCtx(null); }
+  };
+  /** The one popup: replaces the previous, closes on x / Esc / empty-map tap / map move, and is panned clear of the panel and the top bar. */
+  const showPopup = (lngLat: { lng: number; lat: number }, dom: HTMLElement) => {
+    const map = mapRef.current;
+    if (!map) return;
+    popRef.current?.remove();
+    void loadMl().then((ml) => {
+      popRef.current?.remove();
+      const p = new ml.Popup({ closeButton: true, closeOnClick: true, closeOnMove: false, maxWidth: "270px", className: "f3d-popup", focusAfterOpen: false }).setLngLat(lngLat).setDOMContent(dom).addTo(map);
+      popRef.current = p;
+      const mv = () => { if (!adjusting.current) p.remove(); };
+      map.on("movestart", mv);
+      p.on("close", () => { map.off("movestart", mv); if (popRef.current === p) popRef.current = null; });
+      requestAnimationFrame(() => {
+        const el = p.getElement(), box = wrap.current;
+        if (!el || !box) return;
+        const r = el.getBoundingClientRect(), w = box.getBoundingClientRect();
+        let dx = 0, dy = 0;
+        const side = box.querySelector("aside")?.getBoundingClientRect();
+        if (side && r.right > side.left && r.left < side.right && r.bottom > side.top && r.top < side.bottom) { if (side.left > w.left + w.width / 2 && side.width < w.width * 0.6) dx = r.right - side.left + 16; else dy = r.bottom - side.top + 16; }
+        if (r.top < w.top + 64) dy = Math.min(dy, 0) - (w.top + 64 - r.top);
+        if (dx || dy) { adjusting.current = true; map.panBy([dx, dy], { duration: 250 }); setTimeout(() => { adjusting.current = false; }, 400); }
+      });
+    });
+  };
    
   useEffect(() => { tapRef.current = (ev: MapMouseEvent) => {
     const map = mapRef.current, g = grid.current, m = meta.current;
@@ -577,8 +658,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         add(String(pr.name), true);
         add(`${pr.inst}. ${tr("Last hour: {x} mm (at least), 24 h: {y} mm. Reported {m} min ago.", { x: Number(pr.mm) < 0 ? tr("not known") : String(pr.mm), y: String(pr.mm24), m: String(pr.age) })}${Number(pr.stale) ? " " + tr("(old)") : ""}`);
       }
-      popRef.current?.remove();
-      void loadMl().then((ml) => { popRef.current = new ml.Popup({ closeButton: true, maxWidth: "270px" }).setLngLat(ev.lngLat).setDOMContent(lines).addTo(map); });
+      showPopup(ev.lngLat, lines);
       return;
     }
     const road = map.queryRenderedFeatures(ev.point, { layers: ["roads-main", "roads-local"].filter((i) => map.getLayer(i)) })[0];
@@ -618,8 +698,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     rb.textContent = tr("Report here"); rb.style.cssText = "margin-top:6px;padding:4px 10px;border-radius:6px;background:#0284c7;color:#fff;font:600 12px system-ui,sans-serif;border:0;cursor:pointer";
     rb.onclick = () => { popRef.current?.remove(); openReportRef.current?.({ lat: ev.lngLat.lat, lon: ev.lngLat.lng, src: "pin", acc: null }); };
     lines.appendChild(rb);
-    popRef.current?.remove();
-    void loadMl().then((ml) => { popRef.current = new ml.Popup({ closeButton: true, maxWidth: "270px" }).setLngLat(ev.lngLat).setDOMContent(lines).addTo(map); });
+    showPopup(ev.lngLat, lines);
   }; });
 
   const secs = fetchedAt ? Math.max(0, Math.round((POLL_MS - (now - fetchedAt)) / 60000)) : null;
@@ -709,7 +788,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const legend = (
     <div className="space-y-2 px-1.5 pb-1 text-[11px] text-slate-700 dark:text-slate-300">
       <div>
-        <div className="h-2 rounded-full" style={{ background: "linear-gradient(90deg, rgb(191,219,254), rgb(96,165,250) 35%, rgb(37,99,235) 70%, rgb(30,64,175))" }} />
+        <div className="h-2 rounded-full" style={{ background: "linear-gradient(90deg, rgba(30,110,210,.5), rgba(24,96,190,.75) 50%, rgba(12,68,180,.95))" }} />
         <div className="mt-0.5 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>{tr("shallow")}</span><span>{tr("water at this river level")}</span><span>{tr("deep")}</span></div>
       </div>
       {chanceOn && isLive && (
@@ -719,7 +798,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         </div>
       )}
       <ul className="grid grid-cols-1 gap-1">
-        <li className="flex items-center gap-2"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "repeating-linear-gradient(135deg, rgba(37,99,235,.55) 0 1px, rgba(147,197,253,.3) 1px 6px)" }} />
+        <li className="flex items-center gap-2"><span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: "repeating-linear-gradient(135deg, rgba(30,110,210,.8) 0 1px, rgba(30,110,210,.3) 1px 6px)" }} />
           <button type="button" aria-expanded={legendNote} onClick={() => setLegendNote((v) => !v)} className="text-left underline decoration-dotted underline-offset-2">{tr("Estimate only (beyond floods we've seen)")}</button></li>
         {legendNote && <li className="pl-7 text-[10px] leading-snug text-slate-500 dark:text-slate-400">{tr("Here the river would have to go higher (or lower) than in any flood we have records for, so this is a guess from ground height.")}</li>}
         <li className="flex items-center gap-2"><span className="inline-block h-0.5 w-5 rounded" style={{ background: "#d97706" }} /><span className="inline-block h-0.5 w-5 -ml-1 rounded" style={{ background: "#b91c1c" }} /> {tr("low road")}</li>
@@ -768,6 +847,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         <SwitchRow icon={<Layers className="size-4" />} label={tr("Plain elevation bands (compare)")} on={plain} onChange={(v) => { setPlain(v); if (v) setChanceOn(false); }} />
         <SwitchRow icon={<Box className="size-4" />} label={tr("3D (off = 2D)")} on={threeD} onChange={setThreeD} />
       </div>
+
+      <SectionTitle>{tr("Map")}</SectionTitle>
+      <div className="px-1.5"><Seg value={mapTheme} onChange={setMapTheme} label={tr("Map")} items={[{ v: "light", t: tr("Light") }, { v: "dark", t: tr("Dark") }]} /></div>
 
       <SectionTitle>{tr("Legend")}</SectionTitle>
       {legend}
@@ -825,7 +907,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
               <Search className="size-4 shrink-0 text-slate-500" aria-hidden />
               <input
                 type="search" role="combobox" aria-expanded={qOpen && hits.length > 0} aria-controls="f3d-search-list" aria-label={tr("Search a place, road or gauge")} placeholder={tr("Search a place or road")}
-                value={q} onChange={(e) => { setQ(e.target.value); setQOpen(true); setActive(0); }} onFocus={() => { loadGaz(); setQOpen(true); }} onKeyDown={onSearchKey}
+                value={q} onChange={(e) => { setQ(e.target.value); setQOpen(true); setActive(0); }} onFocus={() => { loadGaz(); setQOpen(true); }} onBlur={() => setTimeout(() => setQOpen(false), 150)} onKeyDown={onSearchKey}
                 className="h-9 w-full min-w-0 bg-transparent text-xs text-slate-900 placeholder:text-slate-500 focus:outline-none dark:text-slate-100"
               />
             </div>
@@ -837,7 +919,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
             <button type="button" onClick={toggleFull} aria-pressed={full} className={ICON_BTN} aria-label={full ? tr("Exit full screen") : tr("Full screen")} title={full ? tr("Exit full screen") : tr("Full screen")}>{full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</button>
           </div>
         </div>
-        {geoMsg && <p role="status" className={`absolute left-3 right-3 z-20 rounded-lg p-2 text-xs md:right-auto md:max-w-sm ${GLASS}`} style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 64px)" : 64 }}>{geoMsg}</p>}
+        {geoMsg && (
+          <div role="status" className={`absolute left-3 right-3 z-20 flex items-start gap-2 rounded-lg py-2 pl-3 pr-1 text-xs md:right-auto md:max-w-sm ${GLASS}`} style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 64px)" : 64 }}>
+            <p className="flex-1 pt-1">{geoMsg}</p>
+            <button type="button" onClick={() => setGeoMsg(null)} aria-label={tr("Close")} className="flex size-11 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 -my-2"><X className="size-4" /></button>
+          </div>
+        )}
 
         {consentAsk && (
           <div role="dialog" aria-label={tr("Use your location?")} className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
@@ -849,6 +936,21 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
                 <button type="button" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs dark:border-slate-600" onClick={() => setConsentAsk(false)}>{tr("Not now")}</button>
               </div>
             </div>
+          </div>
+        )}
+        {ctx && (
+          <div
+            ref={menuRef} role="menu" aria-label={tr("Map")} onKeyDown={onMenuKey}
+            className={`absolute z-30 w-60 rounded-xl p-1 text-xs ${GLASS}`}
+            style={{ left: Math.max(8, Math.min(ctx.x, (wrap.current?.clientWidth ?? 600) - 248)), top: Math.max(8, Math.min(ctx.y, (wrap.current?.clientHeight ?? 600) - 190)) }}
+          >
+            <div className="flex items-start justify-between gap-1 px-2 py-1.5">
+              <p className="text-[11px] leading-snug text-slate-600 dark:text-slate-300">{ctx.line}</p>
+              <button type="button" onClick={() => setCtx(null)} aria-label={tr("Close")} className="-mr-1 -mt-1 flex size-8 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-4" /></button>
+            </div>
+            <a role="menuitem" href={`https://www.google.com/maps/search/?api=1&query=${ctx.lat.toFixed(6)},${ctx.lon.toFixed(6)}`} target="_blank" rel="noopener noreferrer" onClick={() => setCtx(null)} className="flex min-h-9 items-center gap-2 rounded-md px-2 hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800"><ExternalLink className="size-4 text-slate-500" aria-hidden />{tr("Open in Google Maps")}</a>
+            <button type="button" role="menuitem" onClick={() => void copyCoords()} className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800"><Copy className="size-4 text-slate-500" aria-hidden />{copied ? tr("Copied") : `${tr("Copy coordinates")} (${ctx.lat.toFixed(5)}, ${ctx.lon.toFixed(5)})`}</button>
+            <button type="button" role="menuitem" onClick={() => { const c = ctx; setCtx(null); openReportRef.current?.({ lat: c.lat, lon: c.lon, src: "pin", acc: null }); }} className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800"><Flag className="size-4 text-slate-500" aria-hidden />{tr("Report here")}</button>
           </div>
         )}
         {rep && <ReportPanel pos={rep} cell={cell} onClose={() => setRep(null)} tr={tr} lang={lang} />}
@@ -870,7 +972,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         ) : (
           <button type="button" onClick={() => setPanelOpen(true)} className={`absolute z-10 flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${GLASS}`} style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)", right: 12 }}><SlidersHorizontal className="size-4" aria-hidden /> {tr("Options")}</button>
         ))}
-        <style>{".maplibregl-ctrl-bottom-left{margin-bottom:44px} @media (max-width:767px){.maplibregl-ctrl-top-right{margin-top:60px}} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
+        <style>{".f3d-popup .maplibregl-popup-close-button{width:44px;height:44px;font-size:24px;line-height:1;color:#475569;border-radius:0 12px 0 12px} .f3d-popup .maplibregl-popup-content{padding:12px 44px 12px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.22)} .maplibregl-ctrl-bottom-left{margin-bottom:44px} @media (max-width:767px){.maplibregl-ctrl-top-right{margin-top:60px}} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
         {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{tr("Loading map…")}</div>}
         {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
       </div>
