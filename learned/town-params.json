@@ -1,0 +1,541 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-27T18:50:43.278Z",
+  "asOf": "2026-10-28",
+  "minimums": {
+    "answers": 3,
+    "days": 2,
+    "streetFloorFrac": 0.6,
+    "rainPossibleMm": [
+      45,
+      60
+    ],
+    "momentumGainPct": 5
+  },
+  "totals": {
+    "answers": 94,
+    "people": 90,
+    "streetReports": 12,
+    "days": 2
+  },
+  "stations": {
+    "Badalgama": {
+      "answers": {
+        "n": 7,
+        "days": 2,
+        "yes": 3,
+        "worse": 1,
+        "better": 1,
+        "unsure": 2
+      },
+      "seen": {
+        "n": 1,
+        "higher": 0,
+        "same": 0,
+        "lower": 1
+      },
+      "rising": {
+        "n": 3,
+        "days": 1,
+        "yes": 2,
+        "worse": 0,
+        "better": 1,
+        "errN": 3,
+        "meanErrFt": 0.37
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.47
+      }
+    },
+    "Hanwella": {
+      "answers": {
+        "n": 32,
+        "days": 2,
+        "yes": 18,
+        "worse": 7,
+        "better": 0,
+        "unsure": 7
+      },
+      "seen": {
+        "n": 3,
+        "higher": 0,
+        "same": 2,
+        "lower": 1
+      },
+      "rising": {
+        "n": 20,
+        "days": 1,
+        "yes": 15,
+        "worse": 5,
+        "better": 0,
+        "errN": 20,
+        "meanErrFt": 0.52
+      },
+      "falling": {
+        "n": 5,
+        "days": 1,
+        "yes": 3,
+        "worse": 2,
+        "better": 0,
+        "errN": 5,
+        "meanErrFt": 0
+      }
+    },
+    "Holombuwa": {
+      "answers": {
+        "n": 2,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 1,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.11
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 0,
+        "better": 1,
+        "errN": 1,
+        "meanErrFt": -1.14
+      }
+    },
+    "Nagalagam Street": {
+      "answers": {
+        "n": 17,
+        "days": 2,
+        "yes": 9,
+        "worse": 2,
+        "better": 2,
+        "unsure": 4
+      },
+      "seen": {
+        "n": 1,
+        "higher": 1,
+        "same": 0,
+        "lower": 0
+      },
+      "rising": {
+        "n": 8,
+        "days": 2,
+        "yes": 6,
+        "worse": 0,
+        "better": 2,
+        "errN": 7,
+        "meanErrFt": 0.03
+      },
+      "falling": {
+        "n": 3,
+        "days": 1,
+        "yes": 2,
+        "worse": 1,
+        "better": 0,
+        "errN": 3,
+        "meanErrFt": -0.19
+      },
+      "streetLevel": {
+        "ft": 3.1,
+        "n": 5,
+        "days": 3,
+        "defaultFt": 5,
+        "clamped": false,
+        "dryBelowN": 1
+      }
+    },
+    "Deraniyagala": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -2
+      }
+    },
+    "Norwood": {
+      "answers": {
+        "n": 3,
+        "days": 2,
+        "yes": 3,
+        "worse": 0,
+        "better": 0,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 2,
+        "days": 1,
+        "yes": 2,
+        "worse": 0,
+        "better": 0,
+        "errN": 2,
+        "meanErrFt": 0.43
+      }
+    },
+    "Dunamale": {
+      "answers": {
+        "n": 9,
+        "days": 2,
+        "yes": 8,
+        "worse": 0,
+        "better": 1,
+        "unsure": 0
+      },
+      "seen": {
+        "n": 3,
+        "higher": 2,
+        "same": 0,
+        "lower": 1
+      },
+      "rising": {
+        "n": 7,
+        "days": 2,
+        "yes": 7,
+        "worse": 0,
+        "better": 0,
+        "errN": 7,
+        "meanErrFt": 0.3
+      }
+    },
+    "Peradeniya": {
+      "answers": {
+        "n": 2,
+        "days": 1,
+        "yes": 2,
+        "worse": 0,
+        "better": 0,
+        "unsure": 0
+      },
+      "seen": {
+        "n": 1,
+        "higher": 0,
+        "same": 0,
+        "lower": 1
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.83
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.18
+      }
+    },
+    "Moragaswewa": {
+      "answers": {
+        "n": 2,
+        "days": 1,
+        "yes": 1,
+        "worse": 1,
+        "better": 0,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.25
+      }
+    },
+    "Rathnapura": {
+      "answers": {
+        "n": 3,
+        "days": 2,
+        "yes": 3,
+        "worse": 0,
+        "better": 0,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.12
+      },
+      "falling": {
+        "n": 2,
+        "days": 1,
+        "yes": 2,
+        "worse": 0,
+        "better": 0,
+        "errN": 2,
+        "meanErrFt": -0.1
+      }
+    },
+    "Giriulla": {
+      "answers": {
+        "n": 3,
+        "days": 2,
+        "yes": 2,
+        "worse": 0,
+        "better": 0,
+        "unsure": 1
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0
+      }
+    },
+    "Thawalama": {
+      "answers": {
+        "n": 4,
+        "days": 2,
+        "yes": 1,
+        "worse": 1,
+        "better": 1,
+        "unsure": 1
+      },
+      "seen": {
+        "n": 1,
+        "higher": 0,
+        "same": 1,
+        "lower": 0
+      },
+      "rising": {
+        "n": 2,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 1,
+        "errN": 2,
+        "meanErrFt": 1.42
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -1.25
+      }
+    },
+    "Panadugama": {
+      "answers": {
+        "n": 3,
+        "days": 2,
+        "yes": 1,
+        "worse": 1,
+        "better": 1,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.55
+      },
+      "falling": {
+        "n": 2,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 1,
+        "errN": 2,
+        "meanErrFt": 0
+      }
+    },
+    "Glencourse": {
+      "answers": {
+        "n": 2,
+        "days": 2,
+        "yes": 0,
+        "worse": 2,
+        "better": 0,
+        "unsure": 0
+      },
+      "falling": {
+        "n": 2,
+        "days": 2,
+        "yes": 0,
+        "worse": 2,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.01
+      }
+    },
+    "Kalawellawa (Millakanda)": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "unsure": 0
+      },
+      "seen": {
+        "n": 1,
+        "higher": 1,
+        "same": 0,
+        "lower": 0
+      }
+    }
+  },
+  "zones": {},
+  "towns": {
+    "colombo": {
+      "reports": 2,
+      "days": 2,
+      "deep": 2,
+      "little": 0,
+      "dry": 0
+    },
+    "wellampitiya": {
+      "reports": 3,
+      "days": 1,
+      "deep": 2,
+      "little": 0,
+      "dry": 1
+    },
+    "kaduwela": {
+      "reports": 1,
+      "days": 1,
+      "deep": 0,
+      "little": 0,
+      "dry": 1
+    },
+    "gampaha": {
+      "reports": 4,
+      "days": 2,
+      "deep": 0,
+      "little": 0,
+      "dry": 4
+    },
+    "attanagalla": {
+      "reports": 1,
+      "days": 1,
+      "deep": 0,
+      "little": 0,
+      "dry": 1
+    },
+    "gothatuwa": {
+      "reports": 1,
+      "days": 1,
+      "deep": 0,
+      "little": 1,
+      "dry": 0
+    }
+  },
+  "pending": [
+    {
+      "kind": "streetRain",
+      "zone": "colombo-east",
+      "n": 2,
+      "days": 2,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
+      "station": "Moragaswewa",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
+      "station": "Dunamale",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
+      "station": "Kalawellawa (Millakanda)",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
+    }
+  ],
+  "forecast": {
+    "window": {
+      "from": "2026-10-22",
+      "to": "2026-10-27",
+      "points": 4711
+    },
+    "horizons": {
+      "1": {
+        "n": 1615,
+        "maeBase": 0.15,
+        "maeFit": 0.15,
+        "gainPct": 1,
+        "maePooled": 0.15,
+        "pooledGainPct": -3
+      },
+      "3": {
+        "n": 1590,
+        "maeBase": 0.38,
+        "maeFit": 0.37,
+        "gainPct": 1,
+        "maePooled": 0.37,
+        "pooledGainPct": 1
+      },
+      "6": {
+        "n": 1500,
+        "maeBase": 0.74,
+        "maeFit": 0.74,
+        "gainPct": 0,
+        "maePooled": 0.74,
+        "pooledGainPct": -1
+      }
+    },
+    "gaugesPassingOwnTest": 3,
+    "useful": false,
+    "wired": false
+  }
+}

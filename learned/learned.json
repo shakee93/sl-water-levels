@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-27T18:50:43.278Z",
+  "asOf": "2026-10-28",
+  "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
+  "counts": {
+    "total": 103,
+    "feedback": 90,
+    "street": 12,
+    "flood3d": 1,
+    "newTonight": 103,
+    "trusted": 1,
+    "flagged": 0
+  },
+  "streetLevel": {
+    "Nagalagam Street": {
+      "ft": 3.1,
+      "n": 5,
+      "days": 3,
+      "defaultFt": 5,
+      "clamped": false,
+      "dryBelowN": 1
+    }
+  },
+  "groundRain": {
+    "chilaw": {
+      "proposed": true,
+      "wired": false,
+      "steps": 11,
+      "stepDays": 2,
+      "events": 0,
+      "eventDays": 0,
+      "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
+    },
+    "colombo-east": {
+      "proposed": true,
+      "wired": false,
+      "steps": 11,
+      "stepDays": 2,
+      "events": 3,
+      "eventDays": 2,
+      "metrics": {},
+      "pending": "no scorable events in the shadow-log window"
+    },
+    "ja-ela": {
+      "proposed": true,
+      "wired": false,
+      "steps": 11,
+      "stepDays": 2,
+      "events": 0,
+      "eventDays": 0,
+      "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
+    },
+    "marawila": {
+      "proposed": true,
+      "wired": false,
+      "steps": 11,
+      "stepDays": 2,
+      "events": 0,
+      "eventDays": 0,
+      "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
+    },
+    "negombo": {
+      "proposed": true,
+      "wired": false,
+      "steps": 11,
+      "stepDays": 2,
+      "events": 0,
+      "eventDays": 0,
+      "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
+    },
+    "wennappuwa": {
+      "proposed": true,
+      "wired": false,
+      "steps": 11,
+      "stepDays": 2,
+      "events": 0,
+      "eventDays": 0,
+      "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
+    }
+  },
+  "forecast": {
+    "window": {
+      "from": "2026-10-22",
+      "to": "2026-10-27",
+      "points": 4711
+    },
+    "momentum": {
+      "horizons": {
+        "1": {
+          "n": 1615,
+          "maeBase": 0.15,
+          "maeFit": 0.15,
+          "gainPct": 1,
+          "maePooled": 0.15,
+          "pooledGainPct": -3
+        },
+        "3": {
+          "n": 1590,
+          "maeBase": 0.38,
+          "maeFit": 0.37,
+          "gainPct": 1,
+          "maePooled": 0.37,
+          "pooledGainPct": 1
+        },
+        "6": {
+          "n": 1500,
+          "maeBase": 0.74,
+          "maeFit": 0.74,
+          "gainPct": 0,
+          "maePooled": 0.74,
+          "pooledGainPct": -1
+        }
+      },
+      "gaugesPassingOwnTest": 3,
+      "useful": false,
+      "wired": false
+    },
+    "worseFeature": {
+      "horizons": {
+        "1": {
+          "rowsWithReports": 16,
+          "testN": 2,
+          "testDays": 1,
+          "maeBase": 0.04,
+          "maeFit": 0.04,
+          "gainPct": 0,
+          "beta": 0
+        },
+        "3": {
+          "rowsWithReports": 16,
+          "testN": 2,
+          "testDays": 1,
+          "maeBase": 0.16,
+          "maeFit": 0.16,
+          "gainPct": 0,
+          "beta": 0
+        }
+      },
+      "reports": 7,
+      "useful": false,
+      "wired": false
+    }
+  },
+  "mapRefit": {
+    "Biyagama and Kaduwela": {
+      "trusted": 0,
+      "newTrusted": 0,
+      "newPeople": 0,
+      "needNew": 10,
+      "needPeople": 3,
+      "due": false
+    },
+    "Hanwella": {
+      "trusted": 0,
+      "newTrusted": 0,
+      "newPeople": 0,
+      "needNew": 10,
+      "needPeople": 3,
+      "due": false
+    },
+    "Kelaniya": {
+      "trusted": 1,
+      "newTrusted": 1,
+      "newPeople": 1,
+      "needNew": 10,
+      "needPeople": 3,
+      "due": false
+    },
+    "Wellampitiya and Kolonnawa": {
+      "trusted": 0,
+      "newTrusted": 0,
+      "newPeople": 0,
+      "needNew": 10,
+      "needPeople": 3,
+      "due": false
+    }
+  },
+  "gaps": [
+    {
+      "kind": "map",
+      "name": "Biyagama and Kaduwela",
+      "have": 0,
+      "need": 10,
+      "missing": 10
+    },
+    {
+      "kind": "map",
+      "name": "Hanwella",
+      "have": 0,
+      "need": 10,
+      "missing": 10
+    },
+    {
+      "kind": "map",
+      "name": "Wellampitiya and Kolonnawa",
+      "have": 0,
+      "need": 10,
+      "missing": 10
+    },
+    {
+      "kind": "map",
+      "name": "Kelaniya",
+      "have": 1,
+      "need": 10,
+      "missing": 9
+    },
+    {
+      "kind": "streetLevel",
+      "name": "Moragaswewa",
+      "have": 1,
+      "need": 3,
+      "missing": 2
+    },
+    {
+      "kind": "streetLevel",
+      "name": "Dunamale",
+      "have": 1,
+      "need": 3,
+      "missing": 2
+    },
+    {
+      "kind": "streetLevel",
+      "name": "Kalawellawa (Millakanda)",
+      "have": 1,
+      "need": 3,
+      "missing": 2
+    },
+    {
+      "kind": "streetRain",
+      "name": "colombo-east",
+      "have": 2,
+      "need": 3,
+      "missing": 1
+    }
+  ],
+  "changes": [
+    "Nagalagam Street: people report road water from ~3.1 ft (5 reports, 3 days)"
+  ]
+}
