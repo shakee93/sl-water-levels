@@ -39,9 +39,14 @@ const hasStorm = d1("PRAGMA table_info(forecast_runs)").some((c) => c.name === "
 // Fetch in 4-day slices so no single D1 query is heavy.
 const first = d1("SELECT MIN(issued_at) AS a FROM forecast_runs")[0].a;
 for (let a = first; a < now; a += 4 * DAY) {
-  rows.push(...d1(`SELECT v.station, v.issued_at, v.method, v.unit, v.horizon_h AS h, v.predicted AS p, v.low, v.high, v.actual AS y, r.current_level AS c${hasStorm ? ", r.storm AS storm" : ", NULL AS storm"}
-    FROM forecast_verification v JOIN forecast_runs r ON r.station = v.station AND r.issued_at = v.issued_at
-    WHERE v.issued_at >= ${a} AND v.issued_at < ${a + 4 * DAY}`));
+  // Same pairing as the forecast_verification view (nearest observation within 40 min of the target), but the lookup is a
+  // primary-key range on observations (station, ts) instead of ABS(ts - target), which made SQLite scan every observation of
+  // the station for each point: ~1M rows read per run, the main cause of hitting D1's 5M rows/day limit (27 Oct 2026).
+  rows.push(...d1(`SELECT r.station, r.issued_at, r.method, r.unit, p.horizon_h AS h, p.level AS p, p.low, p.high, r.current_level AS c${hasStorm ? ", r.storm AS storm" : ", NULL AS storm"},
+      (SELECT o.level FROM observations o WHERE o.station = r.station AND o.ts BETWEEN p.target_ts - 2400000 AND p.target_ts + 2400000
+       ORDER BY ABS(o.ts - p.target_ts) LIMIT 1) AS y
+    FROM forecast_runs r JOIN forecast_points p ON p.run_id = r.id
+    WHERE r.issued_at >= ${a} AND r.issued_at < ${a + 4 * DAY} AND p.target_ts < ${now}`).filter((x) => x.y != null));
 }
 const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 const r2 = (v) => (v == null ? null : Math.round(v * 100) / 100);

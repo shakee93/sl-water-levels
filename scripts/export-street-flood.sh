@@ -69,10 +69,11 @@ q "SELECT d.day, d.runs, d.max_mm24h_clipped, d.max_live, d.max_shadow, d.shadow
 # station + issued_at; p1/a1/low1/high1 are in the log's own unit u). feedback_summary.json is the same aggregate the owner digest uses.
 q "SELECT datetime((f.created_ms + 19800000) / 1000, 'unixepoch') AS colombo_time, f.page, f.station, f.town, f.answer, f.river_obs, f.rain_obs, f.note, f.note_tags,
           f.lat_r, f.lon_r, f.dist_km, f.shown_tier, f.shown_level, f.shown_next_ft, f.shown_low_ft, f.shown_high_ft, f.shown_dir, f.shown_method, f.shown_rain, f.lang, f.device,
-          r.model_version, v.unit AS u, v.predicted AS p1, v.actual AS a1, v.low AS low1, v.high AS high1
+          r.model_version, r.unit AS u, p.level AS p1, p.low AS low1, p.high AS high1,
+          (SELECT o.level FROM observations o WHERE o.station = r.station AND o.ts BETWEEN p.target_ts - 2400000 AND p.target_ts + 2400000 ORDER BY ABS(o.ts - p.target_ts) LIMIT 1) AS a1
    FROM forecast_feedback f
    LEFT JOIN forecast_runs r ON r.station = f.station AND r.issued_at = f.shown_issued_at
-   LEFT JOIN forecast_verification v ON v.station = f.station AND v.issued_at = f.shown_issued_at AND v.horizon_h = 1
+   LEFT JOIN forecast_points p ON p.run_id = r.id AND p.horizon_h = 1
    WHERE f.created_ms >= $start AND f.created_ms < $end ORDER BY f.created_ms" > "$out/feedback.json" || echo "[]" > "$out/feedback.json"
 node -e "
 import('$(pwd)/lib/feedbackLearn.mjs').then(({feedbackRows, summary, perStation}) => {
