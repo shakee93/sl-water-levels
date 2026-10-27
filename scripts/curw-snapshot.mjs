@@ -388,8 +388,14 @@ async function main() {
   const q = (v) => (v == null ? "NULL" : typeof v === "number" ? String(v) : `'${String(v).replace(/'/g, "''")}'`);
   const nowMs = Date.now();
   const sql = [await readFile(new URL("../d1/0002_curw.sql", import.meta.url), "utf8")];
+  // D1 read budget (27 Oct 2026): every run used to upsert the whole 24 h curve of every gauge (~2,400 conflicting rows, ~22k rows
+  // read per run, ~2.1M a day of D1's 5M). The last 3 h is enough every 15 minutes; the full 24 h is re-sent once a day (06:00 run,
+  // which already keeps the raw PNGs) or with CURW_FULL=1, so a missed run's gap is still filled from the curve.
+  const colomboHour = new Date(nowMs + COLOMBO_MS).getUTCHours(), colomboMin = new Date(nowMs + COLOMBO_MS).getUTCMinutes();
+  const fullCurve = !!process.env.CURW_FULL || (colomboHour === 6 && colomboMin < 20);
+  const dbRows = fullCurve ? rows : rows.filter((r) => r.t > nowMs - 3 * 3_600_000);
   const byStation = new Map();
-  for (const r of rows) (byStation.get(r.station) ?? byStation.set(r.station, []).get(r.station)).push(r);
+  for (const r of dbRows) (byStation.get(r.station) ?? byStation.set(r.station, []).get(r.station)).push(r);
   for (const list of byStation.values()) {
     sql.push(`INSERT INTO curw_levels (station, grp, observed_ms, observed_at, level_m_msl, src, status, stored_at) VALUES\n${list
       .map((r) => `(${[r.station, r.group, r.t, r.observedAt, r.level_m_msl, r.src, r.status, nowMs].map(q).join(", ")})`).join(",\n")}\n`
