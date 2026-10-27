@@ -138,7 +138,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   // ---- the level the map shows
   // Nagalagam's own hourly level, always. Hanwella (10-minute sensor) is shown as its own number and is only used to answer "what if Hanwella reaches X",
   // because it leads Nagalagam by many hours at high flows (scripts/flood3d/fit-hanwella.py), so it says nothing about Nagalagam right now.
-  const liveNag = useMemo(() => (live?.nagalagam?.levelFt != null ? { ft: live.nagalagam.levelFt } : null), [live]);
+  // A reading older than about 6 h is not shown as live (the chip says unavailable); older than 90 min it says it may be a few minutes old.
+  const liveNag = useMemo(() => (live?.nagalagam?.levelFt != null && !(live.nagalagam.hourlyAt && Date.now() - Date.parse(live.nagalagam.hourlyAt) > 6 * 3_600_000) ? { ft: live.nagalagam.levelFt } : null), [live]);
   const level = driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
   const lagH = live?.hanwellaLagH ?? 18;
   const isLive = driver === "live";
@@ -307,7 +308,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const findMe = () => {
     if (!navigator.geolocation) { setGeoMsg(tr("Your browser cannot share its location.")); return; }
     setGeoMsg(tr("Finding your location\u2026"));
-    const msgFor = (code: number) => code === 1 ? tr("Location is blocked for this site. Allow it in the browser's site settings (padlock icon).") : code === 2 ? tr("Your device couldn't find its location. On a Mac, turn on Location Services for your browser in System Settings \u203a Privacy & Security \u203a Location Services; on a phone, turn on Location.") : tr("Finding your location took too long. Try again near a window or with Wi-Fi on.");
+    const msgFor = (code: number) => code === 1 ? tr("Location is blocked for this site. Allow it in the browser's site settings (padlock icon).") : code === 2 ? tr("Your device couldn't find its location. Turn Wi-Fi on (Macs locate using nearby Wi-Fi), even on Ethernet. On a Mac, turn on Location Services for your browser in System Settings \u203a Privacy & Security \u203a Location Services; on a phone, turn on Location.") : tr("Finding your location took too long. Try again near a window or with Wi-Fi on.");
     const ok = (pos: GeolocationPosition) => showMe(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
     const fail = (err: GeolocationPositionError, stage: number) => {
       console.warn("[flood3d] geolocation error", err.code, err.message, "stage", stage);
@@ -750,6 +751,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
 
   const arrow = (t: string | null | undefined) => (t == null ? "" : t.startsWith("rising") ? "↑" : t === "falling" ? "↓" : "→");
   const areaK = areas.find((x) => x.name === "Kelaniya");
+  const nagAgeMin = nag?.hourlyAt ? (now - Date.parse(nag.hourlyAt)) / 60000 : null;
+  const nagUsable = nag?.levelFt != null && !(nagAgeMin != null && nagAgeMin > 360);
   const stepColor = STEP_COLOR[nag ? (live?.gauges?.find((g) => g.name === "Nagalagam Street")?.status ?? nag.status) : "none"] ?? "#64748b";
   const dot = "·";
 
@@ -760,11 +763,11 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         <h1 className="text-base font-semibold md:text-lg tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map (test)")}</h1>
         <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
           <span aria-hidden className="size-2 rounded-full" style={{ background: stepColor }} />
-          {nag?.levelFt != null ? (
+          {nagUsable && nag ? (
             <>
-              <span className="font-semibold">{tr("Nagalagam Street {ft} ft", { ft: f1(nag.levelFt) })}</span>
+              <span className="font-semibold">{tr("Nagalagam Street {ft} ft", { ft: f1(nag.levelFt ?? 0) })}</span>
               {nag.trend && <span>{dot} {tr(nag.trend)} {arrow(nag.trend)}</span>}
-              {nag.hourlyAt && <span className="text-slate-500 dark:text-slate-400">{dot} {clock(nag.hourlyAt)}</span>}
+              {nag.hourlyAt && <span className="text-slate-500 dark:text-slate-400">{dot} {clock(nag.hourlyAt)}{nagAgeMin != null && nagAgeMin > 90 ? ` ${dot} ${tr("may be a few minutes old")}` : ""}</span>}
             </>
           ) : (
             <span>{liveErr ? tr("Live readings unavailable") : tr("Loading the latest readings…")}</span>

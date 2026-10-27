@@ -66,3 +66,23 @@ import { stripJpeg, exifAgree, distM } from "../lib/flood3dPhoto.ts";
   assert.ok(Math.abs(distM({ lat: 0, lon: 0 }, { lat: 0, lon: 0.001 }) - 111.2) < 1);
   console.log("flood3d photo helpers passed");
 }
+
+import { composeLive } from "../lib/flood3dCompose.ts";
+{
+  const st = (station: string, lat: number, lon: number) => ({ station, latitude: lat, longitude: lon, basin: "Kelani Ganga   " });
+  const rec = (s: { station: string }) => ({ station: s.station, level: 3.6, observedAt: "2026-10-27T12:00:00Z", marks: { alert: 4, minor: 5, major: 7 }, status: "watch", statusLabel: "Normal", trend: "falling", changePerHour3h: -0.1, url: "https://x/" + s.station });
+  const box = { south: 6.8, north: 7.2, west: 79.75, east: 80.5 };
+  const national = [st("Nagalagam Street", 6.958, 79.878), st("Hanwella", 6.909, 80.083), st("Kalu", 6.6, 80.1)];
+  const a = composeLive(national, { now: 1 }, rec, [[3, 2.6]], 18, box, "Kelani Ganga")!;
+  assert.equal(a.nagalagam!.levelFt, 3.6);                       // the core never depends on the optional parts
+  assert.deepEqual(a.nagalagam!.horizons, []);                   // a slow forecast leaves horizons empty, not the level
+  assert.equal(a.gauges.length, 2);                              // other basins are not drawn
+  const b = composeLive(national, { now: 1, han: { horizons: [{ h: 3, level: 5, low: 4, high: 6 }], method: "model" }, fast: { ft: 17.9, at: "t" } }, rec, [[3, 2.6]], 18, box, "Kelani Ganga")!;
+  assert.equal(b.hanwella!.fastFt, 17.9);
+  assert.equal(b.hanwella!.horizons.length, 1);
+  assert.equal(b.nagalagam!.fastFt, null);
+  // a half-read snapshot without Nagalagam is never an answer (the data cache keeps its last good entry instead)
+  assert.equal(composeLive([st("Hanwella", 6.909, 80.083)], { now: 1 }, rec, [], 18, box, "Kelani Ganga"), null);
+  assert.equal(composeLive([], { now: 1 }, rec, [], 18, box, "Kelani Ganga"), null);
+  console.log("flood3d live composition passed");
+}
