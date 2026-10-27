@@ -785,6 +785,47 @@ the site watches itself and tells the owner.
   `https://api.telegram.org/bot<token>/sendMessage` from the `slack()` helper in
   `scripts/health-alert.mjs`.
 
+## Gauge-corrected satellite rain (27 Oct 2026)
+
+**What.** The satellite (GSMaP_NOW) reads far from the ground gauges in places: on 27 Oct 2026 it read 169 mm in 24 h at Baddegama against
+63 mm on the gauge, and the dry zone over-reads (24 h satellite 76-112 mm against 3-12 mm). About 280 HMIS rain gauges (NBRO, Met,
+Irrigation, ACCIMT) report live, so each hour the satellite is checked against them and corrected. **A view and a note only**: the official
+steps, the street-water-likely rule, the heavy-rain warning and push alerts still read the RAW satellite, because their thresholds were
+backtested on raw GSMaP.
+
+**Pipeline (no new request-time calls, no D1).** `scripts/hmis-snapshot.mjs` (every 30 min) keeps `hmis/rain-live.json` on the `data`
+branch: every live gauge (record under 3 h old, zeros included) with its last 4.5 h of 24 h sums. `scripts/rain-correct.mjs`
+(`.github/workflows/rain-correct.yml`, started at :17/:47 by the Cloudflare scheduler, GitHub cron :19/:49 as backup) reads that and
+`gsmap/grid.json` only, and writes `rain-correction/latest.json` plus one line per satellite hour to `rain-correction/log/YYYY/YYYY-MM-DD.jsonl`.
+The site reads `latest.json` through `lib/rainCorrected.ts` (cached 10 min, fails soft, ignored when older than 3 h).
+
+**Method (`lib/rainCorrection.ts`, constants at the top, tests `scripts/rain-correction.test.mts`).**
+1. Pairs: each gauge's 24 h sum nearest the end of the satellite window (median lag is recorded; ~0 min once the state has history) against the
+   24 whole :00 satellite hours in the 0.1 degree pixel it sits in. HMIS publishes only a 24 h sum, so the fit is 24 h; there is no 1 h / 6 h gauge truth.
+   (HMIS rain times are real UTC; the SLT-labelled-Z quirk is for water levels only.)
+2. Factor = median of gauge / satellite over pairs with satellite >= 1 mm, per class of the SATELLITE value (light < 10 mm, moderate 10-50, heavy >= 50;
+   never classed by the gauge, which would bias it) and per region (Colombo metro, wet, intermediate, dry: a coarse box rule `regionOf`).
+3. Shrinkage toward 1.0: national class factor = 1 + w(median - 1), region-class factor = national + w(median - national), w = n / (n + 8);
+   fewer than 3 pairs uses the parent. Capped 0.1..3. (The cap was 0.3 in the first draft; every class hit it on 27 Oct, when heavy-class medians were 0.09.)
+4. Residual interpolation (24 h only): gauge - factor x satellite, Shepard weights within 10 km, divided by (sum of weights + 0.005) so it fades to the
+   factor-only field (about 0.97 of the nearest residual at 2 km, 0.67 at 5 km, 0.1 at 8 km, 0 beyond 10 km).
+5. 1 / 3 / 6 h and hourly frames: satellite x the pixel factor only (a multiplicative bias carries to shorter windows, a residual in mm does not).
+
+**Where it shows.** The ground-rain note on gauge pages and town pages (`app/GroundRainLine.tsx`: "Satellite rain, corrected with 12 nearby rain gauges:
+about 64 mm in 24 h (raw satellite 169 mm)", shown when either figure is >= 10 mm; "nearby" = gauges within 10 km, else "N rain gauges across the country");
+the /rain map has a Satellite / Corrected switch (1 h, 3 h, 24 h, the play-back and the river card use it); `latest.json` has corrected and raw 6 h / 24 h per
+catchment (`stations`) and street-rain zone (`zones`).
+
+**Validation** is in `latest.json` under `validation` and refreshed every run: leave one out (hide a gauge, refit everything from the others, predict it),
+MAE in mm of raw satellite, factor only and factor + residuals, by region and by class, over pairs where either reads >= 1 mm. `validation.flags` states the
+two known failure modes as sum(gauge)/sum(satellite): dry-zone over-reading (under 1) and heavy-burst under-reading (over 1 in the heavy class would mean
+the satellite under-reads). Caveat: a gauge is a point, a pixel is 11 km, so part of the "error" is representativeness, and a day with one big event fits one event.
+
+**Switching the rules to the corrected field (NOT done).** The log holds raw and corrected 24 h / 6 h per zone and catchment every hour, plus the nonzero
+gauge/satellite pairs. To switch: backtest the street-water-likely thresholds (60 / 100 mm clipped 24 h) and the heavy-rain thresholds on the logged corrected
+series against reported floods once the archive has a few events (the corrected series is a 24 h total, so the 15 mm/h hourly clip cannot be applied to it as is;
+decide how to clip first), compare hit and false-alarm rates with the raw series, and only then change `scripts/street-rain-log.mjs` / `lib/townRisk.ts`.
+
 ## Street-flood validation (is the satellite-rain rule right?)
 
 **Status since 26 Oct 2026: the rain rule is a personal opt-in for low-lying spots, not a town warning.** The owner (who lives in

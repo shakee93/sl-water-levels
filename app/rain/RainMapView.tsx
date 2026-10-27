@@ -13,7 +13,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Pause, Play, X } from "lucide-react";
 import { HOME_COAST, HOME_RIVERS } from "@/lib/geo/homeRivers";
 import { RAIN_BASINS, inBasin } from "@/lib/geo/rainBasins";
-import { basinForecast, basinSatellite, decodeFrame, forecastTotal, satelliteTotal, type RainMapData, type RainMapGauge } from "@/lib/rainMapCalc";
+import { basinForecast, basinSatellite, correctedFrame, correctedTotal, decodeFrame, forecastTotal, perBasin, satelliteTotal, type RainMapData, type RainMapGauge } from "@/lib/rainMapCalc";
 import { hmisT } from "@/lib/i18n/hmis";
 import { RAIN_BANDS, rainBand, rainWordOf, satelliteCaveat, type RainBand, type RainWindow } from "@/lib/rainWords";
 import { rmFor } from "@/lib/i18n/rainMap";
@@ -130,6 +130,8 @@ export function RainMapView({ rivers }: RainMapStrings) {
   const [view, setView] = useState<View>({ kind: "total", tab: "24h" });
   const [playing, setPlaying] = useState(false);
   const [sel, setSel] = useState<number | null>(null);
+  // satellite rain as the satellite saw it, or corrected with the live ground gauges (scripts/rain-correct.mjs); a view only, no rule reads it
+  const [useCorr, setUseCorr] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   // screen pixels per map unit, so dots and labels keep one size on every screen
@@ -164,6 +166,7 @@ export function RainMapView({ rivers }: RainMapStrings) {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
+  const corrOn = useCorr && !!data?.corrected;
   const nowHour = data ? Math.floor(data.generatedAt / HOUR) * HOUR : 0;
 
   // what to draw for the current view
@@ -184,17 +187,17 @@ export function RainMapView({ rivers }: RainMapStrings) {
     if (view.kind === "total") {
       if (view.tab === "f24") return fc(forecastTotal(data, 24), "24h");
       const h = view.tab === "1h" ? 1 : view.tab === "3h" ? 3 : 24;
-      return sat(satelliteTotal(data, h), view.tab);
+      return sat(corrOn ? correctedTotal(data, h) : satelliteTotal(data, h), view.tab);
     }
     if (view.i < 0) {
       const start = nowHour + view.i * HOUR;
       const hr = data.satellite?.hours.find((x) => x.start === start);
-      return sat(hr ? decodeFrame(hr.v) : null, "1h");
+      return sat(hr ? (corrOn ? correctedFrame(data, decodeFrame(hr.v)) : decodeFrame(hr.v)) : null, "1h");
     }
     const end = nowHour + (view.i + 1) * HOUR;
     const hr = data.forecast?.hours.find((x) => x.end === end);
     return fc(hr ? decodeFrame(hr.v) : null, "1h");
-  }, [data, view, nowHour]);
+  }, [data, view, nowHour, corrOn]);
 
   useEffect(() => {
     if (frame) paint(canvasRef.current, frame.sample, frame.win);
@@ -213,7 +216,11 @@ export function RainMapView({ rivers }: RainMapStrings) {
     return () => clearInterval(id);
   }, [playing]);
 
-  const fell24 = useMemo(() => (data ? basinSatellite(data, 24) : []), [data]);
+  const fell24 = useMemo(() => {
+    if (!data) return [];
+    const c = corrOn ? correctedTotal(data, 24) : null;
+    return c ? perBasin(data, (i) => c[i]) : basinSatellite(data, 24);
+  }, [data, corrOn]);
   const next24 = useMemo(() => (data ? basinForecast(data, 24) : []), [data]);
   const next6 = useMemo(() => (data ? basinForecast(data, 6) : []), [data]);
   const gaugeBy = useMemo(() => new Map((data?.gauges ?? []).map((g) => [g.station, g])), [data]);
@@ -298,11 +305,13 @@ export function RainMapView({ rivers }: RainMapStrings) {
       const h = view.tab === "1h" ? 1 : view.tab === "3h" ? 3 : 24;
       caption = lastSat ? rm("frame.satTotal", { h, to: clock(lastSat.start + HOUR, t) }) : "";
       if (!data.satellite) note = rm("frame.satSoon");
+      else if (corrOn && data.corrected) note = hmisT(lang)("map.corrected", { n: data.corrected.pairs });
       else if (h === 24 && satHours.length < 24) note = rm("frame.partial", { n: satHours.length });
     } else if (view.i < 0) {
       const s = nowHour + view.i * HOUR;
       caption = rm("frame.sat", { from: clock(s, t), to: clock(s + HOUR, t) });
       if (!frame.sample) note = data.satellite ? rm("frame.notIn") : rm("frame.satSoon");
+      else if (corrOn && data.corrected) note = hmisT(lang)("map.corrected", { n: data.corrected.pairs });
     } else {
       const s = nowHour + view.i * HOUR;
       caption = rm("frame.fc", { from: clock(s, t), to: clock(s + HOUR, t) });
@@ -320,7 +329,8 @@ export function RainMapView({ rivers }: RainMapStrings) {
     : [];
 
   const tabBar = (
-    <div role="tablist" aria-label={rm("legend.title")} className="grid grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800 lg:col-start-2 lg:row-start-1">
+    <div className="space-y-2 lg:col-start-2 lg:row-start-1">
+    <div role="tablist" aria-label={rm("legend.title")} className="grid grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800">
       {tabs.map((k) => {
         const on = view.kind === "total" && view.tab === k;
         return (
@@ -335,6 +345,22 @@ export function RainMapView({ rivers }: RainMapStrings) {
           </button>
         );
       })}
+    </div>
+    {data?.corrected && !isFc && (
+      <div role="radiogroup" aria-label={rm("src.label")} className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800">
+        {([false, true] as const).map((c) => (
+          <button
+            key={String(c)}
+            role="radio"
+            aria-checked={useCorr === c}
+            onClick={() => setUseCorr(c)}
+            className={`rounded-md px-1 py-1.5 font-medium leading-tight transition ${useCorr === c ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100" : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"}`}
+          >
+            {rm(c ? "src.corr" : "src.sat")}
+          </button>
+        ))}
+      </div>
+    )}
     </div>
   );
 

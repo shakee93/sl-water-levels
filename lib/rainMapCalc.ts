@@ -46,6 +46,12 @@ export type RainMapData = {
   gauges: RainMapGauge[];
   /** Live ground rain gauges from HMIS (record under 3 h old) with 5 mm or more in 24 h: [name, institute, lat, lon, mm in 24 h]. Absent when HMIS is slow. */
   ground?: [string, string, number, number, number][];
+  /**
+   * Satellite rain corrected with the live ground gauges (scripts/rain-correct.mjs, lib/rainCorrection.ts): `corr24` = corrected 24 h mm per pixel
+   * (tenths, same encoding as the satellite frames), `gain` = the bias factor x 100 per pixel that scales the 1 h / 3 h totals and the hour frames
+   * (factor only, no gauge residual), `pairs` = gauges used. Absent when the file is missing or older than 3 h.
+   */
+  corrected?: { pairs: number; corr24: string; gain: string };
 };
 
 export const decodeFrame = (s: string): number[] => s.split(",").map((x) => (x === "" ? 0 : x === "x" ? -1 : Number(x) / 10));
@@ -109,3 +115,23 @@ export const basinForecast = (d: RainMapData, hours: number) => {
   const idx = forecastIndexPerPixel(d);
   return perBasin(d, (i) => (idx[i] >= 0 ? t[idx[i]] : null));
 };
+
+/** Per pixel gain (factor) of the corrected field, null where missing. */
+const gainOf = (d: RainMapData): (number | null)[] | null => (d.corrected ? d.corrected.gain.split(",").map((x) => (x === "x" ? null : Number(x) / 100)) : null);
+
+/** Like satelliteTotal, but with the gauge correction: 24 h = the corrected 24 h field, shorter windows = satellite x the pixel's factor. Null without a correction. */
+export function correctedTotal(d: RainMapData, hours: number): (number | null)[] | null {
+  if (!d.corrected) return null;
+  if (hours === 24) {
+    const c = decodeFrame(d.corrected.corr24);
+    return c.map((v) => (v < 0 ? null : v));
+  }
+  const sat = satelliteTotal(d, hours), g = gainOf(d);
+  return sat && g ? sat.map((v, i) => (v == null || g[i] == null ? null : v * g[i]!)) : null;
+}
+
+/** One satellite hour frame scaled by the pixel factors (the corrected play-back); the input is returned unchanged when there is no correction. */
+export function correctedFrame(d: RainMapData, frame: number[]): number[] {
+  const g = gainOf(d);
+  return g ? frame.map((v, i) => (v < 0 || g[i] == null ? v : v * g[i]!)) : frame;
+}

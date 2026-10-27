@@ -19,6 +19,7 @@ import { soft } from "./soft";
 import { getGsmap } from "./gsmap";
 import { getJson } from "./weather";
 import { getHmisRain, RAIN_MAX_AGE_MIN } from "./hmis";
+import { getRainCorrection } from "./rainCorrected";
 import { orderStations } from "./basinOrder";
 import { measuredAtGauge } from "./stationRain";
 import { noRainSensor } from "./rainSensors";
@@ -125,7 +126,7 @@ const r1 = (v: number | null | undefined) => (v == null ? null : Math.round(v * 
 
 async function build(): Promise<RainMapData> {
   const now = Date.now();
-  const [sat, fc, national, gsmap, verdicts, hmisRain] = await Promise.all([
+  const [sat, fc, national, gsmap, verdicts, hmisRain, correction] = await Promise.all([
     satelliteHours(now),
     forecastHours(now),
     getNational().catch(() => []),
@@ -133,6 +134,7 @@ async function build(): Promise<RainMapData> {
     // same verdict as the gauge pages, so a gauge listed here never reads calmer than its page; 4 s cap, else none
     soft(getStationVerdicts().catch(() => ({}) as Record<string, StationVerdict>), 4000, {} as Record<string, StationVerdict>),
     getHmisRain(2000),
+    soft(getRainCorrection(now), 2000, null),
   ]);
   const ground: [string, string, number, number, number][] | undefined = hmisRain
     ? hmisRain.devices
@@ -173,8 +175,11 @@ async function build(): Promise<RainMapData> {
     forecast: fc ? { grid: FC_GRID, points: FC_POINTS, hours: fc.map((h) => ({ end: h.end, v: enc(h.v) })) } : null,
     gauges,
     ground,
+    corrected: correction && sat
+      ? { pairs: correction.pairs, corr24: enc(correction.corr24.map((v) => (v == null ? -1 : Math.round(v * 10)))), gain: correction.gain.map((v) => (v == null ? "x" : Math.round(v * 100))).join(",") }
+      : undefined,
   };
 }
 
 /** The whole map payload, cached 5 minutes (the sources underneath have their own caches). */
-export const getRainMap = unstable_cache(build, ["rain-map-v4"], { revalidate: 300 });
+export const getRainMap = unstable_cache(build, ["rain-map-v5"], { revalidate: 300 });

@@ -2,6 +2,9 @@
 // and the ground rain gauges that reported. One request per endpoint per run (every 30 minutes), UA with the site URL and owner email.
 //   <outDir>/hmis/levels/YYYY/YYYY-MM-DD.json  { "<device>": { name, institute, pts: [[epochMs UTC, metres], ...] } }  (Colombo day of the reading)
 //   <outDir>/hmis/rain/YYYY/YYYY-MM-DD.json    { "<device>": { name, institute, lat, lon, pts: [[latest_record_ms UTC, mm in the last 24 h], ...] } }
+//   <outDir>/hmis/rain-live.json   { updatedAt, devices: { "<device>": { n: name, i: institute, lat, lon, pts: [[epoch minutes UTC, mm in the last 24 h], ...] } } }
+//     EVERY live gauge (record under 3 h old), zeros included, last 4.5 h only: the input of scripts/rain-correct.mjs, which needs the gauge's
+//     24 h sum at the time the satellite window ends (1-2 h ago) and needs the dry gauges too (the satellite's false rain). Rewritten each run.
 // Points are merged and de-duplicated, so a missed run is healed by the next one (HMIS serves the last 24 h every time).
 // Usage: node --experimental-strip-types scripts/hmis-snapshot.mjs <outDir>
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -42,6 +45,30 @@ async function merge(kind, entries) {
 }
 
 const now = Date.now();
+
+/** Rolling state for the gauge-corrected satellite rain (see the header). */
+async function writeLiveRain(rain) {
+  const file = path.join(outDir, "hmis", "rain-live.json");
+  let cur = { devices: {} };
+  try { cur = JSON.parse(await readFile(file, "utf8")); } catch { /* first run */ }
+  const keepFrom = Math.floor((now - 4.5 * 3_600_000) / 60_000);
+  const devices = {};
+  for (const [id, e] of Object.entries(cur.devices ?? {})) {
+    const pts = (e.pts ?? []).filter((p) => p[0] >= keepFrom);
+    if (pts.length) devices[id] = { ...e, pts };
+  }
+  for (const d of rain) {
+    if (now - d.latestTs > 3 * 3_600_000 || d.latestTs > now + 10 * 60_000) continue;
+    const e = devices[d.device] ?? { n: d.name, i: d.institute, lat: d.lat, lon: d.lon, pts: [] };
+    const tm = Math.round(d.latestTs / 60_000);
+    if (!e.pts.some((p) => p[0] === tm)) e.pts.push([tm, d.mm24h]);
+    e.pts.sort((a, b) => a[0] - b[0]);
+    devices[d.device] = e;
+  }
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, JSON.stringify({ updatedAt: new Date(now).toISOString(), devices }) + "\n");
+}
+
 let failed = 0;
 try {
   const devices = normaliseLevelRows(await get("getwaterlevelsummary/1_day/live"));
@@ -71,6 +98,7 @@ try {
     by.get(day).set(d.device, { meta: { name: d.name, institute: d.institute, lat: d.lat, lon: d.lon }, pts: [[d.latestTs, d.mm24h]] });
   }
   await merge("rain", by);
+  await writeLiveRain(rain);
   console.log(`rain: ${[...by.values()].reduce((n, m) => n + m.size, 0)} gauges with rain`);
 } catch (e) {
   failed++;

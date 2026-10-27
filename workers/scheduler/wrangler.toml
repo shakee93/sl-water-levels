@@ -14,6 +14,7 @@ crons = [
   "*/5 * * * *",   # X posts within ~5 min of a new gauge reading; release snapshots + CUrW every 15 min (filtered in code)
   "25 * * * *",    # forecast store, hourly
   "7,37 * * * *",  # health check + GSMaP satellite rain (JAXA posts at :01/:31), every 30 min
+  "17,47 * * * *", # gauge-corrected satellite rain, after the :07/:37 snapshots
   "30 7,19 * * *", # gauge snapshot, 13:00 and 01:00 Colombo
   "0 1 1 * *",     # monthly prediction export, 06:30 Colombo on the 1st
 ]

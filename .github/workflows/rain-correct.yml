@@ -1,0 +1,67 @@
+# Gauge-corrected satellite rain -> `data` branch under rain-correction/ (scripts/rain-correct.mjs, maths in lib/rainCorrection.ts).
+# Pairs every live HMIS rain gauge (hmis/rain-live.json, written by hmis-snapshot) with the GSMaP pixel it sits in
+# (gsmap/grid.json, written by gsmap-snapshot) for the same 24 h window and publishes the bias factors, a leave-one-out validation and the
+# corrected 6 h / 24 h rain per catchment, zone and pixel. It reads only files already on the data branch: no request to JAXA or HMIS, no D1.
+# Runs after both snapshots (they start at :07/:37 and take a few minutes). The Cloudflare scheduler also starts it; this cron is the backup.
+
+name: Rain correction
+
+on:
+  schedule:
+    - cron: "19,49 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Same group as the other data-branch writers so none of them push at once.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  correct:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth=1 origin data
+            git worktree add archive FETCH_HEAD
+            git -C archive checkout -B data
+          else
+            git worktree add --orphan -b data archive
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Correct the satellite rain with the ground gauges
+        run: node --experimental-strip-types --no-warnings scripts/rain-correct.mjs archive
+
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change."
+            exit 0
+          fi
+          git commit -m "Rain correction $(date -u '+%F %H:%M') UTC"
+          git pull --rebase origin data || true
+          git push origin data
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true

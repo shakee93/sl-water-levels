@@ -162,6 +162,10 @@ lib/
   point-in-polygon on HMIS `basin/merge`), (3) ground-rain notes within 5 km, record <= 3 h old, ahead of GSMaP.
   HMIS gauges are never "upstream" of an ArcGIS gauge in forecasts or the anomaly detector (no fitted travel time).
 
+- **Gauge-corrected satellite rain** (`lib/rainCorrection.ts`, `scripts/rain-correct.mjs`, `rain-correct.yml`; DOCS.md "Gauge-corrected satellite rain"): the
+  GSMaP 24 h rain adjusted with the live HMIS gauges (class x region median factor, shrunk to 1, plus faded gauge residuals). A NOTE and a /rain toggle only:
+  the street-water rule, heavy-rain warning, push and official steps stay on RAW GSMaP until the logged corrected series (`data:rain-correction/log/`) is backtested.
+
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.
 
