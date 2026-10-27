@@ -1,4 +1,4 @@
-// Water depth on the ground for the 3D water layer and the tap note ("About X ft of water here"). An ESTIMATE.
+// Water depth on the ground for the tap note ("About X ft of water here"). An ESTIMATE.
 // Two regimes, both calibrated on Cyclone Ditwah (private depth table, scripts/flood3d/prep.py):
 //  - kind 2, the Kolonnawa / Megoda Kolonnawa / Wellampitiya pool (POOL_ZONE): one flat water surface behind the canals, rising 0.81 m per ft of Nagalagam stage up to
 //    7.4 ft and 0.25 m per ft above, so depth = pool surface minus the cell's own fill level. Agrees on 6.25 m at the 1 Dec peak from three independent lines (a bridge-deck
@@ -21,14 +21,4 @@ export function depthM(lv: number, L: number, kind: 0 | 1 | 2): number {
   if (!(d > 0) || !Number.isFinite(L)) return 0;
   if (kind === 2) return poolW(lv) - poolW(L);
   return (kind === 1 ? SETTLED_OFFSET_M * Math.min(1, d / RAMP_SETTLED_FT) : OPEN_OFFSET_M * Math.min(1, d / RAMP_OPEN_FT)) + FT * d;
-}
-
-/** The same formula as a MapLibre expression over the cell properties L (ft) and b (0 open, 1 settled, 2 pool), for a given river level. */
-export function depthExpr(lv: number): unknown[] {
-  const d = ["-", lv, ["get", "L"]];
-  const pw = (x: unknown) => ["+", ["*", 0.81, ["min", x, 7.4]], ["*", 0.25, ["max", 0, ["-", x, 7.4]]]];
-  return ["case", [">", d, 0],
-    ["case", ["==", ["get", "b"], 2], ["-", pw(lv), pw(["get", "L"])],
-      ["+", ["*", ["case", ["==", ["get", "b"], 1], SETTLED_OFFSET_M, OPEN_OFFSET_M], ["min", 1, ["/", d, ["case", ["==", ["get", "b"], 1], RAMP_SETTLED_FT, RAMP_OPEN_FT]]]], ["*", FT, d]]],
-    0];
 }
