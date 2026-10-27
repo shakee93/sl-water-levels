@@ -678,18 +678,18 @@ live data and from alias tables.
 
 | Page | Title | H1 |
 |---|---|---|
-| Home | Sri Lanka River Water Levels Today (Live) & Flood Alerts | River water levels in Sri Lanka today |
+| Home | Sri Lanka River Water Levels Today (Live) | Sri Lanka river water levels, live |
 | /rivers | River Water Levels in Sri Lanka Today (Live) | same as H1 |
-| River | {Lead} Water Level Today (Live) – {Other name}, e.g. Kalu Ganga Water Level Today (Live) – Kalu River | {Lead} water level today, plus an "Also called ..." line |
-| Gauge | {Gauge} Water Level Today – {River} (Live) | {Gauge} water level today, plus a link up to the river |
-| Gauge of a one-gauge river | {River} Water Level Today – {Gauge} (Live) | {River} water level today at {Gauge} |
-| Town | Is {Town} flooding today? Live flood level | Is {Town} flooding today? |
-| Reservoir | {Name} Reservoir Water Level & Spill Today | {Name} Reservoir water level today, plus "Also searched as ..." |
-| Index pages | Reservoir & Dam Water Levels Sri Lanka Today; Is My Town Flooding? Live Flood Check, N Towns; Sri Lanka Rain Map (Live) – Rainfall Today; Flood News Sri Lanka Today – Latest Reports; Flood Help Sri Lanka: 117 DMC Emergency Number; Colombo Canal Water Levels Today & Tide | matching H1 |
+| River | {Lead} Water Level Today (Live, Map), e.g. Kalu Ganga Water Level Today (Live, Map) | {Lead} ({Other name}) water level today, plus an "Also called ..." line (the other name is in the H1 and description) |
+| Gauge | {Gauge} Water Level Today ({River}, Live) | {Gauge} water level today, plus a link up to the river and an "Also searched as" line (Glencorse, Nagalam Street) |
+| Gauge of a one-gauge river | {River} Water Level Today ({Gauge}, Live) | {River} water level today at {Gauge} |
+| Town | {Town} Flood Today – Situation, Level & Map | Is {Town} flooding now? |
+| Reservoir | {Name} Reservoir Water Level Today (Sri Lanka) | {Name} Reservoir water level today, "Also searched as ...", and an H2 "Spill gates and release now" |
+| Index pages | Sri Lanka Reservoir Water Levels Today (Live); Sri Lanka Flood Today – Which Towns Are Flooding; Sri Lanka Rain Map Today – Live Satellite Rainfall; Flood News Sri Lanka Today – Rivers, Rain, Dams; Flood Help Sri Lanka – 117 Hotline & What To Do; Colombo Canal Water Levels Today (Live); Reservoir Spill Gates Open Today – Sri Lanka (/reservoirs/spilling); Sri Lanka Flood Map Today – Live River Levels (/flood-map, gauges + spilling dams + towns to watch + official past-flood list, never a map of flooded streets) | matching H1 |
 
 **Rules**
 - Titles are `title: { absolute }` (the layout's " — site name" suffix would push them past about 60 characters; phones cut at 55-60).
-  River titles drop the "– {Other name}" half automatically past 62 characters. No live number in a title (it goes stale in snippets).
+  No live number in a title (it goes stale in snippets).
 - "River", "water level", "today", "live", "flood level" are the words; never "basin" in a title, H1, meta or nav label (the data still
   says basin internally; the public label is "Rivers" / "All rivers").
 - Meta descriptions: about 160 characters, the live status first ("Now: minor flood level"), official steps only (Normal, Alert, Minor

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
 import { notFound } from "next/navigation";
 import { CloudRain, Download, Quote, Waves } from "lucide-react";
 import { isLocale, pageAlternates } from "@/lib/i18n/config";
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     description: WF_DESC[lang],
     alternates,
     authors: [{ name: OWNER.name, url: OWNER.x }],
-    openGraph: {
+    openGraph: { ...ogBase(lang),
       title: WF_TITLE[lang],
       description: WF_DESC[lang],
       url: `${SITE}${alternates.canonical}`,

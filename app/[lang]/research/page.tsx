@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
 import { notFound } from "next/navigation";
 import { FileText } from "lucide-react";
 import { isLocale, pageAlternates } from "@/lib/i18n/config";
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     title,
     description: X.indexIntro,
     alternates,
-    openGraph: { title, description: X.indexIntro, url: `${SITE}${alternates.canonical}`, type: "website" },
+    openGraph: { ...ogBase(lang), title, description: X.indexIntro, url: `${SITE}${alternates.canonical}`, type: "website" },
   };
 }
 

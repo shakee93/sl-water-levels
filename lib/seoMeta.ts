@@ -3,7 +3,7 @@
 import { OG_LOCALE, type Locale } from "./i18n/config";
 import { getI18n } from "./i18n/server";
 import { seoFor } from "./i18n/seo";
-import { byGaugeDemand, nativeRiver, reservoirAliases, riverNames, siGenitive } from "./seoNames";
+import { byGaugeDemand, gaugeAliases, nativeRiver, reservoirAliases, riverNames, siGenitive } from "./seoNames";
 
 /** Phones cut a title near 55-60 characters: past this the optional tail (the "also called" half) is dropped. */
 export const TITLE_MAX = 62;
@@ -37,17 +37,18 @@ export function riverMeta(lang: Locale, basin: string, o: { gauges: string[]; no
   const title = full.length > TITLE_MAX ? s("river.titleNoAlt", vars) : full;
   const description = s("river.desc", {
     lead: n.lead,
+    alt: n.alt ?? n.lead,
     native: n.native,
     gauges: shortList(byGaugeDemand(o.gauges), lang, 3),
     now: o.now ?? "",
     rom: lang === "si" && n.rom[0] ? `${n.rom[0]}.` : "",
-  }).replace(/\s+/g, " ").trim();
+  }).replace(` (${n.lead})`, n.alt ? ` (${n.alt})` : "").replace(/\s+/g, " ").trim();
   const names = [n.alt, ...n.also].filter((x): x is string => !!x);
   // The H1 carries the everyday name only; the variants go in the line under it (and, in en, the alt in the title).
   return {
     title,
     description,
-    h1: s("river.h1", vars),
+    h1: s(n.alt ? "river.h1" : "river.h1NoAlt", vars),
     also: lang === "en" && names.length ? s("river.also", { list: names.join(", ") }) : lang !== "en" && n.alt ? s("river.also", { list: [n.lead, n.alt, ...n.also.slice(0, 2)].join(", ") }) : null,
   };
 }
@@ -72,6 +73,7 @@ export function gaugeMeta(
     h1: s(o.oneGauge ? "gauge.h1One" : "gauge.h1", { gauge: o.gauge, river }),
     sub: o.oneGauge ? null : s("gauge.sub", { gauge: o.gauge }),
     /** Anchor text of the link up to the river page ("Kelani River water level"). */
+    alias: lang === "en" && gaugeAliases(o.gauge).length ? s("gauge.alias", { list: gaugeAliases(o.gauge).join(", ") }) : null,
     riverLink: o.oneGauge ? null : s("rivers.link", { river }),
   };
 }

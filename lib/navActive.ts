@@ -8,7 +8,7 @@ import { splitLocale } from "./i18n/config";
 
 export type NavSection = "home" | "basins" | "towns" | "reservoirs" | "news" | "help";
 
-const TOP: Record<string, NavSection> = { rivers: "basins", flood: "towns", reservoirs: "reservoirs", news: "news", help: "help" };
+const TOP: Record<string, NavSection> = { rivers: "basins", flood: "towns", "flood-map": "towns", reservoirs: "reservoirs", news: "news", help: "help" };
 
 export function navSection(pathname: string, riverSlugs: readonly string[] = []): NavSection | null {
   const first = splitLocale(pathname || "/").path.split("/")[1] ?? "";

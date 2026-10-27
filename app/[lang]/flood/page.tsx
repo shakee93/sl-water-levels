@@ -65,6 +65,7 @@ export default async function FloodIndex({ params }: { params: Promise<{ lang: s
         <header className="mb-5">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{seoFor(lang)("flood.h1")}</h1>
           <p className="mt-1.5 text-sm sm:text-base text-slate-600 dark:text-slate-400" lang={lang}>{tt("idx.lead")}</p>
+          <p className="mt-1"><Link href={p("/flood-map")} className="inline-flex items-center min-h-11 text-sm text-sky-700 dark:text-sky-300 hover:underline">{seoFor(lang)("map.link")}</Link></p>
           {lang !== "en" && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
         </header>
 

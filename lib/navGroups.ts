@@ -2,8 +2,9 @@
 // Labels are the same strings the pages use for their breadcrumb / H1 (naming rule: one name per section).
 // Basins (rivers) are listed separately by both, from live station data. Home, Towns, Reservoirs and News are also
 // phone tabs, but are repeated in the sheet so that it alone is a complete index.
-import { House, List, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, LifeBuoy, Info, FlaskConical, type LucideIcon } from "lucide-react";
+import { House, List, Map as MapIcon, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, LifeBuoy, Info, FlaskConical, type LucideIcon } from "lucide-react";
 import type { Locale } from "./i18n/config";
+import { seoFor } from "./i18n/seo";
 import { rtFor } from "./i18n/return";
 import { rtFor as resFor } from "./i18n/reservoirs";
 import { nwFor } from "./i18n/news";
@@ -24,6 +25,7 @@ export function navGroups(lang: Locale, t: (k: "footer.home" | "crumb.allBasins"
       items: [
         { href: "/", label: t("footer.home"), icon: House, event: "home_nav_click" },
         { href: "/rivers", label: t("crumb.allBasins"), icon: List, event: "rivers_nav_click" },
+        { href: "/flood-map", label: seoFor(lang)("map.link"), icon: MapIcon, event: "flood_map_nav_click" },
         { href: "/flood", label: rtFor(lang)("tab.towns"), icon: MapPin, event: "towns_nav_click" },
         { href: "/reservoirs", label: resFor(lang)("nav"), icon: Waves, event: "reservoirs_nav_click" },
         { href: "/colombo-canals", label: ccFor(lang)("crumb"), icon: Droplets, event: "colombo_canals_nav_click" },

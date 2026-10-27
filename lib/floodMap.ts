@@ -49,3 +49,6 @@ export function gnCount(ev: FloodEvent): number {
   const i = EVENTS.indexOf(ev);
   return GN.filter((g) => g[6].includes(i)).length;
 }
+
+/** Every mapped past flood, newest first (for the /flood-map page's list). */
+export const allFloodEvents = (): FloodEvent[] => [...EVENTS].sort((a, z) => z.year - a.year || a.basin.localeCompare(z.basin));

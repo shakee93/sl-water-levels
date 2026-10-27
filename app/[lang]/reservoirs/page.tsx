@@ -129,6 +129,7 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
           <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">
             {active > 0 ? rt("idx.summary", { a: active, b: holding }) : rt("idx.summaryNone", { b: holding })}
           </p>
+          <p className="mt-1"><Link href={p("/reservoirs/spilling")} className="inline-flex items-center min-h-11 text-sm text-sky-700 dark:text-sky-300 hover:underline">{seoFor(lang)("spill.link")}</Link></p>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{rt("idx.asOf", { a: day(data.sheetDate), b: day(data.wmsDate) })}</p>
         </header>
         <ReservoirFilter

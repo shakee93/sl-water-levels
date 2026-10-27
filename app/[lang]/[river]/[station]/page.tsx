@@ -256,15 +256,16 @@ export default async function StationPage({
           <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
             {gmeta ? gmeta.h1 : t("station.fallbackHeading")}
           </h1>
-          {gmeta?.sub && (
+          {(gmeta?.sub || gmeta?.alias) && (
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {gmeta.riverLink && (
+              {gmeta.riverLink && gmeta.sub && (
                 <>
                   <Link href={p(basinPath(basin))} className="underline underline-offset-2 hover:text-sky-700 dark:hover:text-sky-300">{gmeta.riverLink}</Link>
                   {" · "}
                 </>
               )}
               {gmeta.sub}
+              {gmeta.alias && ` · ${gmeta.alias}`}
             </p>
           )}
           {answer && <AnswerLine text={answer} note={mt} />}

@@ -56,6 +56,8 @@ Where to get it:
 
 - [Home: all rivers, map and what needs attention now](${SITE}/): live status and next-hour forecast of every gauge
 - [River water levels today](${SITE}/rivers): every river with a gauge and its worst official step (Normal, Alert, Minor flood, Major flood), linking to each river and gauge page
+- [Sri Lanka flood map today](${SITE}/flood-map): every gauge on a map coloured by its official step, spilling dams, towns to watch, and the Irrigation Department's maps of past floods
+- [Reservoir spill gates open today](${SITE}/reservoirs/spilling): reservoirs spilling or releasing now, release in cusecs, the gauges below them
 - [Flood risk for towns](${SITE}/flood): 135+ towns, each page answers "is it flooding now?" and "will it flood in the next hour?" (pattern: ${SITE}/flood/<town>, e.g. ${SITE}/flood/wellampitiya)
 - [Rain map](${SITE}/rain): rain that fell over the last 24 h (JAXA GSMaP satellite, hour by hour, 0.1 degree; credit JAXA), the next 24 h of forecast (Open-Meteo weather model, shown separately), and every river gauge with its level and its own measured rain; per river, rain on the catchment above its gauges. Satellite rain is an estimate and reads high in the dry zone. JSON: ${SITE}/api/rain-map
 - [Colombo canals](${SITE}/colombo-canals): how Colombo's canals drain (Kolonnawa, Parliament Lake, Wellawatta, Dehiwala), predicted high-tide times, and live canal levels from CUrW / SLLDC (pub.curwsl.org; credit them). Canal levels and tide are context, not a flood warning. JSON: ${SITE}/api/canals

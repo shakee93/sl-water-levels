@@ -93,10 +93,13 @@ const DAM_EXTRA: Record<string, string[]> = {
   laxapana: ["Laksapana", "Old Laxapana", "New Laxapana"],
   castlereagh: ["Castlereigh"],
   maussakele: ["Moussakele", "Maussakelle"],
+  "senanayake-samudraya": ["Senanayake Samudra", "Gal Oya reservoir"],
+  lunugamvehera: ["Lunugamwehera"],
+  kaluganga: ["Kaluganga dam"],
   "deduru-oya": ["Deduru Oya reservoir"],
-  rajanganaya: ["Rajangana"],
+  rajangana: ["Rajanganaya", "Rajangana wewa"],
   tabbowa: ["Thabbowa"],
-  "kala-wewa": ["Kalawewa", "Kala Wewa"],
+  kalawewa: ["Kalawewa", "Kala Wewa"],
 };
 
 const titleCase = (s: string) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
@@ -123,7 +126,18 @@ export function reservoirAliases(catalogueId: string | null, name: string): stri
 // ---------------------------------------------------------------- towns
 
 /** Latin spellings of a town (gazetteer aliases), for the "also searched as" line on the town page. */
-export const townAliases = (p: Place): string[] => p.aliases.filter((a) => LATIN.test(a) && a.toLowerCase() !== p.name.toLowerCase()).slice(0, 3);
+const TOWN_EXTRA: Record<string, string[]> = { kolonnawa: ["Megoda Kolonnawa"], kelaniya: ["Kelaniya river"] };
+export const townAliases = (p: Place): string[] => [...(TOWN_EXTRA[p.slug] ?? []), ...p.aliases.filter((a) => LATIN.test(a) && a.toLowerCase() !== p.name.toLowerCase())].slice(0, 3);
+
+/** Spellings of a gauge name that people type (Search Console and autocomplete, Oct 2026). */
+const GAUGE_ALIASES: Record<string, string[]> = {
+  Glencourse: ["Glencorse"],
+  "Nagalagam Street": ["Nagalam Street", "Mattakkuliya", "Mill Road"],
+  Kithulgala: ["Kitulgala"],
+  Ratnapura: ["Rathnapura"],
+  Thaldena: ["Thaldena Mahaweli"],
+};
+export const gaugeAliases = (gauge: string): string[] => GAUGE_ALIASES[gauge] ?? [];
 
 /** Gauges people search by name, most searched first (Search Console, Oct 2026): the meta description names these before the rest. */
 const GAUGE_PRIORITY = ["Hanwella", "Nagalagam Street", "Glencourse", "Kaduwela", "Ratnapura", "Putupaula", "Panadugama", "Thaldena", "Baddegama", "Peradeniya", "Nawalapitiya", "Manampitiya"];
