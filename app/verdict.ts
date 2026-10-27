@@ -14,7 +14,8 @@ export const VERDICT: Record<VerdictTone, T3> = {
 
 export const CALL: T3 = { en: "Call 117", si: "117 අමතන්න", ta: "117 ஐ அழைக்கவும்" };
 
-export const DIR: Record<"rising" | "slow" | "falling" | "steady", T3> = {
+export const DIR: Record<"fast" | "rising" | "slow" | "falling" | "steady", T3> = {
+  fast: { en: "Rising fast", si: "වේගයෙන් ඉහළ යයි", ta: "வேகமாக உயர்கிறது" },
   rising: { en: "Rising", si: "ඉහළ යයි", ta: "உயர்கிறது" },
   slow: { en: "Rising slowly", si: "සෙමින් ඉහළ යයි", ta: "மெதுவாக உயர்கிறது" },
   falling: { en: "Falling", si: "පහළ යයි", ta: "குறைகிறது" },
@@ -25,6 +26,8 @@ export const NEXT_HOUR: T3 = { en: "Next hour:", si: "ඊළඟ පැය:", ta:
 
 export const STEADY_M_PER_H = 0.006;
 export const SLOW_M_PER_H = 0.05;
+/** About 0.8 ft an hour: Hanwella climbed 14 -> 22 ft in 9 h and Deraniyagala 8 -> 13 ft in 2 h on 26 Oct 2026 while the card only said "Rising". */
+export const FAST_M_PER_H = 0.25;
 
 /** Direction phrase from a rate in metres per hour. */
 export function directionFor(rateMPerH: number): T3 {
@@ -34,5 +37,7 @@ export function directionFor(rateMPerH: number): T3 {
       ? DIR.falling
       : rateMPerH < SLOW_M_PER_H
         ? DIR.slow
-        : DIR.rising;
+        : rateMPerH >= FAST_M_PER_H
+          ? DIR.fast
+          : DIR.rising;
 }

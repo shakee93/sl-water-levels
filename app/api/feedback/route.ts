@@ -14,6 +14,7 @@ import { placeBySlug } from "@/lib/places";
 import { d1Configured, d1Query, D1NotConfigured } from "@/lib/d1";
 import { fetchStations, getNational } from "@/lib/arcgis";
 import { getNextHourForBasin, timeBox } from "@/lib/nextHour";
+import { getStationVerdicts } from "@/lib/stationVerdict";
 import { toShown } from "@/lib/units";
 import { weeklyImpact } from "@/lib/feedbackStats";
 import {
@@ -104,7 +105,9 @@ async function answer(req: NextRequest, body: Record<string, unknown>) {
     const nat = (await getNational().catch(() => [])).find((s) => s.station === r.station);
     if (nat) {
       if (nat.latest?.water_level != null) shown.level = Math.round(toShown(nat.latest.water_level, nat.unit) * 100) / 100;
-      if (r.page === "station") shown.tier = nat.tier;
+      // The tier the visitor was SHOWN: the gauge's own tier lifted by the forecast / confirmed release (lib/stationVerdict.ts), not the raw
+      // gauge tier. 26 Oct 2026: Hanwella answers were logged "normal" while the page said Keep an eye on it, so "worse than shown" could not be judged.
+      if (r.page === "station") shown.tier = (await timeBox(getStationVerdicts().then((m) => m[r.station as string]?.v ?? null).catch(() => null))) ?? nat.tier;
       const nh = (await timeBox(getNextHourForBasin(nat.basin)))?.[r.station] ?? null;
       if (nh) shown = { ...shown, issued: Date.parse(nh.issuedAt), next: nh.level_ft, low: nh.low_ft, high: nh.high_ft, dir: nh.direction, method: nh.method, rain: nh.rainRisk?.kind ?? null };
     }

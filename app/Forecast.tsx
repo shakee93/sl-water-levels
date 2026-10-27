@@ -60,6 +60,22 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
     if (c.etaTs != null) {
       const n = Math.max(1, Math.round((c.etaTs - now) / HOUR));
       const h = hoursPhrase(n);
+      // Visitors ask "will it go on to minor flood?" (Badalgama, 26 Oct 2026): when the first mark ahead is Alert and the forecast
+      // also puts the flood level (minor) within 24 h, say so in the same line, later than the alert time. A note only: the step stays official.
+      const m = c.threshold === "alert" ? f.crossings.find((x) => x.threshold === "minor" && (x.wording === "likely" || x.wording === "possible") && x.etaTs != null && x.etaTs > (c.etaTs as number)) : null;
+      if (m) {
+        const hm = hoursPhrase(Math.max(n, Math.round(((m.etaTs as number) - now) / HOUR)));
+        const maybe = m.wording === "possible";
+        return {
+          target,
+          likely,
+          fact: {
+            en: `Could reach ${lvl.en} in ${h.en}, and ${maybe ? "possibly " : ""}flood level in ${hm.en}`,
+            si: `${h.si} ඇතුළත ${lvl.si}ට ද, ${maybe ? "සමහරවිට " : ""}${hm.si} ඇතුළත ගංවතුර මට්ටමට ද ළඟා විය හැක`,
+            ta: `${h.ta}ில் ${lvl.ta} எட்டலாம்; ${maybe ? "ஒருவேளை " : ""}${hm.ta}ில் வெள்ள மட்டத்தையும் எட்டலாம்`,
+          },
+        };
+      }
       return {
         target,
         likely,
