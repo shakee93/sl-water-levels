@@ -1,10 +1,13 @@
 // Colombo canal basins: which canal area a town belongs to, where it drains, and which CUrW gauges describe it.
-// Facts (project completion report of the Metro Colombo Urban Development Project, research/colombo-canals.md):
-//  - Kolonnawa basin drains to the Kelani through the North Lock pumps (30 m3/s) and gates at Nagalagam Street and the
-//    Gothatuwa flood-bund gates; above 5 ft at Nagalagam Street the outfall stops working and pumping is the outlet.
-//  - Parliament Lake (Diyawanna Oya) is held by gates; it drains north via the Kolonnawa canal and south via the Kotte
-//    canals to the Wellawatta and Dehiwala outfalls on the coast.
-//  - The north canals (Dematagoda, St Sebastian, Beira Lake) end in the Mutwal tunnel / North Canal at the Kelani mouth.
+// Facts (SLLDC / MCUDP project pages, SLLDC Annual Report 2020, Moufar & Perera 2018 Hydrology 5(1):11; audited 27 Oct 2026):
+//  - The Kolonnawa basin has its own outfalls to the Kelani: the Kittampahuwa canal (Passanna and Dahamwela canals) through the
+//    Kalu Palama gates, the Salalihini Mawatha canal and the Dandutota canal; its east side leaves by the Ambatale gates and pumps.
+//    The Gothatuwa bund gates link it to the Colombo canals in a flood. The North Lock is NOT its outfall.
+//  - The North Lock gates and pumps (30 m3/s) at Nagalagam Street are the Kelani outfall of the St Sebastian North canal (the
+//    Colombo canals); above about 5 ft at Nagalagam Street the gravity outfall stops working and pumping is the outlet.
+//  - Parliament Lake (Diyawanna Oya) is held by gates; it drains north via the Kolonnawa canals, east via the Madiwela East
+//    diversion to the Kelani at Ambatale, and south via the Kotte canals to the Wellawatta outfall.
+//  - The north canals (Dematagoda, St Sebastian, Beira Lake) leave by the North Lock (Kelani) and the Mutwal tunnel (sea).
 //  - Wellawatta, Kirulapone and Dehiwala canals end in the sea and are tidal.
 import type { CKey } from "./i18n/colombo";
 

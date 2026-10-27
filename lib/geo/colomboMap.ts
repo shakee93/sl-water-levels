@@ -1,8 +1,8 @@
 // Data for the /colombo-canals map, decoded once. Pure (no I/O); imported only by the lazy map chunk.
 //  - canals / lakes: OpenStreetMap (c) contributors, ODbL, fetched once by scripts/build-colombo-map.mjs (colombo-canals.json)
 //  - basins: APPROXIMATE outlines drawn by hand on that canal network (colombo-basins.json); not official boundaries
-//  - gauges: APPROXIMATE positions of the CUrW gauges (colombo-gauges.json); CUrW publishes none
-//  - works: static design figures of the flood-control works (colombo-works.json); positions approximate
+//  - gauges: APPROXIMATE positions of the CUrW gauges (colombo-gauges.json), read off CUrW's public gauge-location map and snapped to OSM canals
+//  - works: static design figures of the flood-control works (colombo-works.json); positions checked against Google Maps place records and the CUrW gauge map
 //  - floods: village divisions inside the mapped May 2016 Kelani flood (colombo-floods.json)
 import canalsJson from "./colombo-canals.json";
 import basinsJson from "./colombo-basins.json";
@@ -16,14 +16,16 @@ export type Line = { n?: string; k: "c" | "d" | "r" | "s" | "t"; b: BasinId | nu
 export type Water = { n?: string; w: 0 | 1; ring: LL[] };
 export type BasinShape = { id: BasinId; ring: LL[]; centre: LL };
 export type GaugePos = { n: string; lat: number; lon: number; basin: BasinId | null };
-export type Work = { id: "ambathale" | "stsebN" | "stsebS" | "torrington" | "mutwal" | "northlock" | "nagalagam"; kind: "pump" | "tunnel" | "gate"; cap: number; lat: number; lon: number };
+export type Work = { id: "ambathale" | "stsebS" | "torrington" | "mutwal" | "northlock" | "kalupalama" | "gothatuwa"; kind: "pump" | "tunnel" | "gate"; cap: number; lat: number; lon: number };
 
 export const NAGALAGAM: LL = [6.958265, 79.878642];
-/** Where each basin's water leaves (approximate): flow arrows point this way. Parliament has two outlets, so no arrows. */
+/** Where each basin's water leaves (approximate): flow arrows point this way. Parliament has several outlets, so no arrows.
+ *  Kolonnawa: the Kittampahuwa canal meets the Kelani at the Kalu Palama gates (SLLDC works description, Kolonnawa Canal Diversion Stage IV).
+ *  North: the North Lock at Nagalagam Street (Kelani) and the New Mutwal tunnel inlet (sea). Wellawatta: the Wellawatta and Dehiwala canal mouths. */
 const OUTFALLS: Partial<Record<BasinId, LL[]>> = {
-  kolonnawa: [[6.9532, 79.8838]],
-  north: [[6.9735, 79.855]],
-  wellawatta: [[6.8735, 79.845], [6.8495, 79.857]],
+  kolonnawa: [[6.9532, 79.89]],
+  north: [[6.9558, 79.8777], [6.9574, 79.8639]],
+  wellawatta: [[6.8786, 79.8559], [6.8666, 79.8609]],
 };
 
 const dec = (a: number[]): LL[] => {
@@ -46,12 +48,6 @@ export function inRing(pt: LL, ring: LL[]): boolean {
 const centroid = (ring: LL[]): LL => [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length];
 
 export const BASIN_SHAPES: BasinShape[] = (basinsJson.basins as { id: BasinId; ring: LL[] }[]).map((b) => ({ id: b.id, ring: b.ring, centre: centroid(b.ring) }));
-/** The whole canal system (all four basins) with a little margin: the view the map opens on. */
-export const MAP_BOUNDS: [LL, LL] = (() => {
-  const all = BASIN_SHAPES.flatMap((b) => b.ring);
-  const la = all.map((p) => p[0]), lo = all.map((p) => p[1]);
-  return [[Math.min(...la) - 0.004, Math.min(...lo) - 0.004], [Math.max(...la) + 0.004, Math.max(...lo) + 0.004]];
-})();
 export const basinAt = (pt: LL): BasinId | null => BASIN_SHAPES.find((b) => inRing(pt, b.ring))?.id ?? null;
 
 const lenKm = (p: LL[]) => p.reduce((s, q, i) => (i ? s + Math.sqrt(d2(q, p[i - 1])) * 111.2 : 0), 0);
@@ -80,6 +76,12 @@ export const LINES: Line[] = (canalsJson.lines as { n?: string; k: Line["k"]; b?
 export const WATERS: Water[] = (canalsJson.waters as { n?: string; w: 0 | 1; r: number[] }[]).map((w) => ({ n: w.n, w: w.w, ring: dec(w.r) }));
 
 export const GAUGE_POS: GaugePos[] = gaugesJson.gauges.map((g) => ({ n: g.n, lat: g.lat, lon: g.lon, basin: BASINS.find((b) => b.gauges.includes(g.n))?.id ?? basinAt([g.lat, g.lon]) }));
+/** The whole canal system (all four basins and every drawn gauge) with a little margin: the view the map opens on. */
+export const MAP_BOUNDS: [LL, LL] = (() => {
+  const all = [...BASIN_SHAPES.flatMap((b) => b.ring), ...GAUGE_POS.map((g): LL => [g.lat, g.lon])];
+  const la = all.map((p) => p[0]), lo = all.map((p) => p[1]);
+  return [[Math.min(...la) - 0.004, Math.min(...lo) - 0.004], [Math.max(...la) + 0.004, Math.max(...lo) + 0.004]];
+})();
 export const WORKS = worksJson.works as Work[];
 export const FLOOD_CIRCLES = floodsJson.circles as [number, number, number][];
 export const FLOOD_EVENT = floodsJson.event;

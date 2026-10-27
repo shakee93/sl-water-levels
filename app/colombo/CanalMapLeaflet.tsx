@@ -363,16 +363,14 @@ export function CanalMapLeaflet({ data }: { data: CanalMapData }) {
                     </CircleMarker>
                   )}
                   {/* flood-control works: static design context */}
-                  {on.works && WORKS.filter((w) => w.id !== "nagalagam").map((w) => (
-                    <Marker key={w.id} position={[w.lat, w.lon]} icon={workIcon(w.kind)} pane="cc-points" keyboard={false} bubblingMouseEvents={false} eventHandlers={{ click: () => pick({ t: "work", id: w.id }) }}>
-                      <Tooltip key={zoom >= 14 ? "p" : "h"} permanent={zoom >= 14} direction="right" offset={[10, 0]} opacity={0.95} className="cc-wlabel">{cc(`work.${w.id}` as CKey)}</Tooltip>
-                    </Marker>
-                  ))}
-                  {on.works && (() => { const w = WORKS.find((x) => x.id === "nagalagam")!; return (
-                    <Marker position={[w.lat, w.lon]} icon={workIcon("gate")} pane="cc-points" keyboard={false} bubblingMouseEvents={false} eventHandlers={{ click: () => pick({ t: "work", id: w.id }) }}>
-                      <Tooltip key={zoom >= 14 ? "p" : "h"} permanent={zoom >= 14} direction="left" offset={[-10, 0]} opacity={0.95} className="cc-wlabel">{cc("work.nagalagam")}</Tooltip>
-                    </Marker>
-                  ); })()}
+                  {on.works && WORKS.map((w) => {
+                    const left = w.id === "northlock";
+                    return (
+                      <Marker key={w.id} position={[w.lat, w.lon]} icon={workIcon(w.kind)} pane="cc-points" keyboard={false} bubblingMouseEvents={false} eventHandlers={{ click: () => pick({ t: "work", id: w.id }) }}>
+                        <Tooltip key={zoom >= 14 ? "p" : "h"} permanent={zoom >= 14} direction={left ? "left" : "right"} offset={[left ? -10 : 10, 0]} opacity={0.95} className="cc-wlabel">{cc(`work.${w.id}` as CKey)}</Tooltip>
+                      </Marker>
+                    );
+                  })}
                   {me && (
                     <>
                       <CircleMarker center={me} radius={14} interactive={false} pane="cc-points" pathOptions={{ stroke: false, fillColor: "#3b82f6", fillOpacity: 0.2 }} />
@@ -542,8 +540,9 @@ function Panel({ data, cc, sel, setSel, gauge, basin, reset, floods, t, p }: Pan
       <>
         <Back />
         <h3 className="text-base font-semibold">{cc(`work.${w.id}` as CKey)}</h3>
-        <p className="mt-2 text-sm">{w.kind === "gate" ? cc("map.work.gate") : cc(`map.work.${w.kind}` as CKey, { cap: w.cap })}</p>
-        {w.id === "northlock" && <p className="mt-1 text-sm">{cc("map.out.kolonnawa").replace(/^./, (c) => c.toUpperCase())}.</p>}
+        <p className="mt-2 text-sm">{cc(`work.d.${w.id}` as CKey)}</p>
+        {w.kind !== "gate" && <p className="mt-1 text-sm">{cc(`map.work.${w.kind}` as CKey, { cap: w.cap })}</p>}
+        {w.kind === "gate" && <p className="mt-1 text-sm">{cc("map.work.gate")}</p>}
         <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{cc("map.work.note")}</p>
       </>
     );

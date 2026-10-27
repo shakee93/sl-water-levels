@@ -641,12 +641,18 @@ English advisory and no official warnings.
     nearest canal; the divide between two basins therefore falls half way between their canals. Shared edges are traced once,
     simplified and Chaikin-smoothed, so neighbours fit exactly. No official catchment boundary was found (OSM has only Colombo ward
     boundaries; the Irrigation Department / SLLDC publish none), so the map and legend say "approximate".
-  - `lib/geo/colombo-gauges.json`: **approximate** CUrW gauge positions (CUrW publishes none): placed from the gauge name, snapped to
-    the nearest OSM canal within 600 m. Not surveyed; the gauge panel says so. Ranwala N, Kaduwela N and Awerihena Tank are outside
-    the map and not drawn.
-  - `lib/geo/colombo-works.json`: Ambathale pumps 20 m3/s, St Sebastian North 30 and South 10, Torrington tunnel 32, New Mutwal
-    tunnel 15 (MCUDP / CUrW node/170), North Lock pumps 30 (project report) and the Nagalagam Street gates. Design figures, positions
-    approximate, never "live status".
+  - `lib/geo/colombo-gauges.json`: **approximate** CUrW gauge positions. CUrW publishes no coordinates, but its public "all locations"
+    gauge map (pub.curwsl.org node/58) names every gauge on a basemap: positions were read off it (affine fit to seven landmarks,
+    about 100 m), cross-checked against Google Maps / OSM (Mutwal tunnel inlet, Kalu Palama gates, Ambatale, Ingurukade, Orugodawatta,
+    Kimbulawala Bridge, Diyasaru Park, Lanka Hospital, Janakala Kendraya) and snapped to the nearest OSM canal within 200 m. Not
+    surveyed; the gauge panel says so. Kalupalama US/DS are the two sides of the Kalu Palama gates (US = canal side, DS = Kelani side);
+    "Mutwal Inlet" is the New Mutwal tunnel inlet on the Main Drain (a tidal canal gauge, not open sea). Sedawatta Bridge DS and
+    Aluthkade are the two dots the CUrW map leaves unlabelled (inferred). Ranwala N, Kaduwela N and Awerihena Tank are outside the
+    map and not drawn. Audit of 27 Oct 2026: 27 of 30 positions were 0.5 to 7.8 km off (the first version placed them from the names).
+  - `lib/geo/colombo-works.json`: Ambathale pumps 20 m3/s, St Sebastian South pumps 10, Torrington tunnel 28 (43 m3/s for both
+    tunnels), New Mutwal tunnel 15, North Lock gates and pumps 30 (the Kelani outfall of the St Sebastian North canal at Nagalagam
+    Street) and the Kalu Palama and Gothatuwa gates. Positions from Google Maps place records and the CUrW gauge map. Design figures,
+    never "live status". (SLLDC runs a status page, colomboifms.lk, that lists these stations as offline; nothing is read from it.)
   - `lib/geo/colombo-floods.json`: one circle per village division in the Irrigation Department's mapped May 2016 Kelani flood
     (from `lib/model/flood-map.json`); size of the division, not the flood edge. Shown only when the layer is on, labelled as past.
   Levels: server (`app/[lang]/colombo-canals/page.tsx`) converts our own `getCanals()` data to feet and passes it as props; the

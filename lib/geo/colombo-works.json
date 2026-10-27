@@ -1,12 +1,54 @@
 {
-  "note": "Flood-control works of the Metro Colombo Urban Development Project (CUrW / SLLDC site, node/170 and the project completion report) and the Kelani outfalls. Static context: capacities are design figures, nothing here is live. Positions are approximate (placed from the project descriptions, not surveyed).",
+  "note": "Flood-control works of the Metro Colombo Urban Development Project (SLLDC / CUrW project pages and the project completion report) and the Kelani outfalls. Static context: capacities are design figures, nothing here is live. Positions checked 27 Oct 2026 against Google Maps place records (North Lock, Ambathale, St Sebastian South, New Mutwal tunnel inlet and outfall) and the CUrW gauge map (Kalu Palama and Gothatuwa gates); the Torrington tunnel is a network under Thummulla and Torrington, marked at its western end, not at a single shaft.",
   "works": [
-    { "id": "ambathale", "kind": "pump", "cap": 20, "lat": 6.9402, "lon": 79.9418 },
-    { "id": "stsebN", "kind": "pump", "cap": 30, "lat": 6.9528, "lon": 79.8668 },
-    { "id": "stsebS", "kind": "pump", "cap": 10, "lat": 6.9448, "lon": 79.8688 },
-    { "id": "torrington", "kind": "tunnel", "cap": 32, "lat": 6.9012, "lon": 79.8638 },
-    { "id": "mutwal", "kind": "tunnel", "cap": 15, "lat": 6.9722, "lon": 79.8548 },
-    { "id": "northlock", "kind": "pump", "cap": 30, "lat": 6.9532, "lon": 79.8838 },
-    { "id": "nagalagam", "kind": "gate", "cap": 0, "lat": 6.9592, "lon": 79.8768 }
+    {
+      "id": "ambathale",
+      "kind": "pump",
+      "cap": 20,
+      "lat": 6.9353,
+      "lon": 79.9477
+    },
+    {
+      "id": "stsebS",
+      "kind": "pump",
+      "cap": 10,
+      "lat": 6.9327,
+      "lon": 79.8586
+    },
+    {
+      "id": "torrington",
+      "kind": "tunnel",
+      "cap": 28,
+      "lat": 6.9012,
+      "lon": 79.8638
+    },
+    {
+      "id": "mutwal",
+      "kind": "tunnel",
+      "cap": 15,
+      "lat": 6.9607,
+      "lon": 79.8632
+    },
+    {
+      "id": "northlock",
+      "kind": "pump",
+      "cap": 30,
+      "lat": 6.9558,
+      "lon": 79.8777
+    },
+    {
+      "id": "kalupalama",
+      "kind": "gate",
+      "cap": 0,
+      "lat": 6.9532,
+      "lon": 79.89
+    },
+    {
+      "id": "gothatuwa",
+      "kind": "gate",
+      "cap": 0,
+      "lat": 6.9286,
+      "lon": 79.901
+    }
   ]
 }
