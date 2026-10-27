@@ -32,6 +32,47 @@ export function isUrgentNow(ev: Ev): boolean {
   return false;
 }
 
+/**
+ * Held updates are re-read against the current snapshot before they are used (a level from 45 minutes ago is never shown as
+ * current). Per gauge, matched by station name: found -> the fresh level / tier / trend / time; the gauge has dropped below
+ * the event's threshold (a rise below its tier, a storm gauge back to normal, an all-clear that is Alert again) -> dropped,
+ * and an event left with no gauge is dropped; no fresh reading -> kept as it was, flagged `stale` so the line shows its time.
+ * Events without gauges (reservoirs, warnings, summary) pass through. `stations` null = nothing could be read: all stale.
+ */
+export function refreshEvents(events: Ev[], stations: any[] | null): Ev[] {
+  const out: Ev[] = [];
+  for (const ev of events) {
+    const key = ev.type === "gauge_rise" || ev.type === "gauge_clear" ? "gauges" : ev.type === "storm" ? "storm" : ev.type === "rivers_rising" ? "rivers" : null;
+    if (!key) { out.push(ev); continue; }
+    const list: any[] = key === "gauges" ? ev.gauges : key === "storm" ? ev.storm.gauges : ev.rivers.gauges;
+    const kept: any[] = [];
+    for (const g of list) {
+      const f = (stations ?? []).find((x) => x.station === g.station && x.river === g.river && typeof x.level === "number" && x.observedAt && x.unit === "ft" && x.status in LEVEL);
+      if (!f) { kept.push({ ...g, stale: true }); continue; }
+      const now = lvl(f.status);
+      if (ev.type === "gauge_rise" && now < lvl(g.tier)) continue;
+      if (ev.type === "storm" && now < 1) continue;
+      if (ev.type === "rivers_rising" && now < 1) continue;
+      if (ev.type === "gauge_clear" && now >= 2) continue;
+      kept.push({ ...g, tier: f.status, level: f.level, trend: f.trend, at: Date.parse(f.observedAt), stale: false, nextHour: f.nextHour ? { level: f.nextHour.level_ft, low: f.nextHour.low_ft, high: f.nextHour.high_ft, direction: f.nextHour.direction, crossing: f.nextHour.crossing } : null });
+    }
+    if (!kept.length) continue;
+    out.push(key === "gauges" ? { ...ev, gauges: kept } : key === "storm" ? { ...ev, storm: { ...ev.storm, gauges: kept } } : { ...ev, rivers: { ...ev.rivers, gauges: kept } });
+  }
+  return out;
+}
+
+/** The newest reading time among the events (gauge readings, the summary's time), or null. */
+export function newestReading(events: Ev[]): number | null {
+  const ts: number[] = [];
+  for (const ev of events) {
+    const gs: any[] = ev.gauges ?? ev.storm?.gauges ?? ev.rivers?.gauges ?? [];
+    for (const g of gs) if (typeof g.at === "number") ts.push(g.at);
+    if (ev.summary?.at) ts.push(ev.summary.at);
+  }
+  return ts.length ? Math.max(...ts) : null;
+}
+
 const trend = (t: string | null) => (t === "rising" ? ", rising" : t === "rising slowly" ? ", rising slowly" : t === "falling" ? ", falling" : "");
 
 /** The brief lines of a batch of events, one per river / reservoir / warning, most severe first. */
@@ -54,7 +95,7 @@ export function itemsOf(events: Ev[]): Item[] {
   for (const [river, m] of rivers) {
     const gs = [...m.values()].sort((a, b) => lvl(b.tier) - lvl(a.tier) || b.level - a.level);
     const top = lvl(gs[0].tier);
-    const shown = gs.slice(0, 2).map((g, i) => `${g.station} ${ft(g.level)}${i === 0 ? trend(g.trend) : ""}`);
+    const shown = gs.slice(0, 2).map((g, i) => `${g.station} ${ft(g.level)}${g.stale ? ` at ${clock(g.at)}` : i === 0 ? trend(g.trend) : ""}`);
     const more = gs.length - shown.length;
     const label = top >= 2 ? LABEL[top] : "Rising";
     const cross = gs.find((g) => g.nextHour?.crossing)?.nextHour?.crossing;
@@ -84,12 +125,12 @@ export function itemsOf(events: Ev[]): Item[] {
   }
   if (clears.size) {
     const gs = [...clears.values()];
-    items.push({ line: `All clear: ${gs.slice(0, 3).map((g) => `${g.station} ${ft(g.level)}`).join(", ")}${gs.length > 3 ? ` +${gs.length - 3} more` : ""}`, severity: 5, serious: false });
+    items.push({ line: `All clear: ${gs.slice(0, 3).map((g) => `${g.station} ${ft(g.level)}${g.stale ? ` at ${clock(g.at)}` : ""}`).join(", ")}${gs.length > 3 ? ` +${gs.length - 3} more` : ""}`, severity: 5, serious: false });
   }
   return items.sort((a, b) => b.severity - a.severity);
 }
 
-export type Combined = { text: string; shown: number; total: number; serious: boolean; long: boolean };
+export type Combined = { headAt: number; text: string; shown: number; total: number; serious: boolean; long: boolean };
 
 /**
  * The one combined post. `link` (a full URL, or "" for none) is placed once at the end. Keeps as many of the most severe
@@ -100,7 +141,8 @@ export function composeCombined(events: Ev[], o: { now: number; link?: string; l
   const long = !!o.long;
   const limit = long ? LONG_TWEET : MAX_TWEET;
   const serious = items.some((i) => i.serious);
-  const head = `Water levels, ${clock(o.now)}`;
+  const headAt = newestReading(events) ?? o.now;
+  const head = `Water levels, ${clock(headAt)}`;
   const build = (k: number) => {
     const rest = items.length - k;
     return [head, ...items.slice(0, k).map((i) => i.line), rest > 0 ? `+${rest} more on waterlevels.lk` : null, serious ? "Emergency: 117." : null, o.link || null].filter(Boolean).join("\n");
@@ -109,7 +151,7 @@ export function composeCombined(events: Ev[], o: { now: number; link?: string; l
   let k = max;
   while (k > 1 && tweetLength(build(k)) > limit) k--;
   // a long post that hit the item cap still says how many were left out
-  return { text: build(k), shown: k, total: items.length, serious, long };
+  return { headAt, text: build(k), shown: k, total: items.length, serious, long };
 }
 
 /** Why a combined text may not go out; empty = fine. Numbers must come from the events, plus the clock in the heading. */

@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { tweetLength, MAX_TWEET } from "../lib/xCompose.ts";
-import { itemsOf, composeCombined, validateCombined, decide, capBatch, batchKey, isUrgentNow, MIN_GAP_MS } from "../lib/xAggregate.ts";
+import { refreshEvents, newestReading, itemsOf, composeCombined, validateCombined, decide, capBatch, batchKey, isUrgentNow, MIN_GAP_MS } from "../lib/xAggregate.ts";
 import { run, X_SCHEMA } from "./x-post.mjs";
 
 const SITE = "https://waterlevels.lk";
@@ -27,7 +27,7 @@ const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, 
   const c = composeCombined(evs, { now: AT });
   assert.ok(c.text.startsWith("Water levels, 6:16 am"), c.text);
   assert.ok(c.text.includes("Emergency: 117."), "a Minor flood item brings the closing");
-  assert.deepEqual(validateCombined(c.text, evs, AT, false), []);
+  assert.deepEqual(validateCombined(c.text, evs, c.headAt, false), []);
   assert.ok(tweetLength(c.text) <= MAX_TWEET);
   // a rise and a storm update for the same river are ONE line
   const storm = { type: "storm", kind: "storm", priority: 25, dedupe: "s", storm: { river: "Kelani Ganga", at: AT, gauges: [gf("Hanwella", "Kelani Ganga", "minor", 10.6)], url: SITE } };
@@ -43,11 +43,36 @@ const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, 
   assert.ok(c.text.includes("Major flood: River 7"), "the most severe line survives the cut");
   assert.equal(c.text.split(SITE).length - 1, 1, "link once");
   assert.ok(c.text.trimEnd().endsWith(SITE));
-  assert.deepEqual(validateCombined(c.text, many, AT, false), []);
+  assert.deepEqual(validateCombined(c.text, many, c.headAt, false), []);
   // long posts (X Premium): everything fits, no "+N more"
   const l = composeCombined(many, { now: AT, link: SITE, long: true });
   assert.equal(l.shown, 12); assert.ok(!/more on/.test(l.text)); assert.ok(tweetLength(l.text) > MAX_TWEET);
-  assert.deepEqual(validateCombined(l.text, many, AT, true), []);
+  assert.deepEqual(validateCombined(l.text, many, l.headAt, true), []);
+}
+// held updates are refreshed from the current snapshot
+{
+  const OLD = AT - 45 * 60_000; // 5:31 am
+  const held = [rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6, { at: OLD })], "h1"), rise("Attanagalu Oya", [gf("Dunamale", "Attanagalu Oya", "alert", 8.3, { at: OLD })], "h2"), rise("Kelani Ganga", [gf("Hanwella", "Kelani Ganga", "alert", 8.4, { at: OLD })], "h3")];
+  const fresh = [
+    { station: "Holombuwa", river: "Maha Oya", status: "alert", level: 9.2, unit: "ft", trend: "rising", observedAt: new Date(AT - 300_000).toISOString(), nextHour: null }, // current level replaces 8.6
+    { station: "Dunamale", river: "Attanagalu Oya", status: "normal", level: 6.1, unit: "ft", trend: "falling", observedAt: new Date(AT - 300_000).toISOString(), nextHour: null }, // dropped below: line dropped
+  ]; // Hanwella: no fresh reading
+  const r = refreshEvents(held, fresh);
+  assert.equal(r.length, 2, "the dropped one is gone");
+  const c = composeCombined(r, { now: AT });
+  assert.match(c.text, /Holombuwa 9\.2 ft/); assert.ok(!/8\.6/.test(c.text), "the old level is not shown");
+  assert.ok(!/Dunamale/.test(c.text));
+  assert.match(c.text, new RegExp(`Hanwella 8\\.4 ft at ${"5:31 am"}`), c.text); // no fresh reading: kept, with its time
+  assert.ok(c.text.startsWith("Water levels, 6:11 am"), "heading = newest reading: " + c.text);
+  assert.equal(newestReading(r), AT - 300_000);
+  assert.deepEqual(validateCombined(c.text, r, c.headAt, false), [], "number guard against the refreshed facts");
+  // the old level is not allowed any more
+  assert.ok(validateCombined("Water levels, 6:11 am\nAlert: Maha Oya, Holombuwa 8.6 ft", r, c.headAt, false).length);
+  // snapshot unreadable: everything kept, all with their time
+  const none = refreshEvents(held, null);
+  assert.equal(none.length, 3); assert.match(composeCombined(none, { now: AT }).text, /Holombuwa 8\.6 ft at 5:31 am/);
+  // an all-clear that is Alert again is dropped
+  assert.equal(refreshEvents([clear], [{ station: "Norwood", river: "Kelani Ganga", status: "alert", level: 8.2, unit: "ft", trend: "rising", observedAt: new Date(AT).toISOString() }]).length, 0);
 }
 // a made-up number is caught
 assert.ok(validateCombined("Water levels, 6:16 am\nAlert: X 99.9 ft", [rise("X", [gf("X", "X", "alert", 8.3)])], AT, false).length);

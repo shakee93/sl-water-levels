@@ -31,7 +31,7 @@ import {
 } from "../lib/xCompose.ts";
 import { OPENAI_MODEL } from "../lib/openai.ts";
 import { evaluate, emptyState, summaryEvent, tierLevel, DEFAULTS } from "./x-engine.mjs";
-import { composeCombined, validateCombined, decide, capBatch, batchKey, MIN_GAP_MS, DEFER_MAX_AGE_MS } from "../lib/xAggregate.ts";
+import { refreshEvents, composeCombined, validateCombined, decide, capBatch, batchKey, MIN_GAP_MS, DEFER_MAX_AGE_MS } from "../lib/xAggregate.ts";
 import { PLACES } from "../lib/places.ts";
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
@@ -332,11 +332,14 @@ export async function run(o = {}) {
   const minGap = (Number(env.X_MIN_GAP_MIN) >= 0 && env.X_MIN_GAP_MIN != null && env.X_MIN_GAP_MIN !== "" ? Number(env.X_MIN_GAP_MIN) * 60_000 : MIN_GAP_MS);
   const long = (env.X_LONG_POSTS ?? "").trim() === "1";
   const events = [];
+  const held = [];
   const seen = new Set(fresh.map((e) => e.dedupe));
   for (const d of prev.deferred ?? []) {
     if (now - d.at > DEFER_MAX_AGE_MS) await note(`:warning: X account: dropped a held update that is now too old to send (${d.ev.type}).`);
-    else if (!seen.has(d.ev.dedupe)) events.push(d.ev);
+    else if (!seen.has(d.ev.dedupe)) held.push(d.ev);
   }
+  // held updates are re-read against this run's snapshot (current level, or dropped, or flagged with their own time)
+  events.push(...refreshEvents(held, snap.stations));
   events.push(...fresh);
   events.sort((a, c) => c.priority - a.priority);
   const ageOf = new Map((prev.deferred ?? []).map((d) => [d.ev.dedupe, d.at]));
@@ -348,20 +351,20 @@ export async function run(o = {}) {
   const lastPostMs = lastRow[0]?.last != null ? Number(lastRow[0].last) : null;
   const verdict = decide(events, lastPostMs, now, minGap);
   const defer = (list) => { for (const e of list) state.deferred.push({ at: ageOf.get(e.dedupe) ?? now, ev: e }); };
-  let held = [];
+  let heldByCap = [];
   let batch = [];
   if (verdict === "defer") {
     log(`a post went out ${Math.round((now - lastPostMs) / 60_000)} min ago (gap ${Math.round(minGap / 60_000)} min): ${events.length} update(s) held for the next combined post`);
     defer(events);
   } else if (verdict === "send") {
     if (capBatch(events, Number(usedRows[0]?.n ?? 0), { ...DEFAULTS, ...cfg })) batch = events;
-    else held = events;
+    else heldByCap = events;
   }
-  for (const e of held) {
+  for (const e of heldByCap) {
     log(`held by the daily limit: ${e.type} ${e.dedupe}`);
     await query("INSERT OR IGNORE INTO x_posts (ts, day, kind, dedupe_key, mode, status, text) VALUES (?, ?, ?, ?, ?, 'held', ?)", [now, day, e.kind, `held:${e.dedupe}:${now}`, g.mode, `(held by daily limit) ${e.type}`]);
   }
-  if (held.length) await note(`:information_source: X account: ${held.length} update(s) held back by the daily limit (${cfg.dailyMax}/day, urgent ${cfg.urgentMax}).`);
+  if (heldByCap.length) await note(`:information_source: X account: ${heldByCap.length} update(s) held back by the daily limit (${cfg.dailyMax}/day, urgent ${cfg.urgentMax}).`);
 
   const month = day.slice(0, 7);
   let spent = Number((await query("SELECT COALESCE(SUM(cost_usd), 0) AS c FROM x_posts WHERE day LIKE ? AND mode = ? AND status IN ('posted','dry')", [`${month}%`, g.mode]))[0]?.c ?? 0);
@@ -386,7 +389,7 @@ export async function run(o = {}) {
     }
     const link = links === "all" || list.some((e) => linkWanted(e, links)) ? (snap.site || SITE_DEFAULT) : "";
     const c = composeCombined(list, { now, link, long });
-    const bad = validateCombined(c.text, list, now, long);
+    const bad = validateCombined(c.text, list, c.headAt, long);
     if (bad.length) return { error: `the combined post failed its own checks (${bad.join("; ")})` };
     return { text: c.text, reply: null, ai: false, why: `${list.length} updates combined, ${c.shown} of ${c.total} lines shown`, extra: [], cost: costOf(c.text, [], rates) };
   };
@@ -464,8 +467,8 @@ export async function run(o = {}) {
 
   if (blocked || meta.pauseUntil) await saveValue("meta", meta, now, query);
   await saveValue("main", state, now, query);
-  log(`events ${events.length}, posts sent ${posted}${live ? "" : " (dry run)"}, failed ${failed}, held ${held.length}`);
-  return { mode: g.mode, posted, failed, held: held.length, events: events.length };
+  log(`events ${events.length}, posts sent ${posted}${live ? "" : " (dry run)"}, failed ${failed}, held ${heldByCap.length}`);
+  return { mode: g.mode, posted, failed, held: heldByCap.length, events: events.length };
 }
 
 /** Up to 3 sample posts from today's real data, to Slack only. Touches no memory. */
@@ -513,7 +516,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const evs = JSON.parse(readFileSync(val("--events"), "utf8"));
     const at = val("--at") ? Date.parse(val("--at")) : Date.now();
     const c = composeCombined(evs, { now: at, link: (process.env.X_LINKS ?? "off") === "off" ? "" : SITE_DEFAULT, long: process.env.X_LONG_POSTS === "1" });
-    console.log(`${tweetLength(c.text)}/${process.env.X_LONG_POSTS === "1" ? 25000 : MAX_TWEET} characters, ${c.shown} of ${c.total} lines\n${c.text}\nproblems: ${JSON.stringify(validateCombined(c.text, evs, at, c.long))}`);
+    console.log(`${tweetLength(c.text)}/${process.env.X_LONG_POSTS === "1" ? 25000 : MAX_TWEET} characters, ${c.shown} of ${c.total} lines\n${c.text}\nproblems: ${JSON.stringify(validateCombined(c.text, evs, c.headAt, c.long))}`);
     process.exit(0);
   }
   (mode === "sample" ? sample() : run())
