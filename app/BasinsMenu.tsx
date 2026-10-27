@@ -95,7 +95,7 @@ export function BasinsMenu({ items, label }: { items: BasinItem[]; label: string
   const footer = useMemo(() => {
     const links = navGroups(lang, t as never)[0].items;
     const by = (h: string) => links.find((l) => l.href === h)!;
-    return [{ href: "/", label: s.allBasins, event: "home_nav_click" }, by("/rain"), by("/colombo-canals"), by("/reservoirs")];
+    return [{ href: "/rivers", label: s.allBasins, event: "rivers_nav_click" }, by("/rain"), by("/colombo-canals"), by("/reservoirs")];
   }, [lang, t, s]);
 
   // Focus the filter once the panel is placed (it is visibility:hidden until then, which cannot take focus).

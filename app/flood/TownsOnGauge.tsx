@@ -26,7 +26,7 @@ export function TownsOnGauge({ lang, station }: { lang: Locale; station: string 
               href={p(`/flood/${x.slug}`)}
               className="inline-flex items-center min-h-11 sm:min-h-9 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm hover:border-sky-300 dark:hover:border-sky-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             >
-              {x.name}
+              {tt("h1", { town: x.name })}
             </Link>
           </li>
         ))}

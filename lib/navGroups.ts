@@ -2,7 +2,7 @@
 // Labels are the same strings the pages use for their breadcrumb / H1 (naming rule: one name per section).
 // Basins (rivers) are listed separately by both, from live station data. Home, Towns, Reservoirs and News are also
 // phone tabs, but are repeated in the sheet so that it alone is a complete index.
-import { House, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, LifeBuoy, Info, FlaskConical, type LucideIcon } from "lucide-react";
+import { House, List, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, LifeBuoy, Info, FlaskConical, type LucideIcon } from "lucide-react";
 import type { Locale } from "./i18n/config";
 import { rtFor } from "./i18n/return";
 import { rtFor as resFor } from "./i18n/reservoirs";
@@ -15,7 +15,7 @@ import { ccFor } from "./i18n/colombo";
 export type NavItem = { href: string; label: string; icon: LucideIcon; event: string };
 export type NavGroup = { id: "levels" | "news" | "about"; heading: string; items: NavItem[] };
 
-export function navGroups(lang: Locale, t: (k: "footer.home" | "nav.history" | "nav.help" | "nav.about") => string): NavGroup[] {
+export function navGroups(lang: Locale, t: (k: "footer.home" | "crumb.allBasins" | "nav.history" | "nav.help" | "nav.about") => string): NavGroup[] {
   const g = NAV_GROUPS[lang];
   return [
     {
@@ -23,6 +23,7 @@ export function navGroups(lang: Locale, t: (k: "footer.home" | "nav.history" | "
       heading: g.levels,
       items: [
         { href: "/", label: t("footer.home"), icon: House, event: "home_nav_click" },
+        { href: "/rivers", label: t("crumb.allBasins"), icon: List, event: "rivers_nav_click" },
         { href: "/flood", label: rtFor(lang)("tab.towns"), icon: MapPin, event: "towns_nav_click" },
         { href: "/reservoirs", label: resFor(lang)("nav"), icon: Waves, event: "reservoirs_nav_click" },
         { href: "/colombo-canals", label: ccFor(lang)("crumb"), icon: Droplets, event: "colombo_canals_nav_click" },

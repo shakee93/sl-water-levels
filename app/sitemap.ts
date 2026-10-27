@@ -75,6 +75,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...entry("/", newest),
+    // The generic "river water levels Sri Lanka today" page; changes when any gauge reports.
+    ...entry("/rivers", newest),
     ...(rsv ? entry("/reservoirs", dayMs(rsvDay)) : []),
     ...(rsv?.items ?? []).flatMap((r) => entry(`/reservoirs/${r.slug}`, dayMs(r.latestDay))),
     ...entry("/flood", newest),
