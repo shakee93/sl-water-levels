@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Waves, ChevronDown } from "lucide-react";
+import { Waves } from "lucide-react";
 import { basinPath } from "@/lib/slug";
 import { PlaceSearch } from "./PlaceSearch";
 import { LangSwitch } from "./LanguageBar";
@@ -16,6 +16,10 @@ import { ttFor } from "@/lib/i18n/town";
 import { getSearchStations, type SearchStation } from "./PlaceSearchData";
 import { X_HANDLE } from "@/lib/seo";
 import { XLogo } from "./XLogo";
+import { BasinsMenu, type BasinItem } from "./BasinsMenu";
+import { RIVERS } from "@/lib/places";
+import { tierRank } from "./tierUi";
+import type { Tier } from "@/lib/arcgis";
 
 export async function Header({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
@@ -27,6 +31,21 @@ export async function Header({ lang }: { lang: Locale }) {
     for (const s of stations) if (s.basin) set.add(s.basin);
     return [...set].sort();
   })();
+
+  // Worst official step and gauge count per basin, from the same cached national fetch as the search list (no new request).
+  const basinItems: BasinItem[] = basins.map((b) => {
+    const g = stations.filter((s) => s.basin === b);
+    const worst = g.reduce<Tier>((w, s) => (tierRank(s.tier) < tierRank(w) ? s.tier : w), "stale");
+    const aliases = RIVERS.find((r) => r.basin === b)?.aliases ?? [];
+    return {
+      basin: b,
+      label: riverName(b, lang),
+      href: p(basinPath(b)),
+      tier: worst === "watch" ? "normal" : worst,
+      n: g.length,
+      search: [b, riverName(b, lang), ...aliases].join(" "),
+    };
+  });
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-slate-950/70">
@@ -52,32 +71,7 @@ export async function Header({ lang }: { lang: Locale }) {
         <nav className="flex items-center gap-1 sm:gap-2 text-sm shrink-0">
           <PlaceSearch variant="header" stations={stations} />
 
-          {basins.length > 0 && (
-            <details className="relative group hidden sm:block">
-              <summary
-                className="list-none cursor-pointer select-none inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-              >
-                {t("nav.basins")}
-                <ChevronDown className="size-3.5 text-slate-400 group-open:rotate-180 transition" aria-hidden />
-              </summary>
-              <div className="absolute right-0 mt-1 w-56 z-50 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg overflow-hidden">
-                <ul className="py-1 max-h-80 overflow-y-auto">
-                  {basins.map((b) => (
-                    <li key={b}>
-                      <Link
-                        href={p(basinPath(b))}
-                        data-umami-event="basin_nav_click"
-                        data-umami-event-basin={b.trim()}
-                        className="block px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-sky-700 dark:hover:text-sky-300 transition"
-                      >
-                        {riverName(b, lang)}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </details>
-          )}
+          {basinItems.length > 0 && <BasinsMenu items={basinItems} label={t("nav.basins")} />}
 
           <HeaderTownsLink href={p("/flood")} label={ttFor(lang)("crumb")} />
 
