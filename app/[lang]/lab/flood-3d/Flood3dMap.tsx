@@ -4,7 +4,7 @@
 // every ~5 min while the tab is visible). The browser never calls ArcGIS or HMIS; map tiles come from OpenFreeMap and AWS Terrarium.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MlMap, GeoJSONSource, CanvasSource, MapMouseEvent, Popup, Marker } from "maplibre-gl";
-import { preconnect } from "react-dom";
+import { preconnect, preload } from "react-dom";
 import { Activity, Box, CloudRain, Copy, ExternalLink, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Route, Search, SlidersHorizontal, Waves, X } from "lucide-react";
 import { loadBaseStyle } from "./mapStyle";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
@@ -51,7 +51,9 @@ const KIND_LABEL = ["place", "landmark", "road"];
 
 export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang }) {
   const tr = useMemo(() => makeT(lang), [lang]);
-  preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com"); // start the tile connections while the map library loads
+  preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com");
+  // start the big downloads in the HTML, before hydration: the map library, the level grid, the base style
+  preload(`/flood3d/ml/maplibre-gl-csp.js?v=${ML_VERSION}`, { as: "script" }); preload("/flood3d/level.webp", { as: "fetch", crossOrigin: "anonymous" }); preload("/flood3d/accuracy.json", { as: "fetch", crossOrigin: "anonymous" }); // start the tile connections while the map library loads
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const popRef = useRef<Popup | null>(null);
@@ -470,7 +472,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     let map: MlMap | null = null;
     (async () => {
       try {
-        const [ml, m, png] = await Promise.all([loadMl(), fetch("/flood3d/accuracy.json").then((r) => r.json() as Promise<Meta>), loadGrid()]);
+        let dark0 = false;
+        try { dark0 = localStorage.getItem("f3d-map-theme") === "dark"; } catch { /* default light */ }
+        const [ml, m, png, base] = await Promise.all([loadMl(), fetch("/flood3d/accuracy.json").then((r) => r.json() as Promise<Meta>), loadGrid(), loadBaseStyle(dark0)]);
         if (dead || !box.current) return;
         meta.current = m; grid.current = png;
         const phone = window.innerWidth < 768;
@@ -481,11 +485,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         const lut = new Uint8ClampedArray(257 * 4);
         for (let k = 0; k <= 256; k++) { const d = Math.min(3, k / 32); lut[k * 4] = 30 - d * 6; lut[k * 4 + 1] = 110 - d * 14; lut[k * 4 + 2] = 210 - d * 10; lut[k * 4 + 3] = 120 + d * 28; }
         cv.current = { out, img: out.getContext("2d")!.createImageData(W2, H2), lut };
-        up.current = buildUp(png, S);
-        try { schemeRef.current = localStorage.getItem("f3d-map-theme") === "dark" ? "dark" : "light"; } catch { schemeRef.current = "light"; }
+        const buildUpLater = () => { up.current ??= buildUp(png, S); };
+        schemeRef.current = dark0 ? "dark" : "light";
         setMapTheme(schemeRef.current);
-        const base = await loadBaseStyle(schemeRef.current === "dark");
-        if (dead || !box.current) return;
         map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true } });
         mapRef.current = map;
         if (new URLSearchParams(location.search).has("debug")) (window as unknown as { __f3d?: unknown }).__f3d = { map, cv: cv.current, grid: grid.current };
@@ -551,6 +553,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           if (startView.current) map.jumpTo({ center: [startView.current[0], startView.current[1]], zoom: startView.current[2] });
           setThreeD(forced3d.current ?? !phone);
           }
+          buildUpLater(); // the heavy upsampling runs after the base map has started loading its tiles
           setReady(true);
         });
         map.on("error", (e) => { if (!dead && /style|tiles\.openfreemap/i.test(String(e?.error?.message ?? ""))) setErr(tr("The base map could not load.")); });
