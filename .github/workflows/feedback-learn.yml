@@ -6,9 +6,9 @@
 
 name: Feedback learn
 
+# Since 27 Oct 2026 the nightly run is .github/workflows/learn-all.yml (it contains this job's maths plus the observation table, ground-rain proposals,
+# forecast tests and the map re-fit flag), so this one has no schedule and is kept for manual runs.
 on:
-  schedule:
-    - cron: "50 18 * * *"
   workflow_dispatch:
     inputs:
       dry_run:

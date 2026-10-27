@@ -17,6 +17,7 @@ crons = [
   "17,47 * * * *", # gauge-corrected satellite rain, after the :07/:37 snapshots
   "30 7,19 * * *", # gauge snapshot, 13:00 and 01:00 Colombo
   "0 1 1 * *",     # monthly prediction export, 06:30 Colombo on the 1st
+  "50 18 * * *",   # nightly learning pipeline (learn-all.yml), 00:20 Colombo
 ]
 
 [vars]

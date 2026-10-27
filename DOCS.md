@@ -1194,6 +1194,65 @@ re-validating every number against the same bounds (`streetLevelOf`, `rainPossib
 **Known limits.** One person who answers on the site and in the street report counts twice (the two tables use different salts). A gauge
 level learned from rain-caused street water (Nagalagam Street, ~3 ft) is a level at which water WAS seen, not proof the river caused it.
 
+## Learning pipeline (nightly observations -> models, 27 Oct 2026)
+
+Owner: "we need to use all that data to improve our forecasting." One job, `scripts/learn-all.mjs` (maths in `lib/learnAll.mjs` + `lib/learnedParams.mjs`; tests
+`scripts/learn-all.test.mts`, `scripts/feedback-learn.test.mts`), started by the Cloudflare scheduler at 18:50 UTC (00:20 Sri Lanka) via
+`.github/workflows/learn-all.yml` (GitHub cron 18:55 as backup; the old `feedback-learn.yml` is manual-only now: learn-all contains its job). **Deploy the worker after editing
+`workers/scheduler`** (`wrangler deploy`). Dry run: Actions -> Learn all -> `dry_run`, or locally
+`node --experimental-strip-types --no-warnings scripts/learn-all.mjs <data-branch checkout> --dry-run` (reads D1, writes and sends nothing).
+
+```
+D1: forecast_feedback, street_flood_reports, flood3d_reports, observations (7 d), forecast_runs/points (21 d), street_rain_ground_log (45 d), street_rain_log
+data branch: hmis/rain/, rain-correction/log/, stations.json, previous learned/*
+        |
+        v   one gather (feedback-learn.mjs gather() + flood3d + ground log), one join
+ [1] unified observation table ----------------------> learned/observations.jsonl   (public-safe, cumulative, one row per answer / report)
+        |                                                gauge level + 3 h rise (nearest gauge and the town's gauge), rain at the spot (ground gauge <= 5 km, else
+        |                                                gauge-corrected satellite), the forecast that was showing, flags (cross-check, contradicted, pin, accuracy, photo, EXIF)
+        +--> [2a] street-water level per gauge ---------> learned/town-params.json    (now also from 3D-map reports, weighted by trust)
+        +--> [2b] ground-rain mark proposals per zone --> learned/learned.json        groundRain  (proposed = true, wired = false, + backtest)
+        +--> [2c] forecast correction + "worse while rising" feature test --> learned.json  forecast  (wired = false)
+        +--> [2d] 3D-map re-fit trigger ----------------> learned.json mapRefit + GitHub issue "3D flood map: re-fit due" (label map-refit); prep.py stays manual
+        v
+ [3] owner: Slack digest "What we learned" block (scripts/feedback-digest.mjs reads learned.json), dashboard export `learned.json` (scripts/feedback-export.mjs),
+     the town-params Slack line (new street level / rain mark), About card (counts only, unchanged)
+```
+
+**Rules.** No learned value changes an official step, a verdict, a push level or a live rule. Values are bounded and evidence-gated (3 independent answers on 2 days); proposals
+carry `proposed: true, wired: false`; switching a rule live is the owner's decision (the switch criteria are in "Ground-gauge street rain").
+
+**1. Observation table** (`learned/observations.jsonl`, version 1). One row per answer ("Is this right?"), street-flood report and 3D-map report, joined once its next 3 h of gauge data
+exist (rows younger than 3 h wait a day) and then kept (`observations` holds only 7 days, so the file is the long-term record). Public-safe: an allowlist (`PUBLIC_KEYS`), a 3-hour
+Sri Lanka time bucket, an area NAME (town, gauge or 3D-map reach) and NO coordinates, hashes, person codes, notes or photos; `assertPublicSafe` fails the job rather than write anything else.
+Exact positions (3D-map pins) are used inside the run to join rain / gauges and find neighbours and are dropped. Flags: `check` (the "worse" cross-check, lib/feedbackCheck.mjs),
+`contradicted` (two or more other people within 400 m and 6 h, or the same named flood, said the opposite and outnumber agreement 2:1), `pin`, `lowAccuracy` (GPS > 150 m), `photo`,
+`exif` (the photo's EXIF time and place agree: true / false), `outlier` (owner-marked in D1).
+Photo columns: the 3D-map work is adding them; `photoInfo` reads `photo_key | photo | has_photo | photo_id | photo_ok` and `exif_ok | exif_agree | photo_exif_ok`. Until they exist every report counts as "no photo".
+
+**2a. Street-water level.** The 3D-map reports join the street-level evidence at the live level of the nearer of Nagalagam Street / Hanwella: "water here now" at the level stored with the report
+(Hanwella: the 10-minute sensor when present), "flooded last time" at the named flood's peak at Nagalagam (Ditwah 8.4 ft, May 2016 7.64 ft). "Stayed dry" and map checks say where, not when: not used.
+`reportStrength`: a bare answer 1.0; depth +0.10; GPS <= 50 m +0.15 (<= 150 m +0.05); dragged pin -0.10; photo +0.15, photo with agreeing EXIF +0.25; recalled past flood -0.20; capped at 1.5.
+Excluded (0): test / outlier / contradicted, GPS worse than 500 m, a photo whose EXIF disagrees. The estimator is the lowest level where the cumulative weight of wet reports reaches 2, so with every weight under 2
+at least two reports are always needed and weak evidence (weights below 1) needs more; everything else (3 independent answers on 2 days, clamp to [0.6 x minor mark, minor mark], contested check) is unchanged.
+
+**2b. Ground-rain marks.** `fitGroundRain`: per rain zone and per trigger (1 h incl. peak, 3 h, 24 h) from the shadow log (`street_rain_ground_log`, ground and corrected tiers) and independent wet reports
+(street reports deep/little, "water on road / yard / inside" answers not marked far from the gauge, trusted 3D-map "water now"): the highest mark that still catches 75 % of the reported floods = proposed
+"possible", 50 % = "likely" (not below possible), clamped to 0.5-1.5 x the live shadow mark, scored like `scripts/ground-rain-backtest.mts` (hit within 12 h before / 3 h after the report; unmatched alarm episodes).
+Gates: 3 independent reports on 2 days, 2 days of shadow steps. Output per zone: current marks, proposed marks, and the backtest of both on the same steps. Nothing switches automatically.
+
+**2c. Forecast.** The per-gauge momentum factor walk-forward test of `lib/learnedParams.mjs` is re-run every night (result in `learned.json forecast.momentum`; unchanged `useful` / `wired = false` rules).
+`worseFeatureTest` adds: does "worse while rising" at a gauge in the 3 h before a forecast was issued predict that forecast being too low? Leave-one-day-out least squares, shrunk, 0 to 0.8 ft per report (up to 3),
+scored only on rows that have such a report; `useful` needs at least 8 held-out points on 2 days and a 5 % lower miss. Even then it is not wired.
+
+**2d. Map re-fit.** `mapRefitStatus`: a reach (the `AREAS` boxes of `lib/flood3dReports.ts`) is due when at least 10 new (status `new`) reports of strength > 0 came from at least 3 people. The workflow then opens one
+GitHub issue (label `map-refit`) with the counts; running `scripts/flood3d/prep.py` (heavy) stays manual or a later Mac-mini workflow.
+
+**D1 cost.** The learn job's ~30k rows, `flood3d_reports` (<= 5000, small), `street_rain_ground_log` 45 days (indexed on `obs_ms`, about 6 zones x 48 a day). Nothing scans `curw_levels` or the verification view.
+
+**Known limits (27 Oct).** The shadow log holds one day, so ground-rain proposals are "waiting" until two days and three reports per zone exist; the first 3D-map reports are only now arriving; the forecast tests have a few
+held-out points. All of that is shown as counts in `learned.json` rather than hidden.
+
 ## Reasons to come back (return-visit features)
 
 Design rule: every loop must be useful, honest and optional. No streaks, no counters that shame, no fake urgency, nothing that

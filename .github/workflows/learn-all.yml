@@ -1,0 +1,88 @@
+# The nightly observations -> models pipeline (scripts/learn-all.mjs, lib/learnAll.mjs; DOCS.md "Learning pipeline"): once a day, just after the Sri Lanka
+# day ends (00:20), joins every answer and report (answers, street-flood reports, 3D-map reports) with gauge levels, rain at the spot, the forecast
+# shown and quality flags, and writes to the `data` branch:
+#   learned/observations.jsonl  unified table, public-safe (no coordinates, hashes, notes or photos)
+#   learned/town-params.json    street-water level per gauge (now also from 3D-map reports, weighted by trust), rain marks, forecast factor test
+#   learned/learned.json        ground-rain mark PROPOSALS with backtests, forecast tests, 3D-map re-fit status, areas needing more reports
+# Nothing it writes changes an official step, a verdict, a push level or a live rule. Supersedes feedback-learn.yml (kept for manual runs).
+# Started by the Cloudflare scheduler (workers/scheduler, cron "50 18 * * *" = 00:20 Colombo); the schedule here is the backup (same concurrency group).
+# Manual run: dry_run = true prints learned.json, a sample of rows and the Slack text, writes and sends nothing.
+
+name: Learn all
+
+on:
+  schedule:
+    - cron: "55 18 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print what would be written, change nothing, send nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+# Same group as the other jobs that push to `data`.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out data branch
+        run: |
+          git fetch --depth=1 origin data
+          git worktree add archive FETCH_HEAD
+          git -C archive checkout -B data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dry run
+        if: ${{ inputs.dry_run }}
+        run: node --experimental-strip-types --no-warnings scripts/learn-all.mjs archive --dry-run
+      - name: Learn from the observations
+        if: ${{ !inputs.dry_run }}
+        run: node --experimental-strip-types --no-warnings scripts/learn-all.mjs archive
+      - name: Commit and push
+        if: ${{ !inputs.dry_run }}
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add learned
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "Learning pipeline $(date -u '+%F') UTC"
+          git pull --rebase origin data || true
+          git push origin data
+      - name: Raise a GitHub issue when a 3D-map re-fit is due
+        if: ${{ !inputs.dry_run }}
+        run: |
+          due=$(node -e 'const L=JSON.parse(require("fs").readFileSync("archive/learned/learned.json","utf8"));console.log(Object.entries(L.mapRefit||{}).filter(([,s])=>s.due).map(([a,s])=>`${a}: ${s.newTrusted} new trusted reports from ${s.newPeople} people`).join("\n"))')
+          [ -z "$due" ] && exit 0
+          open=$(gh issue list --label map-refit --state open --json number --jq 'length')
+          [ "$open" != "0" ] && { echo "A map-refit issue is already open."; exit 0; }
+          gh label create map-refit --color 1d76db --description "3D flood map: enough new trusted reports to re-fit" 2>/dev/null || true
+          gh issue create --label map-refit --title "3D flood map: re-fit due" --body "Enough new trustworthy reports have arrived to re-run the per-cell fit (scripts/flood3d/prep.py, heavy: run it by hand or on the Mac mini). Export the reports with scripts/flood3d/reports-export.mjs (private: exact positions).
+
+$due
+
+The nightly learning job only raises this flag; it never re-fits or changes the map."
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true

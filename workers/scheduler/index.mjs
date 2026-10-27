@@ -11,6 +11,7 @@ const BY_CRON = {
   "17,47 * * * *": ["rain-correct.yml"], // after the :07/:37 snapshots (gsmap, hmis) have pushed
   "30 7,19 * * *": ["snapshot.yml"],
   "0 1 1 * *": ["export-predictions.yml"],
+  "50 18 * * *": ["learn-all.yml"], // nightly observations -> models pipeline, 18:50 UTC = 00:20 Colombo, just after the Sri Lanka day ends
 };
 
 // Release snapshots: every 15 min 05:30-23:15 Colombo (00-17 UTC), hourly otherwise.

@@ -4,12 +4,13 @@
 // "worse" answer (a handful of rows each). Leaves out IP hashes and tokens; locations only as stored (rounded to 0.01 degree, about 1 km);
 // notes are included because the dashboard is private to the owner. "Worse" answers also get the cross-check (lib/feedbackCheck.mjs):
 // nearest gauge, satellite rain, what the gauge did in the next 3 h, and a verdict `check`. Needs one fetch of stations.json from the
-// `data` branch (gauge coordinates). Usage: node scripts/feedback-export.mjs <outDir>
+// `data` branch (gauge coordinates). Also writes learned.json (what the nightly learning pipeline learned). Usage: node scripts/feedback-export.mjs <outDir>
 // Needs wrangler's login (CLOUDFLARE_ACCOUNT_ID is set below; no API token in the repo).
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { checkWorse, exportColumns, stationInfo } from "../lib/feedbackCheck.mjs";
+import { whatWeLearnedLines } from "../lib/learnAll.mjs";
 
 const out = process.argv[2];
 if (!out) { console.error("usage: node scripts/feedback-export.mjs <outDir>"); process.exit(1); }
@@ -54,4 +55,16 @@ const sr = d1("SELECT id, created_ms, day, town, answer, when_hint, lang FROM st
 
 writeFileSync(path.join(out, "feedback.json"), JSON.stringify(fb));
 writeFileSync(path.join(out, "street-reports.json"), JSON.stringify(sr));
-console.log(JSON.stringify({ feedback: fb.length, street_reports: sr.length, at: new Date().toISOString() }));
+// learned.json: what the nightly pipeline (scripts/learn-all.mjs) learned: counts, values that changed, ground-rain proposals with their backtest,
+// the forecast tests, the 3D-map re-fit status and the areas that need more reports. Public-safe (it lives on the data branch); no D1 read.
+// The dashboard also gets `lines` (the same "What we learned" text as the Slack digest). Missing or unreadable = no file, nothing else changes.
+let learned = false;
+try {
+  const res = await fetch(process.env.LEARNED_ALL_URL || "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/learned/learned.json", { signal: AbortSignal.timeout(15_000) });
+  if (res.ok) {
+    const L = await res.json();
+    writeFileSync(path.join(out, "learned.json"), JSON.stringify({ ...L, lines: whatWeLearnedLines(L) }));
+    learned = true;
+  }
+} catch { /* the dashboard just shows no "learned" section */ }
+console.log(JSON.stringify({ feedback: fb.length, street_reports: sr.length, learned, at: new Date().toISOString() }));
