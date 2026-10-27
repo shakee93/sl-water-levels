@@ -148,6 +148,20 @@ lib/
   "Learning from feedback"): street-water gauge level and rain mark taught by visitors' answers, evidence-gated (>= 3 people, >= 2 days) and bounded.
   Notes and heads-ups only: NEVER the verdict step, tone, sticky bar or push levels. Counts only in the file. Forecast factor tested, not wired (no gain).
 
+- **HMIS (hmis.gov.lk)**, the Irrigation Department's Hydro-Meteorological Information System (CResMPA): its public dashboard
+  JSON ("Public Access", no login; owner decision 27 Oct 2026: public data, use it). `lib/hmis.ts` (fetcher: one request per
+  endpoint per 10 min via unstable_cache, 2.5 s soft budget, fail soft, UA with site URL + owner email, never from the browser,
+  never D1) + `lib/hmisCalc.ts` (pure: timestamps, offset, device mapping, nearest rain; tests `node scripts/hmis.test.mts`).
+  Endpoints: `getwaterlevelsummary/1_day/live` (53 devices, 24 h, metres, thresholds incl. extreme), `getrainfalldevices` (661 rain
+  gauges: NBRO 481, Met 120, Irrigation 58, ACCIMT 2; ~280 report in any 3 h), `warnings` (empty so far). Credit wherever shown:
+  "HMIS – Irrigation Department (hmis.gov.lk)" plus the institute (NBRO / Met Department / ACCIMT). Its hourly Irrigation gauges are
+  the SAME readings as ArcGIS (identical to the millisecond), so they add nothing; the value is (1) 10-min HMIS sensors at
+  Hanwella / Baddegama / Thanamalwila (a "Latest: X ft at 4:40 pm (10-min sensor)" note, median-offset corrected, never the official step),
+  (2) 10 gauges ArcGIS lacks, merged into `fetchStations` / `getNational` / `fetchStationData` with `source: "hmis"` (Karawanella
+  Bridge, Mahiyangana Bridge, 8 east-coast bridges/anicut under Mundeni Aru, Andella Oya, Maduru Oya, Magalawatavan Aru: rivers found by
+  point-in-polygon on HMIS `basin/merge`), (3) ground-rain notes within 5 km, record <= 3 h old, ahead of GSMaP.
+  HMIS gauges are never "upstream" of an ArcGIS gauge in forecasts or the anomaly detector (no fitted travel time).
+
 - **PUCSL reservoir/storage-rainfall**: same — endpoint exists,
   returns `data: []`. Stub.
 
@@ -159,6 +173,10 @@ These cost real debugging time. Future-you should not relearn them.
   alertpull >= 4 -> feet; alertpull <= 1.5 -> meters; in between is
   ambiguous. See `lib/units.ts`. Norwood (Kelani) reports in meters
   despite the rest of Kelani being feet — single basins can mix units.
+- **HMIS timestamps: two conventions in one API.** `getwaterlevelsummary` timestamps are Sri Lanka local time labelled "Z"
+  (Hanwella "16:03:56.630Z" = the ArcGIS reading of 10:33:56.630 UTC): real UTC = parsed - 5.5 h (`fixHmisLevelTime`). The rain
+  endpoint's `latest_record_time` is real UTC (no shift). Getting either wrong puts readings 5.5 h in the future or past. HMIS
+  levels are metres; the site shows feet (`lib/units.ts`).
 - **`gauges_2_view.rain_fall` is often null** at downstream/urban gauges
   (Nagalagam Street, Calidonia). Null means "not measured here," not zero.
 - **`hydrostations.basin` has trailing whitespace** (`"Kelani Ganga     "`).

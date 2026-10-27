@@ -190,7 +190,7 @@ const median = (a: number[]) => {
 /**
  * Median of (official hourly reading - HMIS sensor reading) over the last `windowMs`, pairing each hourly reading with the sensor
  * point nearest in time (within `pairMin`). Add it to a sensor reading to put it on the official gauge's scale. null when fewer
- * than `minPairs` pairs, or the two do not track each other (spread over 0.25 m, or offset over 0.5 m): then no sensor reading is shown.
+ * than `minPairs` pairs, or the two do not track each other (spread over 0.12 m, or offset over 0.5 m): then no sensor reading is shown.
  */
 export function medianOffset(fast: Pt[], hourly: Pt[], now: number, opts: { windowMs?: number; pairMin?: number; minPairs?: number } = {}): Offset | null {
   const windowMs = opts.windowMs ?? 24 * HOUR, pairMs = (opts.pairMin ?? 12) * MIN, minPairs = opts.minPairs ?? 6;
@@ -205,7 +205,7 @@ export function medianOffset(fast: Pt[], hourly: Pt[], now: number, opts: { wind
   const off = median(diffs);
   const mean = diffs.reduce((a, b) => a + b, 0) / diffs.length;
   const sd = Math.sqrt(diffs.reduce((a, b) => a + (b - mean) ** 2, 0) / diffs.length);
-  if (sd > 0.25 || Math.abs(off) > 0.5) return null;
+  if (sd > 0.12 || Math.abs(off) > 0.5) return null;
   return { offsetM: off, n: diffs.length, sdM: sd };
 }
 
