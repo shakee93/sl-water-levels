@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { tweetLength, MAX_TWEET } from "../lib/xCompose.ts";
-import { refreshEvents, newestReading, itemsOf, composeCombined, validateCombined, decide, capBatch, batchKey, isUrgentNow, MIN_GAP_MS } from "../lib/xAggregate.ts";
+import { refreshEvents, newestReading, groupsOf, composeCombined, validateCombined, decide, capBatch, batchKey, isUrgentNow, MIN_GAP_MS } from "../lib/xAggregate.ts";
 import { run, X_SCHEMA } from "./x-post.mjs";
 
 const SITE = "https://waterlevels.lk";
@@ -16,66 +16,73 @@ const warning = { type: "warning", kind: "warning", urgent: true, priority: 40, 
 const summary = { type: "summary", kind: "morning", urgent: false, exempt: true, priority: 15, dedupe: "morning:2026-10-27", summary: { period: "morning", at: AT, reporting: 40, assessed: 38, atAlert: [{ station: "Holombuwa", tier: "alert" }], nearAlert: 3, rain: { mm: 85, place: "Ratnapura" }, fallen: null, rainWindowH: 24, spilling: 1, url: SITE } };
 const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, dedupe: "c1", gauges: [gf("Norwood", "Kelani Ganga", "normal", 4.2)] };
 
-// ordering: warning, then Major, Minor, Alert, summary, all-clear
+// wording: plain sentences, most severe first, rivers at the same step share a sentence
 {
-  const evs = [clear, summary, rise("Attanagalu Oya", [gf("Dunamale", "Attanagalu Oya", "alert", 8.3)]), rise("Kelani Ganga", [gf("Hanwella", "Kelani Ganga", "minor", 10.4), gf("Glencourse", "Kelani Ganga", "alert", 8.5)]), warning];
-  const it = itemsOf(evs).map((i) => i.line);
-  assert.match(it[0], /^Official minor flood warning/);
-  assert.match(it[1], /^Minor flood: Kelani Ganga, Hanwella 10.4 ft, rising, Glencourse 8.5 ft/);
-  assert.match(it[2], /^Alert: Attanagalu Oya/);
-  assert.match(it.at(-1), /^All clear/);
+  const evs = [clear, summary, rise("Attanagalu Oya", [gf("Dunamale", "Attanagalu Oya", "alert", 8.3)]), rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6)]), rise("Kelani Ganga", [gf("Hanwella", "Kelani Ganga", "minor", 10.4), gf("Glencourse", "Kelani Ganga", "alert", 8.5)]), warning];
   const c = composeCombined(evs, { now: AT });
-  assert.ok(c.text.startsWith("Water levels, 6:16 am"), c.text);
-  assert.ok(c.text.includes("Emergency: 117."), "a Minor flood item brings the closing");
+  assert.match(c.text, /^6:16 am: The Irrigation Department has issued a minor flood warning for the Kelani\. The Kelani is in minor flood at Hanwella \(10\.4 ft\) and still rising\./, c.text);
+  assert.ok(c.text.endsWith("Near these rivers? Move valuables up. Emergency: 117."), c.text);
+  assert.ok(!/#/.test(c.text));
   assert.deepEqual(validateCombined(c.text, evs, c.headAt, false), []);
   assert.ok(tweetLength(c.text) <= MAX_TWEET);
-  // a rise and a storm update for the same river are ONE line
+  const room = composeCombined(evs.slice(2, 5), { now: AT });
+  assert.ok(room.text.includes("The Maha Oya at Holombuwa (8.6 ft) and the Attanagalu Oya at Dunamale (8.3 ft) have reached alert level."), room.text);
+  // calm summary: no action line; one alert: action line, no emergency closing; all-clear: neither
+  const none = { ...summary, summary: { ...summary.summary, atAlert: [] } };
+  const c0 = composeCombined([none], { now: AT });
+  assert.ok(/Good morning\. All 38 river gauges are below alert level/.test(c0.text) && !/Move valuables|117/.test(c0.text), c0.text);
+  const c1 = composeCombined([rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6)])], { now: AT });
+  assert.ok(/has reached alert level and is still rising\. Near these rivers\? Move valuables up\.$/.test(c1.text) && !/117/.test(c1.text), c1.text);
+  const cc = composeCombined([clear], { now: AT });
+  assert.ok(/The Kelani is back below alert level at Norwood \(4\.2 ft\)/.test(cc.text) && !/Move valuables|117/.test(cc.text), cc.text);
+  // a rise and a storm update for the same river are ONE sentence
   const storm = { type: "storm", kind: "storm", priority: 25, dedupe: "s", storm: { river: "Kelani Ganga", at: AT, gauges: [gf("Hanwella", "Kelani Ganga", "minor", 10.6)], url: SITE } };
-  assert.equal(itemsOf([evs[3], storm]).length, 1);
+  assert.equal(groupsOf([evs[4], storm]).length, 1);
 }
-// length: many items keep the most severe and say how many are left; link counts 23; never a thread
+// length: many rivers keep the most severe and say how many are left; link counts 23; never a thread
 {
-  const many = Array.from({ length: 12 }, (_, i) => rise(`River ${i}`, [gf(`Gauge ${i}`, `River ${i}`, i === 7 ? "major" : "alert", 8.1 + i / 10)], `r${i}`));
+  const many = Array.from({ length: 12 }, (_, i) => rise(`River ${i} Oya`, [gf(`Gauge ${i}`, `River ${i} Oya`, i === 7 ? "major" : "alert", 8.1 + i / 10)], `r${i}`));
   const c = composeCombined(many, { now: AT, link: SITE });
   assert.ok(tweetLength(c.text) <= MAX_TWEET, String(tweetLength(c.text)));
   assert.ok(c.shown < c.total && c.shown >= 1);
-  assert.match(c.text, new RegExp(`\\+${c.total - c.shown} more on waterlevels.lk`));
-  assert.ok(c.text.includes("Major flood: River 7"), "the most severe line survives the cut");
+  assert.match(c.text, new RegExp(`\\.\\.\\.and ${c.total - c.shown} more on waterlevels.lk`));
+  assert.ok(c.text.includes("River 7 Oya is in major flood at Gauge 7 (8.8 ft)"), "the most severe survives the cut: " + c.text);
   assert.equal(c.text.split(SITE).length - 1, 1, "link once");
   assert.ok(c.text.trimEnd().endsWith(SITE));
   assert.deepEqual(validateCombined(c.text, many, c.headAt, false), []);
-  // long posts (X Premium): everything fits, no "+N more"
+  // long posts (X Premium): short paragraphs, at most 10 rivers named, soft target ~700, "and N more rivers"
   const l = composeCombined(many, { now: AT, link: SITE, long: true });
-  assert.equal(l.shown, 12); assert.ok(!/more on/.test(l.text)); assert.ok(tweetLength(l.text) > MAX_TWEET);
+  assert.equal(l.shown, 10); assert.ok(tweetLength(l.text) > MAX_TWEET && tweetLength(l.text) <= 760, String(tweetLength(l.text)));
+  assert.match(l.text, /\.\.\.and 2 more rivers at alert level or higher, see waterlevels\.lk\./);
+  assert.ok(l.text.split("\n\n").length >= 3, "paragraphs: flood, alerts, action");
   assert.deepEqual(validateCombined(l.text, many, l.headAt, true), []);
+  const ls = composeCombined(many.slice(0, 2), { now: AT, long: true });
+  assert.ok(!/more/.test(ls.text));
 }
 // held updates are refreshed from the current snapshot
 {
   const OLD = AT - 45 * 60_000; // 5:31 am
   const held = [rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6, { at: OLD })], "h1"), rise("Attanagalu Oya", [gf("Dunamale", "Attanagalu Oya", "alert", 8.3, { at: OLD })], "h2"), rise("Kelani Ganga", [gf("Hanwella", "Kelani Ganga", "alert", 8.4, { at: OLD })], "h3")];
   const fresh = [
-    { station: "Holombuwa", river: "Maha Oya", status: "alert", level: 9.2, unit: "ft", trend: "rising", observedAt: new Date(AT - 300_000).toISOString(), nextHour: null }, // current level replaces 8.6
-    { station: "Dunamale", river: "Attanagalu Oya", status: "normal", level: 6.1, unit: "ft", trend: "falling", observedAt: new Date(AT - 300_000).toISOString(), nextHour: null }, // dropped below: line dropped
-  ]; // Hanwella: no fresh reading
+    { station: "Holombuwa", river: "Maha Oya", status: "alert", level: 9.2, unit: "ft", trend: "rising", observedAt: new Date(AT - 300_000).toISOString(), nextHour: null },
+    { station: "Dunamale", river: "Attanagalu Oya", status: "normal", level: 6.1, unit: "ft", trend: "falling", observedAt: new Date(AT - 300_000).toISOString(), nextHour: null },
+  ];
   const r = refreshEvents(held, fresh);
   assert.equal(r.length, 2, "the dropped one is gone");
   const c = composeCombined(r, { now: AT });
-  assert.match(c.text, /Holombuwa 9\.2 ft/); assert.ok(!/8\.6/.test(c.text), "the old level is not shown");
+  assert.match(c.text, /Holombuwa \(9\.2 ft\)/); assert.ok(!/8\.6/.test(c.text), "the old level is not shown");
   assert.ok(!/Dunamale/.test(c.text));
-  assert.match(c.text, new RegExp(`Hanwella 8\\.4 ft at ${"5:31 am"}`), c.text); // no fresh reading: kept, with its time
-  assert.ok(c.text.startsWith("Water levels, 6:11 am"), "heading = newest reading: " + c.text);
+  assert.match(c.text, /Hanwella \(8\.4 ft at 5:31 am\)/, c.text);
+  assert.ok(c.text.startsWith("6:11 am:"), "heading = newest reading: " + c.text);
   assert.equal(newestReading(r), AT - 300_000);
-  assert.deepEqual(validateCombined(c.text, r, c.headAt, false), [], "number guard against the refreshed facts");
-  // the old level is not allowed any more
-  assert.ok(validateCombined("Water levels, 6:11 am\nAlert: Maha Oya, Holombuwa 8.6 ft", r, c.headAt, false).length);
-  // snapshot unreadable: everything kept, all with their time
+  assert.deepEqual(validateCombined(c.text, r, c.headAt, false), []);
+  assert.ok(validateCombined("6:11 am: The Maha Oya at Holombuwa (8.6 ft) has reached alert level.", r, c.headAt, false).length);
   const none = refreshEvents(held, null);
-  assert.equal(none.length, 3); assert.match(composeCombined(none, { now: AT }).text, /Holombuwa 8\.6 ft at 5:31 am/);
-  // an all-clear that is Alert again is dropped
+  assert.equal(none.length, 3); assert.match(composeCombined(none, { now: AT }).text, /Holombuwa \(8\.6 ft at 5:31 am\)/);
   assert.equal(refreshEvents([clear], [{ station: "Norwood", river: "Kelani Ganga", status: "alert", level: 8.2, unit: "ft", trend: "rising", observedAt: new Date(AT).toISOString() }]).length, 0);
 }
 // a made-up number is caught
-assert.ok(validateCombined("Water levels, 6:16 am\nAlert: X 99.9 ft", [rise("X", [gf("X", "X", "alert", 8.3)])], AT, false).length);
+assert.ok(validateCombined("6:16 am: The Kelani at X (99.9 ft) has reached alert level.", [rise("Kelani Ganga", [gf("X", "Kelani Ganga", "alert", 8.3)])], AT, false).length);
 
 // hold window and urgency
 {
