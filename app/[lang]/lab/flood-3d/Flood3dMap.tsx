@@ -3,7 +3,7 @@
 // MapLibre is loaded on demand. Data: /flood3d/*.json|png (static, built by scripts/flood3d), live gauges from our own /api/flood3d (polled
 // every ~5 min while the tab is visible). The browser never calls ArcGIS or HMIS; map tiles come from OpenFreeMap and AWS Terrarium.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Map as MlMap, GeoJSONSource, CanvasSource, MapMouseEvent, Popup, GeolocateControl, Marker } from "maplibre-gl";
+import type { Map as MlMap, GeoJSONSource, CanvasSource, MapMouseEvent, Popup, Marker } from "maplibre-gl";
 import { preconnect } from "react-dom";
 import { Activity, Box, CloudRain, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Route, Search, SlidersHorizontal, Waves } from "lucide-react";
 import { useScheme } from "@/app/useTheme";
@@ -259,7 +259,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const [areas, setAreas] = useState<{ name: string; n: number | null }[]>([]);
   const [used, setUsed] = useState(0);
   const gps = useRef<{ lat: number; lon: number; acc: number } | null>(null);
-  const geoRef = useRef<GeolocateControl | null>(null);
+  const meMarker = useRef<Marker | null>(null);
+  const meData = useRef<GeoJSON.FeatureCollection | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const openReportRef = useRef<((p: RepPos) => void) | null>(null);
   useEffect(() => { openReportRef.current = (p) => { setRep(p); setPanelOpen(false); }; });
@@ -291,7 +292,44 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   };
   const cell: CellInfo = rep ? cellAtLL(rep.lon, rep.lat) : { covered: false, shaded: false, cellFt: null };
    
-  const locate = () => { if (!consented) setConsentAsk(true); else { setGeoMsg(null); geoRef.current?.trigger(); } };
+  const locate = () => { if (!consented) setConsentAsk(true); else findMe(); };
+  // Locate me: navigator.geolocation directly (never on load, only after the consent line). First a precise try, then a coarser, patient one.
+  const findMe = () => {
+    if (!navigator.geolocation) { setGeoMsg(tr("Your browser cannot share its location.")); return; }
+    setGeoMsg(tr("Finding your location\u2026"));
+    const msgFor = (code: number) => code === 1 ? tr("Location is blocked for this site. Allow it in the browser's site settings (padlock icon).") : code === 2 ? tr("Your device couldn't find its location. On a Mac, turn on Location Services for your browser in System Settings \u203a Privacy & Security \u203a Location Services; on a phone, turn on Location.") : tr("Finding your location took too long. Try again near a window or with Wi-Fi on.");
+    const ok = (pos: GeolocationPosition) => showMe(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+    const fail = (err: GeolocationPositionError, stage: number) => {
+      console.warn("[flood3d] geolocation error", err.code, err.message, "stage", stage);
+      if (stage === 0 && (err.code === 2 || err.code === 3)) { navigator.geolocation.getCurrentPosition(ok, (e) => fail(e, 1), { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }); return; }
+      setGeoMsg(msgFor(err.code));
+    };
+    navigator.geolocation.getCurrentPosition(ok, (e) => fail(e, 0), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  };
+  const showMe = (lat: number, lon: number, acc: number) => {
+    const map = mapRef.current, m = meta.current;
+    if (!map || !m) return;
+    gps.current = { lat, lon, acc };
+    // our own dot and accuracy circle (a 64-point polygon of acc metres)
+    const ring: [number, number][] = [];
+    for (let k = 0; k <= 64; k++) { const a = (k / 64) * 2 * Math.PI; ring.push([lon + (acc * Math.sin(a)) / (111320 * Math.cos((lat * Math.PI) / 180)), lat + (acc * Math.cos(a)) / 110574]); }
+    meData.current = { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [ring] } }] };
+    (map.getSource("f3d-me") as GeoJSONSource | undefined)?.setData(meData.current);
+    void loadMl().then((ml) => {
+      if (!meMarker.current) { const el = document.createElement("div"); el.style.cssText = "width:14px;height:14px;border-radius:50%;background:#0284c7;border:3px solid #fff;box-shadow:0 0 0 1px rgba(2,132,199,.5),0 1px 4px rgba(0,0,0,.35)"; meMarker.current = new ml.Marker({ element: el }).setLngLat([lon, lat]).addTo(map); }
+      else meMarker.current.setLngLat([lon, lat]);
+    });
+    const inside = lon >= m.png.west - 0.03 && lon <= m.png.east + 0.17 && lat >= m.png.south - 0.03 && lat <= m.png.north + 0.03;
+    if (!inside) {
+      const km = Math.round(Math.hypot((lon - CENTER[0]) * 111.32 * Math.cos((lat * Math.PI) / 180), (lat - CENTER[1]) * 110.57));
+      map.setMaxBounds(null as never); // show where they are anyway
+      setGeoMsg(tr("You're outside the covered area (Kelani corridor), about {km} km from Kelaniya.", { km }));
+      map.flyTo({ center: [lon, lat], zoom: 11, duration: 1400 });
+    } else {
+      setGeoMsg(null);
+      map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), acc > 500 ? 13.5 : 15), duration: 1400 });
+    }
+  };
   const startReport = () => {
     const map = mapRef.current;
     if (!map) return;
@@ -442,12 +480,6 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         if (new URLSearchParams(location.search).has("debug")) (window as unknown as { __f3d?: unknown }).__f3d = { map, cv: cv.current, grid: grid.current };
         map.addControl(new ml.NavigationControl({ visualizePitch: true }), phone ? "top-right" : "bottom-left");
         if (!phone) map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
-        // Locate me: the control's own button is hidden (CSS below); our button asks for consent first, then triggers it. Never on load.
-        const geo = new ml.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }, trackUserLocation: false, showAccuracyCircle: true, showUserLocation: true, fitBoundsOptions: { maxZoom: 16 } });
-        map.addControl(geo, "top-right");
-        geo.on("geolocate", (e: unknown) => { const c = (e as { coords: GeolocationCoordinates }).coords; gps.current = { lat: c.latitude, lon: c.longitude, acc: c.accuracy }; setGeoMsg(null); });
-        geo.on("error", () => setGeoMsg(tr("Your location could not be read. Check that location is on for this browser.")));
-        geoRef.current = geo;
         setUsed(m.reports_used?.Kelaniya ?? 0);
         let bound = false;
         map.on("style.load", () => {
@@ -466,6 +498,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           const rc = document.createElement("canvas"); rc.width = 360; rc.height = 200; rainCv.current = rc;
           map.addSource("f3d-rain", { type: "canvas", canvas: rc, coordinates: [[79.79, 7.05], [80.15, 7.05], [80.15, 6.85], [79.79, 6.85]], animate: false });
           map.addLayer({ id: "f3d-rain", type: "raster", source: "f3d-rain", paint: { "raster-opacity": 0.9, "raster-fade-duration": 0 }, layout: { visibility: "none" } }, before);
+          map.addSource("f3d-me", { type: "geojson", data: meData.current ?? { type: "FeatureCollection", features: [] } });
+          map.addLayer({ id: "f3d-me-acc", type: "fill", source: "f3d-me", paint: { "fill-color": "#0284c7", "fill-opacity": 0.12 } });
+          map.addLayer({ id: "f3d-me-line", type: "line", source: "f3d-me", paint: { "line-color": "#0284c7", "line-width": 1, "line-opacity": 0.5 } });
           map.addSource("past", { type: "geojson", data: "/flood3d/ems-2025.json" });
           map.addLayer({ id: "past-fill", type: "fill", source: "past", paint: { "fill-color": "#6366f1", "fill-opacity": 0.12 }, layout: { visibility: "none" } }, before);
           map.addLayer({ id: "past-line", type: "line", source: "past", paint: { "line-color": "#4f46e5", "line-width": 1, "line-dasharray": [3, 2] }, layout: { visibility: "none" } }, before);
@@ -810,7 +845,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
               <p className="font-semibold">{tr("Use your location?")}</p>
               <p className="text-xs leading-relaxed">{tr("Your exact spot is kept private and used only to improve the flood map. We only read it when you tap, and never show it to anyone.")}</p>
               <div className="flex gap-2">
-                <button type="button" className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white" onClick={() => { setConsented(true); setConsentAsk(false); setGeoMsg(null); geoRef.current?.trigger(); }}>{tr("Use my location")}</button>
+                <button type="button" className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white" onClick={() => { setConsented(true); setConsentAsk(false); findMe(); }}>{tr("Use my location")}</button>
                 <button type="button" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs dark:border-slate-600" onClick={() => setConsentAsk(false)}>{tr("Not now")}</button>
               </div>
             </div>
@@ -835,7 +870,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         ) : (
           <button type="button" onClick={() => setPanelOpen(true)} className={`absolute z-10 flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${GLASS}`} style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)", right: 12 }}><SlidersHorizontal className="size-4" aria-hidden /> {tr("Options")}</button>
         ))}
-        <style>{".maplibregl-ctrl-group:has(.maplibregl-ctrl-geolocate){display:none!important} .maplibregl-ctrl-bottom-left{margin-bottom:44px} @media (max-width:767px){.maplibregl-ctrl-top-right{margin-top:60px}} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
+        <style>{".maplibregl-ctrl-bottom-left{margin-bottom:44px} @media (max-width:767px){.maplibregl-ctrl-top-right{margin-top:60px}} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
         {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{tr("Loading map…")}</div>}
         {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
       </div>
