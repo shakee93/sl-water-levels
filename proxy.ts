@@ -133,8 +133,9 @@ export async function proxy(req: NextRequest) {
     const v = await verdictFor(target, url.origin);
     if (v === "missing") {
       const to = url.clone();
+      // no status override here: on Vercel that serves the bare static /404; the page throws notFound() itself (404, our UI)
       to.pathname = `/${lang}/page-not-found`;
-      return NextResponse.rewrite(to, { status: 404 });
+      return NextResponse.rewrite(to);
     }
     if (alias || hadUpper) {
       const to = url.clone();
