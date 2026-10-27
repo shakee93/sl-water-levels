@@ -5,10 +5,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MlMap, GeoJSONSource, CanvasSource, MapMouseEvent, Popup, Marker } from "maplibre-gl";
 import { preconnect, preload } from "react-dom";
-import { Activity, Box, CloudRain, Copy, ExternalLink, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Route, Search, SlidersHorizontal, Waves, X } from "lucide-react";
+import { Activity, Box, CloudRain, Copy, Droplets, ExternalLink, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Play, Route, Search, SlidersHorizontal, Waves, X } from "lucide-react";
 import { loadBaseStyle } from "./mapStyle";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
 import { makeT, type Lang } from "./strings";
+import { ReplayCard, replayTime, type ReplayData } from "./Replay";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
@@ -48,6 +49,7 @@ const f1 = (v: number) => (Math.round(v * 10) / 10).toFixed(1);
 export type SearchItem = { n: string; lat: number; lon: number; al?: string[] };
 type GazItem = [name: string, lat: number, lon: number, kind: number, si?: string, ta?: string];
 const KIND_LABEL = ["place", "landmark", "road"];
+const ORDER_RAMP: [number, number, number][] = [[49, 46, 129], [37, 99, 200], [56, 150, 210], [96, 196, 190], [190, 225, 160], [250, 222, 140]]; // "fills first" shading, dark to pale
 
 export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang }) {
   const tr = useMemo(() => makeT(lang), [lang]);
@@ -117,6 +119,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const [chanceOn, setChanceOn] = useState(false);
   const [horizon, setHorizon] = useState<0 | 3 | 6>(0);
   const [plain, setPlain] = useState(false);
+  // Replay of Cyclone Ditwah (off by default; its 3 KB file is fetched only when it is opened) and the "fills first" shading
+  const [replayOn, setReplayOn] = useState(false);
+  const [rp, setRp] = useState<ReplayData | null>(null);
+  const [rpIdx, setRpIdx] = useState(42);
+  const [playing, setPlaying] = useState(false);
+  const [order, setOrder] = useState(false);
   const [past, setPast] = useState(false);
   const [roadsOn, setRoadsOn] = useState(true);
   const [threeD, setThreeD] = useState(false);
@@ -142,9 +150,11 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   // because it leads Nagalagam by many hours at high flows (scripts/flood3d/fit-hanwella.py), so it says nothing about Nagalagam right now.
   // A reading older than about 6 h is not shown as live (the chip says unavailable); older than 90 min it says it may be a few minutes old.
   const liveNag = useMemo(() => (live?.nagalagam?.levelFt != null && !(live.nagalagam.hourlyAt && Date.now() - Date.parse(live.nagalagam.hourlyAt) > 6 * 3_600_000) ? { ft: live.nagalagam.levelFt } : null), [live]);
-  const level = driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
+  const rpI = rp ? Math.max(0, Math.min(rp.hours - 1, Math.round(rpIdx))) : 0;
+  const level = replayOn && rp ? rp.nag[rpI] / 100 : driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
   const lagH = live?.hanwellaLagH ?? 18;
-  const isLive = driver === "live";
+  const isLive = driver === "live" && !replayOn;
+  const nearShot = replayOn && rp ? rp.shots.find((x) => Math.abs(x.h - rpI) <= 6) ?? null : null;
 
   // Deep link for testing and sharing a view: ?lv=7.2 (what-if Nagalagam ft) &chance=6 (horizon h) &past=1 &plain=1 &d3=0|1
   const startView = useRef<[number, number, number] | null>(null);
@@ -155,6 +165,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     const ch = q.get("chance"); if (ch !== null && !lv) { setChanceOn(true); setHorizon(([0, 3, 6].includes(+ch) ? +ch : 0) as 0 | 3 | 6); }
     if (q.get("past")) setPast(true);
     if (q.get("plain")) setPlain(true);
+    if (q.get("order")) setOrder(true);
+    if (q.get("replay")) { setReplayOn(true); const t = +(q.get("t") ?? ""); if (Number.isFinite(t) && q.get("t")) setRpIdx(t); else setPlaying(true); }
     const ll = q.get("ll")?.split(",").map(Number); if (ll && ll.length === 3 && ll.every(Number.isFinite)) startView.current = [ll[0], ll[1], ll[2]];
     if (q.has("d3")) forced3d.current = q.get("d3") === "1";
   }, []);
@@ -205,6 +217,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         else if (gs) {
           const t = tableFor(hw2[i])[Math.min(419, Math.max(0, Math.round((L2[i] - 2) * 10)))];
           if (t === 1) { r = 254; g = 222; b = 185; a = 150; } else if (t === 2) { r = 240; g = 150; b = 70; a = 165; } else if (t === 3) { r = 180; g = 60; b = 15; a = 185; }
+        } else if (order) { // fills first: dark = the low spots that flood first, pale = the ground that floods last; in a replay only what is under water now
+          const l = L2[i];
+          if (l <= 9.5 && (!replayOn || l <= lv)) {
+            const k = l <= 3.5 ? 0 : l <= 4.5 ? 1 : l <= 5.5 ? 2 : l <= 6.5 ? 3 : l <= 7.5 ? 4 : 5;
+            r = ORDER_RAMP[k][0]; g = ORDER_RAMP[k][1]; b = ORDER_RAMP[k][2]; a = cls2[i] === 0 && (x + y) % 7 !== 0 ? 95 : 170;
+          }
         } else if (plain) {
           if (band2[i] <= kBand) { r = 99; g = 102; b = 241; a = 120; }
         } else {
@@ -223,7 +241,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     c.out.getContext("2d")!.putImageData(c.img, 0, 0);
     const src = mapRef.current?.getSource("f3d-water") as CanvasSource | undefined;
     if (src) { src.play(); requestAnimationFrame(() => requestAnimationFrame(() => src.pause())); }
-  }, [chanceOn, isLive, horizon, plain, live]);
+  }, [chanceOn, isLive, horizon, plain, live, order, replayOn]);
 
   const paintRoads = useCallback((lv: number) => {
     const map = mapRef.current;
@@ -237,7 +255,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   useEffect(() => {
     if (!ready) return;
     cancelAnimationFrame(raf.current);
-    const from = shown.current, to = level, t0 = performance.now(), dur = Math.abs(to - from) < 0.03 ? 0 : 1400;
+    const from = shown.current, to = level, t0 = performance.now(), dur = Math.abs(to - from) < 0.03 ? 0 : replayRef.current ? 220 : 1400;
     const step = (t: number) => {
       const k = dur ? Math.min(1, (t - t0) / dur) : 1, e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       shown.current = from + (to - from) * e;
@@ -254,8 +272,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     const map = mapRef.current;
     if (!ready || !map) return;
     const vis = (id: string, on: boolean) => map.getLayer(id) && map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
-    vis("f3d-water", waterOn); vis("roads-main", roadsOn); vis("roads-local", roadsOn); vis("past-fill", past); vis("past-line", past);
-  }, [ready, roadsOn, past, waterOn]);
+    vis("f3d-water", waterOn); vis("roads-main", roadsOn); vis("roads-local", roadsOn);
+  }, [ready, roadsOn, waterOn]);
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -767,7 +785,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         <h1 className="text-base font-semibold md:text-lg tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map (test)")}</h1>
         <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
           <span aria-hidden className="size-2 rounded-full" style={{ background: stepColor }} />
-          {nagUsable && nag ? (
+          {replayOn && rp ? (
+            <span className="font-semibold">{tr("Replay")} {dot} {replayTime(rp, rpI, lang)} {dot} {tr("Nagalagam Street {ft} ft", { ft: f1(rp.nag[rpI] / 100) })}</span>
+          ) : nagUsable && nag ? (
             <>
               <span className="font-semibold">{tr("Nagalagam Street {ft} ft", { ft: f1(nag.levelFt ?? 0) })}</span>
               {nag.trend && <span>{dot} {tr(nag.trend)} {arrow(nag.trend)}</span>}
@@ -793,12 +813,46 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   );
 
   // ---- legend card with a depth gradient
+  const replayRef = useRef(false);
+  useEffect(() => { replayRef.current = replayOn; });
+  // replay data: fetched once, only when the replay is opened (our own static file)
+  useEffect(() => {
+    if (!replayOn || rp) return;
+    let dead = false;
+    fetch("/flood3d/ditwah.json").then((r) => r.json()).then((d: ReplayData) => { if (!dead) setRp(d); }).catch(() => { if (!dead) { setReplayOn(false); setGeoMsg(tr("The replay could not load. Try again in a minute.")); } });
+    return () => { dead = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- tr is stable per language
+  }, [replayOn, rp]);
+  // playback: one hour of the storm every 0.2 s, paused while the tab is hidden, stops at the end
+  useEffect(() => {
+    if (!playing || !rp) return;
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      setRpIdx((v) => { const n = Math.round(v) + 1; if (n >= rp.hours - 1) { setPlaying(false); return rp.hours - 1; } return n; });
+    }, 200);
+    return () => clearInterval(id);
+  }, [playing, rp]);
+  // the real satellite outline appears while the replay is within a few hours of a satellite photo
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map) return;
+    const on = past || !!nearShot;
+    const f = !past && nearShot ? ["==", ["get", "event"], nearShot.ev] : null;
+    for (const id of ["past-fill", "past-line"]) if (map.getLayer(id)) { map.setFilter(id, f as never); map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); }
+  }, [ready, past, nearShot]);
+
   const legend = (
     <div className="space-y-2 px-1.5 pb-1 text-[11px] text-slate-700 dark:text-slate-300">
       <div>
         <div className="h-2 rounded-full" style={{ background: "linear-gradient(90deg, rgba(30,110,210,.5), rgba(24,96,190,.75) 50%, rgba(12,68,180,.95))" }} />
         <div className="mt-0.5 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>{tr("shallow")}</span><span>{tr("water at this river level")}</span><span>{tr("deep")}</span></div>
       </div>
+      {order && (
+        <div>
+          <div className="h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${ORDER_RAMP.map((c) => `rgb(${c.join(",")})`).join(", ")})` }} />
+          <div className="mt-0.5 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>{tr("floods first")}</span><span>{tr("floods last")}</span></div>
+        </div>
+      )}
       {chanceOn && isLive && (
         <div>
           <div className="h-2 rounded-full" style={{ background: "linear-gradient(90deg, rgb(254,222,185), rgb(240,150,70) 55%, rgb(180,60,15))" }} />
@@ -821,8 +875,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     <div className="px-2 pb-3">
       <SectionTitle>{tr("River level on the map")}</SectionTitle>
       <div className="px-1.5">
-        <Seg value={driver} onChange={(k) => { setDriver(k); if (k !== "live") setChanceOn(false); }} label={tr("River level on the map")} items={[{ v: "live", t: tr("Live") }, { v: "nag", t: "Nagalagam" }, { v: "han", t: "Hanwella" }]} />
-        {driver === "nag" && (
+        <Seg value={driver} onChange={(k) => { setDriver(k); setReplayOn(false); setPlaying(false); if (k !== "live") setChanceOn(false); }} label={tr("River level on the map")} items={[{ v: "live", t: tr("Live") }, { v: "nag", t: "Nagalagam" }, { v: "han", t: "Hanwella" }]} />
+        <div className="pt-1"><SwitchRow icon={<Play className="size-4" />} label={tr("Replay Cyclone Ditwah (Nov 2025)")} on={replayOn} onChange={(v) => { setReplayOn(v); setPlaying(v); if (v) { setChanceOn(false); setPlain(false); setRpIdx(42); } }} /></div>
+        {driver === "nag" && !replayOn && (
           <div className="pt-2">
             <div className="flex items-baseline justify-between text-xs"><span className="text-slate-500 dark:text-slate-400">{tr("What if Nagalagam reaches…")}</span><span className="text-base font-semibold tabular-nums">{f1(whatNag)} ft</span></div>
             <input aria-label={tr("Nagalagam Street level in feet")} type="range" min={2} max={10} step={0.1} value={whatNag} onChange={(e) => setWhatNag(+e.target.value)} className="mt-1 w-full accent-sky-600" />
@@ -832,7 +887,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
             </div>
           </div>
         )}
-        {driver === "han" && (
+        {driver === "han" && !replayOn && (
           <div className="pt-2">
             <div className="flex items-baseline justify-between text-xs"><span className="text-slate-500 dark:text-slate-400">{tr("What if Hanwella reaches…")}</span><span className="text-base font-semibold tabular-nums">{f1(whatHan)} ft</span></div>
             <input aria-label={tr("Hanwella level in feet")} type="range" min={10} max={36} step={0.5} value={whatHan} onChange={(e) => setWhatHan(+e.target.value)} className="mt-1 w-full accent-sky-600" />
@@ -852,7 +907,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         {rainOn && <p className="px-1.5 pb-1 text-[10px] leading-snug text-slate-500 dark:text-slate-400">{rain ? tr("Rain now (estimate, updated {time}). {g} ground gauge(s) reported in the last hour; the rest is satellite for the hour from {sat} ({age} old).", { time: clock(rain.generatedAt), g: rain.groundGauges, sat: rain.satelliteHourStart ? clock(rain.satelliteHourStart) : "-", age: rain.satelliteHourStart ? ageText(Date.parse(rain.generatedAt) - rain.satelliteHourStart - 3_600_000) : "-" }) : rainErr ? tr("Rain data is not available right now.") : tr("Loading rain…")}</p>}
         <SwitchRow icon={<MapPin className="size-4" />} label={tr("Rain gauges")} on={rainGaugesOn} onChange={setRainGaugesOn} />
         <SwitchRow icon={<History className="size-4" />} label={tr("Real flood, 30 Nov 2025 (satellite)")} on={past} onChange={setPast} />
-        <SwitchRow icon={<Layers className="size-4" />} label={tr("Plain elevation bands (compare)")} on={plain} onChange={(v) => { setPlain(v); if (v) setChanceOn(false); }} />
+        <SwitchRow icon={<Droplets className="size-4" />} label={tr("Fills first (dark floods first)")} on={order} onChange={(v) => { setOrder(v); if (v) { setChanceOn(false); setPlain(false); } }} />
+        <SwitchRow icon={<Layers className="size-4" />} label={tr("Plain elevation bands (compare)")} on={plain} onChange={(v) => { setPlain(v); if (v) { setChanceOn(false); setOrder(false); } }} />
         <SwitchRow icon={<Box className="size-4" />} label={tr("3D (off = 2D)")} on={threeD} onChange={setThreeD} />
       </div>
 
@@ -927,6 +983,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
             <button type="button" onClick={toggleFull} aria-pressed={full} className={ICON_BTN} aria-label={full ? tr("Exit full screen") : tr("Full screen")} title={full ? tr("Exit full screen") : tr("Full screen")}>{full ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</button>
           </div>
         </div>
+        {replayOn && <ReplayCard data={rp} idx={rpIdx} setIdx={setRpIdx} playing={playing} setPlaying={setPlaying} onClose={() => { setReplayOn(false); setPlaying(false); }} tr={tr} lang={lang} near={nearShot} top={full ? 64 : 60} />}
         {geoMsg && (
           <div role="status" className={`absolute left-3 right-3 z-20 flex items-start gap-2 rounded-lg py-2 pl-3 pr-1 text-xs md:right-auto md:max-w-sm ${GLASS}`} style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 64px)" : 64 }}>
             <p className="flex-1 pt-1">{geoMsg}</p>

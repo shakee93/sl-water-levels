@@ -44,6 +44,20 @@
    "nag_ft": 4.6
   }
  },
+ "extra_bounds": {
+  "A4": {
+   "label": "4 Dec 2025",
+   "nag_ft": 3.0
+  },
+  "A5": {
+   "label": "5 Dec 2025",
+   "nag_ft": 2.5
+  },
+  "A6": {
+   "label": "6 Dec 2025",
+   "nag_ft": 2.4
+  }
+ },
  "zone_offset_m": {
   "-124": -1.47,
   "-123": 1.7,
@@ -509,56 +523,56 @@
   {
    "event": "E1",
    "area": "corridor",
-   "csi": 1.0,
+   "csi": 0.933,
    "hit": 1.0,
-   "far": 0.0,
+   "far": 0.067,
    "n_wet": 35013,
-   "n_pred": 35013
+   "n_pred": 37522
   },
   {
    "event": "E1",
    "area": "Kelaniya",
-   "csi": 1.0,
+   "csi": 0.883,
    "hit": 1.0,
-   "far": 0.0,
+   "far": 0.117,
    "n_wet": 11721,
-   "n_pred": 11721
+   "n_pred": 13271
   },
   {
    "event": "E1",
    "area": "Wellampitiya",
-   "csi": 1.0,
+   "csi": 0.907,
    "hit": 1.0,
-   "far": 0.0,
+   "far": 0.093,
    "n_wet": 3391,
-   "n_pred": 3391
+   "n_pred": 3738
   },
   {
    "event": "E3",
    "area": "corridor",
-   "csi": 0.829,
-   "hit": 0.829,
-   "far": 0.0,
+   "csi": 0.814,
+   "hit": 0.831,
+   "far": 0.024,
    "n_wet": 13148,
-   "n_pred": 10900
+   "n_pred": 11185
   },
   {
    "event": "E3",
    "area": "Kelaniya",
-   "csi": 0.778,
-   "hit": 0.778,
-   "far": 0.0,
+   "csi": 0.759,
+   "hit": 0.781,
+   "far": 0.036,
    "n_wet": 6452,
-   "n_pred": 5021
+   "n_pred": 5226
   },
   {
    "event": "E3",
    "area": "Wellampitiya",
-   "csi": 0.796,
+   "csi": 0.78,
    "hit": 0.796,
-   "far": 0.0,
+   "far": 0.025,
    "n_wet": 1530,
-   "n_pred": 1218
+   "n_pred": 1249
   }
  ],
  "reliability_cell_part": [
@@ -679,9 +693,9 @@
  "ground_truth_points": 31,
  "points_learned": {
   "2025": {
-   "hit": 14,
+   "hit": 15,
    "n": 17,
-   "rate": 0.82
+   "rate": 0.88
   },
   "2017": {
    "hit": 1,
@@ -689,9 +703,9 @@
    "rate": 1.0
   },
   "2016": {
-   "hit": 12,
+   "hit": 13,
    "n": 13,
-   "rate": 0.92
+   "rate": 1.0
   }
  },
  "points_plain_bands": {
@@ -713,11 +727,11 @@
  },
  "points_random_baseline": {
   "300 m": {
-   "learned": 0.66,
+   "learned": 0.7,
    "plain": 0.95
   },
   "1000 m": {
-   "learned": 0.96,
+   "learned": 0.98,
    "plain": 1.0
   }
  }

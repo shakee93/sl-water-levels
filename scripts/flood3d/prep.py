@@ -91,6 +91,12 @@ EV = {
  "E3": dict(label="3 Dec 2025 (falling)", nag_ft=4.6, wet=rast(e+"aoi02m/EMSR851_AOI02_DEL_MONIT01_observedEventA_v1.json"),
             foot=fp(e+"aoi02m/EMSR851_AOI02_DEL_MONIT01_imageFootprintA_v1.json", e+"aoi02m/EMSR851_AOI02_DEL_MONIT01_notAnalysedA_v1.json", srcs=[1])),
 }
+# Low-stage recession moments (Angoda, Pleiades Neo 4, 5 and 6 Dec 2025; river 3.0, 2.5, 2.4 ft, tide-smoothed): used ONLY as extra wet/dry bounds on the per-cell level
+# (scripts/flood3d/replay.py: held-out CSI at 4-6 Dec 0.28-0.56 with them vs 0.17-0.43 without). Not used for the fit or the accuracy table.
+EXTRA = {}
+for key, d, nm, srcs, st, lab in (("A4", "aoi06", "AOI06_GRA_PRODUCT", [2], 3.0, "4 Dec 2025"), ("A5", "aoi06m1", "AOI06_GRA_MONIT01", [3], 2.5, "5 Dec 2025"), ("A6", "aoi06m2", "AOI06_GRA_MONIT02", [4], 2.4, "6 Dec 2025")):
+    if os.path.exists(e + f"{d}/EMSR851_{nm}_observedEventA_v1.json"):
+        EXTRA[key] = dict(label=lab, nag_ft=st, wet=rast(e + f"{d}/EMSR851_{nm}_observedEventA_v1.json"), foot=fp(e + f"{d}/EMSR851_{nm}_imageFootprintA_v1.json", e + f"{d}/EMSR851_{nm}_notAnalysedA_v1.json", srcs=srcs))
 # secondary truth: news/agency points (research/kelaniya-ground-truth.geojson). Scored with a buffer, never used to fit.
 PTS = []
 STAGE_BY_DATE = {"2016-05": 7.64, "2017-05": 6.0, "2025-11-28": 7.4, "2025-11-29": 7.4, "2025-11-30": 7.4, "2025-12-01": 8.4, "2025-12-02": 8.4}
@@ -200,7 +206,7 @@ CZ, CG = fit(["E1", "E3"])
 Lm = level_m(CZ, CG)
 # bounds from observations (wet at s -> L <= s ; dry in footprint at s -> L > s)
 hi_b = np.full((H, W), np.inf); lo_b = np.full((H, W), -np.inf)
-for ev in EV.values():
+for ev in list(EV.values()) + list(EXTRA.values()):
     s = ev["nag_ft"] * FT
     hi_b = np.where(ev["foot"] & ev["wet"], np.minimum(hi_b, s), hi_b)
     lo_b = np.where(ev["foot"] & ~ev["wet"], np.maximum(lo_b, s), lo_b)
@@ -237,6 +243,25 @@ if os.environ.get("REPORTS") and os.path.exists(os.environ["REPORTS"]):
     print("reports used", used, "skipped", skipped, "outlier ids ->", f"{WORK}/report_outlier_ids.json")
 Lf = np.minimum(np.maximum(Lm, lo_b + 0.02), np.where(hi_b < np.inf, np.maximum(hi_b, lo_b + 0.03), np.inf))
 Lft = Lf / FT
+# Spread, do not stack: where an observation moves a cell's level to the edge of its bracket (e.g. a cell the fit puts at 9 ft that was wet at 7.4 ft), putting all of
+# them AT the edge makes a sheet of water appear in one hour of a replay (40% of the corridor at exactly 7.4 ft). Instead they keep the order of their HAND inside the
+# bracket (highest ground last), over the bracket width (no far edge: 3.4 ft below a wet bound, 3 ft above a dry bound). Inside every observed stage the result is
+# unchanged (the bracket is respected); only what happens between observed stages is spread. Checked on the held-out 2 Dec 2025 map (scripts/flood3d/replay.py).
+from scipy.stats import rankdata
+_lo = lo_b / FT; _hi = hi_b / FT; _fin = np.isfinite
+_top = okall & _fin(hi_b) & (Lm / FT > _hi + 1e-6); _bot = okall & _fin(lo_b) & (Lm / FT < _lo - 1e-6) & ~_top
+_new = Lft.copy()
+for sel, up in ((_top, False), (_bot, True)):
+    pairs = {}
+    for r_, c_ in zip(*np.nonzero(sel)): pairs.setdefault((float(_lo[r_, c_]) if _fin(lo_b[r_, c_]) else None, float(_hi[r_, c_]) if _fin(hi_b[r_, c_]) else None), []).append((r_, c_))
+    for (lo_, hi_), cells in pairs.items():
+        rr = np.array([c[0] for c in cells]); cc = np.array([c[1] for c in cells]); rk = rankdata(HAND[rr, cc], method="average") / len(cells)
+        if not up:
+            lo_e = lo_ + 0.02 if lo_ is not None else max(2.4, hi_ - 3.4); _new[rr, cc] = hi_ - (hi_ - lo_e) * (1 - rk)
+        else:
+            hi_e = hi_ if hi_ is not None else lo_ + 3.0; _new[rr, cc] = lo_ + 0.02 + (hi_e - lo_ - 0.02) * rk
+Lft = _new
+Lf = Lft * FT
 # uncertainty class and half-width (ft). Widths from the leave-one-event-out spread (set below), observed bounds tighten.
 LO_EV, HI_EV = 4.6, 8.5
 bracket = np.isfinite(hi_b) & np.isfinite(lo_b)
@@ -430,7 +455,7 @@ if os.path.exists(f"{WORK}/osm_places.json"):
 
 json.dump(dict(
     reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)"),
-    drainage=VLAB, minfilter=VSM, variants=variants, events={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EV.items()},
+    drainage=VLAB, minfilter=VSM, variants=variants, events={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EV.items()}, extra_bounds={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EXTRA.items()},
     zone_offset_m={str(k): round(v, 2) for k, v in CZ.items()}, global_offset_m=round(CG, 2), half_width_ft=HW,
     plain_bands=acc_bands, loeo=LOEO, insample_note='reproduces the two observed maps by construction (bounds clip); not an accuracy figure', insample=insample, reliability_cell_part=rel, chance_calibration=dict(a=CAL[0], b=CAL[1], sd_ft=round(float(np.sqrt(HW['interpolated'] ** 2 / 3)), 2)), ground_truth_points=len(PTS), points_learned=pts_learned, points_plain_bands=pts_plain, points_random_baseline=base),
     open(f"{OUT}/accuracy.json", "w"), indent=1)
