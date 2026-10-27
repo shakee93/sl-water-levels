@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-27T18:50:43.278Z",
+  "updatedAt": "2026-10-27T22:40:44.068Z",
   "asOf": "2026-10-28",
   "minimums": {
     "answers": 3,
@@ -136,7 +136,7 @@
         "yes": 6,
         "worse": 0,
         "better": 2,
-        "errN": 7,
+        "errN": 8,
         "meanErrFt": 0.03
       },
       "falling": {
@@ -402,8 +402,8 @@
         "yes": 0,
         "worse": 2,
         "better": 0,
-        "errN": 1,
-        "meanErrFt": 0.01
+        "errN": 2,
+        "meanErrFt": 0.39
       }
     },
     "Kalawellawa (Millakanda)": {
@@ -505,36 +505,36 @@
   "forecast": {
     "window": {
       "from": "2026-10-22",
-      "to": "2026-10-27",
-      "points": 4711
+      "to": "2026-10-28",
+      "points": 5029
     },
     "horizons": {
       "1": {
-        "n": 1615,
-        "maeBase": 0.15,
-        "maeFit": 0.15,
+        "n": 1716,
+        "maeBase": 0.14,
+        "maeFit": 0.14,
         "gainPct": 1,
         "maePooled": 0.15,
-        "pooledGainPct": -3
+        "pooledGainPct": -2
       },
       "3": {
-        "n": 1590,
-        "maeBase": 0.38,
-        "maeFit": 0.37,
+        "n": 1698,
+        "maeBase": 0.36,
+        "maeFit": 0.36,
         "gainPct": 1,
-        "maePooled": 0.37,
+        "maePooled": 0.36,
         "pooledGainPct": 1
       },
       "6": {
-        "n": 1500,
-        "maeBase": 0.74,
-        "maeFit": 0.74,
+        "n": 1609,
+        "maeBase": 0.72,
+        "maeFit": 0.72,
         "gainPct": 0,
-        "maePooled": 0.74,
+        "maePooled": 0.72,
         "pooledGainPct": -1
       }
     },
-    "gaugesPassingOwnTest": 3,
+    "gaugesPassingOwnTest": 4,
     "useful": false,
     "wired": false
   }
