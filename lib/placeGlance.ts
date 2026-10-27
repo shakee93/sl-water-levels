@@ -93,6 +93,7 @@ export async function loadGlances(keys: ParsedKey[], lv: Record<string, number> 
     }),
   );
   const glances = out.filter((g): g is Glance => g !== null);
+  for (const g of glances) g.basin = g.gaugeStation ? byName.get(g.gaugeStation)?.basin.trim() ?? null : null;
   // which reservoir release (if any) is heading for each place's gauge; fails soft: no answer = no release claimed
   const rel = await getReleases().catch(() => null);
   if (rel) {

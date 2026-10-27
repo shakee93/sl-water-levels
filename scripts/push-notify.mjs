@@ -3,6 +3,7 @@
 //   node --experimental-strip-types --no-warnings scripts/push-notify.mjs [--mode check|morning] [--dry-run] [--force]
 //   node ... scripts/push-notify.mjs --test latest|<endpoint-sha256-prefix>     send ONE test push, change nothing else
 //   node ... scripts/push-notify.mjs --broadcast [--dry-run]    one owner message (title/body/url/language from BC_* env vars)
+//   node ... scripts/push-notify.mjs --news-preview [--hours 24]   replay the Flood news rules on the stories now on the site: no database, nothing sent
 //   node ... scripts/push-notify.mjs --stats [--dry-run]        counts-only subscriber summary to Slack (SLACK_WEBHOOK_URL)
 //
 // Every subscriber has settings (lib/pushPrefs.ts, table push_prefs; no row = the defaults, which equal the behaviour
@@ -25,6 +26,7 @@ import { levelOf, pushStep, parseKey } from "../lib/myPlaces.ts";
 import { PUSH_SCHEMA, MAX_FAILS } from "../lib/pushSub.ts";
 import { parsePrefs, baseKey, morningDue, colombo, inQuiet, riverRank } from "../lib/pushPrefs.ts";
 import { evalSub, broadcastPayload, broadcastRecipients } from "./push-eval.mjs";
+import { evalNews, areasOf, fetchNewsItems, shortHeadline, newsWorthy, NEWS_PER_DAY } from "./push-news.mjs";
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
 
@@ -245,6 +247,24 @@ export async function main({ mode = "check", dry = false, test = null, now = Dat
       jobs.push({ sub, kind: m.kind, place: m.key, payload: { title: text.title, body: text.body, url: urlFor(sub, g.href), tag: m.kind === "rise" || m.kind === "clear" ? m.key : `${m.key}:${m.kind}`, lang: sub.lang } });
     }
   }
+  // ---- Flood news (opt-in): read the stories once, only when somebody asked for them; "cannot read" sends nothing
+  if (subs.some((s) => s.prefs.news)) {
+    const items = await fetchNewsItems(SITE, doFetch);
+    console.log(`news: ${items ? `${items.length} recent item(s)` : "not readable, none sent"}`);
+    for (const sub of subs) {
+      const st = nextStates.get(sub);
+      if (!sub.prefs.news) { delete st.nw; continue; }
+      if (!items) { st.nw = sub.state?.nw ?? { since: now, d: colombo(now).day, n: 0, s: [] }; continue; }
+      const areas = areasOf(sub.places.map((k) => parseKey(k)?.key).filter(Boolean), glances);
+      const r = evalNews({ prefs: sub.prefs, nw: sub.state?.nw, items, areas, now });
+      st.nw = r.nw;
+      for (const it of r.messages) {
+        const m = pushText(sub.lang, "news", [], { headline: shortHeadline(it.title), source: it.source });
+        jobs.push({ sub, kind: "news", place: null, payload: { title: m.title, body: m.body, url: urlFor(sub, `/news#${encodeURIComponent(it.id)}`), tag: `news:${it.id}`, lang: sub.lang } });
+      }
+    }
+  } else for (const sub of subs) delete nextStates.get(sub).nw;
+
   const groups = new Map();
   const c = await deliver(send, jobs, now, dry, groups);
 
@@ -260,6 +280,35 @@ export async function main({ mode = "check", dry = false, test = null, now = Dat
   }
   for (const g of groups.values()) console.log(`${g.kind} ${g.place ?? ""}: ${JSON.stringify({ sent: g.sent, gone: g.gone, failed: g.failed })}`);
   return { sent: c.sent + mc.sent, gone: c.gone + mc.gone, failed: c.failed + mc.failed };
+}
+
+/**
+ * Offline replay of the Flood news rules over the stories the site holds now (no database, no push, nothing stored): one
+ * pretend subscriber with the alert on and "All of Sri Lanka", a check every 30 minutes over the last `hours`, so the
+ * output shows what would have been sent and what the quiet hours, freshness, cap and de-duplication did.
+ */
+export async function newsPreview({ hours = 24, now = Date.now(), doFetch = fetch, items = null, scope = "all" } = {}) {
+  const list = items ?? (await fetchNewsItems(SITE, (u, o) => doFetch(u.replace("hours=6", `hours=${Math.min(48, hours)}`), o)));
+  if (!list) throw new Error("the site could not give the news list");
+  const prefs = parsePrefs({ news: true, newsScope: scope });
+  const start = Math.ceil((now - hours * 3_600_000) / 1_800_000) * 1_800_000;
+  const sent = [];
+  let nw = { since: start, d: colombo(start).day, n: 0, s: [] };
+  for (let t = start; t <= now; t += 1_800_000) {
+    const r = evalNews({ prefs, nw, items: list, areas: { towns: new Set(), rivers: new Set() }, now: t });
+    nw = r.nw;
+    for (const it of r.messages) sent.push({ at: t, it });
+  }
+  const when = (ms) => new Date(ms + 330 * 60_000).toISOString().replace("T", " ").slice(5, 16);
+  console.log(`${list.length} item(s) on the board in the last ${hours} h; replaying checks every 30 min (times are Colombo)`);
+  for (const { at, it } of sent) console.log(`WOULD SEND ${when(at)} | published ${when(it.publishedAt)} | ${it.source} | ${it.tag} | ${shortHeadline(it.title)}`);
+  const ids = new Set(sent.map((x) => x.it.id));
+  for (const it of list.filter((i) => !ids.has(i.id)).sort((a, b) => a.publishedAt - b.publishedAt)) {
+    const why = !newsWorthy(it) ? (it.sure !== true ? "not a clear keyword match" : "tag too weak for a push") : "held back (quiet hours, older than 3 h by the next check, daily cap or a duplicate)";
+    console.log(`skipped    ${when(it.publishedAt)} | ${it.source} | ${it.tag} | ${shortHeadline(it.title)}  [${why}]`);
+  }
+  console.log(`${sent.length} alert(s) would have gone to a person with "All of Sri Lanka" on (cap ${NEWS_PER_DAY}/day)`);
+  return { sent: sent.length };
 }
 
 /** One owner message to everyone who has not turned announcements off. A dry run prints counts only. Never runs by itself. */
@@ -288,7 +337,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const a = process.argv.slice(2);
   const val = (f) => (a.includes(f) ? a[a.indexOf(f) + 1] : null);
   const dry = a.includes("--dry-run");
-  const run = a.includes("--stats")
+  const run = a.includes("--news-preview")
+    ? newsPreview({ hours: Number(val("--hours")) || 24 })
+    : a.includes("--stats")
     ? stats({ dry })
     : main({
         mode: val("--mode") ?? "check", dry, test: val("--test"), force: a.includes("--force"),

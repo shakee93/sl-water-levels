@@ -1055,6 +1055,32 @@ announcements from the site (default on); and a "Send me a test alert" button.
 - Tests: `node --experimental-strip-types --no-warnings scripts/push-prefs.test.mts` (defaults, filtering, levels, quiet hours, all-clear, broadcast, stats)
   and `scripts/push.test.mts` (the whole sender).
 
+#### Flood news alert (opt-in, off by default)
+
+A switch in Alert settings, "Flood news: a notification when a new flood or water-release story is reported", with a choice of
+"All of Sri Lanka" (default) or "Only my places and their rivers". Prefs `news` / `newsScope` (`lib/pushPrefs.ts`); the same
+"places and settings you chose" on the privacy card, nothing new stored about the person. A news report, never an official
+warning: the notification says "News: <headline>" and "Reported by <outlet>. A news report, not an official warning."; tapping opens
+`/news#<item id>` (each row has that id and a soft highlight). Rules, all in `scripts/push-news.mjs` (pure) and run inside the
+30-minute check of `scripts/push-notify.mjs`:
+- Items come from `GET /api/news?hours=6`, which reads the same 10-minute cached `getNews()` as the /news page (no new news-site request). Only
+  items the keyword rules said "yes" to by themselves (`NewsItem.sure`): never a model-confirmed borderline one. A bare "rain" story needs a
+  heavy / flood / warning word, a Cyclone tag needs cyclone / depression / storm, exam-schedule and dengue stories are dropped.
+- One alert per story: the board already merges identical headlines; the sender also merges re-worded copies (headline word overlap >= 0.6)
+  within a batch and against what that person was already sent. Never sent twice to a person.
+- Never older than 3 h at send time, and never published before the person switched the alert on (no backlog).
+- At most 4 a day (Colombo day) and 2 per check per person. Quiet hours 22:00-06:00 Colombo (plus their own quiet hours): news is
+  DROPPED, not queued; a story from the night is still sent after 06:00 only while it is under 3 h old.
+- "Mine": the story must name one of the person's pinned towns (`NewsItem.towns`) or the river basin of one of their places (`Glance.basin`,
+  `NewsItem.rivers`, which also holds the basin of a named reservoir). Names are matched by `namesIn()` in `lib/news.ts`; when a story names
+  nothing we know it is not sent to "mine" people. No readable place = nothing, never everything.
+- Memory: `push_prefs.state.nw` = `{ since, d, n, s: [{ i, t, m }] }` (switch-on time, today's count, ids + word keys of the last 12 sent); dropped when the
+  switch is turned off. No new table, lookups by endpoint only. If /api/news cannot be read nothing is sent and the memory is kept; if nobody has the
+  switch on the news is not requested at all.
+- Tests: `scripts/push-news.test.mts` (rules) and the Flood news block of `scripts/push-prefs.test.mts` (through the sender).
+  Replay on the live board without sending anything or touching the database:
+  `SITE_URL=https://waterlevels.lk node --experimental-strip-types --no-warnings scripts/push-notify.mjs --news-preview --hours 48`.
+
 #### Owner broadcast (manual only)
 
 One message from the owner to every subscriber who has not turned off "Occasional announcements from the site". It never runs by itself: it exists only as a

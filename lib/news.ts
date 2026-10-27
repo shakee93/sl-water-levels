@@ -36,6 +36,8 @@ export type NewsItem = {
   reservoirs: string[];
   rivers: string[];
   towns: string[];
+  /** true = our keyword rules said "yes" on their own; false = a borderline item the model confirmed. Push alerts use only the first kind. */
+  sure: boolean;
 };
 
 export type NewsData = { items: NewsItem[]; errors: Partial<Record<Outlet, string>>; fetchedAt: number };
@@ -164,6 +166,7 @@ async function build(): Promise<NewsData> {
       tag: v.tag,
       snippet: snippetOf(it.desc, it.title),
       ...namesIn(it.title, it.desc),
+      sure: v.kind === "yes",
     });
   }
   out.sort((a, b) => b.publishedAt - a.publishedAt);
@@ -171,7 +174,7 @@ async function build(): Promise<NewsData> {
 }
 
 /** Cached 10 minutes. Throws only when no feed can be read. */
-export const getNews = unstable_cache(build, ["news-board-v1"], { revalidate: 600 });
+export const getNews = unstable_cache(build, ["news-board-v2"], { revalidate: 600 });
 
 /** For page render: never throws, never waits more than 1.5 s (a slow refresh finishes in the background). */
 export async function getNewsSoon(ms = 1500): Promise<NewsData | null> {

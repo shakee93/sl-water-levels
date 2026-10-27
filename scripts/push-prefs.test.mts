@@ -309,6 +309,49 @@ assert.equal((await d1Query("SELECT COUNT(*) AS n FROM push_log WHERE kind = 'br
 assert.ok((await d1Query("SELECT COUNT(*) AS n FROM push_log"))[0].n > before);
 sent.length = 0;
 
+// Flood news (opt-in): only the subscriber who switched it on, only after the switch, once, with the right link and wording
+{
+  await addSub("news", ["s:Hanwella"], { lang: "si", prefs: { news: true } });
+  t = at("2026-10-25T05:00:00Z"); // 10:30 Colombo
+  const story = (id, title, ago) => ({ id, title, source: "Newswire", publishedAt: t + H / 2 - ago, tag: "Reservoir", sure: true, rivers: [], towns: [], reservoirs: [] });
+  let items = [story("old1", "Spill gates of Kotmale opened", 2 * H)];
+  let asked = 0;
+  const fetchNews = async (url) => {
+    if (!String(url).includes("/api/news")) return doFetch(url);
+    asked++;
+    return { ok: true, status: 200, json: async () => ({ ok: true, items }) };
+  };
+  sent.length = 0;
+  await run({ doFetch: fetchNews });
+  assert.equal(sent.length, 0, "a story from before the switch was on is not new");
+  items = [story("new1", "Spill gates of Laxapana opened", 0)];
+  await run({ doFetch: fetchNews });
+  assert.deepEqual(tos(), ["news"], "only the subscriber who asked");
+  assert.match(sent[0].title, /^පුවත්: /);
+  assert.equal(sent[0].url, "/si/news#new1");
+  assert.equal(sent[0].tag, "news:new1");
+  sent.length = 0;
+  await run({ doFetch: fetchNews });
+  assert.equal(sent.length, 0, "never twice");
+  const memory = JSON.parse((await d1Query("SELECT state FROM push_prefs WHERE endpoint LIKE '%/news'"))[0].state).nw;
+  assert.equal(memory.n, 1);
+  assert.equal(memory.s[0].i, "new1");
+  // not readable: nothing sent, memory kept
+  items = [story("new2", "Landslide warning for Kegalle", 0)];
+  await run({ doFetch: async (u) => (String(u).includes("/api/news") ? { ok: false, status: 502, json: async () => ({ ok: false }) } : doFetch(u)) });
+  assert.equal(sent.length, 0);
+  assert.equal(JSON.parse((await d1Query("SELECT state FROM push_prefs WHERE endpoint LIKE '%/news'"))[0].state).nw.n, 1);
+  // switched off: memory dropped; and with nobody opted in the news is not even requested
+  await d1Query("UPDATE push_prefs SET prefs = ? WHERE endpoint LIKE '%/news'", [JSON.stringify({ news: false })]);
+  asked = 0;
+  await run({ doFetch: fetchNews });
+  assert.equal(asked, 0, "nobody wants news: no request");
+  assert.equal(JSON.parse((await d1Query("SELECT state FROM push_prefs WHERE endpoint LIKE '%/news'"))[0].state).nw, undefined);
+  await d1Query("DELETE FROM push_subscriptions WHERE endpoint LIKE '%/news'");
+  await d1Query("DELETE FROM push_prefs WHERE endpoint LIKE '%/news'");
+  sent.length = 0;
+}
+
 // stats: counts only
 process.env.SLACK_WEBHOOK_URL = "https://hooks.example.test/x";
 const posts = [];

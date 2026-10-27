@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_push_log_ts ON push_log (ts);
 
 -- What each browser asked to be alerted about (lib/pushPrefs.ts: places muted, river level, street water, reservoir,
 -- all-clear, morning summary + time, quiet hours, announcements) and the sender's per-subscriber memory (what this person
--- was told per place, the day the morning summary last went out). One JSON text each; no row = the defaults, which equal
+-- was told per place, the day the morning summary last went out; and, for the opt-in Flood news alert, `nw` inside that state: when it was switched on, how
+-- many went out today, and the ids + a word-key of the last few headlines sent, so nothing is sent twice. No new table: lookups are by the endpoint key only). One JSON text each; no row = the defaults, which equal
 -- the behaviour before settings existed. Deleted together with the subscription. Choices only; nothing personal.
 CREATE TABLE IF NOT EXISTS push_prefs (endpoint TEXT PRIMARY KEY, prefs TEXT, state TEXT, updated_ms INTEGER NOT NULL);

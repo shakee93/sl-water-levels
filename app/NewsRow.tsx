@@ -56,7 +56,7 @@ export function TagChip({ tag, label }: { tag: NewsTag; label: string }) {
 
 export function NewsRow({ row, serverNow, labels }: { row: NewsRowData; serverNow: number; labels: NewsRowLabels }) {
   return (
-    <li className="px-3.5 py-3">
+    <li id={row.id} className="scroll-mt-24 px-3.5 py-3 target:bg-sky-50 dark:target:bg-sky-950/40">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
         <TagChip tag={row.tag} label={row.tagLabel} />
         <span>{labels.source.replace("{src}", row.source)}</span>

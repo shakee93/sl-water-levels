@@ -80,6 +80,8 @@ export type Glance = {
   rainNext24: number | null;
   /** Gauge the estimate rests on (lets the page apply the visitor's own street level). */
   gaugeStation: string | null;
+  /** River basin of that gauge (trimmed), so the news alert can match stories to "my places"; absent when unknown. */
+  basin?: string | null;
   /** Reading time, epoch ms. */
   ts: number | null;
 };

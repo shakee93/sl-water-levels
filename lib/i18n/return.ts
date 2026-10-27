@@ -138,6 +138,10 @@ const en = {
   "as.to": "Until",
   "as.announce": "Occasional announcements from the site",
   "as.announceHelp": "Now and then, for example a new feature. Never advertising.",
+  "as.news": "Flood news: a notification when a new flood or water-release story is reported",
+  "as.newsHelp": "A news report, not an official warning. At most 4 a day, none from 10 pm to 6 am.",
+  "as.newsAll": "All of Sri Lanka",
+  "as.newsMine": "Only my places and their rivers",
   "as.test": "Send me a test alert",
   "as.testBody": "This is how an alert looks on this phone.",
   "as.testSent": "Test alert sent to this phone.",
@@ -149,6 +153,8 @@ const en = {
   "pn.relTitle": "{place}: water released upstream",
   "pn.relBody": "{name} has opened its gates. Levels near you may rise over the next hours. Open to check.",
   "pn.relBodyReported": "{name} is reported to have opened its gates (a news report, not official). Levels near you may rise. Open to check.",
+  "pn.newsTitle": "News: {headline}",
+  "pn.newsBody": "Reported by {source}. A news report, not an official warning. Open to read.",
   "pn.rainRisk": "Heavy rain is forecast upstream, so it may rise faster than expected.",
   "pn.rainMeasured": "Very heavy rain was just measured upstream, so it may rise fast.",
 } as const;
@@ -283,6 +289,10 @@ const si: Dict = {
   "as.to": "දක්වා",
   "as.announce": "අඩවියෙන් ඉඳහිට නිවේදන",
   "as.announceHelp": "වරින් වර, උදාහරණයක් ලෙස නව විශේෂාංගයක්. දැන්වීම් කිසිවිටෙක නැත.",
+  "as.news": "ගංවතුර පුවත්: නව ගංවතුර හෝ ජලය මුදාහැරීමේ පුවතක් වාර්තා වූ විට දැනුම්දීමක්",
+  "as.newsHelp": "පුවත් වාර්තාවකි, නිල අනතුරු ඇඟවීමක් නොවේ. දිනකට උපරිම 4ක්, රාත්‍රී 10 සිට පෙ.ව. 6 දක්වා නැත.",
+  "as.newsAll": "මුළු ශ්‍රී ලංකාවම",
+  "as.newsMine": "මගේ ස්ථාන සහ ඒවායේ ගංගා පමණි",
   "as.test": "මට පරීක්ෂණ ඇඟවීමක් එවන්න",
   "as.testBody": "මෙම දුරකථනයේ ඇඟවීමක් පෙනෙන ආකාරය මෙයයි.",
   "as.testSent": "මෙම දුරකථනයට පරීක්ෂණ ඇඟවීම යැවිණි.",
@@ -294,6 +304,8 @@ const si: Dict = {
   "pn.relTitle": "{place}: ඉහළින් ජලය මුදා හරී",
   "pn.relBody": "{name} එහි දොරටු විවෘත කර ඇත. ඔබ අසල මට්ටම් ඉදිරි පැය කිහිපයේ ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
   "pn.relBodyReported": "{name} එහි දොරටු විවෘත කළ බව වාර්තා වේ (පුවත් වාර්තාවකි, නිල නොවේ). ඔබ අසල මට්ටම් ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
+  "pn.newsTitle": "පුවත්: {headline}",
+  "pn.newsBody": "{source} වාර්තා කරයි. පුවත් වාර්තාවකි, නිල අනතුරු ඇඟවීමක් නොවේ. බැලීමට විවෘත කරන්න.",
   // draft translation, not yet reviewed by a native speaker
   "pn.rainRisk": "ඉහළ ප්‍රදේශවල තද වැසි අපේක්ෂිතයි, එබැවින් අපේක්ෂාවට වඩා වේගයෙන් ඉහළ යා හැක.",
   "pn.rainMeasured": "ඉහළ ප්‍රදේශවල ඉතා තද වැසි මැනිණි, එබැවින් වේගයෙන් ඉහළ යා හැක.",
@@ -426,6 +438,10 @@ const ta: Dict = {
   "as.to": "வரை",
   "as.announce": "தளத்திலிருந்து அவ்வப்போது அறிவிப்புகள்",
   "as.announceHelp": "எப்போதாவது, எ.கா. புதிய வசதி. விளம்பரம் ஒருபோதும் இல்லை.",
+  "as.news": "வெள்ள செய்தி: புதிய வெள்ளம் அல்லது நீர் திறப்பு செய்தி வந்தால் அறிவிப்பு",
+  "as.newsHelp": "இது செய்தி அறிக்கை, அதிகாரப்பூர்வ எச்சரிக்கை அல்ல. ஒரு நாளைக்கு அதிகபட்சம் 4, இரவு 10 முதல் காலை 6 வரை இல்லை.",
+  "as.newsAll": "இலங்கை முழுவதும்",
+  "as.newsMine": "என் இடங்கள் மற்றும் அவற்றின் ஆறுகள் மட்டும்",
   "as.test": "எனக்கு ஒரு சோதனை அறிவிப்பை அனுப்பு",
   "as.testBody": "இந்தத் தொலைபேசியில் அறிவிப்பு இப்படித் தெரியும்.",
   "as.testSent": "இந்தத் தொலைபேசிக்கு சோதனை அறிவிப்பு அனுப்பப்பட்டது.",
@@ -437,6 +453,8 @@ const ta: Dict = {
   "pn.relTitle": "{place}: மேலே நீர் திறக்கப்பட்டது",
   "pn.relBody": "{name} தனது மதகுகளைத் திறந்துள்ளது. உங்கள் அருகில் மட்டங்கள் சில மணி நேரத்தில் உயரலாம். பார்க்கத் திறக்கவும்.",
   "pn.relBodyReported": "{name} தனது மதகுகளைத் திறந்ததாகத் தெரிவிக்கப்படுகிறது (செய்தி, அதிகாரப்பூர்வமற்றது). உங்கள் அருகில் மட்டங்கள் உயரலாம். பார்க்கத் திறக்கவும்.",
+  "pn.newsTitle": "செய்தி: {headline}",
+  "pn.newsBody": "{source} தெரிவிக்கிறது. இது செய்தி அறிக்கை, அதிகாரப்பூர்வ எச்சரிக்கை அல்ல. பார்க்கத் திறக்கவும்.",
   // draft translation, not yet reviewed by a native speaker
   "pn.rainRisk": "மேல்பகுதியில் கனமழை எதிர்பார்க்கப்படுகிறது, எனவே எதிர்பார்த்ததை விட வேகமாக உயரலாம்.",
   "pn.rainMeasured": "மேல்பகுதியில் மிகக் கனமழை அளக்கப்பட்டது, எனவே வேகமாக உயரலாம்.",
@@ -472,9 +490,10 @@ export type PushPlace = {
 export type PushMessage = { title: string; body: string };
 
 /** The wording of a rise ping, an all-clear and the morning summary, in the subscriber's language. */
-export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "release", places: PushPlace[], extra?: { reservoir?: string; confirmed?: boolean; rainRisk?: boolean | "measured" | null }): PushMessage {
+export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "release" | "news", places: PushPlace[], extra?: { headline?: string; source?: string; reservoir?: string; confirmed?: boolean; rainRisk?: boolean | "measured" | null }): PushMessage {
   const rt = rtFor(lang);
   if (kind === "test") return { title: rt("pn.testTitle"), body: rt("pn.testBody") };
+  if (kind === "news") return { title: rt("pn.newsTitle", { headline: extra?.headline ?? "" }), body: rt("pn.newsBody", { source: extra?.source ?? "" }) };
   if (kind === "release") {
     const name = extra?.reservoir ?? "";
     return { title: rt("pn.relTitle", { place: places[0].name }), body: rt(extra?.confirmed === false ? "pn.relBodyReported" : "pn.relBody", { name }) };

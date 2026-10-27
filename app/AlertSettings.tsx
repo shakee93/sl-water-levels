@@ -288,6 +288,18 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
               <Toggle id="as-ac" checked={prefs.allClear} onChange={(v) => change({ allClear: v })} title={rt("as.allClear")} />
 
               <div className="mt-3 border-t border-slate-100 dark:border-slate-800" />
+              <Toggle id="as-nw" checked={prefs.news} onChange={(v) => change({ news: v })} title={rt("as.news")} help={rt("as.newsHelp")} />
+              {prefs.news && (
+                <div className="ml-8 pb-1">
+                  <label htmlFor="as-ns" className="sr-only">{rt("as.news")}</label>
+                  <select id="as-ns" value={prefs.newsScope} onChange={(e) => change({ newsScope: e.target.value === "mine" ? "mine" : "all" })} className={`${select} w-full`}>
+                    <option value="all">{rt("as.newsAll")}</option>
+                    <option value="mine">{rt("as.newsMine")}</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="mt-3 border-t border-slate-100 dark:border-slate-800" />
               <Toggle id="as-mo" checked={prefs.morning} onChange={(v) => change({ morning: v })} title={rt("as.morning")} help={rt("as.morningHelp")} />
               {prefs.morning && (
                 <div className="ml-8 flex items-center gap-2 pb-1">

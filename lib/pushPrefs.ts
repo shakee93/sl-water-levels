@@ -26,6 +26,10 @@ export type Prefs = {
   quiet: { from: string; to: string } | null;
   /** Occasional announcements from the site (owner broadcasts). */
   announce: boolean;
+  /** Opt-in "Flood news" alert: a news report (never an official warning) about floods or water releases (scripts/push-news.mjs). Off for everyone unless chosen. */
+  news: boolean;
+  /** "all" = anywhere in Sri Lanka; "mine" = only stories that name one of this person's places or the river they sit on. */
+  newsScope: "all" | "mine";
 };
 
 export const DEFAULT_PREFS: Prefs = {
@@ -39,6 +43,8 @@ export const DEFAULT_PREFS: Prefs = {
   morningAt: "06:00",
   quiet: null,
   announce: true,
+  news: false,
+  newsScope: "all",
 };
 
 export const MORNING_TIMES = ["05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00"];
@@ -72,6 +78,8 @@ export function parsePrefs(raw: unknown, legacyMorning = false): Prefs {
     morningAt: at,
     quiet,
     announce: bool(o.announce, true),
+    news: bool(o.news, false),
+    newsScope: o.newsScope === "mine" ? "mine" : "all",
   };
 }
 
