@@ -5,13 +5,10 @@ import { basinPath, stationPath } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
-import { rtFor } from "@/lib/i18n/reservoirs";
 import { FooterLangLinks } from "./FooterLangLinks";
-import { statusT } from "@/lib/i18n/status";
-import { nwFor } from "@/lib/i18n/news";
-import { ttFor } from "@/lib/i18n/town";
+import { navGroups } from "@/lib/navGroups";
 
-import { MADE_BY, RESEARCH, STRIP } from "@/lib/i18n/footer";
+import { MADE_BY, STRIP } from "@/lib/i18n/footer";
 import { X_HANDLE } from "@/lib/seo";
 
 // Phones (below sm) get a one-line strip instead of the big footer: apps do not have footers, and the links live in the
@@ -88,32 +85,37 @@ async function FullFooter({ lang }: { lang: Locale }) {
           </ul>
         </div>
 
-        <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("footer.site")}</h4>
-          <ul className="grid grid-cols-2 gap-x-3 sm:block sm:space-y-1">
-            {[
-              ["/", t("footer.home")],
-              ["/reservoirs", rtFor(lang)("nav")],
-              ["/flood", ttFor(lang)("crumb")],
-              ["/news", nwFor(lang)("crumb")],
-              ["/history", t("footer.floodHistory")],
-              ["/help", t("footer.floodHelp")],
-              ["/about", t("footer.aboutMethod")],
-              ["/research", RESEARCH[lang]],
-              ["/status", statusT(lang)("footer")],
-            ].map(([href, label]) => (
-              <li key={href}>
-                <Link href={p(href)} className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
-                  {label}
-                </Link>
-              </li>
-            ))}
-            <li>
-              <a href="https://github.com/shakee93/sl-water-levels" target="_blank" rel="noreferrer" className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
-                {t("footer.source")}
-              </a>
-            </li>
-          </ul>
+        <div className="space-y-4">
+          {navGroups(lang, t).map((g) => (
+            <div key={g.id} className="space-y-2">
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{g.heading}</h4>
+              <ul className="grid grid-cols-2 gap-x-3 sm:block sm:space-y-1">
+                {g.items.map((it) => (
+                  <li key={it.href}>
+                    <Link href={p(it.href)} className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
+                      {it.label}
+                    </Link>
+                  </li>
+                ))}
+                {g.id === "about" && (
+                  <>
+                    {X_HANDLE && (
+                      <li>
+                        <a href={`https://x.com/${X_HANDLE}`} target="_blank" rel="noreferrer me" className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
+                          @{X_HANDLE}
+                        </a>
+                      </li>
+                    )}
+                    <li>
+                      <a href="https://github.com/shakee93/sl-water-levels" target="_blank" rel="noreferrer" className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
+                        {t("footer.source")}
+                      </a>
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+          ))}
         </div>
 
         <div className="space-y-2">

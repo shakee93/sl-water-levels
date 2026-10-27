@@ -5,8 +5,9 @@
 // MobileMenu through the "sl:open-menu" event. The page keeps its own bottom padding in app/[lang]/layout.tsx.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, MapPin, Waves, History, Menu } from "lucide-react";
+import { House, MapPin, Waves, Newspaper, Menu } from "lucide-react";
 import { rtFor } from "@/lib/i18n/return";
+import { nwFor } from "@/lib/i18n/news";
 import { rtFor as resFor } from "@/lib/i18n/reservoirs";
 import { splitLocale } from "@/lib/i18n/config";
 import { useI18n } from "./LocaleProvider";
@@ -15,7 +16,7 @@ export const OPEN_MENU_EVENT = "sl:open-menu";
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500";
 
 export function BottomTabs() {
-  const { lang, t, p } = useI18n();
+  const { lang, p } = useI18n();
   const rt = rtFor(lang);
   const path = splitLocale(usePathname() || "/").path;
   const on = (base: string) => (base === "/" ? path === "/" : path === base || path.startsWith(base + "/"));
@@ -24,7 +25,7 @@ export function BottomTabs() {
     { href: p("/"), label: rt("tab.home"), icon: House, active: path === "/", event: "tab_home" },
     { href: p("/flood"), label: rt("tab.towns"), icon: MapPin, active: on("/flood"), event: "tab_towns" },
     { href: p("/reservoirs"), label: resFor(lang)("nav"), icon: Waves, active: on("/reservoirs"), event: "tab_reservoirs" },
-    { href: p("/history"), label: t("nav.history"), icon: History, active: on("/history"), event: "tab_history" },
+    { href: p("/news"), label: nwFor(lang)("nav"), icon: Newspaper, active: on("/news"), event: "tab_news" },
   ];
   const item = "relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 pt-1.5 pb-1 text-[11px] font-medium leading-tight";
 

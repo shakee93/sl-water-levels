@@ -33,12 +33,12 @@ export const ta: Dict = {
   "footer.basins": "ஆறுகள்", // needs native review
   "footer.site": "ஆராய்க", // needs native review
   "footer.aboutMethod": "பற்றி", // needs native review
-  "footer.floodHelp": "வெள்ள உதவி", // needs native review
+  "footer.floodHelp": "உதவி", // needs native review
   "footer.source": "GitHub", // needs native review
   "footer.data": "தரவும் நன்றியும்", // needs native review
   "footer.notOfficial": "இது அதிகாரப்பூர்வ எச்சரிக்கை சேவை அல்ல. அவசரத்தில் 117 ஐ அழைக்கவும்.",
   "footer.home": "முகப்பு", // needs native review
-  "footer.floodHistory": "வெள்ள வரலாறு", // needs native review
+  "footer.floodHistory": "வரலாறு", // needs native review
   "footer.credits": "அளவீடுகள்: நீர்ப்பாசனத் திணைக்களம் மற்றும் மகாவலி அதிகாரசபை. எச்சரிக்கைகள்: அனர்த்த முகாமைத்துவ நிலையம். மழை முன்னறிவிப்பு: Open-Meteo. வரைபடம் © OpenStreetMap பங்களிப்பாளர்கள்.", // needs native review
   "footer.copyright": "© {year} இலங்கை நீர் மட்டங்கள். இலங்கையில் உருவாக்கப்பட்டது.",
 
@@ -359,7 +359,7 @@ export const ta: Dict = {
   "hist.stationSeason": "{name} இல் வெள்ள எச்சரிக்கைகள் வருவது {season}.",
   "hist.stationDays": "நவம்பர் 2025 முதல் {n} நாட்கள் வெள்ளம் இருந்தது.",
   "hist.stationLatest": "கடைசி: {range}.",
-  "hist.nav": "வெள்ள வரலாறு",
+  "hist.nav": "வரலாறு",
   "hist.eyebrow": "வெள்ள வரலாறு",
   "hist.h1All": "நம் ஆறுகள் எப்போது பெருக்கெடுக்கின்றன?",
   "hist.h1Where": "{where} எப்போது பெருக்கெடுக்கிறது?",
@@ -495,7 +495,7 @@ export const ta: Dict = {
   "help.metaTitle": "இலங்கை வெள்ள உதவி — அவசர எண்கள், என்ன செய்வது",
   "help.metaDesc": "இலங்கையில் வெள்ளத்துக்கான அவசர எண்கள் (பேரிடர் மேலாண்மை மையம் 117, பொலிஸ் 119, அம்புலன்ஸ் 1990), உங்கள் மாவட்டப் பேரிடர் மேலாண்மை அலுவலகம், வெள்ளத்துக்கு முன், போது, பின் செய்ய வேண்டிய சில படிகள்.",
   "help.eyebrow": "உதவி",
-  "help.h1": "வெள்ள உதவி",
+  "help.h1": "உதவி",
   "help.danger": "இப்போது ஆபத்தில் இருக்கிறீர்களா? 117 ஐ அழைக்கவும்.",
   "help.emergency": "அவசர எண்கள்",
   "help.callN": "{n} ஐ அழைக்கவும்",

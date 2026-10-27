@@ -33,12 +33,12 @@ export const si: Dict = {
   "footer.basins": "ගංගා", // needs native review
   "footer.site": "ගවේෂණය", // needs native review
   "footer.aboutMethod": "පිළිබඳව", // needs native review
-  "footer.floodHelp": "ගංවතුර උදව්", // needs native review
+  "footer.floodHelp": "උදව්", // needs native review
   "footer.source": "GitHub", // needs native review
   "footer.data": "දත්ත සහ ස්තූතිය", // needs native review
   "footer.notOfficial": "මෙය නිල අනතුරු ඇඟවීමේ සේවාවක් නොවේ. හදිසි අවස්ථාවක 117 අමතන්න.",
   "footer.home": "මුල් පිටුව", // needs native review
-  "footer.floodHistory": "ගංවතුර ඉතිහාසය", // needs native review
+  "footer.floodHistory": "ඉතිහාසය", // needs native review
   "footer.credits": "මට්ටම් කියවීම්: වාරිමාර්ග දෙපාර්තමේන්තුව සහ මහවැලි අධිකාරිය. අනතුරු ඇඟවීම්: ආපදා කළමනාකරණ මධ්‍යස්ථානය. වැසි පුරෝකථන: Open-Meteo. සිතියම © OpenStreetMap දායකයින්.", // needs native review
   "footer.copyright": "© {year} ශ්‍රී ලංකා ජල මට්ටම්. ශ්‍රී ලංකාවේ නිර්මාණය කරන ලදී.",
 
@@ -359,7 +359,7 @@ export const si: Dict = {
   "hist.stationSeason": "{name} හි ගංවතුර අනතුරු ඇඟවීම් එන්නේ {season}.",
   "hist.stationDays": "2025 නොවැම්බර් සිට දින {n}ක් ගංවතුර තිබුණා.",
   "hist.stationLatest": "අවසන්: {range}.",
-  "hist.nav": "ගංවතුර ඉතිහාසය",
+  "hist.nav": "ඉතිහාසය",
   "hist.eyebrow": "ගංවතුර ඉතිහාසය",
   "hist.h1All": "අපේ ගංගා ගංවතුරට යන්නේ කවදාද?",
   "hist.h1Where": "{where} ගංවතුරට යන්නේ කවදාද?",
@@ -495,7 +495,7 @@ export const si: Dict = {
   "help.metaTitle": "ශ්‍රී ලංකාවේ ගංවතුර උදව් — හදිසි අංක, කළ යුතු දේ",
   "help.metaDesc": "ශ්‍රී ලංකාවේ ගංවතුර සඳහා හදිසි අංක (ආපදා කළමනාකරණ මධ්‍යස්ථානය 117, පොලිසිය 119, ගිලන් රථ 1990), ඔබේ දිස්ත්‍රික්කයේ ආපදා කළමනාකරණ කාර්යාලය, සහ ගංවතුරට පෙර, අතරතුර සහ පසු කළ යුතු දේ.",
   "help.eyebrow": "උදව්",
-  "help.h1": "ගංවතුර උදව්",
+  "help.h1": "උදව්",
   "help.danger": "දැන් අනතුරකද? 117 අමතන්න.",
   "help.emergency": "හදිසි අංක",
   "help.callN": "{n} අමතන්න",

@@ -11,6 +11,8 @@ import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { nwFor } from "@/lib/i18n/news";
+import { HeaderTownsLink } from "./HeaderTownsLink";
+import { ttFor } from "@/lib/i18n/town";
 import { getSearchStations, type SearchStation } from "./PlaceSearchData";
 import { X_HANDLE } from "@/lib/seo";
 import { XLogo } from "./XLogo";
@@ -77,6 +79,8 @@ export async function Header({ lang }: { lang: Locale }) {
             </details>
           )}
 
+          <HeaderTownsLink href={p("/flood")} label={ttFor(lang)("crumb")} />
+
           <Link
             href={p("/reservoirs")}
             data-umami-event="reservoirs_nav_click"
@@ -91,14 +95,6 @@ export async function Header({ lang }: { lang: Locale }) {
             className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             {nwFor(lang)("nav")}
-          </Link>
-
-          <Link
-            href={p("/history")}
-            data-umami-event="history_nav_click"
-            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            {t("nav.history")}
           </Link>
 
           <Link

@@ -5,8 +5,8 @@ import type { Locale } from "./config";
 
 const en = {
   nav: "News",
-  crumb: "Flood news",
-  h1: "Flood news",
+  crumb: "News",
+  h1: "News",
   lead: "Recent news reports about floods, rivers, reservoirs, heavy rain, cyclones and landslides in Sri Lanka, from Newswire and other Sri Lankan outlets.",
   notice: "News reports, not official. For warnings check the Disaster Management Centre (hotline 117) and the Irrigation Department.",
   metaTitle: "Flood news Sri Lanka: latest reports on floods, rain, rivers and reservoirs",
@@ -39,8 +39,8 @@ type K = keyof typeof en;
 
 const si: Record<K, string> = {
   nav: "පුවත්", // needs native review
-  crumb: "ගංවතුර පුවත්", // needs native review
-  h1: "ගංවතුර පුවත්", // needs native review
+  crumb: "පුවත්", // needs native review
+  h1: "පුවත්", // needs native review
   lead: "ශ්‍රී ලංකාවේ ගංවතුර, ගංගා, ජලාශ, තද වැසි, සුළි සුළං සහ නායයෑම් පිළිබඳ මෑත පුවත් වාර්තා.", // needs native review
   notice: "මේවා පුවත් වාර්තා මිස නිල තොරතුරු නොවේ. අනතුරු ඇඟවීම් සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානය (ඇමතුම් 117) සහ වාරිමාර්ග දෙපාර්තමේන්තුව පරීක්ෂා කරන්න.", // needs native review
   metaTitle: "ශ්‍රී ලංකා ගංවතුර පුවත්: ගංවතුර, වැසි, ගංගා සහ ජලාශ පිළිබඳ නවතම වාර්තා", // needs native review
@@ -72,8 +72,8 @@ const si: Record<K, string> = {
 
 const ta: Record<K, string> = {
   nav: "செய்திகள்", // needs native review
-  crumb: "வெள்ளச் செய்திகள்", // needs native review
-  h1: "வெள்ளச் செய்திகள்", // needs native review
+  crumb: "செய்திகள்", // needs native review
+  h1: "செய்திகள்", // needs native review
   lead: "இலங்கையில் வெள்ளம், ஆறுகள், நீர்த்தேக்கங்கள், கனமழை, சூறாவளி மற்றும் நிலச்சரிவு பற்றிய சமீபத்திய செய்தி அறிக்கைகள்.", // needs native review
   notice: "இவை செய்தி அறிக்கைகள், அதிகாரப்பூர்வமானவை அல்ல. எச்சரிக்கைகளுக்கு பேரிடர் முகாமைத்துவ நிலையம் (117) மற்றும் நீர்ப்பாசனத் திணைக்களத்தைப் பார்க்கவும்.", // needs native review
   metaTitle: "இலங்கை வெள்ளச் செய்திகள்: வெள்ளம், மழை, ஆறுகள், நீர்த்தேக்கங்கள் பற்றிய சமீபத்திய அறிக்கைகள்", // needs native review
