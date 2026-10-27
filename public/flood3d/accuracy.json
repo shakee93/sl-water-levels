@@ -523,56 +523,56 @@
   {
    "event": "E1",
    "area": "corridor",
-   "csi": 0.875,
+   "csi": 0.829,
    "hit": 1.0,
-   "far": 0.125,
+   "far": 0.171,
    "n_wet": 35013,
-   "n_pred": 40029
+   "n_pred": 42253
   },
   {
    "event": "E1",
    "area": "Kelaniya",
-   "csi": 0.745,
+   "csi": 0.653,
    "hit": 1.0,
-   "far": 0.255,
+   "far": 0.347,
    "n_wet": 11721,
-   "n_pred": 15729
+   "n_pred": 17951
   },
   {
    "event": "E1",
    "area": "Wellampitiya",
-   "csi": 0.569,
+   "csi": 0.46,
    "hit": 1.0,
-   "far": 0.431,
+   "far": 0.54,
    "n_wet": 3391,
-   "n_pred": 5964
+   "n_pred": 7377
   },
   {
    "event": "E3",
    "area": "corridor",
-   "csi": 0.802,
-   "hit": 0.839,
-   "far": 0.052,
+   "csi": 0.782,
+   "hit": 0.84,
+   "far": 0.081,
    "n_wet": 13148,
-   "n_pred": 11628
+   "n_pred": 12014
   },
   {
    "event": "E3",
    "area": "Kelaniya",
-   "csi": 0.738,
-   "hit": 0.797,
-   "far": 0.092,
+   "csi": 0.702,
+   "hit": 0.799,
+   "far": 0.148,
    "n_wet": 6452,
-   "n_pred": 5669
+   "n_pred": 6055
   },
   {
    "event": "E3",
    "area": "Wellampitiya",
-   "csi": 0.7,
+   "csi": 0.644,
    "hit": 0.863,
-   "far": 0.212,
+   "far": 0.282,
    "n_wet": 1530,
-   "n_pred": 1676
+   "n_pred": 1839
   }
  ],
  "reliability_cell_part": [

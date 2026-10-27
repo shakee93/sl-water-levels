@@ -358,8 +358,14 @@ while _hp:
                 if _nf < _F[_rr, _cc]: _F[_rr, _cc] = _nf; heapq.heappush(_hp, (_nf, _rr, _cc))
 _rr_, _cc_ = np.mgrid[0:H, 0:W]
 _lon, _lat = Ti.transform(X0 + (_cc_ + 0.5) * RES, Y1 - (_rr_ + 0.5) * RES)
-PZ = (_lon >= POOL_ZONE[0]) & (_lon <= POOL_ZONE[1]) & (_lat >= POOL_ZONE[2]) & (_lat <= POOL_ZONE[3]) & LAND & ~DRAIN & np.isfinite(_F)
-_Lp = np.where(PZ, pool_s(_F), np.inf)
+# The box is only where the pool was calibrated. Beyond it the pool fades out over 2.5 km (taper 1 -> 0): a cell there needs F / taper, so the pool's reach follows the
+# terrain (priority-flood connection) and fades smoothly instead of ending at a seam; far away the old level stands. Keep POOL_FADE_M in step with depth.ts.
+POOL_FADE_M = 2500.0
+_dx = np.maximum.reduce([POOL_ZONE[0] - _lon, _lon - POOL_ZONE[1], np.zeros_like(_lon)]) * 111320.0 * np.cos(np.radians(_lat))
+_dy = np.maximum.reduce([POOL_ZONE[2] - _lat, _lat - POOL_ZONE[3], np.zeros_like(_lat)]) * 110574.0
+TAPER = np.clip(1.0 - np.hypot(_dx, _dy) / POOL_FADE_M, 0.0, 1.0)
+PZ = (TAPER > 0.05) & LAND & ~DRAIN & np.isfinite(_F)
+_Lp = np.where(PZ, pool_s(_F / np.maximum(TAPER, 0.05)), np.inf)
 _before = float(np.mean((Lft <= 8.5)[PZ & np.isfinite(Lft)]))
 _take = PZ & (_Lp < np.where(np.isfinite(Lft), Lft, 99.0))
 Lft = np.where(_take, _Lp, Lft)

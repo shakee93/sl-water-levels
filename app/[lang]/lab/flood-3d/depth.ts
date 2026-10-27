@@ -11,14 +11,19 @@ export const OPEN_OFFSET_M = 0.3;
 const RAMP_SETTLED_FT = 1.0, RAMP_OPEN_FT = 0.3;
 /** lon0, lon1, lat0, lat1: keep in step with POOL_ZONE in scripts/flood3d/prep.py */
 export const POOL_ZONE = [79.885, 79.925, 6.915, 6.955] as const;
-export const inPool = (lon: number, lat: number) => lon >= POOL_ZONE[0] && lon <= POOL_ZONE[1] && lat >= POOL_ZONE[2] && lat <= POOL_ZONE[3];
+export const POOL_FADE_M = 2500; // keep in step with prep.py
+/** 1 inside the calibrated box, fading to 0 over POOL_FADE_M beyond it. */
+export function poolTaper(lon: number, lat: number): number {
+  const dx = Math.max(POOL_ZONE[0] - lon, lon - POOL_ZONE[1], 0) * 111320 * Math.cos((lat * Math.PI) / 180), dy = Math.max(POOL_ZONE[2] - lat, lat - POOL_ZONE[3], 0) * 110574;
+  return Math.min(1, Math.max(0, 1 - Math.hypot(dx, dy) / POOL_FADE_M));
+}
 /** Pool surface (m) at a Nagalagam stage (ft). */
 export const poolW = (s: number) => 0.81 * Math.min(s, 7.4) + 0.25 * Math.max(0, s - 7.4);
 
 /** Depth in metres at a cell with flood level L (ft at Nagalagam Street) when the river is at lv (ft). 0 = dry. kind: 0 open, 1 settled, 2 pool. */
-export function depthM(lv: number, L: number, kind: 0 | 1 | 2): number {
+export function depthM(lv: number, L: number, kind: 0 | 1 | 2, taper = 1): number {
   const d = lv - L;
   if (!(d > 0) || !Number.isFinite(L)) return 0;
-  if (kind === 2) return poolW(lv) - poolW(L);
+  if (kind === 2) return taper * (poolW(lv) - poolW(L));
   return (kind === 1 ? SETTLED_OFFSET_M * Math.min(1, d / RAMP_SETTLED_FT) : OPEN_OFFSET_M * Math.min(1, d / RAMP_OPEN_FT)) + FT * d;
 }

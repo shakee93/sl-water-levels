@@ -10,7 +10,7 @@ import { loadBaseStyle } from "./mapStyle";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
 import { makeT, type Lang } from "./strings";
 import { ReplayCard, replayTime, type ReplayData } from "./Replay";
-import { depthM, inPool } from "./depth";
+import { depthM, poolTaper } from "./depth";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
@@ -732,7 +732,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           add(nag.trend ? tr("River now {ft} ft and {trend}.", { ft: f1(st.level), trend: tr(nag.trend) }) : tr("River now {ft} ft", { ft: f1(st.level) }));
         } else add(L <= st.level ? tr("At {ft} ft this spot would be under water.", { ft: f1(st.level) }) : tr("At {ft} ft this spot would be dry.", { ft: f1(st.level) }));
         // how deep (an estimate, see depth.ts), tied to the replay time, the live reading or the chosen level
-        const dm = depthM(st.level, L, inPool(ev.lngLat.lng, ev.lngLat.lat) ? 2 : g.built[i] ? 1 : 0);
+        const tp = poolTaper(ev.lngLat.lng, ev.lngLat.lat), dm = depthM(st.level, L, tp >= 0.5 ? 2 : g.built[i] ? 1 : 0, tp);
         if (dm > 0.05) {
           const ftw = Math.max(1, Math.round((dm / 0.3048) * 2) / 2);
           const when = replayRef.current && rp ? replayTime(rp, rpI, lang) : st.isLive && nag?.hourlyAt ? clock(nag.hourlyAt) : "";
