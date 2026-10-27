@@ -142,7 +142,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
       const applies = byDistrict || (byBasin && !named && gaugeHigh);
       const sev: typeof w.severity = applies || w.severity === "none" || w.severity === "advisory" ? w.severity : "advisory";
       if (!warning || SEV_RANK.indexOf(sev) > SEV_RANK.indexOf(warning.severity)) {
-        warning = { severity: sev, source: w.source, area: byBasin ? warnBasin! : place.district };
+        warning = { severity: sev, source: w.source, area: byBasin ? warnBasin! : place.district, url: w.url, issuedAt: w.issuedAt };
       }
     }
   }

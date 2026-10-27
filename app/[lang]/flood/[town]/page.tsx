@@ -29,6 +29,7 @@ import { MyStreetLevel } from "@/app/flood/MyStreetLevel";
 import { TownRain } from "@/app/flood/TownRain";
 import { RainMapLink } from "@/app/rain/RainMapLink";
 import { TownVerdict } from "@/app/flood/TownVerdict";
+import { getTownPeople } from "@/lib/townPeople";
 import { AnswerLine, JsonLd } from "@/app/Answer";
 import { NextHourFaq } from "@/app/NextHour";
 import { townAnswer, townFaq } from "@/lib/answers";
@@ -76,6 +77,8 @@ export default async function TownPage({ params }: Params) {
   // canal levels (our D1 archive of CUrW / SLLDC, time-boxed) only for canal-area towns; fails soft to nothing
   const [data, canals] = await Promise.all([loadTown(place, undefined, { budgetMs: PAGE_BUDGET_MS }), basinOfTown(place.slug) ? getCanals() : Promise.resolve(null)]);
   const g = data.gauge;
+  // what people near the town answered today: counts only, hidden below K_MIN, fails soft (lib/townPeople.ts)
+  const people = await getTownPeople(place.slug, g && g.km < 1.5 ? g.name : "");
   const national = await getNational().catch(() => [] as NationalStation[]); // already cached by loadTown
   const canonical = p(`/flood/${place.slug}`);
   const serverNow = data.input.now;
@@ -157,6 +160,7 @@ export default async function TownPage({ params }: Params) {
           office={data.office}
           serverNow={serverNow}
           href={canonical}
+          people={people}
         />
 
         <YourRiver primary={data.input.primary} secondary={data.input.secondary} townTone={risk.tone} national={national} lang={lang} t={t} tt={tt} p={p} />

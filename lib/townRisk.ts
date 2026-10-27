@@ -164,7 +164,7 @@ export type ReleaseIn = {
   /** The reservoir is linked directly above the gauge (lib/reservoirs.ts). Missing = yes. */
   direct?: boolean;
 };
-export type WarningIn = { severity: "none" | "advisory" | "alert" | "minor flood" | "major flood" | "evacuation"; source: string; area: string };
+export type WarningIn = { severity: "none" | "advisory" | "alert" | "minor flood" | "major flood" | "evacuation"; source: string; area: string; /** The bulletin (shown as a link), when known. */ url?: string; /** ISO 8601 issue time, when known. */ issuedAt?: string | null };
 
 export type StreetRainIn = {
   /** The number the rule uses: 24 h sum of hourly means, each hour clipped at 15 mm. */
@@ -229,6 +229,8 @@ export type TownRisk = {
   hourKey: "dir.tide" | "dir.rising" | "dir.slow" | "dir.falling" | "dir.steady" | "dir.unknown";
   /** Next-24-hours line. */
   day: { key: string; vars: Record<string, string | number> };
+  /** Why the step is what it is, when it comes from an official warning or a confirmed release rather than the gauge's own level. Display only. */
+  why: { kind: "warning" } | { kind: "release"; res: string; cusecs: number } | null;
   /** Action sentence key, or null. */
   actionKey: "a.alert" | "a.minor" | "a.major" | null;
 };
@@ -520,6 +522,16 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
   }
 
   const final: Tone = tone ?? "stale";
+  // The step is higher than the river alone gives: say which official input holds it there (a note, not a rule).
+  const fromRiver = river != null && rank(river) >= rank(final);
+  const why: TownRisk["why"] =
+    final === "stale" || rank(final) < rank("alert") || fromRiver || sriver
+      ? null
+      : warning && floor && rank(floor) >= rank(final)
+        ? { kind: "warning" }
+        : relAlert
+          ? { kind: "release", res: relAlert.reservoir, cusecs: Math.round(relAlert.cusecs) }
+          : null;
   return {
     tone: final,
     baseTone,
@@ -530,6 +542,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     lowSpot,
     trend,
     reasons,
+    why,
     hourKey: gauge ? hourKey : "dir.unknown",
     day,
     actionKey: final === "alert" ? "a.alert" : final === "minor" ? "a.minor" : final === "major" ? "a.major" : null,

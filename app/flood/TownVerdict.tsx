@@ -8,7 +8,10 @@ import { CALL } from "../verdict";
 import { assessTown, type ReasonKind, type TownRisk, type TownRiskInput } from "@/lib/townRisk";
 import { ttFor, type TKey } from "@/lib/i18n/town";
 import { formatKm } from "@/lib/nearby";
-import { riverName, clock } from "@/lib/i18n/format";
+import { riverName, clock, dayTick } from "@/lib/i18n/format";
+import { markGap, dayOutlook } from "@/lib/townNotes";
+import type { TownPeople } from "@/lib/townPeople";
+import { isTidalStation } from "@/lib/verdictLift";
 import { formatLevel, type Unit } from "@/lib/units";
 import type { Thresholds } from "@/lib/readings";
 import { useMyLevel } from "./useMyLevel";
@@ -49,10 +52,12 @@ export type TownVerdictProps = {
   office: { district: string; tel: string } | null;
   serverNow: number;
   href: string;
+  /** Aggregated answers from people near the town (lib/townPeople.ts); null = hidden (below the privacy minimum or unavailable). */
+  people?: TownPeople | null;
 };
 
 /** Verdict card + "Why" list for a town. Client-side because the visitor's own street level (localStorage) changes it. */
-export function TownVerdict({ townName, input, gauge, office, serverNow, href }: TownVerdictProps) {
+export function TownVerdict({ townName, input, gauge, office, serverNow, href, people }: TownVerdictProps) {
   const { lang, t } = useI18n();
   const tt = ttFor(lang);
   const probe = assessTown(input, null);
@@ -81,14 +86,90 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
   // a town the rules mark "watch" still reads Normal; the strongest reason is the small note under it (owner, 26 Oct 2026)
   const lead = tone === "watch" ? (r.reasons.find((x) => x.warn) ?? r.reasons[0]) : undefined;
   const nearNote = lead ? tt(lead.key as TKey, fill(lead.vars)) : null;
-  const dayVars = r.day.vars;
+  const HOUR = 3_600_000;
+  const timeAt = (h: number) => clock(serverNow + h * HOUR, t);
+  const fmtFt = (ft: number) => `${ft.toFixed(1)} ft`;
+
+  // ---- notes under the verdict. Display only: they never change the step, pill, sticky bar, push or tone.
+  // gauge marks are only used when the gauge the estimate rests on is the one the card got thresholds for
+  const gg = g && gauge && gauge.station === g.station && gauge.level != null && !stale ? gauge : null;
+
+  // 1. why this step: it comes from an official warning or a confirmed release, not the gauge's own level
+  let whyNote: React.ReactNode = null;
+  if (r.why && elevated) {
+    const w = input.warning;
+    if (r.why.kind === "warning" && w) {
+      const iso = w.issuedAt ? Date.parse(w.issuedAt) : NaN;
+      const when = Number.isFinite(iso) ? (dayTick(iso, t) === dayTick(serverNow, t) ? clock(iso, t) : `${dayTick(iso, t)} ${clock(iso, t)}`) : null;
+      const vars = fill({ source: w.source, area: w.area });
+      const text = when ? tt("why.warningAt", { ...vars, time: when }) : tt("why.warning", vars);
+      whyNote = (
+        <>
+          {text}
+          {w.url && (
+            <>
+              {" · "}
+              <a href={w.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-slate-900 dark:hover:text-slate-100">
+                {tt("why.read")}
+              </a>
+            </>
+          )}
+        </>
+      );
+    } else if (r.why.kind === "release") {
+      whyNote = tt("why.release", { res: r.why.res, cusecs: r.why.cusecs.toLocaleString("en-US") });
+    }
+  }
+
+  // 2. distance to the next official mark, in the gauge's own unit (skipped when the unit is unknown)
+  let gapNote: string | null = null;
+  const gap = gg ? markGap(gg.level, gg.thresholds, gg.unit) : null;
+  if (gg && gap) {
+    const m = (k: "alert" | "minor" | "major") => tt(`mk.${k}` as TKey);
+    const atMark = gap.above && gap.above.ft < 0.1;
+    const text = atMark
+      ? tt("gap.at", { m: m(gap.above!.mark) })
+      : gap.above && gap.below
+        ? tt("gap.aboveBelow", { a: fmtFt(gap.above.ft), m: m(gap.above.mark), d: fmtFt(gap.below.ft), m2: m(gap.below.mark) })
+        : gap.above
+          ? tt("gap.above", { a: fmtFt(gap.above.ft), m: m(gap.above.mark) })
+          : gap.below
+            ? tt("gap.below", { d: fmtFt(gap.below.ft), m: m(gap.below.mark) })
+            : null;
+    gapNote = text && (gg.km >= ON_GAUGE_KM ? `${gg.name}: ${text}` : text);
+  }
+
+  // 3. a concrete "Next 24 hours" when the line would only say "Risk stays high" (forecast central levels the tiles already use)
+  let dayKey = r.day.key as TKey;
+  let dayVars: Record<string, string | number> = r.day.vars;
+  if (r.day.key === "n24.stay" && gg && !isTidalStation(gg.station) && input.forecast && input.forecast.status !== "unavailable") {
+    const o = dayOutlook({ level: gg.level, horizons: input.forecast.horizons, alertMark: gg.thresholds.alert, unit: gg.unit });
+    if (o) {
+      const lv = (v: number) => formatLevel(v, gg.unit);
+      if (o.kind === "peak") { dayKey = "n24.peak"; dayVars = { level: lv(o.level), time: timeAt(o.h) }; }
+      else if (o.kind === "rising") { dayKey = "n24.rising"; dayVars = { level: lv(o.level) }; }
+      else if (o.kind === "backBelow") { dayKey = "n24.back"; dayVars = { mark: lv(o.mark), time: timeAt(o.h) }; }
+      else if (o.kind === "flat") { dayKey = "n24.flat"; dayVars = { level: lv(o.level) }; }
+      else { dayKey = "n24.easing"; dayVars = { level: lv(o.level) }; }
+    }
+  }
+
+  // 4. what people near the town said today (counts only, hidden below the minimum)
+  let peopleNote: string | null = null;
+  if (people?.answers) {
+    const a = people.answers;
+    const parts = [a.yes > 0 ? tt("people.yes", { n: a.yes }) : null, a.worse > 0 ? tt("people.worse", { n: a.worse }) : null, a.better > 0 ? tt("people.better", { n: a.better }) : null].filter(Boolean);
+    if (parts.length) peopleNote = tt("people.line", { n: a.n, town: townName, parts: parts.join(", ") });
+  }
+  const waterNote = people?.water ? tt("people.water", { n: people.water.n, h: people.water.hours }) : null;
+  const moreNotes: React.ReactNode[] = [whyNote, gapNote, peopleNote, waterNote].filter((x) => x != null);
   return (
     <>
       <VerdictCard
         tone={tone}
         verdict={verdict}
         direction={g ? t3(r.hourKey) : null}
-        fact={stale && !r.heavyRain ? null : t3(r.day.key as TKey, dayVars)}
+        fact={stale && !r.heavyRain ? null : t3(dayKey, dayVars)}
         tide={r.hourKey === "dir.tide"}
         labels={{ direction: t3("label.hour"), fact: t3("label.day") }}
         action={r.actionKey ? t3(r.actionKey) : null}
@@ -96,6 +177,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
         // with a down arrow happened when the past 3 h fell but the forecast turned up).
         outlook={{ trend: HOUR_ARROW[r.hourKey] ?? r.trend, text: <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{note}</p> }}
         note={nearNote}
+        moreNotes={moreNotes}
         call={elevated ? CALL : null}
         office={elevated && office ? { label: t("common.callDmcOffice", { district: office.district }), tel: office.tel } : null}
         footer={

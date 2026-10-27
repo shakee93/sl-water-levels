@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS forecast_feedback (
   notified    INTEGER NOT NULL DEFAULT 0   -- urgent Slack ping: 0 = none needed, 1 = sent, 2 = needed and still to send
 );
 CREATE INDEX IF NOT EXISTS idx_ff_target_day ON forecast_feedback (page, station, town, day);
+CREATE INDEX IF NOT EXISTS idx_ff_town_day ON forecast_feedback (town, day);
 CREATE INDEX IF NOT EXISTS idx_ff_ip ON forecast_feedback (ip_hash, created_ms);
 CREATE INDEX IF NOT EXISTS idx_ff_token ON forecast_feedback (token);
 CREATE TABLE IF NOT EXISTS feedback_digest (day TEXT PRIMARY KEY, sent_ms INTEGER NOT NULL);

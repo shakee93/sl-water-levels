@@ -27,6 +27,7 @@ export const dynamic = "force-dynamic";
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS forecast_feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT NOT NULL, created_ms INTEGER NOT NULL, day TEXT NOT NULL, page TEXT NOT NULL, station TEXT, town TEXT, answer TEXT NOT NULL, river_obs TEXT, rain_obs TEXT, note TEXT, note_tags TEXT, lat_r REAL, lon_r REAL, dist_km REAL, shown_tier TEXT, shown_level REAL, shown_issued_at INTEGER, shown_next_ft REAL, shown_low_ft REAL, shown_high_ft REAL, shown_dir TEXT, shown_method TEXT, shown_rain TEXT, lang TEXT, device TEXT, ip_hash TEXT NOT NULL, details_ms INTEGER, notified INTEGER NOT NULL DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS idx_ff_target_day ON forecast_feedback (page, station, town, day)`,
+  `CREATE INDEX IF NOT EXISTS idx_ff_town_day ON forecast_feedback (town, day)`,
   `CREATE INDEX IF NOT EXISTS idx_ff_ip ON forecast_feedback (ip_hash, created_ms)`,
   `CREATE INDEX IF NOT EXISTS idx_ff_token ON forecast_feedback (token)`,
   `CREATE TABLE IF NOT EXISTS feedback_digest (day TEXT PRIMARY KEY, sent_ms INTEGER NOT NULL)`,
