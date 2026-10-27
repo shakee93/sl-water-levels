@@ -1126,6 +1126,21 @@ before and after. Answers per month per town: `street_flood_reports`. Watch for:
 
 ## X account
 
+**One post per run (aggregation, 27 Oct 2026).** The owner did not want a stream of small posts. Each `x-post` run collects every event that
+would post (river rises, storm updates, reservoirs, warnings, all-clears, the summary) and sends ONE combined post (`lib/xAggregate.ts`): a
+"Water levels, 6:16 am" heading, one line per river / reservoir / warning, most severe first (official warning, Major, Minor, Alert, rain, reservoirs,
+summary, all-clear), "Emergency: 117." when any line is Minor/Major or a warning, and the site link once (only when `X_LINKS` allows, it costs more).
+A lone event keeps its own wording (and the gpt-6-luna writer); combined posts are template-only and every number is checked against the facts.
+- **Hold window:** if a post went out less than `X_MIN_GAP_MIN` minutes ago (default 45) routine updates are kept in the memory (`x_state.main.deferred`,
+  dropped after 3 h) and join the next combined post. Urgent ones (a gauge reaching Minor/Major, any official warning) go at once, together with what is waiting.
+  A post that fails (403/429) keeps its events the same way; the pause-on-401/403/429 rule is unchanged.
+- **Daily cap, budget, dedupe** count the combined post once (key = the event's own, or `combo:<half-hour>:<hash>`).
+- **Length:** 280 weighted characters (links 23). If the lines do not fit, the most severe are kept and it ends "+N more on waterlevels.lk"; never a thread.
+  `X_LONG_POSTS=1` (repository variable; X Premium accounts only, up to 25,000 characters through the API) shows up to 40 lines and no "+N more":
+  `gh variable set X_LONG_POSTS --body 1`. Off by default; a non-Premium account gets an API error for text over 280.
+- Preview without posting: `node --experimental-strip-types --no-warnings scripts/x-post.mjs --mode preview --events events.json`; tests: `scripts/x-aggregate.test.mts`.
+
+
 An automated X (Twitter) account that posts river alerts, all-clears, storm updates and a morning summary. Everything is
 built and runs in **dry-run**: each post is sent to the owner's Slack marked `DRY RUN`, nothing goes to X, until the owner
 creates the account, adds the keys and flips one switch.

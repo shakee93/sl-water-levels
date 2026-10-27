@@ -14,6 +14,10 @@
 // Env: SITE_URL, SLACK_WEBHOOK_URL, CLOUDFLARE_API_TOKEN (state), X_POSTING, X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN,
 //      X_ACCESS_SECRET, OPENAI_API_KEY (the writer, gpt-6-luna; templates without it), X_AI_POLISH=off (turns the writer off), X_AI_TEMPERATURE, X_LANGS=en,si,ta (default en), X_DAILY_MAX,
 //      X_EVENING=on.
+// ONE post per run (lib/xAggregate.ts): several events become one combined post, most severe first; a routine update within
+// X_MIN_GAP_MIN (default 45) minutes of the last post waits (state.deferred); Minor/Major crossings and official warnings go
+// at once. X_LONG_POSTS=1 lifts the 280 limit (X Premium); otherwise "+N more on waterlevels.lk". Never a thread of updates.
+//   --mode preview --events file.json [--at ISO]  prints the combined post for engine events, sends nothing.
 // Cost (the X API is pay-per-use; a post with a link costs about 13 times a post without): links are OFF by default
 // (X_LINKS=off|alerts|all; "alerts" = major-flood rises, major official warnings), thread
 // replies are OFF (X_REPLIES=on), and a monthly budget guard (X_MONTHLY_BUDGET_USD, default 10; X_COST_POST=0.015,
@@ -26,7 +30,8 @@ import {
   composeWarning, composeSummary, composeStorm, stormTide, composeRiversRising, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
 } from "../lib/xCompose.ts";
 import { OPENAI_MODEL } from "../lib/openai.ts";
-import { evaluate, applyCaps, emptyState, summaryEvent, tierLevel } from "./x-engine.mjs";
+import { evaluate, emptyState, summaryEvent, tierLevel, DEFAULTS } from "./x-engine.mjs";
+import { composeCombined, validateCombined, decide, capBatch, batchKey, MIN_GAP_MS, DEFER_MAX_AGE_MS } from "../lib/xAggregate.ts";
 import { PLACES } from "../lib/places.ts";
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
@@ -39,7 +44,7 @@ export const X_SCHEMA = [
 
 const SITE_DEFAULT = "https://waterlevels.lk";
 const RAIN_PLACES = ["colombo", "gampaha", "kalutara", "ratnapura", "kandy", "galle", "matara", "anuradhapura", "batticaloa", "jaffna"];
-const PENDING_MAX_AGE_MS = 2 * 3_600_000;
+const bucketOf = (ms) => Math.floor(ms / 1_800_000);
 
 const log = (...a) => console.log(...a);
 
@@ -320,15 +325,43 @@ export async function run(o = {}) {
     return { mode: g.mode, posted: 0, skipped: "site unreadable" };
   }
   const prev = (await loadValue("main", query)) ?? emptyState();
-  const { events, state } = evaluate(snap, prev, cfg);
+  const { events: fresh, state } = evaluate(snap, prev, cfg);
 
-  const usedRows = await query("SELECT COUNT(*) AS n FROM x_posts WHERE day = ? AND mode = ? AND status IN ('posted','dry')", [day, g.mode]);
-  const { send, held } = applyCaps(events, { normal: Number(usedRows[0]?.n ?? 0), urgent: 0 }, cfg);
+  // ONE post per run. Updates held back earlier (a post went out < minGap ago) and this run's events are merged; they
+  // become one combined post, unless a single event is all there is (then its own, better-worded post goes out).
+  const minGap = (Number(env.X_MIN_GAP_MIN) >= 0 && env.X_MIN_GAP_MIN != null && env.X_MIN_GAP_MIN !== "" ? Number(env.X_MIN_GAP_MIN) * 60_000 : MIN_GAP_MS);
+  const long = (env.X_LONG_POSTS ?? "").trim() === "1";
+  const events = [];
+  const seen = new Set(fresh.map((e) => e.dedupe));
+  for (const d of prev.deferred ?? []) {
+    if (now - d.at > DEFER_MAX_AGE_MS) await note(`:warning: X account: dropped a held update that is now too old to send (${d.ev.type}).`);
+    else if (!seen.has(d.ev.dedupe)) events.push(d.ev);
+  }
+  events.push(...fresh);
+  events.sort((a, c) => c.priority - a.priority);
+  const ageOf = new Map((prev.deferred ?? []).map((d) => [d.ev.dedupe, d.at]));
+  state.deferred = [];
+  state.pending = []; // pre-aggregation queue of ready-made texts: no longer used (failed batches are kept as events in `deferred`)
+
+  const usedRows = await query("SELECT COUNT(*) AS n, MAX(ts) AS last FROM x_posts WHERE day = ? AND mode = ? AND status IN ('posted','dry')", [day, g.mode]);
+  const lastRow = await query("SELECT MAX(ts) AS last FROM x_posts WHERE mode = ? AND status IN ('posted','dry')", [g.mode]);
+  const lastPostMs = lastRow[0]?.last != null ? Number(lastRow[0].last) : null;
+  const verdict = decide(events, lastPostMs, now, minGap);
+  const defer = (list) => { for (const e of list) state.deferred.push({ at: ageOf.get(e.dedupe) ?? now, ev: e }); };
+  let held = [];
+  let batch = [];
+  if (verdict === "defer") {
+    log(`a post went out ${Math.round((now - lastPostMs) / 60_000)} min ago (gap ${Math.round(minGap / 60_000)} min): ${events.length} update(s) held for the next combined post`);
+    defer(events);
+  } else if (verdict === "send") {
+    if (capBatch(events, Number(usedRows[0]?.n ?? 0), { ...DEFAULTS, ...cfg })) batch = events;
+    else held = events;
+  }
   for (const e of held) {
     log(`held by the daily limit: ${e.type} ${e.dedupe}`);
     await query("INSERT OR IGNORE INTO x_posts (ts, day, kind, dedupe_key, mode, status, text) VALUES (?, ?, ?, ?, ?, 'held', ?)", [now, day, e.kind, `held:${e.dedupe}:${now}`, g.mode, `(held by daily limit) ${e.type}`]);
   }
-  if (held.length) await note(`:information_source: X account: ${held.length} post(s) held back by the daily limit (${cfg.dailyMax}/day, urgent ${40}).`);
+  if (held.length) await note(`:information_source: X account: ${held.length} update(s) held back by the daily limit (${cfg.dailyMax}/day, urgent ${cfg.urgentMax}).`);
 
   const month = day.slice(0, 7);
   let spent = Number((await query("SELECT COALESCE(SUM(cost_usd), 0) AS c FROM x_posts WHERE day LIKE ? AND mode = ? AND status IN ('posted','dry')", [`${month}%`, g.mode]))[0]?.c ?? 0);
@@ -337,37 +370,45 @@ export async function run(o = {}) {
   log(llm ? `writer: ${OPENAI_MODEL} (checked, template fallback)` : `writer: plain templates (${offReason}). To let ${OPENAI_MODEL} write the posts: gh secret set OPENAI_API_KEY`);
   const recent = await recentPosts(g.mode, query);
   const queue = [];
-  // a post that failed earlier goes first, if still fresh
-  for (const p of state.pending ?? []) {
-    if (now - p.ts <= PENDING_MAX_AGE_MS) queue.push({ ...p, retry: true });
-    else await note(`:warning: X account: dropped a queued post that is now too old to send: ${p.text.split("\n")[0]}`);
-  }
-  state.pending = [];
-  for (const ev of send) {
-    const r = await prepare(ev, llm, { links, replies, recent, offReason });
-    if (r.error) {
-      await note(`:warning: X account: a ${ev.type} post was NOT sent because it failed its own checks: ${r.error}`);
-      continue;
+
+  /** The text, cost and so on for a batch: one event = its own post; several = the combined post (no model, no thread). */
+  const build = async (list) => {
+    if (list.length === 1) {
+      const ev = list[0];
+      const r = await prepare(ev, llm, { links, replies, recent, offReason });
+      if (r.error) return { error: `a ${ev.type} post failed its own checks: ${r.error}` };
+      const extra = [];
+      for (const lang of replies ? langs : []) {
+        const t = localisedReply(ev, lang);
+        if (t) extra.push({ lang, text: t });
+      }
+      return { text: r.text, reply: r.reply, ai: r.ai, why: r.why, extra, cost: costOf(r.text, [r.reply, ...extra.map((x) => x.text)].filter(Boolean), rates) };
     }
-    const cost = costOf(r.text, [r.reply, ...(replies ? langs.map((l) => localisedReply(ev, l)) : [])].filter(Boolean), rates);
-    if (!isCritical(ev) && spent + cost > budget * 0.8) {
-      log(`over 80% of the monthly budget: ${ev.type} not posted`);
-      await query("INSERT OR IGNORE INTO x_posts (ts, day, kind, dedupe_key, mode, status, text) VALUES (?, ?, ?, ?, ?, 'held', ?)", [now, day, ev.kind, `budget:${ev.dedupe}:${now}`, g.mode, `(held by monthly budget) ${r.text}`]);
+    const link = links === "all" || list.some((e) => linkWanted(e, links)) ? (snap.site || SITE_DEFAULT) : "";
+    const c = composeCombined(list, { now, link, long });
+    const bad = validateCombined(c.text, list, now, long);
+    if (bad.length) return { error: `the combined post failed its own checks (${bad.join("; ")})` };
+    return { text: c.text, reply: null, ai: false, why: `${list.length} updates combined, ${c.shown} of ${c.total} lines shown`, extra: [], cost: costOf(c.text, [], rates) };
+  };
+  if (batch.length) {
+    let r = await build(batch);
+    if (r.error) {
+      await note(`:warning: X account: a post was NOT sent because it failed its own checks: ${r.error}`);
+      batch = [];
+    } else if (!batch.some(isCritical) && spent + r.cost > budget * 0.8) {
+      log("over 80% of the monthly budget: not posted");
+      await query("INSERT OR IGNORE INTO x_posts (ts, day, kind, dedupe_key, mode, status, text) VALUES (?, ?, ?, ?, ?, 'held', ?)", [now, day, batch[0].kind, `budget:${batchKey(batch, bucketOf(now))}:${now}`, g.mode, `(held by monthly budget) ${r.text}`]);
       if (meta.budgetNote !== month) {
         meta.budgetNote = month;
         await saveValue("meta", meta, now, query);
         await note(`:moneybag: X account: estimated spend this month is $${spent.toFixed(2)} of the $${budget} budget (80% limit reached). Routine updates (summaries, storm updates, reservoirs) are paused until next month; Major-flood rises and all-clears still go out. Raise it with: gh variable set X_MONTHLY_BUDGET_USD --body <dollars>`);
       }
-      continue;
+      batch = [];
+    } else {
+      spent += r.cost;
+      recent.unshift(r.text);
+      queue.push({ ts: now, day, kind: batch[0].kind, dedupe: batchKey(batch, bucketOf(now)), events: batch, ...r });
     }
-    spent += cost;
-    const extra = [];
-    for (const lang of replies ? langs : []) {
-      const t = localisedReply(ev, lang);
-      if (t) extra.push({ lang, text: t });
-    }
-    recent.unshift(r.text);
-    queue.push({ ts: now, day, kind: ev.kind, dedupe: ev.dedupe, text: r.text, reply: r.reply, ai: r.ai, why: r.why, extra, cost });
   }
 
   let posted = 0;
@@ -375,10 +416,6 @@ export async function run(o = {}) {
   let blocked = false;
   const total = queue.length;
   for (const [i, item] of queue.entries()) {
-    if (blocked) {
-      state.pending.push({ ts: item.ts, day: item.day, kind: item.kind, dedupe: item.dedupe, text: item.text, reply: item.reply, ai: item.ai, extra: item.extra, cost: item.cost });
-      continue;
-    }
     const mine = await claim({ ...item, mode: g.mode }, query);
     if (!mine) {
       log(`already handled by another run: ${item.dedupe}`);
@@ -402,8 +439,8 @@ export async function run(o = {}) {
       blocked = true;
       meta.pauseUntil = r.retryAfterMs ?? now + 3_600_000;
       meta.pauseWhy = r.detail;
-      await note(`:rotating_light: X post failed (${r.detail}). Posting is paused until ${new Date(meta.pauseUntil).toISOString()}; the post is queued for one retry within 2 h. Not retrying in a loop.\n${quote(item.text)}`);
-      state.pending.push({ ts: item.ts, day: item.day, kind: item.kind, dedupe: item.dedupe, text: item.text, reply: item.reply, ai: item.ai, extra: item.extra, cost: item.cost });
+      await note(`:rotating_light: X post failed (${r.detail}). Posting is paused until ${new Date(meta.pauseUntil).toISOString()}; its updates are kept for the next post (for up to ${DEFER_MAX_AGE_MS / 3_600_000} h). Not retrying in a loop.\n${quote(item.text)}`);
+      defer(item.events);
       continue;
     }
     let replyId = null;
@@ -427,7 +464,7 @@ export async function run(o = {}) {
 
   if (blocked || meta.pauseUntil) await saveValue("meta", meta, now, query);
   await saveValue("main", state, now, query);
-  log(`events ${events.length}, sent ${posted}${live ? "" : " (dry run)"}, failed ${failed}, held ${held.length}`);
+  log(`events ${events.length}, posts sent ${posted}${live ? "" : " (dry run)"}, failed ${failed}, held ${held.length}`);
   return { mode: g.mode, posted, failed, held: held.length, events: events.length };
 }
 
@@ -470,6 +507,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const val = (f) => (a.includes(f) ? a[a.indexOf(f) + 1] : null);
   if (val("--site")) process.env.SITE_URL = val("--site");
   const mode = val("--mode") ?? "run";
+  if (mode === "preview") {
+    // --mode preview --events events.json [--at ISO]: prints the ONE combined post those engine events would make (nothing is sent or stored)
+    const { readFileSync } = await import("node:fs");
+    const evs = JSON.parse(readFileSync(val("--events"), "utf8"));
+    const at = val("--at") ? Date.parse(val("--at")) : Date.now();
+    const c = composeCombined(evs, { now: at, link: (process.env.X_LINKS ?? "off") === "off" ? "" : SITE_DEFAULT, long: process.env.X_LONG_POSTS === "1" });
+    console.log(`${tweetLength(c.text)}/${process.env.X_LONG_POSTS === "1" ? 25000 : MAX_TWEET} characters, ${c.shown} of ${c.total} lines\n${c.text}\nproblems: ${JSON.stringify(validateCombined(c.text, evs, at, c.long))}`);
+    process.exit(0);
+  }
   (mode === "sample" ? sample() : run())
     .then((r) => {
       if (mode === "sample") for (const s of r) console.log(`\n${s.msg}`);

@@ -5,6 +5,8 @@
 #   - Started after every satellite-rain snapshot (gsmap-snapshot.yml, every 30 min) and by the 06:30 Colombo cron below
 #     (GitHub's cron is best-effort: the morning summary is sent by the first run after 06:30 and only once a day).
 #   - Manual: mode "run" = one normal pass; mode "sample" = up to 3 sample posts from today's data to Slack only.
+# One post per run: everything that would post is combined (lib/xAggregate.ts); routine updates within X_MIN_GAP_MIN (45) minutes of
+# the last post wait for the next one; X_LONG_POSTS=1 (X Premium) lifts the 280-character limit.
 # Optional variables: X_LINKS (off|alerts|all, default off), X_REPLIES (on), X_LANGS (en,si,ta), X_EVENING (on),
 # X_DAILY_MAX, X_MONTHLY_BUDGET_USD, X_COST_POST, X_COST_LINK_POST, X_AI_POLISH (off = no AI writer), X_AI_TEMPERATURE.
 # Secret OPENAI_API_KEY makes gpt-6-luna write every post in a human voice from the facts (every number checked against
@@ -57,6 +59,8 @@ jobs:
           X_REPLIES: ${{ vars.X_REPLIES }}
           X_LANGS: ${{ vars.X_LANGS }}
           X_EVENING: ${{ vars.X_EVENING }}
+          X_LONG_POSTS: ${{ vars.X_LONG_POSTS }}
+          X_MIN_GAP_MIN: ${{ vars.X_MIN_GAP_MIN }}
           X_DAILY_MAX: ${{ vars.X_DAILY_MAX }}
           X_MONTHLY_BUDGET_USD: ${{ vars.X_MONTHLY_BUDGET_USD }}
           X_COST_POST: ${{ vars.X_COST_POST }}
