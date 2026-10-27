@@ -52,8 +52,8 @@ const KIND_LABEL = ["place", "landmark", "road"];
 export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang }) {
   const tr = useMemo(() => makeT(lang), [lang]);
   preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com");
-  // start the big downloads in the HTML, before hydration: the map library, the level grid, the base style
-  preload(`/flood3d/ml/maplibre-gl-csp.js?v=${ML_VERSION}`, { as: "script" }); preload("/flood3d/level.webp", { as: "fetch", crossOrigin: "anonymous" }); preload("/flood3d/accuracy.json", { as: "fetch", crossOrigin: "anonymous" }); // start the tile connections while the map library loads
+  // start the map library download in the HTML, before hydration (fetch preloads of the data files made fetch() fail intermittently on throttled phones, so those are not preloaded)
+  preload(`/flood3d/ml/maplibre-gl-csp.js?v=${ML_VERSION}`, { as: "script" }); // start the tile connections while the map library loads
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const popRef = useRef<Popup | null>(null);
