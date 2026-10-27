@@ -15,13 +15,14 @@ import { InstallButton } from "./InstallButton";
 import { AlertSettingsRow } from "./AlertSettings";
 import { OPEN_MENU_EVENT } from "./BottomTabs";
 import { LangSwitch } from "./LanguageBar";
+import { navSection } from "@/lib/navActive";
 import { navGroups } from "@/lib/navGroups";
 import { splitLocale } from "@/lib/i18n/config";
 
 const ring =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 
-export type MenuRiver = { href: string; label: string; slug: string };
+export type MenuRiver = { href: string; label: string; slug: string; urlSlug: string };
 
 export function MobileMenu({ rivers, xHandle = null }: { rivers: MenuRiver[]; xHandle?: string | null }) {
   const { t, p, lang } = useI18n();
@@ -81,6 +82,7 @@ export function MobileMenu({ rivers, xHandle = null }: { rivers: MenuRiver[]; xH
 
   const path = splitLocale(pathname || "/").path;
   const on = (base: string) => (base === "/" ? path === "/" : path === base || path.startsWith(base + "/"));
+  const onRiver = navSection(pathname || "/", rivers.map((r) => r.urlSlug)) === "basins";
   const groups = navGroups(lang, t);
   const row = `flex items-center gap-3 min-h-12 rounded-md px-2 text-base font-medium hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`;
 
@@ -188,7 +190,10 @@ export function MobileMenu({ rivers, xHandle = null }: { rivers: MenuRiver[]; xH
                         onClick={close}
                         data-umami-event="basin_nav_click"
                         data-umami-event-basin={r.slug}
-                        className={`flex items-center min-h-11 rounded-md px-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}
+                        aria-current={onRiver && (path === `/${r.urlSlug}` || path.startsWith(`/${r.urlSlug}/`)) ? "page" : undefined}
+                        className={`flex items-center min-h-11 rounded-md px-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 ${ring} ${
+                          onRiver && (path === `/${r.urlSlug}` || path.startsWith(`/${r.urlSlug}/`)) ? "bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-medium" : "text-slate-700 dark:text-slate-300"
+                        }`}
                       >
                         {r.label}
                       </Link>

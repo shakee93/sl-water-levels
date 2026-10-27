@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Waves } from "lucide-react";
-import { basinPath } from "@/lib/slug";
+import { basinPath, basinSlug } from "@/lib/slug";
 import { PlaceSearch } from "./PlaceSearch";
 import { LangSwitch } from "./LanguageBar";
 import { MobileMenu } from "./MobileMenu";
@@ -11,7 +11,7 @@ import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { nwFor } from "@/lib/i18n/news";
-import { HeaderTownsLink } from "./HeaderTownsLink";
+import { HeaderNavLink } from "./HeaderNavLink";
 import { ttFor } from "@/lib/i18n/town";
 import { getSearchStations, type SearchStation } from "./PlaceSearchData";
 import { X_HANDLE } from "@/lib/seo";
@@ -39,6 +39,7 @@ export async function Header({ lang }: { lang: Locale }) {
     const aliases = RIVERS.find((r) => r.basin === b)?.aliases ?? [];
     return {
       basin: b,
+      slug: basinSlug(b),
       label: riverName(b, lang),
       href: p(basinPath(b)),
       tier: worst === "watch" ? "normal" : worst,
@@ -73,31 +74,10 @@ export async function Header({ lang }: { lang: Locale }) {
 
           {basinItems.length > 0 && <BasinsMenu items={basinItems} label={t("nav.basins")} />}
 
-          <HeaderTownsLink href={p("/flood")} label={ttFor(lang)("crumb")} />
-
-          <Link
-            href={p("/reservoirs")}
-            data-umami-event="reservoirs_nav_click"
-            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            {rtFor(lang)("nav")}
-          </Link>
-
-          <Link
-            href={p("/news")}
-            data-umami-event="news_nav_click"
-            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            {nwFor(lang)("nav")}
-          </Link>
-
-          <Link
-            href={p("/help")}
-            data-umami-event="help_nav_click"
-            className="hidden sm:inline-block rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            {t("nav.help")}
-          </Link>
+          <HeaderNavLink href={p("/flood")} label={ttFor(lang)("crumb")} section="towns" event="towns_nav_click" />
+          <HeaderNavLink href={p("/reservoirs")} label={rtFor(lang)("nav")} section="reservoirs" event="reservoirs_nav_click" />
+          <HeaderNavLink href={p("/news")} label={nwFor(lang)("nav")} section="news" event="news_nav_click" />
+          <HeaderNavLink href={p("/help")} label={t("nav.help")} section="help" event="help_nav_click" />
 
           {X_HANDLE && (
             <a
@@ -123,7 +103,7 @@ export async function Header({ lang }: { lang: Locale }) {
 
           <MobileMenu
             xHandle={X_HANDLE}
-            rivers={basins.map((b) => ({ href: p(basinPath(b)), label: riverName(b, lang), slug: b.trim() }))}
+            rivers={basins.map((b) => ({ href: p(basinPath(b)), label: riverName(b, lang), slug: b.trim(), urlSlug: basinSlug(b) }))}
           />
         </nav>
       </div>

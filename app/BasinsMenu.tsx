@@ -9,10 +9,11 @@ import { usePathname } from "next/navigation";
 import { ChevronDown, Search } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
 import { TierPill, type PillTier } from "./TierPill";
+import { useNavSection } from "@/lib/navActive";
 import { navGroups } from "@/lib/navGroups";
 import { BASINS_MENU } from "@/lib/i18n/basinsMenu";
 
-export type BasinItem = { basin: string; label: string; href: string; tier: PillTier; n: number; search: string };
+export type BasinItem = { basin: string; slug: string; label: string; href: string; tier: PillTier; n: number; search: string };
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500";
 const fold = (s: string) => s.normalize("NFKD").toLowerCase();
@@ -22,6 +23,7 @@ export function BasinsMenu({ items, label }: { items: BasinItem[]; label: string
   const { t, p, lang } = useI18n();
   const s = BASINS_MENU[lang];
   const pathname = usePathname();
+  const current = useNavSection(useMemo(() => items.map((b) => b.slug), [items])) === "basins";
   const id = useId();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -162,6 +164,7 @@ export function BasinsMenu({ items, label }: { items: BasinItem[]; label: string
         type="button"
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-current={current ? "true" : undefined}
         aria-controls={`${id}-panel`}
         onClick={() => (open ? close() : setOpen(true))}
         onKeyDown={(e) => {
@@ -170,7 +173,7 @@ export function BasinsMenu({ items, label }: { items: BasinItem[]; label: string
             setOpen(true);
           }
         }}
-        className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition ${ring} ${open ? "bg-slate-100 dark:bg-slate-800" : ""}`}
+        className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition ${ring} ${current ? "text-sky-700 dark:text-sky-300 font-medium" : "text-slate-700 dark:text-slate-300"} ${open ? "bg-slate-100 dark:bg-slate-800" : ""}`}
       >
         {label}
         <ChevronDown className={`size-3.5 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
