@@ -363,9 +363,9 @@ export function NeedsAttention({
 // Gauges below alert whose forecast says they will likely reach a mark (lib/verdictLift.ts, the same words as their pages).
 // Since 26 Oct 2026 this is a heads-up, not "Get ready": Get ready is the gauge's own alert level. si/ta are drafts.
 const SOON = {
-  en: { title: "Forecast to reach alert level", alert: "alert level", minor: "minor flood level", major: "major flood level", line: "Likely to reach {mark} in about {h} h", day: "Likely to reach {mark} within 24 hours" },
-  si: { title: "අනතුරු ඇඟවීමේ මට්ටමට ළඟා වීමට පුරෝකථනය", alert: "අනතුරු ඇඟවීමේ මට්ටම", minor: "සුළු ගංවතුර මට්ටම", major: "ප්‍රධාන ගංවතුර මට්ටම", line: "පැය {h} කින් පමණ {mark} කරා ළඟා විය හැක", day: "පැය 24 ක් තුළ {mark} කරා ළඟා විය හැක" },
-  ta: { title: "எச்சரிக்கை மட்டத்தை அடையும் என முன்னறிவிப்பு", alert: "எச்சரிக்கை மட்டம்", minor: "சிறு வெள்ள மட்டம்", major: "பெரு வெள்ள மட்டம்", line: "சுமார் {h} மணி நேரத்தில் {mark} அடையலாம்", day: "24 மணி நேரத்திற்குள் {mark} அடையலாம்" },
+  en: { title: "Forecast to reach alert level", alert: "alert level", minor: "minor flood level", major: "major flood level", line: "Likely to reach {mark} in about {h} h", day: "Likely to reach {mark} within 24 hours", now: "now", toGo: "{d} to go", perH: "{d}/h", sub: "Forecast only: the step changes when the gauge reaches the level." },
+  si: { title: "අනතුරු ඇඟවීමේ මට්ටමට ළඟා වීමට පුරෝකථනය", alert: "අනතුරු ඇඟවීමේ මට්ටම", minor: "සුළු ගංවතුර මට්ටම", major: "ප්‍රධාන ගංවතුර මට්ටම", line: "පැය {h} කින් පමණ {mark} කරා ළඟා විය හැක", day: "පැය 24 ක් තුළ {mark} කරා ළඟා විය හැක", now: "දැන්", toGo: "තව {d}", perH: "පැයට {d}", sub: "පුරෝකථනයක් පමණි: මිනුම මට්ටමට ළඟා වූ විට තත්ත්වය වෙනස් වේ." },
+  ta: { title: "எச்சரிக்கை மட்டத்தை அடையும் என முன்னறிவிப்பு", alert: "எச்சரிக்கை மட்டம்", minor: "சிறு வெள்ள மட்டம்", major: "பெரு வெள்ள மட்டம்", line: "சுமார் {h} மணி நேரத்தில் {mark} அடையலாம்", day: "24 மணி நேரத்திற்குள் {mark} அடையலாம்", now: "இப்போது", toGo: "இன்னும் {d}", perH: "மணிக்கு {d}", sub: "முன்னறிவிப்பு மட்டுமே: அளவி அந்த மட்டத்தை அடைந்ததும் நிலை மாறும்." },
 } as const;
 
 // Gauges the Irrigation Department's own figures put at Alert because a big reservoir release (5,000+ cusecs) is coming down to them
@@ -406,23 +406,63 @@ function ForecastSoon({ lang, p, snapshot, verdicts }: { lang: Locale; p: (path:
     .sort((a, b) => ["major", "minor", "alert"].indexOf(a.v.th!) - ["major", "minor", "alert"].indexOf(b.v.th!) || (a.v.h ?? 99) - (b.v.h ?? 99));
   if (rows.length === 0) return null;
   return (
-    <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 px-4 py-3" lang={lang}>
+    <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 p-3 sm:p-4" lang={lang}>
       <h3 className="flex items-center gap-1.5 text-sm font-semibold text-amber-900 dark:text-amber-200">
         <TriangleAlert className="size-4" aria-hidden /> {c.title}
+        <span className="ml-auto rounded-full bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 text-xs font-medium tabular-nums">{rows.length}</span>
       </h3>
-      <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+      <p className="mt-0.5 text-xs text-amber-900/70 dark:text-amber-200/60">{c.sub}</p>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map(({ s, v }) => {
           const mark = c[v.th!];
           const line = v.h != null ? c.line.replace("{mark}", mark).replace("{h}", String(Math.max(1, Math.round(v.h)))) : c.day.replace("{mark}", mark);
+          const level = s.latest?.water_level ?? null;
+          const target = s.thresholds[v.th!];
+          const gap = level != null && target != null ? target - level : null;
+          // fill = how close the level is to the mark, measured from the gauge's own normal band (the mark minus 3 x the alert-to-minor step, or 0)
+          const step = s.thresholds.alert != null && s.thresholds.minor != null ? s.thresholds.minor - s.thresholds.alert : null;
+          const floor = target != null && step != null && step > 0 ? Math.max(0, target - 3 * step) : 0;
+          const fill = level != null && target != null && target > floor ? Math.min(1, Math.max(0.04, (level - floor) / (target - floor))) : null;
+          const rate = s.rate1h != null && s.rate1h > 0 ? s.rate1h : null;
           return (
             <li key={s.href}>
-              <Link href={p(s.href)} className="group flex items-baseline justify-between gap-3 text-sm hover:underline underline-offset-2">
-                <span className="min-w-0">
-                  <span className="font-medium text-slate-900 dark:text-slate-100">{stationDisplayName(s.station)}</span>
-                  <span className="text-slate-500 dark:text-slate-400"> · {riverName(s.basin, lang)}</span>
-                  <span className="block text-xs text-amber-900/90 dark:text-amber-200/90">{line}</span>
-                </span>
-                {s.latest?.water_level != null && <span className="shrink-0 tabular-nums text-xs text-slate-600 dark:text-slate-300">{formatLevel(s.latest.water_level, s.unit)}</span>}
+              <Link
+                href={p(s.href)}
+                className="group flex h-full flex-col gap-2 rounded-lg border border-amber-200/80 dark:border-amber-900/50 bg-white/80 dark:bg-slate-900/60 p-3 transition-colors hover:border-amber-400 dark:hover:border-amber-700"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="block font-medium text-slate-900 dark:text-slate-100 group-hover:underline underline-offset-2">{stationDisplayName(s.station)}</span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400">{riverName(s.basin, lang)}</span>
+                  </span>
+                  {v.h != null && (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-xs font-semibold tabular-nums text-amber-900 dark:text-amber-100">
+                      <Clock className="size-3.5" aria-hidden />~{Math.max(1, Math.round(v.h))} h
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-amber-900 dark:text-amber-200">{line}</p>
+                {fill != null && (
+                  <div aria-hidden>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                      <div className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-500 dark:from-amber-700 dark:to-amber-400" style={{ width: `${Math.round(fill * 100)}%` }} />
+                    </div>
+                  </div>
+                )}
+                {level != null && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs tabular-nums text-slate-600 dark:text-slate-300">
+                    <span>
+                      {c.now} <span className="font-semibold text-slate-900 dark:text-slate-100">{formatLevel(level, s.unit)}</span>
+                    </span>
+                    {rate != null && (
+                      <span className="inline-flex items-center gap-0.5 text-amber-800 dark:text-amber-300">
+                        <ArrowUp className="size-3" aria-hidden />
+                        {c.perH.replace("{d}", formatDelta(rate, s.unit))}
+                      </span>
+                    )}
+                    {gap != null && gap > 0 && <span className="ml-auto">{c.toGo.replace("{d}", formatDelta(gap, s.unit))}</span>}
+                  </div>
+                )}
               </Link>
             </li>
           );
