@@ -158,7 +158,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
         ],
       },
       {
-        "@type": "Place",
+        "@type": "Reservoir",
         name: `${rv.name} reservoir`,
         url: SITE + canonical,
         ...imageLd,

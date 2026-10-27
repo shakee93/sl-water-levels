@@ -69,7 +69,7 @@ function Lightbox({ photos, index, onIndex, onClose, name }: { photos: Reservoir
       {ph && (
         <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 pb-4 pt-16" onClick={(e) => e.target === e.currentTarget && onClose()}>
           <div className="relative min-h-0 w-full flex-1">
-            <Image loader={loader} src={asSrc(ph)} alt={`${name}: ${ph.caption}`} fill sizes="100vw" className="object-contain" />
+            <Image loader={loader} src={asSrc(ph)} alt={ph.caption.startsWith(name) ? ph.caption : `${name}: ${ph.caption}`} fill sizes="100vw" className="object-contain" />
           </div>
           <div className="max-w-2xl text-center text-sm text-slate-200 [&_p]:text-slate-300 [&_a]:text-slate-100">
             <p className="font-medium !text-slate-100">{ph.caption}</p>
@@ -108,7 +108,7 @@ export function ReservoirPhotos({ photos, name, variant }: { photos: ReservoirPh
           aria-label={t("photos.open", { name: ph.caption })}
           className="relative block h-44 w-full cursor-zoom-in overflow-hidden rounded-xl border border-slate-200 bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-slate-800 dark:bg-slate-800 sm:h-60"
         >
-          <Image loader={loader} src={asSrc(ph)} alt={`${name}: ${ph.caption}`} fill priority sizes="(min-width: 768px) 768px, 100vw" className="object-cover" />
+          <Image loader={loader} src={asSrc(ph)} alt={ph.caption.startsWith(name) ? ph.caption : `${name}: ${ph.caption}`} fill priority sizes="(min-width: 768px) 768px, 100vw" className="object-cover" />
         </button>
         <figcaption className="mt-1.5 px-1"><Credit ph={ph} /></figcaption>
         <Lightbox photos={photos} index={idx} onIndex={setIdx} onClose={close} name={name} />
@@ -128,7 +128,7 @@ export function ReservoirPhotos({ photos, name, variant }: { photos: ReservoirPh
               aria-label={t("photos.open", { name: ph.caption })}
               className="relative block aspect-[16/10] w-full cursor-zoom-in overflow-hidden rounded-lg bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:bg-slate-800"
             >
-              <Image loader={loader} src={asSrc(ph)} alt={`${name}: ${ph.caption}`} fill loading="lazy" sizes="(min-width: 768px) 360px, 100vw" className="object-cover" />
+              <Image loader={loader} src={asSrc(ph)} alt={ph.caption.startsWith(name) ? ph.caption : `${name}: ${ph.caption}`} fill loading="lazy" sizes="(min-width: 768px) 360px, 100vw" className="object-cover" />
             </button>
             <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-200">{ph.caption}</p>
             <Credit ph={ph} className="mt-0.5" />
