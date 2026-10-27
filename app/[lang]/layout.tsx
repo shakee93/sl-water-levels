@@ -21,6 +21,7 @@ import { splashShots } from "@/lib/splash";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { HTML_LANG, LOCALES, OG_LOCALE, isLocale } from "@/lib/i18n/config";
 import { DICTS, getI18n } from "@/lib/i18n/server";
+import { seoFor } from "@/lib/i18n/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -80,10 +81,10 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   return {
     metadataBase: new URL(SITE),
     title: {
-      default: t("home.metaTitle"),
+      default: seoFor(lang)("home.title"),
       template: `%s — ${t("site.name")}`,
     },
-    description: t("home.layoutDesc"),
+    description: seoFor(lang)("home.desc"),
     applicationName: t("site.name"),
     // Home Screen app: short name under the icon, launch images (public/splash, scripts/splash.mjs), and a status bar
     // that follows the phone's light / dark setting with the page starting below it (no content under the clock).
@@ -100,13 +101,13 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       type: "website",
       locale: OG_LOCALE[lang],
       siteName: t("site.name"),
-      title: t("home.metaTitle"),
-      description: t("home.ogDesc"),
+      title: seoFor(lang)("home.title"),
+      description: seoFor(lang)("home.desc"),
     },
     twitter: {
       card: "summary_large_image",
-      title: t("home.metaTitle"),
-      description: t("home.twDesc"),
+      title: seoFor(lang)("home.title"),
+      description: seoFor(lang)("home.desc"),
     },
     robots: {
       index: true,

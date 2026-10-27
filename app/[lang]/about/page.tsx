@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
 import { Activity, AlertTriangle, Database, Lock } from "lucide-react";
 import { notFound } from "next/navigation";
 import { isLocale, pageAlternates } from "@/lib/i18n/config";
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     title: t("about.metaTitle"),
     description: t("about.metaDesc"),
     alternates,
-    openGraph: {
+    openGraph: { ...ogBase(lang),
       title: t("about.ogTitle"),
       description: t("about.ogDesc"),
       url: `${SITE}${alternates.canonical}`,
@@ -83,14 +84,14 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
       <JsonLd
         graph={[
           webPageLd({ lang, path: "/about", name: t("about.metaTitle"), description: t("about.metaDesc"), modified: Date.parse(CONTENT_UPDATED), type: "AboutPage" }),
-          breadcrumbLd([{ name: t("crumb.allBasins"), path: "/" }, { name: t("nav.about"), path: "/about" }], lang),
+          breadcrumbLd([{ name: t("crumb.home"), path: "/" }, { name: t("nav.about"), path: "/about" }], lang),
           publisherLd(),
         ]}
       />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
           <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
-            {t("crumb.allBasins")}
+            {t("crumb.home")}
           </Link>{" "}
           <span aria-hidden>›</span>{" "}
           <span className="text-slate-700 dark:text-slate-300">{t("nav.about")}</span>

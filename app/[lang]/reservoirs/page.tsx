@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { AlertTriangle } from "lucide-react";
 import { getReservoirs, type RV } from "@/lib/reservoirData";
 import { getKnownStatuses, type KnownStatus } from "@/lib/reservoirStatus";
@@ -22,16 +24,15 @@ import { SITE } from "@/lib/seo";
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  const rt = rtFor(lang);
   const data = await getReservoirs();
-  const title = rt("idx.title");
-  const description = rt("idx.desc", { n: data?.items.length ?? "" }).replace("  ", " ");
+  const title = seoFor(lang)("rsvIndex.title");
+  const description = seoFor(lang)("rsvIndex.desc", { n: data?.items.length ?? "" }).replace("  ", " ");
   const alternates = pageAlternates(lang, "/reservoirs");
   return {
     title: { absolute: title },
     description,
     alternates,
-    openGraph: { title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
+    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -124,7 +125,7 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
           <span className="text-slate-700 dark:text-slate-300">{rt("crumb")}</span>
         </nav>
         <header className="mb-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{rt("idx.h1")}</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{seoFor(lang)("rsvIndex.h1")}</h1>
           <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">
             {active > 0 ? rt("idx.summary", { a: active, b: holding }) : rt("idx.summaryNone", { b: holding })}
           </p>

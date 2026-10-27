@@ -4,6 +4,8 @@ import { soft } from "@/lib/soft";
 import Link from "next/link";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { ArrowRight, Clock, LifeBuoy } from "lucide-react";
 import { getNational, fetchStations, type NationalStation } from "@/lib/arcgis";
 import { JsonLd } from "../Answer";
@@ -43,11 +45,12 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   if (!isLocale(lang)) return {};
   const { t } = getI18n(lang);
   const alternates = pageAlternates(lang, "/");
+  const sf = seoFor(lang);
   return {
-    title: { absolute: t("home.metaTitle") },
-    description: t("home.metaDesc"),
+    title: { absolute: sf("home.title") },
+    description: sf("home.desc"),
     alternates: { ...alternates, types: { "application/atom+xml": `${SITE}/feed.xml` } },
-    openGraph: { title: t("home.metaTitle"), description: t("home.ogDesc"), url: `${SITE}${alternates.canonical}`, type: "website", siteName: t("site.name") },
+    openGraph: { ...ogBase(lang), title: sf("home.title"), description: sf("home.desc"), url: `${SITE}${alternates.canonical}`, type: "website", siteName: t("site.name") },
   };
 }
 
@@ -98,7 +101,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           graph={[
             websiteLd(lang, t("home.ldDesc")),
             publisherLd(),
-            webPageLd({ lang, path: "/", name: t("home.metaTitle"), description: t("home.metaDesc"), modified: national?.reduce<number | null>((m, x) => (x.latest && (m == null || x.latest.ts > m) ? x.latest.ts : m), null) }),
+            webPageLd({ lang, path: "/", name: seoFor(lang)("home.title"), description: seoFor(lang)("home.desc"), modified: national?.reduce<number | null>((m, x) => (x.latest && (m == null || x.latest.ts > m) ? x.latest.ts : m), null) }),
             siteDatasetLd(),
           ]}
         />
@@ -106,7 +109,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
         <header className="mb-5 sm:mb-6">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight">
-            {t("home.h1")}
+            {seoFor(lang)("home.h1")}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">
             {t("home.subtitle")}

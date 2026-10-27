@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
 import { notFound } from "next/navigation";
 import { isLocale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     title: TITLE,
     description: DESC,
     alternates: { canonical: "/data" },
-    openGraph: { title: TITLE, description: DESC, url: `${SITE}/data`, type: "website" },
+    openGraph: { ...ogBase(lang), title: TITLE, description: DESC, url: `${SITE}/data`, type: "website" },
   };
 }
 

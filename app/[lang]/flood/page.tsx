@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { PLACES } from "@/lib/places";
 import { loadTownStates } from "@/lib/townData";
 import { ttFor, type TKey } from "@/lib/i18n/town";
@@ -19,15 +21,15 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  const tt = ttFor(lang);
+  const sf = seoFor(lang);
   const alternates = pageAlternates(lang, "/flood");
-  const title = tt("idx.title", { n: PLACES.length });
-  const description = tt("idx.desc");
+  const title = sf("flood.title", { n: PLACES.length });
+  const description = sf("flood.desc", { n: PLACES.length });
   return {
     title: { absolute: title },
     description,
     alternates,
-    openGraph: { title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
+    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -61,7 +63,7 @@ export default async function FloodIndex({ params }: { params: Promise<{ lang: s
           <span aria-hidden>›</span> <span className="text-slate-700 dark:text-slate-300">{tt("crumb")}</span>
         </nav>
         <header className="mb-5">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{tt("idx.h1")}</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{seoFor(lang)("flood.h1")}</h1>
           <p className="mt-1.5 text-sm sm:text-base text-slate-600 dark:text-slate-400" lang={lang}>{tt("idx.lead")}</p>
           {lang !== "en" && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("common.machineTranslated")}</p>}
         </header>

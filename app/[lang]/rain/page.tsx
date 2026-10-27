@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
@@ -18,14 +20,14 @@ type Params = { params: Promise<{ lang: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  const rm = rmFor(lang);
+  const sf = seoFor(lang);
   const alternates = pageAlternates(lang, "/rain");
   return {
-    title: { absolute: rm("page.title") },
-    description: rm("page.desc"),
+    title: { absolute: sf("rain.title") },
+    description: sf("rain.desc"),
     alternates,
-    openGraph: { title: rm("page.title"), description: rm("page.desc"), url: `${SITE}${alternates.canonical}`, type: "website" },
-    twitter: { card: "summary_large_image", title: rm("page.title"), description: rm("page.desc") },
+    openGraph: { ...ogBase(lang), title: sf("rain.title"), description: sf("rain.desc"), url: `${SITE}${alternates.canonical}`, type: "website" },
+    twitter: { card: "summary_large_image", title: sf("rain.title"), description: sf("rain.desc") },
   };
 }
 
@@ -65,7 +67,7 @@ export default async function RainPage({ params }: Params) {
           <span className="text-slate-700 dark:text-slate-300">{rm("crumb")}</span>
         </nav>
         <header className="mb-4">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{rm("page.h1")}</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{seoFor(lang)("rain.h1")}</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{rm("page.lead")}</p>
           <AnswerLine text={answer} note={mt} />
         </header>

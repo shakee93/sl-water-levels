@@ -235,6 +235,12 @@ const Q = {
   nhUp: { en: "{n} rising", si: "{n} ඉහළ යයි", ta: "{n} உயரும்" },
   nhSame: { en: "{n} about the same", si: "{n} පාහේ වෙනසක් නැත", ta: "{n} ஏறக்குறைய மாற்றமில்லை" },
   nhDown: { en: "{n} falling", si: "{n} පහළ යයි", ta: "{n} குறையும்" },
+  rising: { en: "Is the {name} rising today?", si: "{name} අද ඉහළ යනවාද?", ta: "{name} இன்று உயர்கிறதா?" },
+  risingStation: { en: "Is the water level at {name} rising today?", si: "{name} හි ජල මට්ටම අද ඉහළ යනවාද?", ta: "{name} இல் நீர்மட்டம் இன்று உயர்கிறதா?" },
+  risingStationUp: { en: "Yes. Over the last 3 hours the level at {name} has been rising and is now {lv}.", si: "ඔව්. පසුගිය පැය 3 තුළ {name} හි මට්ටම ඉහළ ගොස් දැන් {lv} වේ.", ta: "ஆம். கடந்த 3 மணி நேரத்தில் {name} இல் மட்டம் உயர்ந்து இப்போது {lv}." },
+  risingStationDown: { en: "No. Over the last 3 hours the level at {name} has been falling and is now {lv}.", si: "නැත. පසුගිය පැය 3 තුළ {name} හි මට්ටම පහළ ගොස් දැන් {lv} වේ.", ta: "இல்லை. கடந்த 3 மணி நேரத்தில் {name} இல் மட்டம் குறைந்து இப்போது {lv}." },
+  risingStationSame: { en: "No. Over the last 3 hours the level at {name} has been steady at about {lv}.", si: "නැත. පසුගිය පැය 3 තුළ {name} හි මට්ටම {lv} පමණ ස්ථාවරයි.", ta: "இல்லை. கடந்த 3 மணி நேரத்தில் {name} இல் மட்டம் ஏறக்குறைய {lv} இல் நிலையாக உள்ளது." },
+  risingRiverA: { en: "Over the last 3 hours, of the {m} gauges on the {river} that are reporting: {parts}.", si: "පසුගිය පැය 3 තුළ, වාර්තා කරන {river} හි මාන {m} න්: {parts}.", ta: "கடந்த 3 மணி நேரத்தில், தகவல் தரும் {river} இன் {m} நிலையங்களில்: {parts}." },
   nhCross: { en: " {names} may reach a flood mark.", si: " {names} ගංවතුර මට්ටමකට ළඟා විය හැක.", ta: " {names} வெள்ள மட்டத்தை எட்டலாம்." },
   townHow: { en: "How is the flood risk for {name} worked out?", si: "{name} සඳහා ගංවතුර අවදානම ගණනය කරන්නේ කෙසේද?", ta: "{name} க்கான வெள்ள அபாயம் எப்படிக் கணிக்கப்படுகிறது?" },
   townHowA: {
@@ -256,8 +262,14 @@ export function stationFaq(lang: Locale, s: NationalStation, answer: string, nh:
   add(Q.majorWord, th.major);
   const river = s.basin.trim() ? riverName(s.basin.trim(), lang) : "";
   const next = nextHourSentence(lang, nh, nextHourSubject(lang, s.basin, s.station));
+  const rate = s.tier !== "stale" && s.latest ? s.rate3hM : null;
+  const trendItem: Faq[] =
+    rate == null || s.latest == null || s.latest.water_level == null
+      ? []
+      : [{ q: W(Q.risingStation, lang, { name }), a: W(Math.abs(rate) < STEADY ? Q.risingStationSame : rate > 0 ? Q.risingStationUp : Q.risingStationDown, lang, { name, lv: lvText(s.latest.water_level, s.unit) }) }];
   return [
     { q: W(Q.now, lang, { name }), a: answer },
+    ...trendItem,
     ...(next ? [{ q: W(river ? Q.nhStation : Q.nhStationNoRiver, lang, { name, river }), a: `${next} ${W(Q.nhNote, lang)}` }] : []),
     { q: W(Q.marks, lang, { name }), a: parts.length ? W(Q.marksA, lang, { list: parts.join(", ") }) : W(Q.marksNone, lang) },
     { q: W(Q.source, lang), a: W(Q.sourceA, lang) },
@@ -270,8 +282,14 @@ export function riverFaq(
   answer: string,
   orderedStationNames: string[],
   next: { station: string; nh: NextHour | null }[] = [],
+  /** Gauges on the river by the 3-hour direction of the level (null when no gauge has a trend). */
+  trend: { up: number; down: number; same: number } | null = null,
 ): Faq[] {
   const river = riverName(basin, lang);
+  const tm = trend ? trend.up + trend.down + trend.same : 0;
+  const trendItem: Faq[] = trend && tm
+    ? [{ q: W(Q.rising, lang, { name: river }), a: W(Q.risingRiverA, lang, { m: tm, river, parts: [trend.up && W(Q.nhUp, lang, { n: trend.up }), trend.same && W(Q.nhSame, lang, { n: trend.same }), trend.down && W(Q.nhDown, lang, { n: trend.down })].filter(Boolean).join(", ") }) }]
+    : [];
   const have = next.filter((x): x is { station: string; nh: NextHour } => x.nh != null);
   const flat = (n: NextHour) => Math.abs(Number(n.change_ft.toFixed(1))) < 0.1;
   const up = have.filter((x) => !flat(x.nh) && x.nh.change_ft > 0).length;
@@ -284,6 +302,7 @@ export function riverFaq(
     : [];
   return [
     { q: W(Q.now, lang, { name: river }), a: answer },
+    ...trendItem,
     ...nhItem,
     { q: W(Q.gauges, lang, { river }), a: W(Q.gaugesA, lang, { list: orderedStationNames.join(", ") }) },
     { q: W(Q.source, lang), a: W(Q.sourceA, lang) },

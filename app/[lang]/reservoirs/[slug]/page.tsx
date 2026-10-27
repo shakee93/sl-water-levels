@@ -12,6 +12,8 @@ import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { rtFor } from "@/lib/i18n/reservoirs";
 import { riverName, shortDay, shortStamp } from "@/lib/i18n/format";
+import { reservoirMeta, ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import type { TFn } from "@/lib/i18n/translate";
 import { basinPath, stationPath } from "@/lib/slug";
 import { historyPath } from "@/lib/history";
@@ -70,12 +72,12 @@ function describe(rv: RV, lang: Locale, known: KnownStatus | null = null) {
   if (rv.status === "nodata" && known?.storage && known.ceb) {
     const trend = known.trend && known.trend.kind !== "steady" ? `, ${rt(`known.${known.trend.kind}` as "known.filling").toLowerCase()}` : "";
     return {
-      title: rt("title", { name }),
+      title: reservoirMeta(lang, { name, shown: name, catalogueId: rv.catalogueId }).title,
       description: rt("d.known", { name, n: Math.round(known.storage.pct), t: trend, src: rt("d.src", { source: srcName(t, known.storage.source), date: dayLabel(t, known.storage.day) }) }),
     };
   }
   return {
-    title: rt("title", { name }),
+    title: reservoirMeta(lang, { name, shown: name, catalogueId: rv.catalogueId }).title,
     description: rt(key, { name, c: used ? fmt(used.cusecs) : "", p: pct, src }).replace(/\s+\./g, ".").replace(/\.\s*\./g, "."),
   };
 }
@@ -85,13 +87,16 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   if (!isLocale(lang)) return {};
   const hit = await getReservoir(slug).catch(() => null);
   if (!hit) return {};
-  const { title, description } = describe(hit.rv, lang, await getKnownStatus(hit.rv).catch(() => null));
+  const d = describe(hit.rv, lang, await getKnownStatus(hit.rv).catch(() => null));
+  const title = d.title;
+  // the status sentence leads; the tail carries the words people search ("water level", "spill gates")
+  const description = `${d.description} ${seoFor(lang)("rsv.descTail")}`;
   const alternates = pageAlternates(lang, `/reservoirs/${slug}`);
   return {
     title: { absolute: title },
     description,
     alternates,
-    openGraph: { title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
+    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -127,6 +132,7 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const { description } = describe(rv, lang, known);
   const canonical = p(`/reservoirs/${slug}`);
   const name = displayName(rv, lang, rt);
+  const rmeta = reservoirMeta(lang, { name: localName(rv, lang), shown: name, catalogueId: rv.catalogueId });
   const other = lang === "en" ? [rv.si, rv.ta].filter(Boolean).join(" · ") : rv.name.trim().toLowerCase() === rv.river?.trim().toLowerCase() ? "" : rv.name;
 
   const sh = rv.sheet;
@@ -277,7 +283,8 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
 
         {/* ---- summary strip */}
         <header className={`mb-3 rounded-xl border border-l-4 border-slate-200 dark:border-slate-800 ${edge[rv.status]} bg-white dark:bg-slate-900 p-4 sm:p-5`}>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{rmeta.h1}</h1>
+          {rmeta.also && <p className={`mt-1 text-sm ${muted}`}>{rmeta.also}</p>}
           <p className={`mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm ${muted}`}>
             {other && <span>{other}</span>}
             {rv.river && (

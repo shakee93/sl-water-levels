@@ -3,6 +3,9 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
+import { townAliases } from "@/lib/seoNames";
 import { LifeBuoy } from "lucide-react";
 import { placeBySlug, streetCardKind } from "@/lib/places";
 import { loadTown, PAGE_BUDGET_MS } from "@/lib/townData";
@@ -51,16 +54,16 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { lang, town } = await params;
   const place = placeBySlug(town);
   if (!isLocale(lang) || !place) return {};
-  const tt = ttFor(lang);
   const alternates = pageAlternates(lang, `/flood/${place.slug}`);
   const gauge = place.stations[0] ? stationDisplayName(place.stations[0]) : null;
-  const title = tt("title", { town: place.name });
-  const description = gauge ? tt("desc", { town: place.name, gauge }) : tt("descNoGauge", { town: place.name });
+  const sf = seoFor(lang);
+  const title = sf("town.title", { town: place.name });
+  const description = gauge ? sf("town.desc", { town: place.name, gauge }) : sf("town.descNoGauge", { town: place.name });
   return {
     title: { absolute: title },
     description,
     alternates,
-    openGraph: { title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
+    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };
 }
@@ -99,7 +102,7 @@ export default async function TownPage({ params }: Params) {
     webPageLd({
       lang,
       path: `/flood/${place.slug}`,
-      name: tt("title", { town: place.name }),
+      name: seoFor(lang)("town.title", { town: place.name }),
       description: answer,
       modified: g?.ts ?? serverNow,
       speakable: [".answer-line"],
@@ -149,8 +152,11 @@ export default async function TownPage({ params }: Params) {
         </nav>
 
         <header className="mb-4 sm:mb-5">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{tt("h1", { town: place.name })}</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{place.name === place.district ? place.district : tt("h1sub", { town: place.name, district: place.district })}</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{seoFor(lang)("town.h1", { town: place.name })}</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {place.name === place.district ? place.district : tt("h1sub", { town: place.name, district: place.district })}
+            {lang === "en" && townAliases(place).length > 0 && ` · ${seoFor(lang)("town.also", { list: townAliases(place).join(", ") })}`}
+          </p>
           <AnswerLine text={answer} note={mt} />
         </header>
 

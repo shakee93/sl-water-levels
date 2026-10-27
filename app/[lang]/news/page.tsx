@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { AlertTriangle, Info } from "lucide-react";
 import { getNews, nowMs } from "@/lib/news";
 import { NEWS_TAGS, type NewsTag } from "@/lib/newsClassify";
@@ -20,14 +22,14 @@ import { nwFor } from "@/lib/i18n/news";
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  const nw = nwFor(lang);
+  const sf = seoFor(lang);
   const alternates = pageAlternates(lang, "/news");
   return {
-    title: { absolute: nw("metaTitle") },
-    description: nw("metaDesc"),
+    title: { absolute: sf("news.title") },
+    description: sf("news.desc"),
     alternates,
-    openGraph: { title: nw("metaTitle"), description: nw("metaDesc"), url: `${SITE}${alternates.canonical}`, type: "website" },
-    twitter: { card: "summary", title: nw("metaTitle"), description: nw("metaDesc") },
+    openGraph: { ...ogBase(lang), title: sf("news.title"), description: sf("news.desc"), url: `${SITE}${alternates.canonical}`, type: "website" },
+    twitter: { card: "summary", title: sf("news.title"), description: sf("news.desc") },
   };
 }
 
@@ -47,7 +49,7 @@ export default async function NewsPage({ params }: { params: Promise<{ lang: str
           <span className="text-slate-700 dark:text-slate-300">{nw("crumb")}</span>
         </nav>
         <header className="mb-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{nw("h1")}</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{seoFor(lang)("news.h1")}</h1>
           <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">{nw("lead")}</p>
         </header>
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300" role="note">

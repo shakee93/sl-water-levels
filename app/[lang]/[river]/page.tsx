@@ -31,6 +31,7 @@ import { breadcrumbLd, webPageLd } from "@/lib/seo";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
+import { riverMeta, ogBase } from "@/lib/seoMeta";
 import type { TFn } from "@/lib/i18n/translate";
 
 const nowMs = () => Date.now();
@@ -47,10 +48,20 @@ async function worstStatus(basin: string, t: TFn): Promise<string | null> {
     const snap = await fetchBasinSnapshot(basin);
     if (!snap.length) return null;
     const worst = snap.reduce((a, b) => (TIER_RANK[b.tier] > TIER_RANK[a.tier] ? b : a));
-    return t(`phrase.${worst.tier}` as "phrase.alert");
+    // near alert is Normal: official steps only
+    return t(`phrase.${worst.tier === "watch" ? "normal" : worst.tier}` as "phrase.alert");
   } catch {
     return null;
   }
+}
+
+/** How many reporting gauges are rising, falling or steady over the last 3 hours (same threshold as the arrows). */
+function trendCounts(list: { rate3hM: number | null }[]) {
+  const have = list.filter((s) => s.rate3hM != null);
+  if (!have.length) return null;
+  const same = have.filter((s) => Math.abs(s.rate3hM as number) < 0.006).length;
+  const up = have.filter((s) => (s.rate3hM as number) >= 0.006).length;
+  return { up, same, down: have.length - same - up };
 }
 
 function joinNames(names: string[], and: string): string {
@@ -89,13 +100,7 @@ export async function generateMetadata({
   );
   const names = onBasin.map((s) => stationDisplayName(s.station));
   const worst = await worstStatus(basin, t);
-  const rn = riverName(basin, lang);
-  const title = t("river.metaTitle", { river: rn });
-  const description = t("river.metaDesc", {
-    river: rn,
-    names: joinNames(names, t("list.and")),
-    now: worst ? t("river.metaNow", { phrase: worst }) : "",
-  });
+  const { title, description } = riverMeta(lang, basin, { gauges: names, now: worst ? t("river.metaNow", { phrase: worst }) : "" });
   const alternates = pageAlternates(lang, `/${river}`);
 
   return {
@@ -103,7 +108,7 @@ export async function generateMetadata({
     title: { absolute: title },
     description,
     alternates,
-    openGraph: {
+    openGraph: { ...ogBase(lang),
       title,
       description,
       url: `${SITE}${alternates.canonical}`,
@@ -215,6 +220,7 @@ export default async function BasinPage({
         : "text-yellow-800 dark:text-yellow-300 font-medium";
 
   const answer = snap.length ? riverAnswer(lang, t, basin, snap) : null;
+  const meta = riverMeta(lang, basin, { gauges: names });
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
 
   return (
@@ -225,7 +231,7 @@ export default async function BasinPage({
             webPageLd({
               lang,
               path: `/${river}`,
-              name: t("river.metaTitle", { river: riverName(basin, lang) }),
+              name: riverMeta(lang, basin, { gauges: names }).title,
               description: answer ?? riverName(basin, lang),
               modified: newest,
               speakable: [".answer-line"],
@@ -233,7 +239,7 @@ export default async function BasinPage({
             }),
             breadcrumbLd(
               [
-                { name: t("crumb.allBasins"), path: "/" },
+                { name: t("crumb.allBasins"), path: "/rivers" },
                 { name: riverName(basin, lang), path: `/${river}` },
               ],
               lang,
@@ -244,20 +250,21 @@ export default async function BasinPage({
           <StickyContext
             label={t("sticky.label")}
             backLabel={t("sticky.back")}
-            crumbs={[{ label: t("crumb.allBasins"), href: p("/") }, { label: riverName(basin, lang) }]}
+            crumbs={[{ label: t("crumb.allBasins"), href: p("/rivers") }, { label: riverName(basin, lang) }]}
             pill={{ label: tierLabel(t, worst === "watch" ? "normal" : worst), tier: worst === "watch" ? "normal" : worst }}
             bits={[flagged.length > 0 ? t("sticky.gauges", { n: flagged.length, m: reporting.length }) : t("river.allNormal", { n: reporting.length })]}
           />
         )}
         <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
+          <Link href={p("/rivers")} className="hover:underline inline-block py-3 -my-3">
             {t("crumb.allBasins")}
           </Link>{" "}
           <span aria-hidden>›</span> <span className="text-slate-700 dark:text-slate-300">{riverName(basin, lang)}</span>
         </nav>
 
         <header className="mb-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{riverName(basin, lang)}</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{meta.h1}</h1>
+          {meta.also && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{meta.also}</p>}
           <p className={`mt-1.5 text-sm tabular-nums ${statusTone}`}>{status}</p>
           <p className="sr-only">
             {t("river.srGauges", { n: onBasin.length, names: joinNames(names, t("list.and")) })}
@@ -313,7 +320,7 @@ export default async function BasinPage({
               lang={lang}
               basin={basin}
               build={(m) =>
-                riverFaq(lang, basin, answer, names, snap.filter((s) => s.tier !== "stale").map((s) => ({ station: s.station, nh: m?.[s.station] ?? null })))
+                riverFaq(lang, basin, answer, names, snap.filter((s) => s.tier !== "stale").map((s) => ({ station: s.station, nh: m?.[s.station] ?? null })), trendCounts(reporting))
               }
               note={mt}
             />

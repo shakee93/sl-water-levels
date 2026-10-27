@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
@@ -28,14 +30,14 @@ type Params = { params: Promise<{ lang: string }> };
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  const cc = ccFor(lang);
+  const sf = seoFor(lang);
   const alternates = pageAlternates(lang, "/colombo-canals");
   return {
-    title: { absolute: cc("page.title") },
-    description: cc("page.desc"),
+    title: { absolute: sf("canals.title") },
+    description: sf("canals.desc"),
     alternates,
-    openGraph: { title: cc("page.title"), description: cc("page.desc"), url: `${SITE}${alternates.canonical}`, type: "website" },
-    twitter: { card: "summary_large_image", title: cc("page.title"), description: cc("page.desc") },
+    openGraph: { ...ogBase(lang), title: sf("canals.title"), description: sf("canals.desc"), url: `${SITE}${alternates.canonical}`, type: "website" },
+    twitter: { card: "summary_large_image", title: sf("canals.title"), description: sf("canals.desc") },
   };
 }
 
@@ -89,7 +91,7 @@ export default async function ColomboCanalsPage({ params }: Params) {
           <span className="text-slate-700 dark:text-slate-300">{cc("crumb")}</span>
         </nav>
         <header className="mb-4">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{cc("page.h1")}</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{seoFor(lang)("canals.h1")}</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{cc("page.lead")}</p>
           <AnswerLine text={answer} note={mt} />
         </header>

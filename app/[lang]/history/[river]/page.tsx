@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
 import { notFound } from "next/navigation";
 import { getHistory, historyPath } from "@/lib/history";
 import { basinSlug } from "@/lib/slug";
@@ -46,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     title: { absolute: title },
     description,
     alternates,
-    openGraph: { title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
+    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
     twitter: { card: "summary_large_image", title, description },
   };
 }

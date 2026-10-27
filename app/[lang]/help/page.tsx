@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { ChevronDown, ExternalLink, Phone } from "lucide-react";
 import {
   DONATING_SAFELY,
@@ -23,15 +25,14 @@ import { SITE } from "@/lib/seo";
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  const { t } = getI18n(lang);
   const alternates = pageAlternates(lang, "/help");
-  const title = t("help.metaTitle");
-  const description = t("help.metaDesc");
+  const title = seoFor(lang)("help.title");
+  const description = seoFor(lang)("help.desc");
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates,
-    openGraph: { title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
+    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
   };
 }
 
@@ -73,12 +74,12 @@ export default async function HelpPage({ params }: { params: Promise<{ lang: str
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-12 space-y-5 sm:space-y-6">
         <nav className="text-xs text-slate-500 dark:text-slate-400">
-          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.allBasins")}</Link> <span aria-hidden>›</span>{" "}
+          <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">{t("crumb.home")}</Link> <span aria-hidden>›</span>{" "}
           <span className="text-slate-700 dark:text-slate-300">{t("nav.help")}</span>
         </nav>
 
         <header>
-          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">{t("help.h1")}</h1>
+          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">{seoFor(lang)("help.h1")}</h1>
           <p className="text-slate-600 dark:text-slate-400 mt-2">{t("help.danger")}</p>
         </header>
 

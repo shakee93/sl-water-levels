@@ -3,6 +3,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
+import { gaugeMeta, ogBase } from "@/lib/seoMeta";
 import type { TFn } from "@/lib/i18n/translate";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -88,48 +89,49 @@ export async function generateMetadata({
     const data = await fetchStationData(resolved.station, 1);
     const level = data.latest?.water_level;
     const status = statusFor(level ?? null, data.thresholds, data.latest?.ts);
-    const basin = riverName(data.basin || resolved.basin || "Sri Lanka", lang);
     const unit = detectUnit(data.thresholds, resolved.station);
     const markText = (v: number | null) => (v == null ? "—" : formatLevel(v, unit));
 
     const name = stationDisplayName(resolved.station);
-    const head = heading(t, resolved.station, data.basin || resolved.basin, lang);
     // No live number in the title: it goes stale in search snippets.
-    const titleBits = t("station.metaTitle", { heading: head });
-    const tierKey = `tier.${status.tier}` as "tier.alert";
-    const descBits =
-      level != null
-        ? t("station.metaDescLevel", {
-            name,
-            basin,
+    const oneGauge = stations.filter((x) => x.basin.trim() === (data.basin || resolved.basin).trim()).length === 1;
+    const gm = gaugeMeta(lang, {
+      gauge: name,
+      basin: data.basin || resolved.basin || "Sri Lanka",
+      oneGauge,
+      ...(level != null
+        ? {
             // Feet like the page itself (metre gauges converted); a gauge of unknown unit stays unitless.
             level: formatLevel(level, unit),
-            status: t(tierKey),
+            status: t(`tier.${status.tier}` as "tier.alert"),
             alert: markText(data.thresholds.alert),
             minor: markText(data.thresholds.minor),
             major: markText(data.thresholds.major),
-          })
-        : t("station.metaDescNone", { name, basin });
+          }
+        : {}),
+    });
+    const titleBits = gm.title;
+    const descBits = gm.description;
 
     return {
-      title: titleBits,
+      title: { absolute: titleBits },
       description: descBits,
       alternates,
-      openGraph: {
-        title: t("station.ogTitle", { heading: head }),
+      openGraph: { ...ogBase(lang),
+        title: titleBits,
         description: descBits,
         url: `${SITE}${canonical}`,
         type: "website",
       },
       twitter: {
         card: "summary_large_image",
-        title: t("station.ogTitle", { heading: head }),
+        title: titleBits,
         description: descBits,
       },
     };
   } catch {
     return {
-      title: t("station.metaTitle", { heading: heading(t, resolved.station, resolved.basin, lang) }),
+      title: { absolute: gaugeMeta(lang, { gauge: stationDisplayName(resolved.station), basin: resolved.basin, oneGauge: false }).title },
       alternates,
     };
   }
@@ -172,6 +174,9 @@ export default async function StationPage({
   const nat = resolved ? ((await nationalP).find((x) => x.station === resolved.station) ?? null) : null;
   const answer = nat ? stationAnswer(lang, t, nat) : null;
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
+  const gmeta = resolved
+    ? gaugeMeta(lang, { gauge: stationDisplayName(station), basin, oneGauge: stations.filter((x) => x.basin === basin).length === 1 })
+    : null;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
@@ -182,14 +187,14 @@ export default async function StationPage({
               webPageLd({
                 lang,
                 path: `/${river}/${stationParam}`,
-                name: heading(t, station, basin, lang),
+                name: gmeta?.title ?? heading(t, station, basin, lang),
                 description: answer ?? heading(t, station, basin, lang),
                 modified: nat?.latest?.ts,
                 speakable: [".answer-line"],
               }),
               breadcrumbLd(
                 [
-                  { name: t("crumb.allBasins"), path: "/" },
+                  { name: t("crumb.allBasins"), path: "/rivers" },
                   { name: riverName(basin, lang), path: basinPath(basin) },
                   { name: stationDisplayName(station), path: `/${river}/${stationParam}` },
                 ],
@@ -235,7 +240,7 @@ export default async function StationPage({
 
         {resolved && (
           <nav className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-            <Link href={p("/")} className="hover:underline inline-block py-3 -my-3">
+            <Link href={p("/rivers")} className="hover:underline inline-block py-3 -my-3">
               {t("crumb.allBasins")}
             </Link>{" "}
             <span aria-hidden>›</span>{" "}
@@ -249,8 +254,19 @@ export default async function StationPage({
 
         <header className="mb-4 sm:mb-5">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">
-            {station ? heading(t, station, basin, lang) : t("station.fallbackHeading")}
+            {gmeta ? gmeta.h1 : t("station.fallbackHeading")}
           </h1>
+          {gmeta?.sub && (
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {gmeta.riverLink && (
+                <>
+                  <Link href={p(basinPath(basin))} className="underline underline-offset-2 hover:text-sky-700 dark:hover:text-sky-300">{gmeta.riverLink}</Link>
+                  {" · "}
+                </>
+              )}
+              {gmeta.sub}
+            </p>
+          )}
           {answer && <AnswerLine text={answer} note={mt} />}
           {nat && nat.tier !== "stale" && (
             <Suspense key={`nh-${station}`} fallback={null}>

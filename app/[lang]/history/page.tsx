@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { ogBase } from "@/lib/seoMeta";
+import { seoFor } from "@/lib/i18n/seo";
 import { notFound } from "next/navigation";
 import { getHistory } from "@/lib/history";
 import { HistoryUnavailable, HistoryView } from "@/app/history/HistoryView";
@@ -17,10 +19,10 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   const { t } = getI18n(lang);
   const alternates = pageAlternates(lang, "/history");
   return {
-    title: t("hist.metaTitle"),
+    title: { absolute: seoFor(lang)("history.title") },
     description: t("hist.metaDesc"),
     alternates,
-    openGraph: {
+    openGraph: { ...ogBase(lang),
       title: t("hist.ogTitle"),
       description: t("hist.ogDesc"),
       url: `${SITE}${alternates.canonical}`,
