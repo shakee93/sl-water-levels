@@ -830,7 +830,8 @@ function trendForecast(
   /** Area-average catchment rain over the last 6 h (mm), used when no upstream gauge reports rain. */
   catchRain6h: number | null = null,
 ): TrendResult {
-  const ordered = orderStations(basin, snapshot);
+  // Gauges from HMIS (source "hmis") have no fitted travel time: they are never an upstream signal for another gauge.
+  const ordered = orderStations(basin, snapshot.filter((s) => s.source !== "hmis" || s.station === selectedStation));
   const myIdx = ordered.findIndex((s) => s.station === selectedStation);
   if (myIdx < 0) {
     return emptyForecast(["Selected station not in basin snapshot."]);

@@ -45,6 +45,7 @@ import { RiverMap } from "@/app/RiverMap";
 import { StationNearby } from "@/app/StationNearby";
 import { StickyContext } from "@/app/StickyContext";
 import { colomboTime, tierLabel } from "@/app/tierUi";
+import { HmisGaugeNote } from "@/app/HmisGaugeNote";
 import { FasterReading } from "@/app/FasterReading";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
@@ -172,7 +173,8 @@ export default async function StationPage({
   const canonical = p(`/${river}/${stationParam}`);
 
   // The one-sentence answer and FAQ come from the same snapshot the chart and verdict use.
-  const nat = resolved ? ((await nationalP).find((x) => x.station === resolved.station) ?? null) : null;
+  const nationalAll = await nationalP;
+  const nat = resolved ? (nationalAll.find((x) => x.station === resolved.station) ?? null) : null;
   const answer = nat ? stationAnswer(lang, t, nat) : null;
   const mt = lang !== "en" ? t("common.machineTranslated") : undefined;
   const gmeta = resolved
@@ -275,6 +277,7 @@ export default async function StationPage({
               <StationNextHourLine lang={lang} basin={basin} station={station} />
             </Suspense>
           )}
+          {resolved && <HmisGaugeNote lang={lang} station={station} nat={nat} all={nationalAll} />}
           <Suspense key={`fast-${station}`} fallback={null}>
             <FasterReading lang={lang} station={station} />
           </Suspense>

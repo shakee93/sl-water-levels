@@ -62,7 +62,7 @@ export function detectAnomaly(
     message: null,
   };
   if (snapshot.length === 0) return empty;
-  const ordered = orderStations(basin, snapshot);
+  const ordered = orderStations(basin, snapshot.filter((s) => s.source !== "hmis" || s.station === selectedStation));
   const myIdx = ordered.findIndex((s) => s.station === selectedStation);
   if (myIdx < 0) return empty;
   const me = ordered[myIdx];

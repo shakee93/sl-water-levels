@@ -36,6 +36,7 @@ const RP = "Rathnapura", EL = "Ellagawa", MG = "Magura", KW = "Kalawellawa (Mill
 const BD = "Baddegama", TW = "Thawalama";
 const PI = "Pitabeddara", UR = "Urawa", PA = "Panadugama", TH = "Thalgahagoda";
 const DU = "Dunamale", BG = "Badalgama", GI = "Giriulla", MO = "Moragaswewa", GA = "Galgamuwa";
+const KB = "Karawanella Bridge", MB = "Mahiyangana Bridge"; // gauges from HMIS (lib/hmisCalc.ts)
 const NA = "Nawalapitiya", PE = "Peradeniya", CA = "Calidonia", TL = "Thaldena", WE = "Weraganthota", MA = "Manampitiya";
 
 const ROWS: Row[] = [
@@ -90,7 +91,7 @@ const ROWS: Row[] = [
   ["Kosgama", "Colombo", 6.9300, 80.1300, [HW, GC], ["කොස්ගම"]],
   ["Salawa", "Colombo", 6.9350, 80.1150, [HW, GC], ["සාලාව"]],
   ["Avissawella", "Colombo", 6.9519, 80.2100, [GC, HW], ["Awissawella", "Avissavella", "Seethawaka", "Sitawaka", "අවිස්සාවේල්ල", "අවිස්සාවෙල්ල", "அவிசாவளை"]],
-  ["Ruwanwella", "Kegalle", 7.0560, 80.2530, [GC, KG], ["Ruwanwelle", "රුවන්වැල්ල"]],
+  ["Ruwanwella", "Kegalle", 7.0560, 80.2530, [KB, GC, KG], ["Ruwanwelle", "රුවන්වැල්ල"]],
   ["Yatiyantota", "Kegalle", 6.9990, 80.2950, [KG, GC], ["Yatiyanthota", "Yatiyantota", "යටියන්තොට"]],
   ["Kitulgala", "Kegalle", 6.9890, 80.4140, [KG], ["Kithulgala", "Kitulgale", "කිතුල්ගල"]],
   ["Deraniyagala", "Kegalle", 6.9250, 80.3380, [DE], ["Deraniyagale", "දෙරණියගල"]],
@@ -176,7 +177,7 @@ const ROWS: Row[] = [
   ["Digana", "Kandy", 7.2870, 80.7340, [PE, WE], ["Digana", "දිගන"]],
   ["Talawakele", "Nuwara Eliya", 6.9370, 80.6580, [CA], ["Talawakelle", "Talawakele", "තලවාකැලේ"]],
   ["Nuwara Eliya", "Nuwara Eliya", 6.9497, 80.7891, [CA], ["Nuwaraeliya", "Nuwara-Eliya", "නුවරඑළිය", "நுவரெலியா"]],
-  ["Mahiyangana", "Badulla", 7.3330, 80.9890, [WE, TL], ["Mahiyanganaya", "Mahiyangane", "මහියංගනය"]],
+  ["Mahiyangana", "Badulla", 7.3330, 80.9890, [MB, WE, TL], ["Mahiyanganaya", "Mahiyangane", "මහියංගනය"]],
   ["Polonnaruwa", "Polonnaruwa", 7.9403, 81.0188, [MA], ["Polonnaruva", "Polonnaruwe", "පොළොන්නරුව", "பொலன்னறுவை"]],
   ["Manampitiya", "Polonnaruwa", 7.9130, 81.0900, [MA], ["Manampitiye", "මනම්පිටිය"]],
   // ── North Central: Kala Oya / Malwathu Oya / Yan Oya ──
@@ -283,5 +284,8 @@ export const RIVERS: RiverAlias[] = [
   { basin: "Menik Ganga", aliases: ["Menik", "Menik Ganga", "Manik Ganga", "මැණික් ගඟ"] },
   { basin: "Nilwala Ganga", aliases: ["Nilwala", "Nilwala River", "Nilwala Gaga", "Nilwalaganga", "නිල්වලා ගඟ", "නිල්වලා"] },
   { basin: "Walawe Ganga", aliases: ["Walawe", "Walawa", "Walawe River", "Walave", "වලවේ ගඟ", "වලවේ"] },
+  { basin: "Andella Oya", aliases: ["Andella Oya", "Andella"] },
+  { basin: "Magalawatavan Aru", aliases: ["Magalawatavan Aru", "Magalawatavan"] },
+  { basin: "Mundeni Aru", aliases: ["Mundeni Aru", "Mundeni"] },
   { basin: "Yan Oya", aliases: ["Yan Oya", "Yaan Oya", "යාන් ඔය"] },
 ];

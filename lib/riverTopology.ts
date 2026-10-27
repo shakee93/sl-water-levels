@@ -18,7 +18,7 @@ export type RiverShape = {
 
 export const RIVER_SHAPE: Record<string, RiverShape> = {
   "Kelani Ganga": {
-    main: ["Norwood", "Kithulgala", "Glencourse", "Hanwella", "Nagalagam Street"],
+    main: ["Norwood", "Kithulgala", "Karawanella Bridge", "Glencourse", "Hanwella", "Nagalagam Street"],
     tribs: [
       { path: ["Deraniyagala"], joins: ["Kithulgala", "Glencourse"] }, // Maguru Ganga
       { path: ["Holombuwa"], joins: ["Kithulgala", "Glencourse"] }, // Gurugoda Oya
@@ -26,7 +26,7 @@ export const RIVER_SHAPE: Record<string, RiverShape> = {
     sea: { lat: 6.972, lon: 79.846 }, // Colombo
   },
   "Mahaweli Ganga": {
-    main: ["Nawalapitiya", "Peradeniya", "@polgolla", "@victoria", "@randenigala", "@rantambe", "Weraganthota", "Manampitiya"],
+    main: ["Nawalapitiya", "Peradeniya", "@polgolla", "@victoria", "@randenigala", "@rantambe", "Weraganthota", "Mahiyangana Bridge", "Manampitiya"],
     tribs: [
       // Kotmale Oya: Calidonia is above Upper Kotmale; it joins the Mahaweli at Gampola.
       { path: ["Calidonia", "@upper-kotmale", "@kotmale"], joins: ["Nawalapitiya", "Peradeniya"] },

@@ -58,9 +58,12 @@ const DMC_GAUGES: Record<string, { unit: "ft" | "m"; alert: number; minor: numbe
 };
 
 /** Unit per gauge, keyed by our exact gauge names (from the DMC report above). */
-export const UNIT_BY_STATION: Record<string, "ft" | "m"> = Object.fromEntries(
-  Object.entries(DMC_GAUGES).map(([k, v]) => [k, v.unit]),
-);
+export const UNIT_BY_STATION: Record<string, "ft" | "m"> = {
+  ...Object.fromEntries(Object.entries(DMC_GAUGES).map(([k, v]) => [k, v.unit])),
+  // Gauges from HMIS (hmis.gov.lk), which publishes every level and threshold in metres (its sensor_type is "Waterlevel m").
+  "Karawanella Bridge": "m", "Mahiyangana Bridge": "m", "Galodaya Bridge": "m", "Lavanai Aru Bridge": "m", "Maalayarkattu Bridge": "m",
+  "Mullamunai Bridge": "m", "Pulipanchakal Bridge": "m", "Punani Anicut": "m", "Rajagalathenna Bridge": "m", "Vadamunai Bridge": "m",
+};
 
 // Callers that only have the thresholds (no gauge name) match on the alert/minor/major triple,
 // which is unique per gauge in the DMC table; a triple shared by gauges with different units is dropped.

@@ -19,6 +19,7 @@ import { noRainSensor } from "./rainSensors";
 import { levelTier, statusFor, type Tier } from "./status";
 import { basinPath, basinSlug, stationPath } from "./slug";
 import { detectUnit, type Unit } from "./units";
+import { getHmisLevels, HMIS_GAUGES, HMIS_GAUGE_BY_STATION, type HmisDevice, type HmisGaugeDef } from "./hmis";
 
 export { statusFor } from "./status";
 export type { Status, StatusTone, Tier } from "./status";
@@ -210,8 +211,21 @@ export const fetchStations = cache(async (): Promise<Station[]> => {
       if (seen.has(k)) return false;
       seen.add(k);
       return true;
-    });
+    })
+    .concat(hmisStations());
 });
+
+/** The gauges only HMIS has (lib/hmisCalc.ts HMIS_GAUGES): a fixed list, so their pages resolve even while HMIS is slow. */
+function hmisStations(): Station[] {
+  return HMIS_GAUGES.map((g) => ({ basin: g.basin, station: g.station, latitude: g.lat, longitude: g.lon }));
+}
+
+/** An HMIS device as the rows the ArcGIS builders take (metres; thresholds from HMIS, else the saved copy). No rain (null, not zero). */
+function hmisRows(def: HmisGaugeDef, dev: HmisDevice | undefined): RawGauge[] {
+  const live = dev?.thresholds;
+  const t = (k: "alert" | "minor" | "major") => live?.[k] ?? def.thresholds[k];
+  return (dev?.series ?? []).map((p) => ({ gauge: def.station, basin: def.basin, water_level: p.m, rain_fall: null, CreationDate: p.ts, alertpull: t("alert"), minorpull: t("minor"), majorpull: t("major") }));
+}
 
 type RawGauge = {
   gauge?: string;
@@ -247,6 +261,15 @@ function toThresholds(a: RawGauge): Thresholds {
 
 /** Per-gauge history for the long chart. gauges_2_view only retains ~7 days. */
 export async function fetchStationData(stationName: string, days = 4): Promise<StationData> {
+  const hdef = HMIS_GAUGE_BY_STATION.get(stationName);
+  if (hdef) {
+    // HMIS gauge: its last 24 h (HMIS keeps no more), metres.
+    const hm = await getHmisLevels(4000);
+    const dev = hm?.devices.find((d) => d.device === hdef.device);
+    if (!dev) throw new Error(`HMIS has no reading for ${stationName} right now`);
+    const n = buildHmisNational(hdef, dev);
+    return { station: stationName, basin: hdef.basin, thresholds: n.thresholds, readings: hmisRows(hdef, dev).map(toReading).sort((a, b) => a.ts - b.ts), latest: n.latest };
+  }
   let features: ArcgisPage["features"];
   try {
     features = await arcgis("gauges_2_view/FeatureServer/0/query", {
@@ -316,6 +339,11 @@ export type NationalStation = {
   rain6h: number | null;
   /** Last 24h of readings up to `latest.ts`, ascending. */
   trend24h: Reading[];
+  /** Where the readings come from. HMIS gauges (hmis.gov.lk, metres) are added beside the ArcGIS ones; absent = ArcGIS. */
+  source?: "arcgis" | "hmis";
+  /** HMIS only: who runs the sensor (Irrigation Department / ACCIMT) and how often it reports. */
+  institute?: string;
+  cadenceMin?: number;
 };
 
 const NATIONAL_HOURS = 26;
@@ -404,8 +432,24 @@ export const getNational = cache(async (): Promise<NationalStation[]> => {
     else byGauge.set(k, [a]);
   }
 
-  return stations.map((s) => buildNational(s, byGauge.get(s.station) ?? []));
+  const arc = stations.filter((s) => !HMIS_GAUGE_BY_STATION.has(s.station)).map((s) => buildNational(s, byGauge.get(s.station) ?? []));
+  // HMIS-only gauges, merged as an extra source. Left out entirely while HMIS is slow or down (callers see the ArcGIS gauges, as before).
+  const hmis = await getHmisLevels(1500);
+  if (!hmis) return arc;
+  const extra: NationalStation[] = [];
+  for (const def of HMIS_GAUGES) {
+    const dev = hmis.devices.find((d) => d.device === def.device);
+    if (!dev) continue;
+    extra.push(buildHmisNational(def, dev));
+  }
+  return [...arc, ...extra];
 });
+
+function buildHmisNational(def: HmisGaugeDef, dev: HmisDevice): NationalStation {
+  const st = { basin: def.basin, station: def.station, latitude: def.lat, longitude: def.lon };
+  const n = buildNational(st, hmisRows(def, dev));
+  return { ...n, source: "hmis", institute: def.institute, cadenceMin: def.cadenceMin };
+}
 
 // ---------------------------------------------------------------------------
 // Basin snapshot (derived from getNational)
