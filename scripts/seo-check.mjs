@@ -120,7 +120,7 @@ if (station) await page("station", `/${station.id}`, { faq: true, answer: true }
 const river = pick(/^\/[a-z0-9-]+$/);
 const multi = locs.map((u) => u.replace(SITE, "")).find((u) => /^\/(kelani-ganga|kalu-ganga|mahaweli-ganga)$/.test(u));
 if (multi) await page("river", multi, { faq: true, answer: true });
-const rsv = pick(/^\/reservoirs\/[a-z0-9-]+$/);
+const rsv = pick(/^\/reservoirs\/(?!spilling$)[a-z0-9-]+$/); // /reservoirs/spilling is a list page, not one reservoir
 if (rsv) await page("reservoir", rsv, { faq: true, answer: true });
 const town = pick(/^\/flood\/[a-z0-9-]+$/);
 if (town) await page("town", town, { faq: true, answer: true });
