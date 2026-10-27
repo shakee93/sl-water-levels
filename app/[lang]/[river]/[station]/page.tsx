@@ -45,6 +45,7 @@ import { RiverMap } from "@/app/RiverMap";
 import { StationNearby } from "@/app/StationNearby";
 import { StickyContext } from "@/app/StickyContext";
 import { colomboTime, tierLabel } from "@/app/tierUi";
+import { FasterReading } from "@/app/FasterReading";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
 import { SITE } from "@/lib/seo";
@@ -274,6 +275,9 @@ export default async function StationPage({
               <StationNextHourLine lang={lang} basin={basin} station={station} />
             </Suspense>
           )}
+          <Suspense key={`fast-${station}`} fallback={null}>
+            <FasterReading lang={lang} station={station} />
+          </Suspense>
         </header>
 
         {stationsError ? (
