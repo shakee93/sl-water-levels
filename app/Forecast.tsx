@@ -73,9 +73,9 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
           target,
           likely,
           fact: {
-            en: `Could reach ${lvl.en} in ${h.en}, and ${maybe ? "possibly " : ""}flood level in ${hm.en}`,
-            si: `${h.si} ඇතුළත ${lvl.si}ට ද, ${maybe ? "සමහරවිට " : ""}${hm.si} ඇතුළත ගංවතුර මට්ටමට ද ළඟා විය හැක`,
-            ta: `${h.ta}ில் ${lvl.ta} எட்டலாம்; ${maybe ? "ஒருவேளை " : ""}${hm.ta}ில் வெள்ள மட்டத்தையும் எட்டலாம்`,
+            en: `Could reach ${lvl.en} in ${h.en} (${maybe ? "possibly " : ""}flood level in ${hm.en})`,
+            si: `${h.si} ඇතුළත ${lvl.si}ට ළඟා විය හැක (${maybe ? "සමහරවිට " : ""}${hm.si} ඇතුළත ගංවතුර මට්ටමට)`,
+            ta: `${h.ta}ில் ${lvl.ta} எட்டலாம் (${maybe ? "ஒருவேளை " : ""}${hm.ta}ில் வெள்ள மட்டம்)`,
           },
         };
       }
@@ -128,7 +128,7 @@ function smallChanceFact(c: { threshold: string }, hours: number | null, heavier
     ? { en: " (if the heavier rain comes)", si: " (වැසි වැඩි වුවහොත්)", ta: " (கனமழை வந்தால்)" }
     : { en: "", si: "", ta: "" };
   return {
-    en: `Small chance it reaches the ${lvl.en} ${h ? `in ${h.en}` : "within 24 hours"}${rain.en}`,
+    en: `Small chance of ${lvl.en} ${h ? `in ${h.en}` : "within 24 hours"}${rain.en}`,
     si: `${h ? `${h.si} ඇතුළත` : "පැය 24ක් ඇතුළත"} ${lvl.si} ළඟා වීමට ඇත්තේ සුළු ඉඩකි${rain.si}`,
     ta: `${h ? `${h.ta}ில்` : "24 மணி நேரத்தில்"} ${lvl.ta} எட்டுவதற்கான வாய்ப்பு சிறியது${rain.ta}`,
   };
@@ -354,6 +354,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         verdict={VERDICT[tone]}
         direction={direction}
         fact={fact}
+        factKind={!stale && fact && fact.en === "No flooding expected today" ? "ok" : "soon"}
         labels={
           stale
             ? undefined

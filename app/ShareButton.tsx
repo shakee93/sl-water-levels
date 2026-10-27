@@ -178,6 +178,14 @@ export function AdvisoryText({
 
 // ---- the verdict card ---------------------------------------------------------------------
 export type T3 = { en: string; si: string; ta: string };
+
+/** A tile line "Title (small detail)" shows as a title with a smaller muted sub-line, so long tile texts stay short. */
+function splitTile(text: string): { title: string; sub: string | null } {
+  const m = /^(.+?) \((.+)\)$/.exec(text);
+  if (!m) return { title: text, sub: null };
+  const sub = m[2];
+  return { title: m[1], sub: sub.charAt(0).toUpperCase() + sub.slice(1) };
+}
 export type VerdictTone = "normal" | "watch" | "alert" | "minor" | "major" | "none" | "stale";
 
 export const TONE: Record<VerdictTone, { icon: typeof Clock; text: string; bar: string }> = {
@@ -203,11 +211,32 @@ const SURFACE: Record<VerdictTone, { card: string; tile: string; action: string;
 };
 
 const TREND = {
-  up: { icon: ArrowUp, tone: "text-amber-600 dark:text-amber-400" },
-  down: { icon: ArrowDown, tone: "text-emerald-600 dark:text-emerald-400" },
-  steady: { icon: Minus, tone: "text-slate-500 dark:text-slate-400" },
-  unknown: { icon: CircleHelp, tone: "text-slate-400 dark:text-slate-500" },
+  up: { icon: ArrowUp, tone: "text-amber-600 dark:text-amber-400", chip: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" },
+  down: { icon: ArrowDown, tone: "text-emerald-600 dark:text-emerald-400", chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
+  steady: { icon: Minus, tone: "text-slate-500 dark:text-slate-400", chip: "bg-slate-200/70 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300" },
+  unknown: { icon: CircleHelp, tone: "text-slate-400 dark:text-slate-500", chip: "bg-slate-200/70 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400" },
 } as const;
+
+/** One "Next hour" / "Next 24 hours" tile: small label, an icon chip beside a short bold headline, and an optional muted sub-line. */
+function Tile({ data, label, text, Icon, chip, className }: { data: string; label: string | null; text: string; Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }> | null; chip: string; className: string }) {
+  const { title, sub } = splitTile(text);
+  return (
+    <div {...{ [data]: "" }} className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${className}`}>
+      {label && <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{label}</p>}
+      <div className="mt-1.5 flex items-start gap-2.5">
+        {Icon && (
+          <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${chip}`}>
+            <Icon className="size-5" aria-hidden />
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="text-base sm:text-lg font-semibold leading-snug text-slate-900 dark:text-slate-50">{title}</p>
+          {sub && <p className="mt-0.5 text-xs sm:text-sm leading-snug text-slate-500 dark:text-slate-400">{sub}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function VerdictCard({
   tone,
@@ -215,6 +244,7 @@ export function VerdictCard({
   direction,
   fact,
   labels,
+  factKind,
   action,
   outlook,
   call,
@@ -233,6 +263,8 @@ export function VerdictCard({
   fact: T3 | null;
   /** Optional muted labels shown before direction and fact ("Next hour:", "Next 24 hours:"). */
   labels?: { direction: T3 | null; fact: T3 | null };
+  /** "ok" gives the Next 24 hours tile a green check (calm day); otherwise a clock. */
+  factKind?: "ok" | "soon";
   action: T3 | null;
   /** The AI sentence with a round trend badge, shown by default under the forecast lines. */
   outlook?: { trend: "up" | "down" | "steady" | "unknown"; text: React.ReactNode } | null;
@@ -297,23 +329,24 @@ export function VerdictCard({
         {(direction || fact) && (
           <div className={`mt-4 grid gap-2 sm:gap-3 ${lang === "en" ? "grid-cols-2" : "grid-cols-1 min-[430px]:grid-cols-2"}`} lang={lang}>
             {direction && (
-              <div data-direction className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${look.tile}`}>
-                {labels?.direction && (
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{labels.direction[lang].replace(/:$/, "")}</p>
-                )}
-                <p className="mt-0.5 flex items-center gap-1.5 text-base sm:text-lg font-medium text-slate-900 dark:text-slate-50">
-                  {TrendIcon && <TrendIcon className={`size-5 shrink-0 ${trend!.tone}`} aria-hidden />}
-                  {direction[lang]}
-                </p>
-              </div>
+              <Tile
+                data="data-direction"
+                label={labels?.direction ? labels.direction[lang].replace(/:$/, "") : null}
+                text={direction[lang]}
+                Icon={TrendIcon}
+                chip={trend?.chip ?? ""}
+                className={look.tile}
+              />
             )}
             {fact && (
-              <div data-fact className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${look.tile}`}>
-                {labels?.fact && (
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{labels.fact[lang].replace(/:$/, "")}</p>
-                )}
-                <p className="mt-0.5 text-base sm:text-lg font-medium text-slate-900 dark:text-slate-50">{fact[lang]}</p>
-              </div>
+              <Tile
+                data="data-fact"
+                label={labels?.fact ? labels.fact[lang].replace(/:$/, "") : null}
+                text={fact[lang]}
+                Icon={factKind === "ok" ? CircleCheck : Clock}
+                chip={factKind === "ok" ? TREND.down.chip : tone === "alert" || tone === "minor" || tone === "major" ? TREND.up.chip : TREND.steady.chip}
+                className={look.tile}
+              />
             )}
           </div>
         )}
