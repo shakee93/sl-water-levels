@@ -795,8 +795,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   // ---- header strip: title, one live chip, one info chip that expands the test notice
   const header = (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="text-base font-semibold md:text-lg tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map (test)")}</h1>
+      <div className="flex flex-nowrap items-center gap-x-2 overflow-x-auto whitespace-nowrap sm:gap-x-3 [&>*]:shrink-0">
+        <h1 className="shrink-0 text-sm font-semibold md:text-base tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map (test)")}</h1>
         <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
           <span aria-hidden className="size-2 rounded-full" style={{ background: stepColor }} />
           {replayOn && rp ? (
@@ -955,7 +955,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     dragRef.current = null; setSheetPx(null); setSnap(moved ? nearest : (snap + 1) % 3);
   };
 
-  const mapH = full ? "h-full w-full" : "h-[calc(100svh-290px)] min-h-[440px] max-h-[900px] w-full overflow-hidden rounded-xl border border-slate-200 md:h-[calc(100svh-170px)] md:min-h-[520px] dark:border-slate-700";
+  // full width and the full screen height: viewport minus the site header (3.5 rem), this strip (~2.75 rem) and, on phones, the bottom nav; vh first, dvh over it (see the style tag)
+  const mapH = full ? "h-full w-full" : "f3d-map w-full overflow-hidden";
   const results = (
     <>
       {qOpen && q.trim().length >= 2 && hits.length === 0 && gaz && <p className={`mt-1 rounded-lg px-3 py-2 text-xs text-slate-600 dark:text-slate-300 ${GLASS}`}>{tr("No match. Try a town, road or landmark.")}</p>}
@@ -973,8 +974,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   );
 
   return (
-    <div className="space-y-3">
-      {header}
+    <div>
+      <style>{`.f3d-map{--f3d-off:calc(3.5rem + 2.9rem + 3.5rem + env(safe-area-inset-bottom,0px));height:calc(100vh - var(--f3d-off));height:calc(100dvh - var(--f3d-off));min-height:420px}@media (min-width:640px){.f3d-map{--f3d-off:calc(3.5rem + 2.9rem)}}`}</style>
+      <div className="px-3 py-1.5 sm:px-4">{header}</div>
       <div ref={wrap} className={full ? "fixed inset-0 z-[70] bg-slate-100 dark:bg-slate-950" : "relative"}>
         <div ref={box} className={mapH} data-testid="flood3d-map" />
         <canvas ref={rainFx} className="pointer-events-none absolute inset-0 z-[5]" aria-hidden />

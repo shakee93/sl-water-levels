@@ -41,8 +41,9 @@ export default async function Flood3dPage({ params }: { params: Promise<{ lang: 
   const learned = avg((r) => r.method === "learned");
   const plain = avg((r) => r.method.startsWith("plain HAND<="));
   return (
-    <main className="mx-auto max-w-5xl space-y-3 px-4 py-4">
+    <main className="w-full">
       <Flood3dMap towns={towns} gauges={gauges} lang={lang} />
+      <div className="mx-auto max-w-5xl space-y-3 px-4 py-4">
       <section className="space-y-2 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700" data-testid="flood3d-accuracy">
         <h2 className="font-semibold">{tr("How good is it? (Kelaniya area, honest numbers)")}</h2>
         <p>{ACC[lang](pct(learned.hit), pct(learned.far), pct(plain.hit), pct(plain.far))}</p>
@@ -61,6 +62,7 @@ export default async function Flood3dPage({ params }: { params: Promise<{ lang: 
       <p className="text-xs text-slate-500">
         {tr("Data: Copernicus GLO-30 elevation (ESA, free licence); Copernicus Emergency Management Service EMSR851 flood extents, contains modified Copernicus EMS information; map and roads © OpenStreetMap contributors (ODbL) via OpenFreeMap; terrain tiles Mapzen/AWS; rain: GSMaP (JAXA) and HMIS ground gauges; river levels Irrigation Department (ArcGIS) and HMIS via waterlevels.lk.")}
       </p>
+      </div>
     </main>
   );
 }
