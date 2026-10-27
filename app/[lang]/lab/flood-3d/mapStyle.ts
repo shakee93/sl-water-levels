@@ -45,7 +45,13 @@ type Style = { layers: Layer[]; sources: Record<string, unknown>; [k: string]: u
 
 /** The base style for a theme, with our quiet 3D buildings added from zoom 15. */
 export async function loadBaseStyle(dark: boolean): Promise<Style> {
-  const style = (await (await fetch(POSITRON)).json()) as Style;
+  // a rate-limited or blipping style host must not leave the page without a map: up to three tries with a short back-off
+  let style: Style | null = null;
+  for (let k = 0; k < 3 && !style; k++) {
+    try { const r = await fetch(POSITRON); if (r.ok) style = (await r.json()) as Style; } catch { /* try again */ }
+    if (!style) await new Promise((res) => setTimeout(res, 800 * (k + 1)));
+  }
+  if (!style) throw new Error("style");
   if (dark) {
     for (const l of style.layers) {
       if (!l.paint) continue;

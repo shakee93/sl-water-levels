@@ -558,6 +558,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         });
         map.on("error", (e) => { if (!dead && /style|tiles\.openfreemap/i.test(String(e?.error?.message ?? ""))) setErr(tr("The base map could not load.")); });
       } catch (e) {
+        console.error("[flood3d] map start failed", e);
         if (!dead) setErr(e instanceof Error && e.message === "maplibre" ? tr("The map library could not load.") : tr("The map could not start."));
       }
     })();
