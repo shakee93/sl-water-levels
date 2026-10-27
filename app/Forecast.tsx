@@ -354,6 +354,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         verdict={VERDICT[tone]}
         direction={direction}
         fact={fact}
+        tide={tideOnly}
         factKind={!stale && fact && fact.en === "No flooding expected today" ? "ok" : "soon"}
         labels={
           stale

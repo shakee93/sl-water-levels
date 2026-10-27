@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LevelGauge } from "./LevelGauge";
 import { useI18n } from "./LocaleProvider";
-import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Info, Minus, MessageCircle, Phone, Share2, Siren, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Info, Minus, MessageCircle, Phone, Share2, Siren, Waves, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
 
 const KEY = "sl_favourites";
 const EVT = "sl:favourites";
@@ -223,9 +223,9 @@ function Tile({ data, label, text, Icon, chip, className }: { data: string; labe
   return (
     <div {...{ [data]: "" }} className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${className}`}>
       {label && <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{label}</p>}
-      <div className="mt-1.5 flex items-start gap-2.5">
+      <div className="mt-1.5 flex flex-col items-start gap-1.5 sm:flex-row sm:gap-2.5">
         {Icon && (
-          <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${chip}`}>
+          <span className={`sm:mt-0.5 grid size-7 sm:size-8 shrink-0 place-items-center rounded-lg ${chip}`}>
             <Icon className="size-5" aria-hidden />
           </span>
         )}
@@ -245,6 +245,7 @@ export function VerdictCard({
   fact,
   labels,
   factKind,
+  tide,
   action,
   outlook,
   call,
@@ -265,6 +266,8 @@ export function VerdictCard({
   labels?: { direction: T3 | null; fact: T3 | null };
   /** "ok" gives the Next 24 hours tile a green check (calm day); otherwise a clock. */
   factKind?: "ok" | "soon";
+  /** Next hour is the tide, not the river: Waves icon instead of the steady dash. */
+  tide?: boolean;
   action: T3 | null;
   /** The AI sentence with a round trend badge, shown by default under the forecast lines. */
   outlook?: { trend: "up" | "down" | "steady" | "unknown"; text: React.ReactNode } | null;
@@ -333,7 +336,7 @@ export function VerdictCard({
                 data="data-direction"
                 label={labels?.direction ? labels.direction[lang].replace(/:$/, "") : null}
                 text={direction[lang]}
-                Icon={TrendIcon}
+                Icon={tide ? Waves : TrendIcon}
                 chip={trend?.chip ?? ""}
                 className={look.tile}
               />

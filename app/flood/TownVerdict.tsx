@@ -89,6 +89,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href }:
         verdict={verdict}
         direction={g ? t3(r.hourKey) : null}
         fact={stale && !r.heavyRain ? null : t3(r.day.key as TKey, dayVars)}
+        tide={r.hourKey === "dir.tide"}
         labels={{ direction: t3("label.hour"), fact: t3("label.day") }}
         action={r.actionKey ? t3(r.actionKey) : null}
         // The arrow follows the same next-hour call as the words beside it ("River rising slowly"
