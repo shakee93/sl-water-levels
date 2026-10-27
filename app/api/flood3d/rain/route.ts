@@ -3,8 +3,9 @@ import { connection } from "next/server";
 import { getFlood3dRain } from "@/lib/flood3dRain";
 import { timeBox } from "@/lib/nextHour";
 
-export async function GET() {
+export async function GET(req: Request) {
   await connection();
+  void req.url; // keeps the route dynamic (see app/api/flood3d/route.ts)
   const d = await timeBox(getFlood3dRain(), 8000);
   if (!d) return Response.json({ error: "Rain data temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   return Response.json(d, { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300", "X-Robots-Tag": "noindex" } });

@@ -44,7 +44,8 @@ const publicCounts = unstable_cache(
   { revalidate: 300 },
 );
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  void req.url; // keeps the route dynamic: otherwise the build-time (empty) answer is served
   if (!d1Configured()) return reply(200, { areas: [] });
   return NextResponse.json({ areas: await publicCounts() }, { headers: { "Cache-Control": "public, s-maxage=300", "X-Robots-Tag": "noindex" } });
 }

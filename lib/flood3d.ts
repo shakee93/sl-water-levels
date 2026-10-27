@@ -119,6 +119,8 @@ export const getFlood3dLive = unstable_cache(
         const fast = x.station === "Hanwella" ? hanwella : null;
         return { name: r.station, lat: x.latitude, lon: x.longitude, levelFt: r.level, status: r.status, statusLabel: r.statusLabel, trend: r.trend, observedAt: r.observedAt, url: r.url, fastFt: fast?.fastFt ?? null, fastAt: fast?.fastAt ?? null };
       });
+    // an empty answer (ArcGIS rate-limited or slow) must not be cached for 2 minutes: throw, so the caller serves the last good one
+    if (!nagalagam && gauges.length === 0) throw new Error("flood3d: no gauge data");
     return { generatedAt: new Date().toISOString(), nagalagam, hanwella, hanwellaToNag: HANWELLA_M_TO_NAG_FT, hanwellaLagH: HANWELLA_LAG_H, gauges };
   },
   ["flood3d-live-v3"],
@@ -128,7 +130,7 @@ export const getFlood3dLive = unstable_cache(
 let lastGood: Flood3dLive | null = null;
 /** Never a 503: the fresh answer when it arrives in time, else the last good one (marked stale), else an empty partial the client retries. */
 export async function getFlood3dLiveSafe(): Promise<Flood3dLive> {
-  const fresh = await timeBox(getFlood3dLive(), 4500);
+  const fresh = await timeBox(getFlood3dLive(), 4500); // null on a throw or when slower than 4.5 s
   if (fresh && (fresh.nagalagam || fresh.gauges.length)) { lastGood = fresh; return fresh; }
   if (lastGood) return { ...lastGood, stale: true };
   return fresh ?? { generatedAt: new Date().toISOString(), nagalagam: null, hanwella: null, hanwellaToNag: HANWELLA_M_TO_NAG_FT, hanwellaLagH: HANWELLA_LAG_H, gauges: [], partial: true };
