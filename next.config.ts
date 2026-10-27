@@ -22,6 +22,8 @@ const river = `:river((?!(?:${FIXED})$)[^/]+)`;
 const leaf = ":leaf((?!opengraph-image|twitter-image)[^/]+)";
 
 const nextConfig: NextConfig = {
+  // app/global-not-found.tsx: the body of the 404 that proxy.ts returns for addresses that do not exist (no root layout to compose it from).
+  experimental: { globalNotFound: true },
   images: {
     // Reservoir photos (app/ReservoirPhotos.tsx) are Wikimedia Commons thumbnails and nothing else.
     remotePatterns: [{ protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/commons/**", search: "" }],
