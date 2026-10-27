@@ -13,6 +13,7 @@ import { publisherLd, siteDatasetLd, webPageLd, websiteLd } from "@/lib/seo";
 import { PlaceSearch } from "../PlaceSearch";
 import { getSearchStations } from "../PlaceSearchData";
 import { SriLankaMap } from "../SriLankaMap";
+import { HmisWarnings } from "../HmisWarnings";
 import { NeedsAttention } from "../NeedsAttention";
 import { ReleaseLines } from "../ReleaseCard";
 import { SpillWatchLine } from "../SpillWatchLine";
@@ -115,6 +116,9 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             {t("home.subtitle")}
           </p>
         </header>
+        <Suspense fallback={null}>
+          <HmisWarnings lang={lang} />
+        </Suspense>
 
         {stationsError ? (
           <ErrorBanner t={t} title={t("err.stationsTitle")} detail={stationsError} />

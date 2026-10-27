@@ -647,6 +647,7 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
       const h = colomboHour(now);
       return (h >= 6 && h < 23 ? 2 : 3) * HOUR; // runs every 15 min by day, hourly overnight
     }),
+    checkWorkflow("pipe-hmis", "HMIS archive (data branch)", "hmis-snapshot.yml", "Nothing visible; the history that will let the 10-minute sensors and ground rain gauges be backtested has gaps (each run re-reads the last 24 h, so short gaps heal).", () => 3 * HOUR),
     checkWorkflow("pipe-forecasts", "Hourly forecast store (Cloudflare D1)", "store-forecasts.yml", "Nothing visible; forecast accuracy checking has gaps.", () => 2 * HOUR),
     checkWorkflow("pipe-export", "Monthly prediction export", "export-predictions.yml", "Nothing visible; the monthly accuracy review has no new export.", () => null),
   ]);

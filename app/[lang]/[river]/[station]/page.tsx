@@ -46,6 +46,7 @@ import { StationNearby } from "@/app/StationNearby";
 import { StickyContext } from "@/app/StickyContext";
 import { colomboTime, tierLabel } from "@/app/tierUi";
 import { HmisGaugeNote } from "@/app/HmisGaugeNote";
+import { HmisWarnings } from "@/app/HmisWarnings";
 import { GroundRainLine } from "@/app/GroundRainLine";
 import { FasterReading } from "@/app/FasterReading";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
@@ -293,6 +294,7 @@ export default async function StationPage({
           <ErrorBanner t={t} title={t("err.stationsTitle")} detail={stationsError} />
         ) : (
           <>
+            <Suspense key={`hmiswarn-${station}`} fallback={null}><HmisWarnings lang={lang} /></Suspense>
             <Suspense key={`release-${station}`} fallback={null}><ReleaseCard lang={lang} station={station} basin={basin} /></Suspense>
             <Suspense key={`spillwarn-${station}`} fallback={null}><SpillWarningNote lang={lang} station={station} basin={basin} /></Suspense>
 

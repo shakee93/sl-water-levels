@@ -1,0 +1,64 @@
+# Archives HMIS (hmis.gov.lk) water levels and ground rain to the `data` branch under hmis/levels and hmis/rain
+# (compact JSON per Colombo day, merged each run). Every 30 minutes; HMIS serves the last 24 h each time, so a skipped run heals.
+# This is the history HMIS does not publish: it is what later allows the 10-minute sensors and ground rain gauges to be backtested.
+
+name: HMIS snapshot
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Same group as the other data-branch writers so they never push at once.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  hmis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth=1 origin data
+            git worktree add archive FETCH_HEAD
+            git -C archive checkout -B data
+          else
+            git worktree add --orphan -b data archive
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Archive HMIS
+        run: node --experimental-strip-types scripts/hmis-snapshot.mjs archive
+
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change."
+            exit 0
+          fi
+          git commit -m "HMIS $(TZ=Asia/Colombo date '+%F %H:%M')"
+          git push origin data
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true
