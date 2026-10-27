@@ -71,6 +71,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const dayMs = (d: string | null) => (d ? Date.parse(`${d}T09:00:00+05:30`) : null);
   const rsvDay = [rsv?.sheetDate, rsv?.wmsDate].filter((d): d is string => !!d).sort().pop() ?? null;
 
+  const histTs = history ? Date.parse(history.generatedAt) || null : null;
   const contentDay = Date.parse(`${CONTENT_UPDATED}T00:00:00+05:30`);
 
   return [
@@ -93,9 +94,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...entry(WF_PATH, Date.parse(`${WF_MODIFIED}T00:00:00+05:30`)),
     // English only: the page is for developers and is not translated.
     { url: `${SITE}/data`, lastModified: new Date(contentDay) },
-    ...entry("/history"),
-    ...[...new Set(history?.stations.map((s) => s.basin) ?? [])].flatMap((b) => entry(historyPath(b))),
-    ...(history?.stations ?? []).flatMap((s) => entry(historyPath(s.basin, s.station))),
+    // History pages change when the archive is rebuilt (generatedAt), so they carry a lastmod too.
+    ...entry("/history", histTs),
+    ...[...new Set(history?.stations.map((s) => s.basin) ?? [])].flatMap((b) => entry(historyPath(b), histTs)),
+    ...(history?.stations ?? []).flatMap((s) => entry(historyPath(s.basin, s.station), histTs)),
     // One-gauge rivers 308 to their station page, so only list multi-gauge rivers.
     ...[...basinLatest.values()].filter((b) => b.count > 1).flatMap((b) => entry(b.href, b.ts)),
     ...stations.flatMap((s) => entry(s.href, s.latest?.ts)),
