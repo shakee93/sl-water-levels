@@ -23,7 +23,10 @@ import { clock, riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
 import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareButton";
-import { CALL, STEADY_M_PER_H, VERDICT, directionFor } from "./verdict";
+import Link from "next/link";
+import { PLACES } from "@/lib/places";
+import { fallSummary, heavyRainAround, nearRain24hClipped, riseSummary, townsNear } from "@/lib/levelNotes";
+import { CALL, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor } from "./verdict";
 import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
 
 const HOUR = 3_600_000;
@@ -277,6 +280,47 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const fcWord = fcMm != null ? rainWord("24h", fcMm, lang) : null;
   const hasRain = f.signals.rainContributors.length > 0;
 
+  // Three small notes (lib/levelNotes.ts), never part of the step, colour, sticky bar or push. They read the same "next hour" rate `r` as the
+  // direction tile, so the page never says rising in one place and falling in another. Tidal gauges: a tide swing is not a river rise.
+  const series = me?.trend24h ?? null;
+  const moreNotes: React.ReactNode[] = [];
+  if (!stale && me && unit != null && !(tidal && !rising)) {
+    // 1. "Rose 7.9 ft in the last 9 hours": a big climb, unless the next hour says it is falling now
+    const rise = r == null || r > -STEADY_M_PER_H ? riseSummary(series, mpu) : null;
+    // 2. "Falling: down 1.2 ft since the peak at 3:40 pm": still Alert or above, clearly falling, and the next hour agrees
+    const fall = elevated && r != null && r < -STEADY_M_PER_H ? fallSummary(series, mpu) : null;
+    if (rise) moreNotes.push(ROSE_NOTE(formatDelta(rise.riseM / mpu, unit), rise.hours)[lang]);
+    if (fall) moreNotes.push(FALL_NOTE(formatDelta(fall.dropM / mpu, unit), clock(fall.peakTs, t))[lang]);
+  }
+  // 3. "River normal, but street water is possible here": heavy satellite or measured rain around a gauge that is below Alert (Katuneriya,
+  // 26 Oct 2026: ~139 mm of satellite rain, river gauge under the alert mark). Same heavy-rain marks as the town pages.
+  if (!stale && me && (tone === "normal" || tone === "watch") && (realTier === "normal" || realTier === "watch")) {
+    const heavyHere = heavyRainAround({
+      catch6h: sat?.mm6h ?? null,
+      catch24h: sat?.mm24h ?? null,
+      near24hClipped: nearRain24hClipped(sat?.hourlyNear),
+      measuredHeavy: !!fell && (reachesTrigger("3h", fell.mm3h, trig) || reachesTrigger("24h", fell.mm24h, trig)),
+    });
+    if (heavyHere) {
+      const towns = townsNear({ lat: me.latitude, lon: me.longitude }, PLACES, 15, 2);
+      moreNotes.push(
+        <>
+          {STREET_RAIN_NOTE[lang]}
+          {towns.length > 0 && (
+            <>
+              . {STREET_RAIN_TOWNS[lang]}{" "}
+              {towns.map((x, i) => (
+                <span key={x.slug}>
+                  {i > 0 && ", "}
+                  <Link href={p(`/flood/${x.slug}`)} className="underline underline-offset-2 hover:no-underline">{x.name}</Link>
+                </span>
+              ))}
+            </>
+          )}
+        </>,
+      );
+    }
+  }
   return (
     <section data-forecast-method={f.method}>
       {w && (
@@ -346,6 +390,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         }
         share={{ href: p(stationPath(basin, selectedStation)), name: `${name} (${rn})`, text: shareText }}
         note={nearNote}
+        moreNotes={moreNotes}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
           <p className="font-medium">{f.headline}</p>

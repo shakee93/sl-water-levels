@@ -41,3 +41,21 @@ export function directionFor(rateMPerH: number): T3 {
           ? DIR.fast
           : DIR.rising;
 }
+
+// ---- Notes under the verdict (lib/levelNotes.ts). Notes only: they never change the step, colour, sticky bar or push.
+// si / ta: DRAFT translations, not yet reviewed by a native speaker.
+export const ROSE_NOTE = (delta: string, hours: number): T3 =>
+  hours <= 1
+    ? { en: `Rose ${delta} in the last hour`, si: `පසුගිය පැයේ ${delta}කින් ඉහළ ගියේය`, ta: `கடந்த 1 மணி நேரத்தில் ${delta} உயர்ந்தது` }
+    : { en: `Rose ${delta} in the last ${hours} hours`, si: `පසුගිය පැය ${hours} තුළ ${delta}කින් ඉහළ ගියේය`, ta: `கடந்த ${hours} மணி நேரத்தில் ${delta} உயர்ந்தது` };
+export const FALL_NOTE = (delta: string, time: string): T3 => ({
+  en: `Falling: down ${delta} since the peak at ${time}`,
+  si: `පහළ යයි: ${time} හි උච්චයේ සිට ${delta}කින් අඩු විය`,
+  ta: `குறைகிறது: ${time} உச்சத்திலிருந்து ${delta} குறைந்தது`,
+});
+export const STREET_RAIN_NOTE: T3 = {
+  en: "River is normal, but street water is possible here after the heavy rain nearby",
+  si: "ගඟ සාමාන්‍යයි, නමුත් අවට අධික වැසි නිසා මෙහි වීදිවලට වතුර ඒමට ඉඩ ඇත",
+  ta: "ஆறு இயல்பாக உள்ளது, ஆனால் அருகில் பெய்த கனமழையால் இங்கு தெருக்களில் நீர் தேங்கலாம்",
+};
+export const STREET_RAIN_TOWNS: T3 = { en: "Nearby towns:", si: "අවට නගර:", ta: "அருகிலுள்ள நகரங்கள்:" };

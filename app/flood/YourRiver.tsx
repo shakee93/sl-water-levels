@@ -6,9 +6,12 @@ import { ArrowDown, ArrowUp, ChevronRight, Minus } from "lucide-react";
 import type { GaugeIn } from "@/lib/townRisk";
 import type { NationalStation } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
-import { formatLevel } from "@/lib/units";
+import { formatDelta, formatLevel } from "@/lib/units";
+import { fallSummary, riseSummary } from "@/lib/levelNotes";
+import { isTidalStation } from "@/lib/verdictLift";
+import { clock, riverName } from "@/lib/i18n/format";
+import { FALL_NOTE, ROSE_NOTE } from "@/app/verdict";
 import { formatKm } from "@/lib/nearby";
-import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
 import type { TT } from "@/lib/i18n/town";
@@ -33,6 +36,16 @@ function Row({ g, nat, lang, t, tt, p, small }: { g: GaugeIn; nat: NationalStati
   const trendWord = rate == null ? "" : Math.abs(rate) < STEADY_M_PER_H ? t("trend.steady") : rate > 0 ? t("trend.rising") : t("trend.falling");
   const spark = nat && !small ? nat.trend24h.filter((r) => r.water_level != null).map((r) => r.water_level as number) : [];
   const href = nat ? p(stationPath(nat.basin, nat.station)) : null;
+  // Small notes, as on the gauge page (lib/levelNotes.ts): "Rose 7.9 ft in the last 9 hours", or at Alert and above "Falling: down 1.2 ft since the
+  // peak at 3:40 pm". Same 3 h rate as the arrow beside the level, so the two never disagree. Notes only: the step above is the official one.
+  const notes: string[] = [];
+  if (nat && !small && g.unit != null && g.level != null && g.tier !== "stale" && !isTidalStation(nat.station) && rate != null) {
+    const mpu = nat.metresPerUnit;
+    const rise = rate > -STEADY_M_PER_H ? riseSummary(nat.trend24h, mpu) : null;
+    const fall = ["alert", "minor", "major"].includes(g.tier) && rate < -STEADY_M_PER_H ? fallSummary(nat.trend24h, mpu) : null;
+    if (rise) notes.push(ROSE_NOTE(formatDelta(rise.riseM / mpu, g.unit), rise.hours)[lang]);
+    if (fall) notes.push(FALL_NOTE(formatDelta(fall.dropM / mpu, g.unit), clock(fall.peakTs, t))[lang]);
+  }
   const body = (
     <>
       <div className="min-w-0 flex-1">
@@ -50,6 +63,9 @@ function Row({ g, nat, lang, t, tt, p, small }: { g: GaugeIn; nat: NationalStati
           )}
           {g.ts != null && <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">{colomboTime(g.ts, t)}</span>}
         </div>
+        {notes.map((n) => (
+          <div key={n} className="mt-1 text-xs text-slate-600 dark:text-slate-400">{n}</div>
+        ))}
       </div>
       <Spark pts={spark} />
       <ChevronRight className="size-4 shrink-0 text-slate-400" aria-hidden />

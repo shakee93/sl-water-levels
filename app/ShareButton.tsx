@@ -224,6 +224,7 @@ export function VerdictCard({
   gauge,
   share,
   note,
+  moreNotes,
   children,
 }: {
   tone: VerdictTone;
@@ -246,6 +247,8 @@ export function VerdictCard({
   share: { href: string; name: string; text: string };
   /** The reason a near-alert gauge or town still reads Normal ("Near alert: 1.4 ft below the alert mark, rising"); small, under the verdict. */
   note?: string | null;
+  /** Further small notes under the first (rose / falling since the peak / street water): same look, never change the tone. */
+  moreNotes?: React.ReactNode[];
   children: React.ReactNode;
 }) {
   const { lang, t } = useI18n();
@@ -282,6 +285,12 @@ export function VerdictCard({
             {note}
           </p>
         )}
+
+        {moreNotes?.map((n, i) => (
+          <p key={i} data-verdict-note className="mt-1 text-sm text-slate-600 dark:text-slate-400" lang={lang}>
+            {n}
+          </p>
+        ))}
 
         {gauge && <LevelGauge {...gauge} />}
 
