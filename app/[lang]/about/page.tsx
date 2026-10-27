@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { isLocale, pageAlternates } from "@/lib/i18n/config";
 import { AboutTrust } from "@/app/AboutTrust";
 import { FeedbackPrivacy } from "@/app/feedback/FeedbackPrivacy";
+import { LearnedCard } from "@/app/learned/LearnedCard";
+import { getLearned } from "@/lib/learned";
 import { JsonLd } from "@/app/Answer";
 import { breadcrumbLd, publisherLd, webPageLd, CONTENT_UPDATED, REPO } from "@/lib/seo";
 import { MIN_CHECKS, bestWindow, figure, getAccuracy, newModelFigure, spanText } from "@/lib/accuracy";
@@ -60,7 +62,7 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
   const { t, p } = getI18n(lang);
-  const acc = await getAccuracy();
+  const [acc, learned] = await Promise.all([getAccuracy(), getLearned()]);
   const win = acc ? bestWindow(acc) : "all";
   const f1 = acc ? figure(acc.overall, 1, win) : null;
   const nm1 = acc ? newModelFigure(acc.overall, 1, win) : null;
@@ -172,6 +174,7 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
 
           <AboutTrust lang={lang} />
           <FeedbackPrivacy lang={lang} />
+          <LearnedCard lang={lang} learned={learned} />
 
           <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-4 sm:p-5 text-sm">
             <div className="font-semibold text-amber-900 dark:text-amber-200 mb-1">{t("about.notOfficial")}</div>

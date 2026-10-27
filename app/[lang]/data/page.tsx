@@ -88,7 +88,7 @@ export default async function DataPage({ params }: { params: Promise<{ lang: str
                     </tbody>
                   </table>
                 </div>
-                <p className="mt-2">{nm1 && nm1.n >= 10 ? `The gauge-only model (next hour, 3 h, 6 h) has run since ${acc.gaugeModelSince}: ${nm1.n} next-hour checks, average miss ${nm1.maeFt?.toFixed(2)} ft against ${nm1.baseMaeFt?.toFixed(2)} ft for "no change".` : `The gauge-only model (live since ${acc.gaugeModelSince}) has only ${nm1?.n ?? 0} next-hour checks so far, too few to report separately.`} The raw file is <code>https://raw.githubusercontent.com/shakee93/sl-water-levels/data/accuracy/latest.json</code> (per gauge too).</p>
+                <p className="mt-2">{nm1 && nm1.n >= 10 ? `The gauge-only model (next hour, 3 h, 6 h) has run since ${acc.gaugeModelSince}: ${nm1.n} next-hour checks, average miss ${nm1.maeFt?.toFixed(2)} ft against ${nm1.baseMaeFt?.toFixed(2)} ft for "no change".` : `The gauge-only model (live since ${acc.gaugeModelSince}) has only ${nm1?.n ?? 0} next-hour checks so far, too few to report separately.`} The raw file is <code>https://raw.githubusercontent.com/shakee93/sl-water-levels/data/accuracy/latest.json</code> (per gauge too). What visitors&rsquo; answers taught us (counts and a few bounded numbers; notes and heads-ups only, never the official step) is in <code>https://raw.githubusercontent.com/shakee93/sl-water-levels/data/learned/town-params.json</code>.</p>
               </>
             ) : (
               <p>The live accuracy figures are temporarily unavailable.</p>

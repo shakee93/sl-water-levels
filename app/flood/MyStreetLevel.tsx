@@ -4,16 +4,19 @@ import { useState } from "react";
 import { Ruler } from "lucide-react";
 import { writeMyLevel } from "@/lib/myLevels";
 import { ttFor } from "@/lib/i18n/town";
-import { formatLevel, fromShown, shownUnit, type Unit } from "@/lib/units";
+import { lnFor } from "@/lib/i18n/learned";
+import { formatLevel, fromShown, shownUnit, toShown, type Unit } from "@/lib/units";
 import { useI18n } from "../LocaleProvider";
 import { useMyLevel } from "./useMyLevel";
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 
 /** "Set your street's flood level": the gauge reading at which water reaches the visitor's street. Browser-only (sl_my_levels). */
-export function MyStreetLevel({ station, name, unit, level }: { station: string; name: string; unit: Unit; level: number | null }) {
+export function MyStreetLevel({ station, name, unit, level, learned = null }: { station: string; name: string; unit: Unit; level: number | null; /** what visitors' reports taught us (lib/learned.ts); a suggestion and a note, never the verdict step */ learned?: { ft: number; n: number; days: number } | null }) {
   const { lang } = useI18n();
   const tt = ttFor(lang);
+  const ln = lnFor(lang);
+  const reached = learned != null && level != null && unit != null && toShown(level, unit) >= learned.ft;
   const saved = useMyLevel(station);
   const [draft, setDraft] = useState("");
   const [bad, setBad] = useState(false);
@@ -37,6 +40,12 @@ export function MyStreetLevel({ station, name, unit, level }: { station: string;
         <Ruler className="size-4" aria-hidden /> {tt("my.title")}
       </h2>
       <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400" lang={lang}>{tt("my.help", { gauge: name })}</p>
+      {learned && (
+        <p className="mt-2 text-sm text-slate-700 dark:text-slate-300" lang={lang}>
+          {ln("ln.suggest", { gauge: name, ft: learned.ft.toFixed(1), n: learned.n, days: learned.days, now: level != null ? formatLevel(level, unit) : "—" })}
+          {reached && <> <strong className="font-medium text-slate-900 dark:text-slate-100">{ln("ln.reached", { gauge: name })}</strong></>}
+        </p>
+      )}
       {saved != null && (
         <p className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100" lang={lang}>
           {tt("my.saved", { level: formatLevel(saved, unit), gauge: name, now: level != null ? formatLevel(level, unit) : "—" })}
@@ -49,13 +58,18 @@ export function MyStreetLevel({ station, name, unit, level }: { station: string;
           inputMode="decimal"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={tt("my.placeholder", { unit: shownUnit(unit) ? ` (${shownUnit(unit)})` : "" })}
+          placeholder={learned ? learned.ft.toFixed(1) : tt("my.placeholder", { unit: shownUnit(unit) ? ` (${shownUnit(unit)})` : "" })}
           aria-invalid={bad}
           className={`${input} ${ring}`}
         />
         <button type="submit" className={`h-11 rounded-md bg-slate-900 px-4 text-sm font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white ${ring}`}>
           {tt("my.save")}
         </button>
+        {learned && saved == null && (
+          <button type="button" onClick={() => setDraft(learned.ft.toFixed(1))} className={`h-11 rounded-md border border-slate-300 dark:border-slate-700 px-4 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 ${ring}`}>
+            {ln("ln.use", { ft: learned.ft.toFixed(1) })}
+          </button>
+        )}
         {saved != null && (
           <button
             type="button"

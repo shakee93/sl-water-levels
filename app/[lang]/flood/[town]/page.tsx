@@ -30,6 +30,7 @@ import { TownRain } from "@/app/flood/TownRain";
 import { RainMapLink } from "@/app/rain/RainMapLink";
 import { TownVerdict } from "@/app/flood/TownVerdict";
 import { getTownPeople } from "@/lib/townPeople";
+import { getLearned, streetLevelOf, streetRainLevel } from "@/lib/learned";
 import { AnswerLine, JsonLd } from "@/app/Answer";
 import { NextHourFaq } from "@/app/NextHour";
 import { townAnswer, townFaq } from "@/lib/answers";
@@ -78,7 +79,7 @@ export default async function TownPage({ params }: Params) {
   const [data, canals] = await Promise.all([loadTown(place, undefined, { budgetMs: PAGE_BUDGET_MS }), basinOfTown(place.slug) ? getCanals() : Promise.resolve(null)]);
   const g = data.gauge;
   // what people near the town answered today: counts only, hidden below K_MIN, fails soft (lib/townPeople.ts)
-  const people = await getTownPeople(place.slug, g && g.km < 1.5 ? g.name : "");
+  const [people, learned] = await Promise.all([getTownPeople(place.slug, g && g.km < 1.5 ? g.name : ""), getLearned()]);
   const national = await getNational().catch(() => [] as NationalStation[]); // already cached by loadTown
   const canonical = p(`/flood/${place.slug}`);
   const serverNow = data.input.now;
@@ -124,7 +125,7 @@ export default async function TownPage({ params }: Params) {
   // (27 Oct: Wellampitiya's card said Alert from the Irrigation Department's Kelani warning while the bar said Normal)
   const gTier = risk.tone === "stale" ? null : risk.tone;
   const streetLikely = !!place.rainZone && data.input.streetRain != null && risk.lowSpot?.level === "likely";
-  const lowSpotCard = <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={risk.lowSpot?.level ?? null} canalHigh={basinCanalHigh(place.slug, canals)} kind={streetCardKind(place)} />;
+  const lowSpotCard = <LowSpot slug={place.slug} town={place.name} mm={data.input.streetRain ? data.input.streetRain.mm24h : null} level={streetRainLevel({ base: risk.lowSpot?.level ?? null, mm24h: data.input.streetRain ? data.input.streetRain.mm24h : null, zone: place.rainZone }, learned)} canalHigh={basinCanalHigh(place.slug, canals)} kind={streetCardKind(place)} />;
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 text-slate-900 dark:text-slate-100">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -171,7 +172,7 @@ export default async function TownPage({ params }: Params) {
 
         {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} />}
 
-        {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} />}
+        {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} learned={streetLevelOf(learned, g.station)} />}
 
         <TownRain lang={lang} town={place.name} rain={data.rain} reason={data.rainReason} sat={data.rainSat} />
         <p className="mt-2"><RainMapLink lang={lang} /></p>

@@ -935,6 +935,59 @@ once, and only within two hours.
 20-line node:sqlite server) and run `next dev`; nothing reaches Cloudflare or Slack. `node --experimental-strip-types
 scripts/feedback.test.mts` covers validation, rounding, note cleaning, caps, the table definition and the join / aggregate maths.
 
+## Learning from feedback (the loop that tunes notes and heads-ups)
+
+Added 27 Oct 2026 ("so our prediction and alert system improves"). **Hard rule: the verdict step (Normal, Alert, Minor flood, Major flood)
+stays official. Nothing learned is read by the step, pill, sticky bar, tone or push levels.** Learned numbers tune only notes, quiet
+heads-ups and (if a backtest ever shows it helps) the forecast.
+
+**The job.** `scripts/feedback-learn.mjs` (`.github/workflows/feedback-learn.yml`, daily 00:50 Sri Lanka time, group `snapshot`; manual run with
+`dry_run = true` prints the JSON and writes nothing). It joins each `forecast_feedback` answer and `street_flood_reports` row with what really
+happened: the gauge level and direction shown, the next-hour forecast shown and the reading an hour later (`err1h`), the shown step (rows
+from station pages before commit 961440f stored the raw tier; those are left out of the "saw vs shown" counts only), the gauge reading
+nearest a street report (`observations`), the zone's satellite rain nearest a report (`street_rain_log`, 24 h clipped), and the official minor
+mark (`forecast_crossings`, last 12 h). The maths is `lib/learnedParams.mjs` (pure, `scripts/feedback-learn.test.mts`). D1 cost about 30k rows
+a day: the two answer tables, `observations` once (~5k rows), crossings of the last 12 h, 21 days of points for 1/3/6 h, a few `street_rain_log`
+primary-key windows. It never reads `curw_levels` or the `forecast_verification` view (that view read ~700k rows for 3.6k points; the job
+matches readings itself).
+
+**Output.** `learned/town-params.json` on the `data` branch (version 1): `totals`, `stations[gauge]` (`answers`, `seen` higher/same/lower, `rising`
+/ `falling` yes/worse/better + mean next-hour miss, `streetLevel`, `momentum`), `zones[zone].streetRain`, `towns[slug]` report counts, `pending`
+(how far each candidate is from the minimum), `forecast` (backtest). Counts and numbers only: no notes, places, coordinates, tokens or hashes
+(the per-day IP hash tells people apart inside the job and is dropped). A test checks this.
+
+**Evidence rules.** A number appears only with at least `K_MIN` = 3 independent answers (one per person per day per target) on at least
+`MIN_DAYS` = 2 separate days; otherwise `pending` shows the progress and the default stays. Every value is clamped near its default:
+- `streetLevel` (feet): the second-lowest gauge level at which independent people reported water on roads or in homes ("flooding roads or
+  homes" in the feedback form, or "deep" / "little" in the street-flood report), so one early report cannot set it; clamped to
+  [0.6 x official minor mark, minor mark]; dropped as "contested" if fewer than half of the answers at or above it say water.
+- `streetRain.possibleMm` (per rain zone): same estimator on the zone's 24 h clipped satellite rain at the report; clamped to [45, 60] mm, 60 = the live rule.
+- `rising` / `falling`: evidence only (do people say "worse" while rising, "better" while falling); no parameter is wired to it.
+- `momentum`: forecast factor `p' = c + k (p - c)` per gauge and horizon (1/3/6 h), shrunk to 1 with n/(n+30), k in [0.8, 1.5]. Emitted only
+  if the walk-forward backtest (fit on earlier days, score on the next day, per gauge) beats "no factor" by 5% at every horizon pooled.
+
+**Where it is used (and where it is not).**
+- Town pages, "Set your street's flood level" (`app/flood/MyStreetLevel.tsx`): the learned `streetLevel` is the suggestion ("People near
+  Nagalagam Street have reported water on roads from about 3.1 ft (3 reports on 2 days)", a "Use 3.1 ft" button, the placeholder) and, when
+  the gauge is at or above it, the line "water on low streets is possible". Browser-only saved levels still win.
+- The rain-based street-water note and My places `street` field (`lib/placeGlance.ts`, `app/[lang]/flood/[town]/page.tsx` via
+  `streetRainLevel`): a learned rain mark can add a "possible" below 60 mm. It never removes one and never makes "likely", the level
+  that sends the opt-in push, so **no learned number can send a new push**. `lib/townRisk.ts` is untouched (its `lowSpot` still feeds its own
+  tone exactly as before).
+- About, "What visitors taught us" (`app/learned/LearnedCard.tsx`, en/si/ta, si/ta drafts): the learned figures, counts only, and whether the forecast test helped.
+- Slack: `scripts/feedback-digest.mjs` appends "Learned: ..." / "Building up: ..." lines to the daily digest (from the data-branch file, no D1 reads); the learn job posts when a street level or rain mark first appears or moves by 0.5 ft / 5 mm.
+- Forecast (`lib/forecast.ts`): NOT wired. `forecast.wired` is always false in the file; see the backtest below.
+
+**Backtest, 27 Oct 2026** (3 days of fitted-model forecasts, 22-27 Oct, 3,659 points, one big storm): per-gauge momentum factor, walk-forward,
+average miss before -> after: 1 h 0.16 -> 0.16 ft, 3 h 0.41 -> 0.41, 6 h 0.77 -> 0.77 (gain 1% / 0% / 0%). One factor for all gauges is worse (-3% / 0% / -1%).
+Per-gauge training needs 30 points on earlier days, which the archive does not yet have. Re-run daily by the job; wire it only when `useful` is true.
+
+**Reading the file.** `lib/learned.ts` (`getLearned`: cached 1 h, 1.5 s time-box, fails soft to null = defaults; `LEARNED_URL` overrides),
+re-validating every number against the same bounds (`streetLevelOf`, `rainPossibleMm`).
+
+**Known limits.** One person who answers on the site and in the street report counts twice (the two tables use different salts). A gauge
+level learned from rain-caused street water (Nagalagam Street, ~3 ft) is a level at which water WAS seen, not proof the river caused it.
+
 ## Reasons to come back (return-visit features)
 
 Design rule: every loop must be useful, honest and optional. No streaks, no counters that shame, no fake urgency, nothing that

@@ -3,7 +3,8 @@
 //   1. Urgent catch-up: any "worse than shown" + "flooding roads or homes" row still marked notified = 2 (the site could not
 //      ping Slack itself) is sent now and marked 1.
 //   2. Daily digest: from 08:00 Asia/Colombo, once a day (feedback_digest holds the days already sent), covering the day before:
-//      (a day with no answers is marked done and says nothing) counts, the gauges with most "worse" answers, agreement by distance from the gauge, and the notes (private).
+//      (a day with no answers is marked done and says nothing) counts, the gauges with most "worse" answers, agreement by distance from the gauge, and the notes (private),
+//      then the "Learned: ..." lines from learned/town-params.json on the data branch (scripts/feedback-learn.mjs; no D1 reads).
 // Run by .github/workflows/feedback-digest.yml every 30 minutes. Needs CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_API_TOKEN (wrangler via npx)
 // and SLACK_WEBHOOK_URL (optional; nothing is sent without it).
 // Flags: --dry-run     print what would be sent, change nothing, send nothing
@@ -11,6 +12,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { digestText, feedbackRows, feedbackSql } from "../lib/feedbackLearn.mjs";
+import { learnedLines } from "../lib/learnedParams.mjs";
 
 const args = process.argv.slice(2);
 const FILE = args.includes("--rows") ? args[args.indexOf("--rows") + 1] : null;
@@ -27,6 +29,15 @@ function d1(sql) {
   const raw = execFileSync("npx", ["-y", "wrangler@4", "d1", "execute", "sl-water-levels", "--remote", "--json", "--command", sql], { encoding: "utf8", maxBuffer: 64 << 20 });
   return JSON.parse(raw.slice(raw.indexOf("[")))[0].results;
 }
+/** What the learning job (scripts/feedback-learn.mjs) has learned so far: read from the data branch, no D1 reads; "" when unavailable. */
+async function learnedText() {
+  try {
+    const res = await fetch(process.env.LEARNED_URL || "https://raw.githubusercontent.com/shakee93/sl-water-levels/data/learned/town-params.json", { signal: AbortSignal.timeout(10_000) });
+    return res.ok ? "\n" + learnedLines(await res.json()).join("\n") : "";
+  } catch {
+    return "";
+  }
+}
 async function slack(text) {
   if (DRY) return console.log(`[dry-run] Slack:\n${text}\n`), true;
   if (!SLACK) return false;
@@ -42,7 +53,7 @@ async function slack(text) {
 
 if (FILE) {
   const rows = feedbackRows(JSON.parse(readFileSync(FILE, "utf8")));
-  await slack(digestText({ day: yesterday, rows: rows.filter((r) => r.day === yesterday || !r.day), urgentCount: rows.filter((r) => r.answer === "worse" && r.river_obs === "flooding").length, site: SITE }));
+  await slack(digestText({ day: yesterday, rows: rows.filter((r) => r.day === yesterday || !r.day), urgentCount: rows.filter((r) => r.answer === "worse" && r.river_obs === "flooding").length, site: SITE }) + (await learnedText()));
   process.exit(0);
 }
 
@@ -62,7 +73,7 @@ try {
       const rows = feedbackRows(d1(feedbackSql(0).replace("ORDER BY", `AND f.day = '${yesterday}' ORDER BY`)));
       const urgentCount = rows.filter((r) => r.answer === "worse" && r.river_obs === "flooding").length;
       {
-        const ok = rows.length === 0 ? true : await slack(digestText({ day: yesterday, rows, urgentCount, site: SITE }));
+        const ok = rows.length === 0 ? true : await slack(digestText({ day: yesterday, rows, urgentCount, site: SITE }) + (await learnedText()));
         if (ok && !DRY) d1(`INSERT OR IGNORE INTO feedback_digest (day, sent_ms) VALUES ('${today}', ${now})`);
         else if (!ok) console.log("digest not sent (no Slack webhook)");
       }

@@ -7,6 +7,7 @@ import { assessTown } from "./townRisk";
 import { getStationVerdicts } from "./stationVerdict";
 import { soft } from "./soft";
 import { loadTown } from "./townData";
+import { getLearned, streetRainLevel } from "./learned";
 import { placeBySlug } from "./places";
 import { stationDisplayName } from "./displayName";
 import { formatLevel } from "./units";
@@ -40,7 +41,7 @@ function stationGlance(s: NationalStation, verdict?: NationalStation["tier"]): G
 async function townGlance(k: Extract<ParsedKey, { kind: "t" }>, lv: Record<string, number>): Promise<Glance | null> {
   const place = placeBySlug(k.slug);
   if (!place) return null;
-  const data = await loadTown(place);
+  const [data, learned] = await Promise.all([loadTown(place), getLearned()]);
   // the visitor's own street level applies to the gauge the estimate rests on (same rule as the town page)
   const base = assessTown(data.input);
   const gaugeStation = base.gauge?.station ?? data.gauge?.station ?? null;
@@ -55,7 +56,8 @@ async function townGlance(k: Extract<ParsedKey, { kind: "t" }>, lv: Record<strin
     href: `/flood/${place.slug}`,
     tone: r.tone,
     baseTone: r.baseTone,
-    street: r.lowSpot?.level ?? null,
+    // street-water heads-up: the default rain rule, plus a "possible" at the rain mark visitors' reports taught us (lib/learnedParams.mjs; never "likely", so no new push)
+    street: streetRainLevel({ base: r.lowSpot?.level ?? null, mm24h: data.input.streetRain ? data.input.streetRain.mm24h : null, zone: place.rainZone }, learned),
     trend: stale || r.trend === "unknown" ? "unknown" : r.trend,
     levelText: g?.level != null && !stale ? formatLevel(g.level, g.unit) : null,
     rain24: data.input.streetRain ? data.input.streetRain.mm24h : data.input.rain?.past24hMm ?? null,
