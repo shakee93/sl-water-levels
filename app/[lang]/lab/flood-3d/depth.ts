@@ -32,6 +32,3 @@ export function depthExpr(lv: number): unknown[] {
       ["+", ["*", ["case", ["==", ["get", "b"], 1], SETTLED_OFFSET_M, OPEN_OFFSET_M], ["min", 1, ["/", d, ["case", ["==", ["get", "b"], 1], RAMP_SETTLED_FT, RAMP_OPEN_FT]]]], ["*", FT, d]]],
     0];
 }
-export function wetColorExpr(lv: number): unknown[] {
-  return ["case", [">", ["-", lv, ["get", "L"]], 0], "rgba(40,120,210,1)", "rgba(40,120,210,0)"];
-}

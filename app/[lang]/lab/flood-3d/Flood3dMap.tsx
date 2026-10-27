@@ -10,7 +10,7 @@ import { loadBaseStyle } from "./mapStyle";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
 import { makeT, type Lang } from "./strings";
 import { ReplayCard, replayTime, type ReplayData } from "./Replay";
-import { depthM, depthExpr, wetColorExpr, inPool } from "./depth";
+import { depthM, depthExpr, inPool } from "./depth";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
@@ -61,6 +61,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const mapRef = useRef<MlMap | null>(null);
   const popRef = useRef<Popup | null>(null);
   const cellsShown = useRef(false);
+  const filterAt = useRef(0);
   const grid = useRef<{ L: Float32Array; hw: Float32Array; cls: Uint8Array; band: Uint8Array; river: Uint8Array; unc: Uint8Array; wet: Uint8Array; built: Uint8Array; w: number; h: number } | null>(null);
   const meta = useRef<Meta | null>(null);
   const cv = useRef<{ out: HTMLCanvasElement; img: ImageData; lut: Uint8ClampedArray } | null>(null);
@@ -255,11 +256,14 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   }, []);
 
   useEffect(() => { paintRoadsRef.current = paintRoads; });
-  const paintDepth = useCallback((lv: number) => {
+  const paintDepth = useCallback((lv: number, final = false) => {
     const map = mapRef.current;
     if (!map || !map.getLayer("f3d-depth")) return;
     map.setPaintProperty("f3d-depth", "fill-extrusion-height", depthExpr(lv) as never);
-    map.setPaintProperty("f3d-depth", "fill-extrusion-color", wetColorExpr(lv) as never);
+    // dry cells must draw NOTHING (a zero-height block still draws its top face, which showed as dark grey slabs): only wet cells are in the layer, and the filter
+    // follows the level at most every 120 ms (a filter change re-buckets the layer; the height expression above is cheap and runs every frame)
+    const now = performance.now();
+    if (final || now - filterAt.current > 120) { filterAt.current = now; map.setFilter("f3d-depth", ["<", ["get", "L"], lv] as never); }
   }, []);
   useEffect(() => { paintDepthRef.current = paintDepth; });
   // the cells under the view (grid cells that can flood at all), rebuilt after each move at street zoom
@@ -290,7 +294,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
     const step = (t: number) => {
       const k = dur ? Math.min(1, (t - t0) / dur) : 1, e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       shown.current = from + (to - from) * e;
-      draw(shown.current); paintRoads(shown.current); paintDepth(shown.current);
+      draw(shown.current); paintRoads(shown.current); paintDepth(shown.current, k >= 1);
       if (k < 1) raf.current = requestAnimationFrame(step);
     };
     raf.current = requestAnimationFrame(step);
@@ -597,7 +601,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           // cells in view; it sits over the basemap's buildings so the water line shows on them. The cells are rebuilt after each move (refreshCellsRef), the level only
           // changes the paint expressions.
           map.addSource("f3d-cells", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-          map.addLayer({ id: "f3d-depth", type: "fill-extrusion", source: "f3d-cells", minzoom: 15.5, paint: { "fill-extrusion-color": wetColorExpr(shown.current) as never, "fill-extrusion-height": depthExpr(shown.current) as never, "fill-extrusion-base": 0, "fill-extrusion-opacity": 0.5, "fill-extrusion-vertical-gradient": false } }, before);
+          map.addLayer({ id: "f3d-depth", type: "fill-extrusion", source: "f3d-cells", minzoom: 15.5, filter: ["<", ["get", "L"], shown.current] as never, paint: { "fill-extrusion-color": "#2878d2", "fill-extrusion-height": depthExpr(shown.current) as never, "fill-extrusion-base": 0, "fill-extrusion-opacity": 0.5, "fill-extrusion-vertical-gradient": false } }, before);
           map.on("moveend", () => refreshCellsRef.current?.());
           // 3D buildings only from street level: keeps the first paint light on phones
           if (map.getLayer("building-3d")) map.setLayerZoomRange("building-3d", 15, 24);
