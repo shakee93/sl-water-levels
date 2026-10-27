@@ -17,6 +17,7 @@ import { getReleaseSources, parseSheetTab, type SheetRow } from "./releases";
 import { aiConfigured } from "./openai";
 import { NEWSWIRE_UA } from "./newsFeeds";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
+import { getHmisLevels, getHmisRain, getHmisWarnings, hmisDirect, RAIN_MAX_AGE_MIN } from "./hmis";
 
 /** Hours since `fromMs`, not counting Saturdays and Sundays in Sri Lanka time. */
 function workingHoursSince(fromMs: number, now = Date.now()): number {
@@ -592,6 +593,27 @@ async function checkCurwGauges(deep: boolean): Promise<HealthCheck> {
   });
 }
 
+
+// HMIS (hmis.gov.lk): the 10-minute Hanwella/Baddegama/Thanamalwila sensors, the ACCIMT and east-coast gauges and the ground
+// rain gauges. Normal mode reads the cached fetch; deep mode asks HMIS directly. Rain gauges that stop reporting one by one are
+// normal (about 280 of 661 report at any time); only a feed that is empty, stale or reshaped fails.
+async function checkHmis(deep: boolean): Promise<HealthCheck> {
+  return run("hmis", "HMIS (Irrigation Department hydro-met system)", "The 10-minute sensor notes, the east-coast and Karawanella/Mahiyangana gauge pages and the measured ground-rain notes are hidden; the main gauges are unaffected.", async () => {
+    const { levels, rain, warnings } = deep
+      ? await hmisDirect()
+      : { levels: await getHmisLevels(8000), rain: await getHmisRain(8000), warnings: await getHmisWarnings(8000) };
+    if (!levels) return { ok: false, detail: "water-level feed unavailable" };
+    const newest = levels.devices.reduce((m, d) => Math.max(m, d.series[d.series.length - 1]?.ts ?? 0), 0);
+    const age = Date.now() - newest;
+    const live = rain ? rain.devices.filter((d) => Date.now() - d.latestTs < RAIN_MAX_AGE_MIN * MIN).length : 0;
+    const detail = `${levels.devices.length} water-level devices, newest reading ${words(mins(age))} ago; ${live} rain gauges reporting in the last 3 h${warnings ? `; ${warnings.items.length} warning${warnings.items.length === 1 ? "" : "s"}` : "; warnings feed unavailable"}`;
+    if (levels.devices.length < 30) return { ok: false, detail: `${detail} (expected about 53)`, ...fresh(newest) };
+    if (age > 3 * HOUR) return { ok: false, detail: `${detail}; newest water-level reading is over 3 h old (timestamps are Sri Lanka time labelled Z: see CLAUDE.md)`, ...fresh(newest) };
+    if (!rain || rain.devices.length < 100) return { ok: false, detail: `${detail}; rain-gauge list missing or short` };
+    return { ok: true, detail, ...fresh(newest) };
+  });
+}
+
 // Vercel reports each production deploy as a GitHub commit status on main. A failed build
 // leaves the previous deploy live, so users see stale pages and fixes silently don't ship
 // (twice on 23 Oct 2026, ETIMEDOUT while prerendering). Flag failures and long-stuck builds.
@@ -633,7 +655,7 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
 // ---------------------------------------------------------------- entry point
 
 export async function runHealthChecks(deep = false): Promise<HealthReport> {
-  const [gauges, sheet, wms, wmsWeekly, dmc, openai, weather, feeds, pipes, rainSensors] = await Promise.all([
+  const [gauges, sheet, wms, wmsWeekly, dmc, openai, weather, feeds, pipes, rainSensors, hmis] = await Promise.all([
     checkGauges(deep),
     checkSheet(deep),
     checkWms(deep),
@@ -644,8 +666,9 @@ export async function runHealthChecks(deep = false): Promise<HealthReport> {
     checkFeeds(deep),
     checkPipelines(deep),
     checkRainSensors(),
+    checkHmis(deep),
   ]);
-  const checks = [gauges, sheet, wms, wmsWeekly, dmc, openai, ...weather, rainSensors, ...feeds, ...pipes];
+  const checks = [gauges, sheet, wms, wmsWeekly, dmc, openai, hmis, ...weather, rainSensors, ...feeds, ...pipes];
   return { ok: checks.every((c) => c.ok), checkedAt: new Date().toISOString(), deep, checks };
 }
 
