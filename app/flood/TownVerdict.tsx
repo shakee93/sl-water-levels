@@ -4,7 +4,7 @@ import { CloudRain, Info, TriangleAlert, Waves, Ruler, Droplets, Landmark, Circl
 import { VerdictCard, type T3, type VerdictTone } from "../ShareButton";
 import { TimeAgo } from "../TimeAgo";
 import { useI18n } from "../LocaleProvider";
-import { CALL } from "../verdict";
+import { CALL, hourReason, withReason } from "../verdict";
 import { assessTown, type ReasonKind, type TownRisk, type TownRiskInput } from "@/lib/townRisk";
 import { ttFor, type TKey } from "@/lib/i18n/town";
 import { formatKm } from "@/lib/nearby";
@@ -168,7 +168,23 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
       <VerdictCard
         tone={tone}
         verdict={verdict}
-        direction={g ? t3(r.hourKey) : null}
+        direction={
+          g
+            ? withReason(
+                t3(r.hourKey),
+                r.hourKey === "dir.falling" || r.hourKey === "dir.steady" || r.hourKey === "dir.rising" || r.hourKey === "dir.slow"
+                  ? hourReason({
+                      kind: r.hourKey === "dir.falling" ? "falling" : r.hourKey === "dir.steady" ? "steady" : "rising",
+                      delta3hM: g.rate3hM != null ? g.rate3hM * 3 : null,
+                      unit: g.unit,
+                      heavyRain: input.rain ? r.heavyRain : null,
+                      lowRain: input.rain != null && input.rain.past6hMm < 10,
+                      release: !!input.release?.confirmed,
+                    })
+                  : null,
+              )
+            : null
+        }
         fact={stale && !r.heavyRain ? null : t3(dayKey, dayVars)}
         tide={r.hourKey === "dir.tide"}
         labels={{ direction: t3("label.hour"), fact: t3("label.day") }}

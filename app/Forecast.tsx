@@ -26,7 +26,7 @@ import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareBut
 import Link from "next/link";
 import { PLACES } from "@/lib/places";
 import { fallSummary, heavyRainAround, nearRain24hClipped, riseSummary, townsNear } from "@/lib/levelNotes";
-import { CALL, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor } from "./verdict";
+import { CALL, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
 import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
 
 const HOUR = 3_600_000;
@@ -183,7 +183,18 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
       ? null
       : tideOnly
         ? TIDE_RISE
-        : directionFor(r);
+        : withReason(
+            directionFor(r),
+            hourReason({
+              kind: Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "falling" : "rising",
+              delta3hM: me?.rate3hM != null ? me.rate3hM * 3 : null,
+              unit: me?.unit ?? null,
+              upstreamPerH: f.signals.upstreamRatePerH,
+              heavyRain: f.rain == null && f.rainRisk == null ? null : f.rainRisk != null || f.stormHorizons.length > 0,
+              lowRain: f.rain?.past6hMm != null && f.rain.past6hMm < 10,
+              release: release.active,
+            }),
+          );
   // A confirmed reservoir release upstream counts as an expected crossing only when
   // the gauge is already close to alert (within 1 m, or 20% of the alert level) and
   // rising: a release far below alert, or on a falling river, stays informational

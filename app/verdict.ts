@@ -1,6 +1,7 @@
 // Verdict phrases shared by the station verdict card (Forecast.tsx) and the home "Near you" card.
 // Sinhala and Tamil are machine translations (the cards say so when they are shown).
 import type { T3, VerdictTone } from "./ShareButton";
+import type { Unit } from "@/lib/units";
 
 export const VERDICT: Record<VerdictTone, T3> = {
   normal: { en: "Normal", si: "සාමාන්‍යයි", ta: "இயல்பு" },
@@ -40,6 +41,60 @@ export function directionFor(rateMPerH: number): T3 {
         : rateMPerH >= FAST_M_PER_H
           ? DIR.fast
           : DIR.rising;
+}
+
+/**
+ * The short reason under "Next hour" ("Down 0.4 ft in 3 hours; upstream is falling too"): the 3 h change plus the single strongest
+ * driver we already hold. Same rate source as the tile, so it never contradicts the headline; a change that points the other way
+ * from the headline (the forecast turns) is not quoted. A note only: never changes the step. si / ta: DRAFT translations.
+ */
+export function hourReason(o: {
+  kind: "rising" | "falling" | "steady";
+  /** Change over the last 3 h in metres (signed); null = unknown. */
+  delta3hM: number | null;
+  unit: Unit;
+  /** Upstream gauges' rate, metres per hour (signed); null = none. */
+  upstreamPerH?: number | null;
+  /** true = heavy rain upstream or at the catchment; false = rain known and not heavy; null = unknown. */
+  heavyRain: boolean | null;
+  /** Rain measured over the last 6 h was light (only then may "little rain" be said). */
+  lowRain?: boolean;
+  release?: boolean;
+}): T3 | null {
+  const { kind, delta3hM: d, unit } = o;
+  const ft = d != null && unit != null ? Math.abs(d) / 0.3048 : null;
+  const sameWay = d == null || (kind === "rising" ? d > 0 : kind === "falling" ? d < 0 : true);
+  const num = ft != null && ft >= 0.05 && sameWay ? `${ft.toFixed(ft < 0.1 ? 2 : 1)} ft` : null;
+  const up = o.upstreamPerH ?? null;
+  let lead: T3;
+  if (kind === "steady") lead = { en: "Little change in the last 3 hours", si: "පසුගිය පැය 3 තුළ වෙනසක් අල්පයි", ta: "கடந்த 3 மணி நேரத்தில் சிறிய மாற்றம்" };
+  else if (!sameWay) return null;
+  else if (kind === "rising")
+    lead = num
+      ? { en: `Up ${num} in 3 hours`, si: `පැය 3කින් ${num}කින් ඉහළ ගොස් ඇත`, ta: `3 மணி நேரத்தில் ${num} உயர்ந்தது` }
+      : { en: "Rising over the last 3 hours", si: "පසුගිය පැය 3 තුළ ඉහළ ගොස් ඇත", ta: "கடந்த 3 மணி நேரத்தில் உயர்ந்தது" };
+  else
+    lead = num
+      ? { en: `Down ${num} in 3 hours`, si: `පැය 3කින් ${num}කින් පහත වැටී ඇත`, ta: `3 மணி நேரத்தில் ${num} குறைந்தது` }
+      : { en: "Falling over the last 3 hours", si: "පසුගිය පැය 3 තුළ පහළ ගොස් ඇත", ta: "கடந்த 3 மணி நேரத்தில் குறைந்தது" };
+  let clause: T3 | null = null;
+  if (kind === "rising") {
+    if (o.release) clause = { en: "reservoir release upstream", si: "උඩුගං ජලාශ මුදා හැරීම", ta: "மேலே நீர்த்தேக்க வெளியேற்றம்" };
+    else if (o.heavyRain) clause = { en: "heavy rain upstream", si: "උඩුගං අධික වැසි", ta: "மேலே கனமழை" };
+    else if (up != null && up > 0.03) clause = { en: "upstream gauges rising", si: "උඩුගං මාපක ඉහළ යයි", ta: "மேல்நிலை அளவீடுகள் உயர்கின்றன" };
+  } else if (kind === "falling") {
+    if (up != null && up < -0.03) clause = { en: "upstream is falling too", si: "උඩුගං ද පහළ යයි", ta: "மேல்நிலையும் குறைகிறது" };
+    else if (o.heavyRain === false && o.lowRain) clause = { en: "little rain upstream", si: "උඩුගං වැසි අඩුයි", ta: "மேலே மழை குறைவு" };
+  } else if (o.heavyRain === false && o.lowRain) clause = { en: "no heavy rain nearby", si: "අවට අධික වැසි නැත", ta: "அருகில் கனமழை இல்லை" };
+  if (!clause) return lead;
+  return { en: `${lead.en}; ${clause.en}`, si: `${lead.si}; ${clause.si}`, ta: `${lead.ta}; ${clause.ta}` };
+}
+
+/** Appends a reason as the tile's "(sub-line)" unless the text already has one (the tide line keeps its own). */
+export function withReason(t: T3, reason: T3 | null): T3 {
+  if (!reason) return t;
+  const f = (x: string, r: string) => (/\)$/.test(x) ? x : `${x} (${r})`);
+  return { en: f(t.en, reason.en), si: f(t.si, reason.si), ta: f(t.ta, reason.ta) };
 }
 
 // ---- Notes under the verdict (lib/levelNotes.ts). Notes only: they never change the step, colour, sticky bar or push.
