@@ -73,11 +73,11 @@ jobs:
           open=$(gh issue list --label map-refit --state open --json number --jq 'length')
           [ "$open" != "0" ] && { echo "A map-refit issue is already open."; exit 0; }
           gh label create map-refit --color 1d76db --description "3D flood map: enough new trusted reports to re-fit" 2>/dev/null || true
-          gh issue create --label map-refit --title "3D flood map: re-fit due" --body "Enough new trustworthy reports have arrived to re-run the per-cell fit (scripts/flood3d/prep.py, heavy: run it by hand or on the Mac mini). Export the reports with scripts/flood3d/reports-export.mjs (private: exact positions).
-
-$due
-
-The nightly learning job only raises this flag; it never re-fits or changes the map."
+          printf '%s\n\n%s\n\n%s\n' \
+            "Enough new trustworthy reports have arrived to re-run the per-cell fit (scripts/flood3d/prep.py: heavy, run it by hand or on the Mac mini). Export the reports with scripts/flood3d/reports-export.mjs (private: exact positions)." \
+            "$due" \
+            "The nightly learning job only raises this flag; it never re-fits or changes the map." > issue-body.md
+          gh issue create --label map-refit --title "3D flood map: re-fit due" --body-file issue-body.md
 
       - name: Tell Slack the workflow failed
         if: failure()
