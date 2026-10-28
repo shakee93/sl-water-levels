@@ -127,23 +127,32 @@ function rowOf(s: NationalStation, c: Ctx, nh: NextHour | null, o: { withMarks: 
     marks: o.withMarks ? marksLine(s.thresholds, s.unit, c) : null,
     outcome: outcomeOf(s, c),
     stale,
+    rivernet: s.source === "rivernet",
   };
 }
 
-function credit(c: Ctx, path: string, resv = false): Credit {
-  return { live: c.e("w.live"), linkText: "waterlevels.lk", rest: c.e(resv ? "w.creditResv" : "w.creditRest"), href: SITE + localePath(c.lang, path) };
+/** `rn`: how many of the shown rows are RiverNet gauges. Any -> the RiverNet credit is added; all -> the readings are named as RiverNet's, not the Irrigation Department's. */
+function credit(c: Ctx, path: string, resv = false, rn: { any: boolean; all: boolean } = { any: false, all: false }): Credit {
+  return {
+    live: c.e("w.live"),
+    linkText: "waterlevels.lk",
+    rest: c.e(resv ? "w.creditResv" : rn.all ? "w.creditRestRn" : "w.creditRest"),
+    href: SITE + localePath(c.lang, path),
+    ...(rn.any ? { extra: { text: "RiverNet – DMC / Leecom SCADA (rivernet.lk)", href: "https://rivernet.lk" } } : {}),
+  };
 }
+const rnOf = (rows: { rivernet: boolean }[]) => ({ any: rows.some((r) => r.rivernet), all: rows.length > 0 && rows.every((r) => r.rivernet) });
 
 function ctxOf(cfg: EmbedCfg): Ctx {
   const { t } = getI18n(cfg.lang);
   return { lang: cfg.lang, cfg, now: Date.now(), t, e: embedT(cfg.lang) };
 }
 
-const base = (c: Ctx, widget: Widget, path: string, label: string, resv = false) => ({
+const base = (c: Ctx, widget: Widget, path: string, label: string, resv = false, rn?: { any: boolean; all: boolean }) => ({
   widget,
   cfg: c.cfg,
   generatedAt: c.now,
-  credit: credit(c, path, resv),
+  credit: credit(c, path, resv, rn),
   open: { href: SITE + localePath(c.lang, path), label },
 });
 
@@ -226,14 +235,15 @@ async function buildRiver(slug: string, c: Ctx): Promise<RiverPayload | null> {
   const list = orderStations(basin, hit);
   const nh = c.cfg.forecast ? await nhFor([basin]) : {};
   const rn = riverName(basin, c.lang);
+  const rows = list.map((s) => rowOf(s, c, nh[s.station] ?? null, { withMarks: c.cfg.marks && c.cfg.size === "full" }));
   return {
-    ...base(c, "river", `/${slug}`, c.e("w.openRiver", { river: rn })),
+    ...base(c, "river", `/${slug}`, c.e("w.openRiver", { river: rn }), false, rnOf(rows)),
     kind: "river",
     title: c.e("w.river", { river: rn }),
     summary: riverSummary(list, c),
     upstream: c.e("w.upstream"),
     downstream: c.e("w.downstream"),
-    rows: list.map((s) => rowOf(s, c, nh[s.station] ?? null, { withMarks: c.cfg.marks && c.cfg.size === "full" })),
+    rows,
   };
 }
 
@@ -255,7 +265,7 @@ async function buildGauge(slug: string, c: Ctx): Promise<GaugePayload | null> {
   } else if (bar) bar.marks = [];
   const chart = await chartOf(s, c);
   return {
-    ...base(c, "gauge", `/${basinSlug(s.basin)}/${slug}`, c.e("w.openGauge", { gauge: stationDisplayName(s.station) })),
+    ...base(c, "gauge", `/${basinSlug(s.basin)}/${slug}`, c.e("w.openGauge", { gauge: stationDisplayName(s.station) }), false, rnOf([row])),
     kind: "gauge",
     title: stationDisplayName(s.station),
     river: riverName(s.basin, c.lang),
@@ -333,14 +343,15 @@ async function buildNow(c: Ctx): Promise<NowPayload> {
       : hot.length === 1
         ? c.e("w.nowSome1", { n: 1 })
         : c.e("w.nowSome", { n: hot.length, m: groups.length });
+  const nowGroups = groups.map((g) => ({ river: riverName(g.basin, c.lang), href: SITE + localePath(c.lang, `/${basinSlug(g.basin)}`), rows: g.list.map((s) => rowOf(s, c, null, { withMarks: false })) }));
   return {
-    ...base(c, "now", want.size === 1 ? `/${[...want][0]}` : "/rivers", c.e("w.openNow")),
+    ...base(c, "now", want.size === 1 ? `/${[...want][0]}` : "/rivers", c.e("w.openNow"), false, rnOf(nowGroups.flatMap((g) => g.rows))),
     kind: "now",
     title: c.e("w.nowTitle"),
     calm: hot.length === 0,
     summary,
     checked: c.e("w.nowChecked", { time: clock(c.now, c.t) }),
-    groups: groups.map((g) => ({ river: riverName(g.basin, c.lang), href: SITE + localePath(c.lang, `/${basinSlug(g.basin)}`), rows: g.list.map((s) => rowOf(s, c, null, { withMarks: false })) })),
+    groups: nowGroups,
   };
 }
 
@@ -430,7 +441,7 @@ async function buildTicker(c: Ctx): Promise<TickerPayload | null> {
     ...(row.trend ? [row.trend.toLowerCase()] : []),
     ...(row.time ? [row.time] : []),
   ];
-  return { ...base(c, "ticker", `/${basinSlug(s.basin)}/${stationSlug(s.station)}`, c.e("w.openGauge", { gauge: row.name })), kind: "ticker", segments, tier: row.tier, href: row.href, label: segments.join(" · ") };
+  return { ...base(c, "ticker", `/${basinSlug(s.basin)}/${stationSlug(s.station)}`, c.e("w.openGauge", { gauge: row.name }), false, rnOf([row])), kind: "ticker", segments, tier: row.tier, href: row.href, label: segments.join(" · ") };
 }
 
 /** The payload for one widget, or null when the river / gauge / town does not exist. Throws only when a source is down (callers show "unavailable"). */

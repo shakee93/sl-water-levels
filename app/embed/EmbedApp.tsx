@@ -60,6 +60,12 @@ function Credit({ credit, open }: { credit: Credit; open: { href: string; label:
         </a>
         {" · "}
         {credit.rest}
+        {credit.extra && (
+          <>
+            {" · "}
+            <a href={credit.extra.href} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">{credit.extra.text}</a>
+          </>
+        )}
       </p>
       <p className="mt-1">
         <a href={open.href} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-medium text-sky-700 dark:text-sky-300 underline underline-offset-2">
@@ -385,6 +391,12 @@ function TickerView({ p }: { p: TickerPayload }) {
         <a href={p.credit.href} target="_blank" rel="noopener" className="font-semibold text-sky-700 dark:text-sky-300 underline underline-offset-2">{p.credit.linkText}</a>
         {" · "}
         {p.credit.rest}
+        {p.credit.extra && (
+          <>
+            {" · "}
+            <a href={p.credit.extra.href} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">{p.credit.extra.text}</a>
+          </>
+        )}
       </p>
     </div>
   );

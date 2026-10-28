@@ -27,6 +27,8 @@ export type EmbedRow = {
   /** "3.2 ft below the alert level" */
   outcome: string | null;
   stale: boolean;
+  /** Reading comes from RiverNet (DMC / Leecom SCADA), not the Irrigation Department feed. */
+  rivernet: boolean;
 };
 
 export type Chart = {
@@ -43,7 +45,7 @@ export type Chart = {
   max: string;
 };
 
-export type Credit = { live: string; linkText: string; rest: string; href: string };
+export type Credit = { live: string; linkText: string; rest: string; href: string; /** Extra source credit (RiverNet) with a plain link. */ extra?: { text: string; href: string } };
 
 type Base = {
   widget: Widget;
