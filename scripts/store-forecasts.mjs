@@ -33,8 +33,10 @@ if (newestIssued && Date.now() - newestIssued > 3 * 3600_000) {
   console.error(`stale forecasts: newest issuedAt ${new Date(newestIssued).toISOString()}`);
   process.exit(1);
 }
-// Shadow forecasts (lib/shadowForecast.ts, d1/0016): the table is created on first use, so no separate migration step.
-const sql = splitSql(await readFile(new URL("../d1/0016_forecast_shadow.sql", import.meta.url), "utf8")).map((x) => x + ";");
+// Shadow forecasts (lib/shadowForecast.ts, d1/0016) go to their own file (<output>.shadow.sql), written by a separate, failure-tolerant
+// workflow step: a problem with a candidate must never cost the live forecast log. The table is created on first use there.
+const sql = [];
+const shadowSql = splitSql(await readFile(new URL("../d1/0016_forecast_shadow.sql", import.meta.url), "utf8")).map((x) => x + ";");
 let points = 0;
 let shadowPoints = 0;
 let obs = 0;
@@ -61,7 +63,8 @@ for (const r of data.runs ?? []) {
   }
   for (const v of r.shadows ?? []) {
     for (const h of v.horizons ?? []) {
-      sql.push(
+      if (!Number.isFinite(h.level)) continue; // level is NOT NULL in the table
+      shadowSql.push(
         `INSERT OR IGNORE INTO forecast_shadow_points (station, issued_at, variant, horizon_h, target_ts, level, low, high) VALUES (${[r.station, r.issuedAt, v.variant, h.h, h.ts, h.level, h.low, h.high].map(q).join(", ")});`,
       );
       shadowPoints++;
@@ -81,4 +84,5 @@ for (const r of data.runs ?? []) {
 }
 
 await writeFile(output, sql.join("\n") + "\n");
+await writeFile(`${output}.shadow.sql`, shadowSql.join("\n") + "\n");
 console.log(`${data.runs?.length ?? 0} runs, ${points} points, ${obs} observations, ${shadowPoints} shadow points -> ${output}; errors: ${data.errors?.length ?? 0}`);

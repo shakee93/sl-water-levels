@@ -39,6 +39,9 @@ jobs:
         run: node scripts/store-forecasts.mjs forecasts.json forecasts.sql
       - name: Write to D1
         run: node lib/d1Sql.mjs forecasts.sql
+      - name: Write shadow forecasts to D1 (never blocks the live log)
+        continue-on-error: true
+        run: node lib/d1Sql.mjs forecasts.sql.shadow.sql
 
       # Slack only hears about a workflow that has failed 3 runs in a row (the 3rd failure, then every 12th): a single D1 or API
       # blip on a job that runs every 5-30 minutes fixes itself on the next run. Cancelled/skipped runs do not count either way.
