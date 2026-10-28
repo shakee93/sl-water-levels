@@ -14,11 +14,13 @@ const W = info.width, H = info.height, ch = info.channels;
 const { PLACES } = await import("../../lib/places.ts");
 const R = 5; // +-5 cells (about 150 m)
 const out = [];
-// Per town, for the sentence above the map ("low ground near X starts to take river water at about N ft"): the ground within 1 km that is calibrated
-// and not "usually wet" (those cells are never drawn as flood), as the Nagalagam level at which the 20th-lowest cell (about 1.8 ha, so a street and not a
-// single pixel) goes under water, and the share of that ground under water at 2.0, 2.5 ... 9.0 ft. Written to lib/flood3dTownLevels.ts.
+// Per town, for the sentence above the map: the ground within 1 km that is calibrated, not river/sea, not "usually wet" (ponds, marsh: never drawn as flood)
+// and not within one cell (~30 m) of the river / canal network (their edges are the first to be wet and are not streets). `first` = the Nagalagam level at
+// which 2% of that ground is under water (a street's worth, not a pixel), `pct` = share (%) under water at 2.0, 2.5 ... 9.0 ft. Written to lib/flood3dTownLevels.ts.
 const levels = {};
 const STEPS = Array.from({ length: 15 }, (_, k) => 2 + k * 0.5);
+const nearRiver = new Uint8Array(W * H);
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let n = 0; for (let dy = -1; dy <= 1 && !n; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xx = x + dx; if (yy >= 0 && xx >= 0 && yy < H && xx < W && data[(yy * W + xx) * ch] === 255) { n = 1; break; } } nearRiver[y * W + x] = n; }
 const R1 = 1000, RC = Math.ceil(R1 / 30);
 function townLevels(p, ix, iy) {
   const Ls = [];
@@ -26,12 +28,12 @@ function townLevels(p, ix, iy) {
     const dx = (x - ix) * acc.deg * 111320 * Math.cos((p.lat * Math.PI) / 180), dy = (y - iy) * acc.deg * 110574;
     if (Math.hypot(dx, dy) > R1) continue;
     const o = (y * W + x) * ch, r = data[o], b = data[o + 2];
-    if (r === 255 || r === 0 || ((b >> 5) & 1) || ((b >> 6) & 1)) continue;
+    if (r === 255 || r === 0 || ((b >> 5) & 1) || ((b >> 6) & 1) || nearRiver[y * W + x]) continue;
     Ls.push((r - 1) / 10 + 2);
   }
   if (Ls.length < 150) return null; // too little calibrated ground near the town to say anything
   Ls.sort((a, b) => a - b);
-  return { first: Math.round(Ls[19] * 10) / 10, pct: STEPS.map((s) => Math.round((100 * Ls.filter((l) => l <= s).length) / Ls.length)) };
+  return { first: Math.round(Ls[Math.floor(Ls.length * 0.02)] * 10) / 10, pct: STEPS.map((s) => Math.round((100 * Ls.filter((l) => l <= s).length) / Ls.length)) };
 }
 for (const p of PLACES) {
   const ix = Math.floor((p.lon - acc.west) / acc.deg), iy = Math.floor((acc.north - p.lat) / acc.deg);

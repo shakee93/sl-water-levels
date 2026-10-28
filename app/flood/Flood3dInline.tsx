@@ -16,7 +16,7 @@ const Flood3dMap = dynamic(() => import("@/app/[lang]/lab/flood-3d/Flood3dMap"),
 });
 const MARKS = { alert: 4, minor: 5, major: 7 }; // Nagalagam Street's official steps until the live reading brings them
 
-export function Flood3dInline({ title, lead, mapLabel, lat, lon, lang, survey, slug, town }: { title: string; lead: string; mapLabel: string; lat: number; lon: number; lang: "en" | "si" | "ta"; survey?: { href: string; label: string }; slug?: string; town?: string }) {
+export function Flood3dInline({ title, mapLabel, lat, lon, lang, survey, slug, town }: { title: string; lead?: string; mapLabel: string; lat: number; lon: number; lang: "en" | "si" | "ta"; survey?: { href: string; label: string }; slug?: string; town?: string }) {
   const [near, setNear] = useState(false);
   const [st, setSt] = useState<EmbedState | null>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -33,17 +33,14 @@ export function Flood3dInline({ title, lead, mapLabel, lat, lon, lang, survey, s
   const second = has && st ? levelLine(lang, slug!, town!, st.scen, st.nowFt, st.shownFt) : null;
   return (
     <section aria-labelledby="f3d-embed-h" className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/60">
-      <div className="p-4 sm:p-5">
+      <div className="p-4 pb-3 sm:p-5 sm:pb-3">
         <h2 id="f3d-embed-h" className="flex items-center gap-2 font-semibold tracking-tight">
           <MapIcon className="size-4 text-sky-600 dark:text-sky-400" aria-hidden />
           {title}
         </h2>
-        {first && (
-          <p className="mt-2 text-[15px] leading-snug text-slate-900 dark:text-slate-100" data-testid="f3d-town-line" aria-live="polite">
-            {first}{second && <> <strong className="font-semibold">{second}</strong></>}
-          </p>
+        {(second ?? first) && (
+          <p className="mt-2 text-[15px] font-medium leading-snug text-slate-900 dark:text-slate-100" data-testid="f3d-town-line" aria-live="polite">{second ?? first}</p>
         )}
-        <p className={`${first ? "mt-2 text-xs" : "mt-1 text-sm"} text-slate-600 dark:text-slate-400`}>{lead}</p>
       </div>
       <div ref={holder} role="region" aria-label={mapLabel} className="h-[540px] overflow-hidden border-y border-slate-200 bg-slate-100 dark:border-slate-700 md:h-[580px]">
         {near && <Flood3dMap lang={lang} embed view={[lon, lat, 14]} onState={setSt} />}
