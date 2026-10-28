@@ -20,9 +20,33 @@ export type EmbedCfg = {
   /** now / reservoirs / ticker filters: river (basin) slugs, comma separated in the URL. */
   rivers: string[];
   gauge: string | null;
+  // ---- publisher style (lib/embedStyle.ts turns these into safe CSS; the official step colours are never styleable) ----
+  /** 6-digit hex without "#", or null = default. */
+  accent: string | null;
+  /** 6-digit hex, "transparent", or null = default. */
+  bg: string | null;
+  text: string | null;
+  font: EmbedFont;
+  scale: 90 | 100 | 110 | 120;
+  radius: 0 | 4 | 8 | 12 | 16;
+  border: boolean;
+  shadow: boolean;
+  pad: "tight" | "normal";
+  /** false hides the widget's own title (river, right now, reservoirs). */
+  title: boolean;
 };
 
-export const DEFAULTS: EmbedCfg = { lang: "en", theme: "auto", size: "full", unit: "ft", hours: 24, forecast: true, marks: true, rivers: [], gauge: null };
+export const FONTS = ["system", "sans", "serif", "noto-sans", "noto-serif", "inter", "roboto", "merriweather"] as const;
+export type EmbedFont = (typeof FONTS)[number];
+
+export const DEFAULTS: EmbedCfg = { lang: "en", theme: "light", size: "full", unit: "ft", hours: 24, forecast: true, marks: true, rivers: [], gauge: null, accent: null, bg: null, text: null, font: "system", scale: 100, radius: 12, border: true, shadow: true, pad: "normal", title: true };
+
+const hex = (v: string | undefined): string | null => {
+  const m = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec((v ?? "").trim());
+  if (!m) return null;
+  const h = m[1].toLowerCase();
+  return h.length === 3 ? [...h].map((c) => c + c).join("") : h;
+};
 
 type Sp = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -35,7 +59,7 @@ export function parseCfg(sp: Sp): EmbedCfg {
   const hours = Number(g("hours") ?? g("chart"));
   return {
     lang: isLocale(lang) ? lang : DEFAULTS.lang,
-    theme: g("theme") === "light" || g("theme") === "dark" ? (g("theme") as "light" | "dark") : "auto",
+    theme: g("theme") === "dark" ? "dark" : g("theme") === "auto" ? "auto" : "light",
     size: g("size") === "compact" ? "compact" : "full",
     unit: g("unit") === "m" ? "m" : "ft",
     hours: hours === 0 || hours === 72 ? hours : hours === 24 ? 24 : DEFAULTS.hours,
@@ -43,6 +67,16 @@ export function parseCfg(sp: Sp): EmbedCfg {
     marks: flag(g("marks"), true),
     rivers: slugs(g("river") ?? g("rivers") ?? g("basin")),
     gauge: slugs(g("gauge"))[0] ?? null,
+    accent: hex(g("accent")),
+    bg: g("bg")?.trim().toLowerCase() === "transparent" ? "transparent" : hex(g("bg")),
+    text: hex(g("text")),
+    font: (FONTS as readonly string[]).includes(g("font") ?? "") ? (g("font") as EmbedFont) : "system",
+    scale: ([90, 110, 120] as const).find((n) => n === Number(g("scale"))) ?? 100,
+    radius: ([0, 4, 8, 16] as const).find((n) => n === Number(g("radius"))) ?? 12,
+    border: flag(g("border"), true),
+    shadow: flag(g("shadow"), true),
+    pad: g("pad") === "tight" ? "tight" : "normal",
+    title: flag(g("title"), true),
   };
 }
 
@@ -58,6 +92,16 @@ export function cfgQuery(c: Partial<EmbedCfg>, w: Widget): string {
   if (c.marks === false) q.set("marks", "0");
   if (c.rivers?.length) q.set(w === "reservoirs" ? "basin" : "river", c.rivers.join(","));
   if (w === "ticker" && c.gauge) q.set("gauge", c.gauge);
+  if (c.accent) q.set("accent", c.accent);
+  if (c.bg) q.set("bg", c.bg);
+  if (c.text) q.set("text", c.text);
+  if (c.font && c.font !== "system") q.set("font", c.font);
+  if (c.scale && c.scale !== 100) q.set("scale", String(c.scale));
+  if (c.radius != null && c.radius !== 12) q.set("radius", String(c.radius));
+  if (c.border === false) q.set("border", "0");
+  if (c.shadow === false) q.set("shadow", "0");
+  if (c.pad === "tight") q.set("pad", "tight");
+  if (c.title === false) q.set("title", "0");
   const s = q.toString();
   return s ? `?${s}` : "";
 }

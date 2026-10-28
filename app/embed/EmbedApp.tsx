@@ -4,8 +4,9 @@
 // event) and a view per widget. Plain server-made strings in, markup out: no dictionaries, no calls to any data source.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, Minus } from "lucide-react";
-import { PILL, TierPill, type PillTier } from "@/app/TierPill";
+import { PILL, StepWord, TierPill, type PillTier } from "@/app/TierPill";
 import type { EmbedCfg, Widget } from "@/lib/embedConfig";
+import { styleOf } from "@/lib/embedStyle";
 import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, FChart, ForecastPayload, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
 
 const REFRESH_MS = 5 * 60_000;
@@ -23,13 +24,11 @@ function ArrowIcon({ a, className = "size-4" }: { a: Arrow; className?: string }
 const FILL: Record<PillTier, string> = { normal: "bg-sky-500", alert: "bg-amber-500", minor: "bg-orange-600", major: "bg-red-600", none: "bg-slate-400", stale: "bg-slate-400" };
 const TICK: Record<string, string> = { alert: "bg-amber-500", minor: "bg-orange-600", major: "bg-red-600" };
 const STROKE: Record<string, string> = { alert: "#f59e0b", minor: "#ea580c", major: "#dc2626" };
-const TEXT: Record<PillTier, string> = {
-  normal: "text-emerald-700 dark:text-emerald-400",
-  alert: "text-amber-700 dark:text-amber-400",
-  minor: "text-orange-700 dark:text-orange-400",
-  major: "text-red-700 dark:text-red-400",
-  none: "text-slate-600 dark:text-slate-300",
-  stale: "text-slate-600 dark:text-slate-300",
+const TONE_CLS: Partial<Record<PillTier, string>> = { alert: "emb-tone", minor: "emb-tone", major: "emb-tone" };
+const TONE_VAR: Partial<Record<PillTier, React.CSSProperties>> = {
+  alert: { ["--e-tone" as string]: "#f59e0b" },
+  minor: { ["--e-tone" as string]: "#ea580c" },
+  major: { ["--e-tone" as string]: "#dc2626" },
 };
 const CARD: Record<PillTier, string> = {
   normal: "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900",
@@ -55,7 +54,7 @@ function Credit({ credit, open }: { credit: Credit; open: { href: string; label:
     <footer className="mt-3 border-t border-slate-200 dark:border-slate-800 pt-2.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
       <p>
         {credit.live}{" "}
-        <a href={credit.href} target="_blank" rel="noopener" className="font-semibold text-sky-700 dark:text-sky-300 underline underline-offset-2">
+        <a href={credit.href} target="_blank" rel="noopener" className="emb-link font-semibold underline underline-offset-2">
           {credit.linkText}
         </a>
         {" · "}
@@ -68,7 +67,7 @@ function Credit({ credit, open }: { credit: Credit; open: { href: string; label:
         )}
       </p>
       <p className="mt-1">
-        <a href={open.href} target="_blank" rel="noopener" className="inline-flex items-center gap-1 font-medium text-sky-700 dark:text-sky-300 underline underline-offset-2">
+        <a href={open.href} target="_blank" rel="noopener" className="emb-link inline-flex items-center gap-1 font-medium underline underline-offset-2">
           {open.label}
           <ExternalLink className="size-3" aria-hidden />
         </a>
@@ -79,7 +78,7 @@ function Credit({ credit, open }: { credit: Credit; open: { href: string; label:
 
 function Shell({ p, children, tone }: { p: EmbedPayload; children: React.ReactNode; tone?: PillTier }) {
   return (
-    <section className={`rounded-xl border p-3 sm:p-4 shadow-sm ${CARD[tone ?? "normal"]}`}>
+    <section className={`emb-card ${TONE_CLS[tone ?? "normal"] ?? ""} rounded-xl border p-3 sm:p-4 shadow-sm ${CARD[tone ?? "normal"]}`} style={TONE_VAR[tone ?? "normal"]}>
       {children}
       <Credit credit={p.credit} open={p.open} />
     </section>
@@ -117,7 +116,7 @@ function RowView({ r, full, nameLink = true }: { r: EmbedRow; full: boolean; nam
               {r.next}
             </span>
           )}
-          {full && r.cross && <span className="font-medium text-amber-700 dark:text-amber-400">{r.cross}</span>}
+          {full && r.cross && <span className="font-semibold">{r.cross}</span>}
         </p>
       )}
       {full && r.marks && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">{r.marks}</p>}
@@ -130,7 +129,7 @@ function RiverView({ p }: { p: RiverPayload }) {
   const worst = p.rows.reduce<PillTier>((a, r) => (rank(r.tier) > rank(a) ? r.tier : a), "normal");
   return (
     <Shell p={p} tone={worst === "normal" ? "normal" : worst}>
-      <h1 className="text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
+      <h1 className="emb-title text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
       <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{p.summary}</p>
       {full && p.rows.length > 1 && (
         <p className="mt-2 flex justify-between text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-500">
@@ -189,18 +188,18 @@ function LineChart({ chart, title }: { chart: Chart; title: string }) {
     <div className="mt-4">
       <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{title}</p>
       <div className="relative mt-1.5">
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full h-24 text-sky-500" role="img" aria-label={`${title}: ${chart.min} - ${chart.max}`}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full h-24 text-sky-500" style={{ color: "var(--e-accent, #0ea5e9)" }} role="img" aria-label={`${title}: ${chart.min} - ${chart.max}`}>
           {chart.marks.map((m) => (
             <line key={m.key} x1="0" x2={W} y1={y(m.v)} y2={y(m.v)} stroke={STROKE[m.key]} strokeWidth="1" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" opacity="0.9" />
           ))}
           <path d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         </svg>
         {chart.marks.map((m) => (
-          <span key={m.key} className="absolute left-0 -translate-y-full rounded-sm bg-white/85 dark:bg-slate-900/85 px-1 text-[10px] leading-tight text-slate-600 dark:text-slate-300" style={{ top: `${(y(m.v) / H) * 100}%` }}>
+          <span key={m.key} className="absolute left-0 -translate-y-full emb-chip rounded-sm bg-white/85 dark:bg-slate-900/85 px-1 text-[11px] leading-tight text-slate-600 dark:text-slate-300" style={{ top: `${(y(m.v) / H) * 100}%` }}>
             {m.label}
           </span>
         ))}
-        <span className="absolute size-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 -translate-x-1/2 -translate-y-1/2" style={{ left: `${(x(last[0]) / W) * 100}%`, top: `${(y(last[1]) / H) * 100}%` }} aria-hidden />
+        <span className="absolute size-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 -translate-x-1/2 -translate-y-1/2" style={{ background: "var(--e-accent, #0ea5e9)", left: `${(x(last[0]) / W) * 100}%`, top: `${(y(last[1]) / H) * 100}%` }} aria-hidden />
       </div>
       <p className="mt-1 flex justify-between text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
         <span>{chart.fromLabel}</span>
@@ -229,12 +228,12 @@ function GaugeView({ p }: { p: GaugePayload }) {
         <span className={`text-3xl sm:text-4xl font-semibold tabular-nums leading-none ${r.level ? "" : "text-slate-400"}`}>{r.level ?? "—"}</span>
         <Trend row={r} />
       </p>
-      {r.outcome && <p className={`mt-1.5 text-sm ${TEXT[r.tier]}`}>{r.outcome}</p>}
+      {r.outcome && <p className="mt-1.5 text-sm font-medium">{r.outcome}</p>}
       {(r.next || r.cross) && (
         <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-slate-700 dark:text-slate-300">
           <ArrowIcon a={r.nextArrow} className="size-4" />
           <span>{r.next}</span>
-          {r.cross && <span className="font-medium text-amber-700 dark:text-amber-400">· {r.cross}</span>}
+          {r.cross && <span className="font-semibold">· {r.cross}</span>}
         </p>
       )}
       {r.time && <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</p>}
@@ -265,10 +264,10 @@ function ForecastChart({ chart, title }: { chart: FChart; title: string }) {
     <div className="mt-4">
       <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{title}</p>
       <div className="relative mt-1.5 pl-[3.4rem]">
-        <span className="absolute left-0 top-0 w-[3.2rem] text-right text-[10px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMax}</span>
-        <span className="absolute left-0 bottom-0 w-[3.2rem] text-right text-[10px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMin}</span>
+        <span className="absolute left-0 top-0 w-[3.2rem] text-right text-[11px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMax}</span>
+        <span className="absolute left-0 bottom-0 w-[3.2rem] text-right text-[11px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMin}</span>
         <div className="relative">
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full h-32 text-sky-500" role="img" aria-label={title}>
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full h-32 text-sky-500" style={{ color: "var(--e-accent, #0ea5e9)" }} role="img" aria-label={title}>
             {bandPath && <path d={bandPath} fill="currentColor" opacity="0.18" />}
             {chart.marks.map((m) => (
               <line key={m.key} x1="0" x2={W} y1={y(m.v)} y2={y(m.v)} stroke={STROKE[m.key]} strokeWidth="1" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
@@ -278,11 +277,11 @@ function ForecastChart({ chart, title }: { chart: FChart; title: string }) {
             <path d={line(chart.forecast)} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           </svg>
           {chart.marks.map((m) => (
-            <span key={m.key} className="absolute left-0 -translate-y-full rounded-sm bg-white/85 dark:bg-slate-900/85 px-1 text-[10px] leading-tight text-slate-600 dark:text-slate-300" style={{ top: `${(y(m.v) / H) * 100}%` }}>
+            <span key={m.key} className="absolute left-0 -translate-y-full emb-chip rounded-sm bg-white/85 dark:bg-slate-900/85 px-1 text-[11px] leading-tight text-slate-600 dark:text-slate-300" style={{ top: `${(y(m.v) / H) * 100}%` }}>
               {m.label}
             </span>
           ))}
-          <span className="absolute size-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 -translate-x-1/2 -translate-y-1/2" style={{ left: `${(nx / W) * 100}%`, top: `${(y(chart.forecast[0][1]) / H) * 100}%` }} aria-hidden />
+          <span className="absolute size-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 -translate-x-1/2 -translate-y-1/2" style={{ background: "var(--e-accent, #0ea5e9)", left: `${(nx / W) * 100}%`, top: `${(y(chart.forecast[0][1]) / H) * 100}%` }} aria-hidden />
         </div>
       </div>
       <div className="relative mt-1 h-4 pl-[3.4rem] text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
@@ -291,9 +290,9 @@ function ForecastChart({ chart, title }: { chart: FChart; title: string }) {
         <span className="absolute right-0 top-0">{chart.axis.to}</span>
       </div>
       <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 bg-sky-500" aria-hidden />{chart.legend.observed}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-sky-500" aria-hidden />{chart.legend.forecast}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-4 rounded-sm bg-sky-500/20" aria-hidden />{chart.legend.band}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 bg-sky-500" style={{ background: "var(--e-accent, #0ea5e9)" }} aria-hidden />{chart.legend.observed}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-sky-500" style={{ borderColor: "var(--e-accent, #0ea5e9)" }} aria-hidden />{chart.legend.forecast}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: "color-mix(in srgb, var(--e-accent, #0ea5e9) 20%, transparent)" }} aria-hidden />{chart.legend.band}</span>
       </p>
     </div>
   );
@@ -320,21 +319,21 @@ function ForecastView({ p }: { p: ForecastPayload }) {
       {(p.hour || p.day) && (
         <div className={`mt-3 grid gap-2 ${p.hour && p.day ? "grid-cols-1 min-[440px]:grid-cols-2" : ""}`}>
           {p.hour && (
-            <div className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
+            <div className="emb-tile rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
               <p className="text-xs text-slate-500 dark:text-slate-400">{p.hour.label}</p>
               <p className="mt-0.5 flex items-start gap-1.5 text-sm font-semibold leading-snug"><span className="mt-0.5 shrink-0"><ArrowIcon a={p.hour.arrow} /></span>{p.hour.title}</p>
               {p.hour.sub && <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400 tabular-nums">{p.hour.sub}</p>}
             </div>
           )}
           {p.day && (
-            <div className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
+            <div className="emb-tile rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
               <p className="text-xs text-slate-500 dark:text-slate-400">{p.day.label}</p>
               <p className="mt-0.5 text-sm font-semibold leading-snug">{p.day.text}</p>
             </div>
           )}
         </div>
       )}
-      {p.action && <p className="mt-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm font-medium">{p.action}</p>}
+      {p.action && <p className="emb-tile mt-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm font-medium">{p.action}</p>}
       {full && p.chart && <ForecastChart chart={p.chart} title={p.chartTitle} />}
       {full && p.note && <p className="mt-2.5 text-xs text-slate-500 dark:text-slate-400">{p.note}</p>}
     </Shell>
@@ -349,7 +348,7 @@ function TownView({ p }: { p: TownPayload }) {
     <Shell p={p} tone={p.tier}>
       <h1 className="text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
       <div className="mt-2 flex items-end justify-between gap-3">
-        <p className={`text-2xl sm:text-3xl font-semibold tracking-tight leading-tight ${TEXT[p.tier]}`}>{p.step}</p>
+        <p className="leading-tight"><StepWord label={p.step} tier={p.tier} className="text-xl sm:text-2xl tracking-tight" /></p>
         {p.level && (
           <p className="text-right leading-tight">
             <span className="block text-xl sm:text-2xl font-semibold tabular-nums">{p.level}</span>
@@ -361,7 +360,7 @@ function TownView({ p }: { p: TownPayload }) {
       {(p.hour || p.day) && (
         <div className={`mt-3 grid gap-2 ${p.hour && p.day ? "grid-cols-1 min-[440px]:grid-cols-2" : ""}`}>
           {p.hour && (
-            <div className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
+            <div className="emb-tile rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
               <p className="text-xs text-slate-500 dark:text-slate-400">{p.hourLabel}</p>
               <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold leading-snug">
                 <ArrowIcon a={p.hourArrow} />
@@ -370,14 +369,14 @@ function TownView({ p }: { p: TownPayload }) {
             </div>
           )}
           {p.day && (
-            <div className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
+            <div className="emb-tile rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
               <p className="text-xs text-slate-500 dark:text-slate-400">{p.dayLabel}</p>
               <p className="mt-0.5 text-sm font-semibold leading-snug">{p.day}</p>
             </div>
           )}
         </div>
       )}
-      {p.action && <p className="mt-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm font-medium">{p.action}</p>}
+      {p.action && <p className="emb-tile mt-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm font-medium">{p.action}</p>}
       {full && <p className="mt-2.5 text-xs text-slate-500 dark:text-slate-400">{p.note}</p>}
       {p.time && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{p.time}</p>}
     </Shell>
@@ -392,7 +391,7 @@ function NowView({ p }: { p: NowPayload }) {
   return (
     <Shell p={p} tone={worst}>
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h1 className="text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
+        <h1 className="emb-title text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
         <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">{p.checked}</span>
       </div>
       <p className={`mt-0.5 text-sm ${p.calm ? "text-emerald-700 dark:text-emerald-400" : "text-slate-700 dark:text-slate-300"}`}>{p.summary}</p>
@@ -433,7 +432,7 @@ function NowView({ p }: { p: NowPayload }) {
 function ReservoirsView({ p }: { p: ReservoirsPayload }) {
   return (
     <Shell p={p}>
-      <h1 className="text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
+      <h1 className="emb-title text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
       <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{p.unavailable ?? p.summary}</p>
       {p.items.length > 0 && (
         <ul className="mt-2.5 divide-y divide-slate-200/80 dark:divide-slate-800">
@@ -471,21 +470,21 @@ function ReservoirsView({ p }: { p: ReservoirsPayload }) {
 
 function TickerView({ p }: { p: TickerPayload }) {
   return (
-    <div className={`rounded-lg border px-3 py-1.5 ${CARD[p.tier]}`}>
+    <div className={`emb-card ${TONE_CLS[p.tier] ?? ""} rounded-lg border px-3 py-1.5 ${CARD[p.tier]}`} style={TONE_VAR[p.tier]}>
       <p className="flex items-center gap-2 text-sm leading-tight min-w-0">
         <span className={`size-2.5 shrink-0 rounded-full ${PILL[p.tier].dot}`} aria-hidden />
         <a href={p.href} target="_blank" rel="noopener" className="min-w-0 flex-1 font-medium hover:underline underline-offset-2" title={p.label}>
           {p.segments.map((s, i) => (
-            <span key={i} className={i === 1 ? `font-semibold ${TEXT[p.tier]}` : ""}>
+            <span key={i}>
               {i > 0 && <span className="mx-1 text-slate-400" aria-hidden>· </span>}
-              {s}
+              {i === 1 ? <StepWord label={s} tier={p.tier} className="text-xs" /> : s}
             </span>
           ))}
         </a>
       </p>
-      <p className="mt-0.5 text-[10px] leading-tight text-slate-500 dark:text-slate-400">
+      <p className="mt-0.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
         {p.credit.live}{" "}
-        <a href={p.credit.href} target="_blank" rel="noopener" className="font-semibold text-sky-700 dark:text-sky-300 underline underline-offset-2">{p.credit.linkText}</a>
+        <a href={p.credit.href} target="_blank" rel="noopener" className="emb-link font-semibold underline underline-offset-2">{p.credit.linkText}</a>
         {" · "}
         {p.credit.rest}
         {p.credit.extra && (
@@ -583,8 +582,11 @@ export function EmbedApp({ initial, api, cfg, widget }: { initial: EmbedPayload 
     return () => clearInterval(id);
   }, [widget]);
 
+  const st = styleOf(cfg);
   return (
-    <div ref={wrap} className={widget === "ticker" ? "p-1" : "p-1.5"} lang={cfg.lang}>
+    <div ref={wrap} className={`${st.classes} ${widget === "ticker" ? "p-1" : "p-1.5"}`} lang={cfg.lang}>
+      <style dangerouslySetInnerHTML={{ __html: st.css }} />
+      {st.fontHref && <link rel="stylesheet" href={st.fontHref} />}
       {data ? (
         <View p={data} />
       ) : (

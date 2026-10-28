@@ -14,7 +14,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, colo
 
 // ?theme=light|dark|auto (auto follows the visitor's OS) and ?lang= before first paint: the page background is transparent-free
 // (solid) so the widget looks the same on any host page.
-const INIT = `(function(){try{var q=new URLSearchParams(location.search),t=q.get("theme"),d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches),r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";var l=q.get("lang");if(l==="si"||l==="ta")r.lang=l}catch(e){}})()`;
+const INIT = `(function(){try{var q=new URLSearchParams(location.search),t=q.get("theme"),d=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches),r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";var l=q.get("lang");if(l==="si"||l==="ta")r.lang=l}catch(e){}})()`;
 
 export default function EmbedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,7 +22,7 @@ export default function EmbedLayout({ children }: { children: React.ReactNode })
       <head>
         <script dangerouslySetInnerHTML={{ __html: INIT }} />
       </head>
-      <body className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+      <body className="text-slate-900 dark:text-slate-100" style={{ background: "transparent" }}>
         {children}
         {/* Umami with page views OFF: only the explicit embed_view event is sent. No Google Analytics here. */}
         <Script defer src="https://analytics.freshpixl.com/script.js" data-website-id="a15ed279-5a97-4e07-8aa6-3d7431957c94" data-auto-track="false" />
