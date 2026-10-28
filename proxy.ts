@@ -48,7 +48,7 @@ async function loadSlugs(origin: string): Promise<Slugs | null> {
 }
 
 // Top-level pages with exactly one address (plus the few sub-pages listed), and the rest of the site's shape.
-const SINGLE = new Set(["about", "help", "status", "data", "rain", "rivers", "flood-map", "flood-survey", "colombo-canals", "news", "research", "flood", "reservoirs", "history"]);
+const SINGLE = new Set(["about", "help", "status", "data", "rain", "rivers", "flood-map", "flood-survey", "colombo-canals", "news", "research", "flood", "reservoirs", "history", "embed"]);
 const SUBPAGES = new Set(["research/wellampitiya-street-flooding", "reservoirs/spilling"]);
 const TOWNS = new Set(PLACES.map((p) => p.slug));
 
@@ -179,5 +179,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api(?:/|$)|mcp(?:/|$)|_next|.*\\..*).*)"],
+  matcher: ["/((?!api(?:/|$)|mcp(?:/|$)|embed/(?:river|gauge|town|now|reservoirs|ticker)(?:/|$)|_next|.*\\..*).*)"],
 };
