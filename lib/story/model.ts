@@ -176,7 +176,7 @@ async function buildReservoirsStory(lang: Locale, unit: "ft" | "m"): Promise<Sto
   return {
     kind: "reservoirs", lang, title: p.title, subtitle: s.resSub, tier: "none", step: "", level: null, arrow: null, trend: null, next: null, nextArrow: null,
     updated: null, chart: null, rows: [], summary: p.summary, where: "waterlevels.lk/reservoirs/spilling",
-    res: { rows: items.slice(0, MAX).map((i) => ({ name: i.name, river: i.river, figure: i.figure, when: i.when, source: i.source })), more: Math.max(0, items.length - MAX), sheetDay: null },
+    res: { rows: items.slice(0, MAX).map((i) => ({ name: i.name, river: i.river, figure: i.figure, when: i.when, source: i.source })), more: p.more + Math.max(0, items.length - MAX), sheetDay: null },
   };
 }
 

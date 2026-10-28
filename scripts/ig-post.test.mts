@@ -132,6 +132,9 @@ assert.equal(gate({ IG_MODE: "live", IG_ACCESS_TOKEN: "  ", IG_USER_ID: "1" }).m
   }
   assert.match(composeCaption(all[2], { feed: false }).en, /2 gauges at Alert or higher, 3 near it\. Rain forecast: up to 85 mm in 24 hours near Ratnapura\./);
   assert.match(composeCaption(all[5], { feed: false }).en, /31 reservoirs are spilling or releasing.*Rajanganaya, 7,704 cusecs \(2026-10-28\)/);
+  // native place names where the gazetteer has them (Latin stays otherwise)
+  const nat = composeCaption({ type: "gauge_rise", gauge: { ...gauge, station: "Ratnapura" } }, { feed: false }).text.split("\n").filter(Boolean);
+  assert.ok(/^[඀-෿]+:/.test(nat[1]) && /^[஀-௿]+:/.test(nat[2]), nat.join(" | "));
   assert.equal(tagOf("Kalu Ganga"), "#KaluGanga");
   assert.equal(tagOf("Kalawellawa (Millakanda)"), "#Kalawellawa");
   assert.equal(tagOf("අ"), null);

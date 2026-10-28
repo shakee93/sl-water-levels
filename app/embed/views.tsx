@@ -2,6 +2,7 @@
 // out. Used by the static HTML route (river, town, right now, reservoirs, ticker: no React in the visitor's browser) and by EmbedApp.tsx
 // (gauge, forecast, card: the views that carry the chart).
 import { Fragment } from "react";
+import { embedT } from "@/lib/i18n/embed";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import { PILL, StepWord, TierPill, type PillTier } from "@/app/TierPill";
 import type { Arrow, Credit, EmbedPayload, EmbedRow, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
@@ -322,6 +323,7 @@ export function ReservoirsView({ p }: { p: ReservoirsPayload }) {
           ))}
         </ul>
       )}
+      {p.more > 0 && <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">{embedT(p.cfg.lang)("w.resMore", { n: p.more })}</p>}
     </Shell>
   );
 }

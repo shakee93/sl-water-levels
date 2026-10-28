@@ -9,6 +9,8 @@
 // it is still composed, checked, logged and shown in the Slack dry-run so the words are reviewed once.
 // @ts-ignore node strip-types needs explicit extensions
 import { pushText } from "./i18n/return.ts";
+// @ts-ignore node strip-types needs explicit extensions
+import { nativeGauge } from "./nativeNames.ts";
 
 export const LIVE_LINE: Record<"en" | "si" | "ta", string> = { en: "Live levels: waterlevels.lk", si: "සජීවී මට්ටම්: waterlevels.lk", ta: "நேரடி நீர்மட்டம்: waterlevels.lk" };
 export const MAX_CAPTION = 2200;
@@ -107,10 +109,10 @@ function native(it: Item, lang: "si" | "ta"): string | null {
   switch (it.type) {
     case "gauge_rise": {
       const g = it.gauge;
-      const m = pushText(lang, "rise", [{ name: g.station, level: Math.max(2, LEVEL[g.tier] ?? 2), street: null }]);
+      const m = pushText(lang, "rise", [{ name: nativeGauge(g.station, lang) ?? g.station, level: Math.max(2, LEVEL[g.tier] ?? 2), street: null }]);
       return m.title; // "Ratnapura: Alert" in the reader's language; the push body says "open ... to see what to do", which means nothing in a caption
     }
-    case "gauge_clear": return fill(D.clear, { station: it.gauge.station });
+    case "gauge_clear": return fill(D.clear, { station: nativeGauge(it.gauge.station, lang) ?? it.gauge.station });
     case "warning": return fill(D.warning, { basins: it.warning.basins.join(", ") });
     case "home": return it.home.atAlert > 0 ? fill(D.homeAlert, { n: it.home.atAlert }) : D.homeCalm;
     case "rain": return D.rain;

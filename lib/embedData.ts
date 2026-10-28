@@ -428,13 +428,15 @@ async function buildReservoirs(c: Ctx): Promise<ReservoirsPayload> {
   }
   items.sort((a, b) => Number(b.official) - Number(a.official) || Number((b.figure ?? "0").replace(/\D/g, "")) - Number((a.figure ?? "0").replace(/\D/g, "")));
   const n = items.filter((i) => i.official).length;
+  const shown = items.slice(0, c.cfg.size === "compact" ? 4 : 8);
   const out: ReservoirsPayload = {
     ...base(c, "reservoirs", "/reservoirs/spilling", c.e("w.openRes"), true),
     kind: "reservoirs",
     title: c.e("w.resTitle"),
     summary: !data && !rel ? c.e("w.unavailable") : items.length === 0 ? c.e("w.resNone") : n === 1 ? c.e("w.resSome1") : n === 0 ? c.e("w.resReportedOnly") : c.e("w.resSome", { n }),
-    items: items.slice(0, c.cfg.size === "compact" ? 4 : 8),
+    items: shown,
     officialNote: "",
+    more: n - shown.filter((i) => i.official).length,
   };
   if (!data && !rel) out.unavailable = c.e("w.unavailable");
   return out;

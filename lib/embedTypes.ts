@@ -111,7 +111,9 @@ export type ForecastPayload = Base & {
 export type NowGroup = { river: string; href: string; rows: EmbedRow[] };
 export type NowPayload = Base & { kind: "now"; title: string; calm: boolean; summary: string; groups: NowGroup[]; checked: string };
 export type ResRow = { key: string; name: string; river: string | null; href: string; status: string; official: boolean; figure: string | null; source: string; when: string | null; reported: string | null; reportedUrl: string | null };
-export type ReservoirsPayload = Base & { kind: "reservoirs"; title: string; summary: string; items: ResRow[]; officialNote: string };
+export type ReservoirsPayload = Base & { kind: "reservoirs"; title: string; summary: string; items: ResRow[]; officialNote: string;
+  /** Official spilling / releasing reservoirs beyond the rows shown (the summary counts all of them). */
+  more: number };
 export type TickerPayload = Base & { kind: "ticker"; segments: string[]; tier: PillTier; href: string; label: string };
 
 export type EmbedPayload = RiverPayload | CardPayload | GaugePayload | ForecastPayload | TownPayload | NowPayload | ReservoirsPayload | TickerPayload;
