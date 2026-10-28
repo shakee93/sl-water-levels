@@ -26,6 +26,10 @@ type Meta = { png: { w: number; h: number; west: number; east: number; south: nu
 
 const DITWAH_PEAK_FT = 8.43; // Nagalagam Street, 1 Dec 2025 (the replay hour 155 of public/flood3d/ditwah.json)
 const POLL_MS = 5 * 60 * 1000;
+const FS_ICON = {
+  open: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+  close: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
+};
 const CENTER: [number, number] = [79.922, 6.955]; // Kelaniya
 const PX = { lo: 2, step: 10 }; // level.png: R = round((ft - 2) * 10) + 1
 
@@ -39,7 +43,11 @@ const KIND_LABEL = ["place", "landmark", "road"];
 const ORDER_RAMP: [number, number, number][] = [[76, 29, 120], [150, 40, 140], [214, 70, 110], [244, 127, 80], [250, 185, 100], [252, 230, 150]]; // "fills first" shading, dark to pale
 
 // embed: the compact version rendered inline in a town page (app/flood/Flood3dInline.tsx; view = [lon, lat, zoom]): 2D, live level only, no search / options / reports / replay.
-export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed = false, view, survey: surveyPage = false }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang; embed?: boolean; view?: [number, number, number]; survey?: boolean }) {
+/** What the inline town card tells its parent so the sentence above the map follows the map: the river now (null until read / when too old) and the level shown. */
+export type EmbedState = { nowFt: number | null; shownFt: number; scen: Scenario; failed: boolean; marks: { alert: number; minor: number; major: number } };
+export type Scenario = "now" | "alert" | "minor" | "major" | "ditwah";
+const MARKS0 = { alert: 4, minor: 5, major: 7 }; // Nagalagam Street's official steps until the live reading brings them
+export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed = false, view, survey: surveyPage = false, onState }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang; embed?: boolean; view?: [number, number, number]; survey?: boolean; onState?: (s: EmbedState) => void }) {
   const tr = useMemo(() => makeT(lang), [lang]);
   preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com");
   // start the map library download in the HTML, before hydration (fetch preloads of the data files made fetch() fail intermittently on throttled phones, so those are not preloaded)
@@ -71,7 +79,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const wrap = useRef<HTMLDivElement>(null);
   const [full, setFull] = useState(false);
   const toggleFull = useCallback(() => {
-    const el = wrap.current;
+    const el = embed ? embedRoot.current : wrap.current;
     if (!full) {
       setFull(true);
       el?.requestFullscreen?.().catch(() => {});
@@ -79,7 +87,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
       setFull(false);
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     }
-  }, [full]);
+  }, [full, embed]);
+  useEffect(() => { toggleFullRef.current = toggleFull; });
   useEffect(() => {
     const onFs = () => { if (!document.fullscreenElement) setFull(false); };
     const onKey = (e: KeyboardEvent) => {
@@ -117,7 +126,11 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const [past, setPast] = useState(false);
   const [roadsOn, setRoadsOn] = useState(true);
   const [threeD, setThreeD] = useState(false);
-  const [ditwah, setDitwah] = useState(false); // embed only: show the Cyclone Ditwah peak (1 Dec 2025, 8.43 ft at Nagalagam) instead of the live level
+  const [scen, setScen] = useState<Scenario>("now"); // embed only: "what if the river rises to ...": now (live), the official Alert / Minor / Major step at Nagalagam, or the Cyclone Ditwah peak (1 Dec 2025, 8.43 ft)
+  const ditwah = scen === "ditwah";
+  const embedRoot = useRef<HTMLDivElement>(null);
+  const fullBtn = useRef<HTMLButtonElement | null>(null);
+  const toggleFullRef = useRef<() => void>(() => {});
   const [waterOn, setWaterOn] = useState(true);
   const [legendNote, setLegendNote] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -141,16 +154,18 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   // A reading older than about 6 h is not shown as live (the chip says unavailable); older than 90 min it says it may be a few minutes old.
   const liveNag = useMemo(() => (live?.nagalagam?.levelFt != null && !(live.nagalagam.hourlyAt && Date.now() - Date.parse(live.nagalagam.hourlyAt) > 6 * 3_600_000) ? { ft: live.nagalagam.levelFt } : null), [live]);
   const rpI = rp ? Math.max(0, Math.min(rp.hours - 1, Math.round(rpIdx))) : 0;
-  const level = embed && ditwah ? DITWAH_PEAK_FT : replayOn && rp ? rp.nag[rpI] / 100 : driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
+  const scenMarks = { alert: live?.nagalagam?.marks?.alert ?? MARKS0.alert, minor: live?.nagalagam?.marks?.minor ?? MARKS0.minor, major: live?.nagalagam?.marks?.major ?? MARKS0.major };
+  const scenFt = scen === "ditwah" ? DITWAH_PEAK_FT : scen === "alert" ? scenMarks.alert : scen === "minor" ? scenMarks.minor : scen === "major" ? scenMarks.major : null;
+  const level = embed && scenFt != null ? scenFt : replayOn && rp ? rp.nag[rpI] / 100 : driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
   const lagH = live?.hanwellaLagH ?? 18;
   // Upstream follows Hanwella. Nagalagam rises 12-18 h after Hanwella, so on a rising river the towns from Kaduwela to Ruwanwella were shown late.
   // Hanwella's reading, converted to Nagalagam-equivalent ft (the same table as the Hanwella option), raises the water there when it is higher than
   // Nagalagam; it never lowers it (the upstream picture was fitted on Nagalagam at the satellite times: 30 Nov Hanwella 10.8 m -> 7.4 ft = Nagalagam 7.4,
   // 3 Dec 5.2 m -> 4.1 ft < Nagalagam 4.6, so the falling limb keeps Nagalagam as fitted). West of Kaduwela nothing changes.
   const liveHanFt = live?.hanwella ? (live.hanwella.fastFt ?? live.hanwella.levelFt) : null;
-  const upLevel = embed && ditwah ? null : replayOn && rp ? (rp.han?.[rpI] != null ? hanwellaMToNagFt(rp.han[rpI] / 10, table) : null) : driver === "live" && liveHanFt != null ? hanwellaMToNagFt(liveHanFt * 0.3048, table) : null;
+  const upLevel = embed && scen !== "now" ? null : replayOn && rp ? (rp.han?.[rpI] != null ? hanwellaMToNagFt(rp.han[rpI] / 10, table) : null) : driver === "live" && liveHanFt != null ? hanwellaMToNagFt(liveHanFt * 0.3048, table) : null;
   const upBoost = upLevel != null ? Math.max(0, upLevel - level) : 0;
-  const isLive = driver === "live" && !replayOn && !(embed && ditwah);
+  const isLive = driver === "live" && !replayOn && !(embed && scen !== "now");
   const nearShot = replayOn && rp ? rp.shots.find((x) => Math.abs(x.h - rpI) <= 6) ?? null : null;
 
   // Deep link for testing and sharing a view: ?lv=7.2 (what-if Nagalagam ft) &chance=6 (horizon h) &past=1 &plain=1 &d3=0|1
@@ -178,7 +193,10 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     const pull = async () => {
       let ok = false;
       try {
-        const r = await fetch("/api/flood3d", { cache: "no-store" });
+        // a cold or stuck server must not leave the strip on "Loading" for ever: give up after 12 s (the map keeps the last good reading and tries again soon)
+        const ac = new AbortController(), to = setTimeout(() => ac.abort(), 12_000);
+        let r: Response;
+        try { r = await fetch("/api/flood3d", { cache: "no-store", signal: ac.signal }); } finally { clearTimeout(to); }
         if (r.ok) { const d = (await r.json()) as Live; ok = !d.partial; if (!stop && !d.partial) { setLive(d); setFetchedAt(Date.now()); setLiveErr(!!d.stale); } else if (!stop) setLiveErr(true); } else if (!stop) setLiveErr(true);
       } catch { if (!stop) setLiveErr(true); /* keep the last good numbers */ }
       if (!stop && !document.hidden) timer = setTimeout(pull, ok ? POLL_MS : 20_000); // a cold server can miss its first answer: try again soon
@@ -530,6 +548,17 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     return () => { stop(); if (timer) clearTimeout(timer); map.off("movestart", onMoveStart); map.off("moveend", onIdle); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("resize", onIdle); };
   }, [ready, rain, rainOn, full]);
 
+  // embed: in full screen one finger pans the map (the page cannot scroll behind it); inline the page keeps scrolling (two fingers / Ctrl + scroll for the map)
+  useEffect(() => {
+    if (!embed || !ready) return;
+    const m = mapRef.current;
+    if (m?.cooperativeGestures) { if (full) m.cooperativeGestures.disable(); else m.cooperativeGestures.enable(); }
+    const b = fullBtn.current;
+    if (b) { const lab = full ? tr("Exit full screen") : tr("Full screen"); b.innerHTML = full ? FS_ICON.close : FS_ICON.open; b.setAttribute("aria-label", lab); b.title = lab; }
+    const t = setTimeout(() => m?.resize(), 120);
+    return () => clearTimeout(t);
+  }, [embed, ready, full, tr]);
+
   // ---- build the map once, lazily
   useEffect(() => {
     let dead = false;
@@ -537,7 +566,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     (async () => {
       try {
         let dark0 = false;
-        try { dark0 = embed ? document.documentElement.classList.contains("dark") : localStorage.getItem("f3d-map-theme") === "dark"; } catch { /* default light */ }
+        // the town card map is light whatever the site theme
+        try { dark0 = embed ? false : localStorage.getItem("f3d-map-theme") === "dark"; } catch { /* default light */ }
         const [ml, m, png, base] = await Promise.all([loadMl(), fetch("/flood3d/accuracy.json").then((r) => r.json() as Promise<Meta>), loadGrid(), loadBaseStyle(dark0)]);
         if (dead || !box.current) return;
         meta.current = m; grid.current = png;
@@ -567,6 +597,13 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         }
         if (new URLSearchParams(location.search).has("debug")) (window as unknown as { __f3d?: unknown }).__f3d = { map, cv: cv.current, grid: grid.current };
         map.addControl(new ml.NavigationControl({ visualizePitch: !embed, showCompass: !embed }), embed || phone ? "top-right" : "bottom-left");
+        if (embed) {
+          // full screen button in the same group as the zoom buttons: the whole card (strip, what-if chips, map, note) fills the screen
+          const grp = document.createElement("div"); grp.className = "maplibregl-ctrl maplibregl-ctrl-group";
+          const b = document.createElement("button"); b.type = "button"; b.className = "f3d-fs-btn"; b.setAttribute("aria-label", tr("Full screen")); b.title = tr("Full screen");
+          b.innerHTML = FS_ICON.open; b.addEventListener("click", () => toggleFullRef.current()); grp.appendChild(b); fullBtn.current = b;
+          map.addControl({ onAdd: () => grp, onRemove: () => { grp.remove(); } }, "top-right");
+        }
         if (!phone && !embed) map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
         setUsed(m.reports_used?.Kelaniya ?? 0);
         let bound = false;
@@ -843,6 +880,10 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const nagUsable = nag?.levelFt != null && !(nagAgeMin != null && nagAgeMin > 360);
   const stepColor = STEP_COLOR[nag ? (live?.gauges?.find((g) => g.name === "Nagalagam Street")?.status ?? nag.status) : "none"] ?? "#64748b";
   const dot = "·";
+  // the inline town card's sentence follows the map: what the river is now and the level shown (plus the Hanwella lift at the town's own longitude)
+  const townLon = view?.[0] ?? CENTER[0];
+  const shownEff = level + Math.min(1, Math.max(0, (townLon - 79.98) / 0.1)) * upBoost;
+  useEffect(() => { if (embed) onState?.({ nowFt: nagUsable && nag ? nag.levelFt : null, shownFt: shownEff, scen, failed: liveErr || (live != null && !nagUsable), marks: scenMarks }); }, [embed, shownEff, scen, nagUsable, nag?.levelFt, liveErr, live]); // eslint-disable-line react-hooks/exhaustive-deps -- onState is the parent's setter
 
   // ---- header strip: title, one live chip, one info chip that expands the test notice
   const Title = surveyPage ? "h2" : "h1";
@@ -1031,7 +1072,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     </>
   );
 
-  // ---- embed: map between a one-line live strip and a note + link; the iframe's own height is the layout
+  // ---- embed: a strip saying which level is shown, the "what if" chips, the map, then a legend + note + link. Always a LIGHT panel (the card around it follows the site theme).
   if (embed) {
     const fullHref = () => {
       const m = mapRef.current, c = m?.getCenter(), z = m?.getZoom();
@@ -1040,30 +1081,50 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
       // the full map opens at street level (zoom 16.5 or closer, tilted 55 degrees) so houses and streets are readable
       return c && z != null ? `${base}?${rp0}ll=${c.lng.toFixed(5)},${c.lat.toFixed(5)},${Math.max(16.5, z).toFixed(1)},55` : `${base}${ditwah ? "?replay=1&t=155" : ""}`;
     };
+    const nowFt = nagUsable && nag ? nag.levelFt : null;
+    const scenName = scen === "alert" ? tr("Alert level") : scen === "minor" ? tr("Minor flood level") : scen === "major" ? tr("Major flood level") : tr("Cyclone Ditwah peak, 1 Dec 2025");
+    const chips: { v: Scenario; t: string }[] = [
+      { v: "now", t: nowFt != null ? tr("Now {ft} ft", { ft: f1(nowFt) }) : tr("Now") },
+      { v: "alert", t: tr("Alert {ft} ft", { ft: f1(scenMarks.alert) }) },
+      { v: "minor", t: tr("Minor {ft} ft", { ft: f1(scenMarks.minor) }) },
+      { v: "major", t: tr("Major {ft} ft", { ft: f1(scenMarks.major) }) },
+      { v: "ditwah", t: tr("Ditwah {ft} ft", { ft: f1(DITWAH_PEAK_FT) }) },
+    ];
+    const unavailable = liveErr || (live != null && !nagUsable);
     return (
-      <div className="flex h-full min-h-0 flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" data-testid="flood3d-embed">
-        <style>{".f3d-popup .maplibregl-popup-close-button{width:44px;height:44px;font-size:24px;line-height:1;color:#475569;border-radius:0 12px 0 12px} .f3d-popup .maplibregl-popup-content{padding:12px 44px 12px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.22)} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
-        <div className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
-          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: stepColor }} />
-          <span className="min-w-0 truncate">
-            {ditwah ? <span className="font-semibold">{tr("Cyclone Ditwah peak, 1 Dec 2025")} {dot} {tr("Nagalagam {ft} ft", { ft: f1(DITWAH_PEAK_FT) })}</span> : nagUsable && nag ? <><span className="font-semibold">{tr("Nagalagam Street {ft} ft", { ft: f1(nag.levelFt ?? 0) })}</span>{nag.trend && <> {dot} {tr(nag.trend)} {arrow(nag.trend)}</>}{nag.hourlyAt && <span className="text-slate-500 dark:text-slate-400"> {dot} {clock(nag.hourlyAt)}</span>}</> : liveErr ? tr("Live readings unavailable") : tr("Loading the latest readings…")}
+      <div ref={embedRoot} className={`flex min-h-0 flex-col bg-white text-slate-900 ${full ? "fixed inset-0 z-[70] h-[100dvh]" : "h-full"}`} style={full ? { paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" } : undefined} data-testid="flood3d-embed" data-full={full ? "1" : "0"}>
+        <style>{".f3d-popup .maplibregl-popup-close-button{width:44px;height:44px;font-size:24px;line-height:1;color:#475569;border-radius:0 12px 0 12px} .f3d-popup .maplibregl-popup-content{padding:12px 44px 12px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.22)} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)} .f3d-fs-btn{display:flex;align-items:center;justify-content:center}"}</style>
+        <div className="flex shrink-0 items-center gap-2 px-3 py-2 text-xs text-slate-800" data-testid="flood3d-now" aria-live="polite">
+          <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: scen === "now" ? stepColor : "#0369a1" }} />
+          <span className="min-w-0 leading-snug">
+            {scen !== "now" ? <><span className="font-semibold">{tr("Showing {name}", { name: scenName })} {dot} {tr("Nagalagam {ft} ft", { ft: f1(level) })}</span>{nowFt != null && <span className="text-slate-600"> {dot} {tr("river now {ft} ft", { ft: f1(nowFt) })}</span>}</>
+              : nowFt != null && nag ? <><span className="font-semibold">{tr("Nagalagam Street {ft} ft", { ft: f1(nowFt) })}</span>{nag.trend && <> {dot} {tr(nag.trend)} {arrow(nag.trend)}</>}{nag.hourlyAt && <span className="text-slate-600"> {dot} {clock(nag.hourlyAt)}</span>}</>
+              : unavailable ? <span className="font-semibold">{tr("Live reading unavailable")}</span> : tr("Loading the latest readings…")}
           </span>
         </div>
-        <div className="shrink-0 px-3 pb-1.5"><Seg<"now" | "ditwah"> value={ditwah ? "ditwah" : "now"} onChange={(v) => setDitwah(v === "ditwah")} label={tr("Water level shown")} items={[{ v: "now", t: tr("Now") }, { v: "ditwah", t: tr("Ditwah peak ({ft} ft)", { ft: f1(DITWAH_PEAK_FT) }) }]} /></div>
+        <div className="shrink-0 px-3 pb-2">
+          <p id="f3d-whatif" className="mb-1 text-[11px] font-medium text-slate-600">{tr("What if the river rises to…")}</p>
+          <div role="radiogroup" aria-labelledby="f3d-whatif" className="flex flex-wrap gap-1.5">
+            {chips.map((c) => (
+              <button key={c.v} type="button" role="radio" aria-checked={scen === c.v} onClick={() => setScen(c.v)} data-testid={`f3d-chip-${c.v}`} className={`min-h-10 rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${scen === c.v ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-100"}`}>{c.t}</button>
+            ))}
+          </div>
+        </div>
         <div ref={wrap} className="relative min-h-0 flex-1">
           <div ref={box} className="h-full w-full overflow-hidden" data-testid="flood3d-map" />
           {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{tr("Loading map…")}</div>}
           {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
+          {full && <button type="button" onClick={toggleFull} data-testid="flood3d-close" className="absolute left-3 top-3 z-10 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold text-slate-900 shadow-lg ring-1 ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"><X className="size-4" aria-hidden />{tr("Close")}</button>}
         </div>
-        <div className="shrink-0 space-y-1 px-3 py-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+        <div className="shrink-0 space-y-1 px-3 py-2 text-[11px] text-slate-700">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-500 dark:text-slate-400">{tr("shallow")}</span>
+            <span className="text-[11px] text-slate-600">{tr("shallow")}</span>
             <div className="h-2 flex-1 rounded-full" style={{ background: "linear-gradient(90deg, rgba(30,110,210,.5), rgba(24,96,190,.75) 50%, rgba(12,68,180,.95))" }} aria-hidden />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400">{tr("deep")}</span>
+            <span className="text-[11px] text-slate-600">{tr("deep")}</span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
             <p>{tr("River flooding only · not official")}</p>
-            <a href={fullHref()} target="_top" onClick={(e) => { e.currentTarget.href = fullHref(); }} className="inline-flex min-h-8 items-center gap-1 font-medium text-sky-700 underline underline-offset-2 dark:text-sky-300"><ExternalLink className="size-3.5" aria-hidden />{tr("Open the full flood map")}</a>
+            <a href={fullHref()} target="_top" onClick={(e) => { e.currentTarget.href = fullHref(); }} className="inline-flex min-h-8 items-center gap-1 font-medium text-sky-800 underline underline-offset-2"><ExternalLink className="size-3.5" aria-hidden />{tr("Open the full flood map")}</a>
           </div>
         </div>
       </div>

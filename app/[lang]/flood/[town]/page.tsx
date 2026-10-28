@@ -213,7 +213,7 @@ export default async function TownPage({ params }: Params) {
 
         {/* the unlisted 3D flood test map, only for towns inside its calibrated area (scripts/flood3d/town-coverage.mjs); loads when the card scrolls near the viewport */}
         {FLOOD3D_TOWNS.has(place.slug) && (
-          <Flood3dInline title={tt("f3d.title")} lead={tt("f3d.lead")} mapLabel={tt("f3d.frame", { town: place.name })} lat={place.lat} lon={place.lon} lang={lang} survey={{ href: `${lang === "en" ? "" : `/${lang}`}/flood-survey?ll=${place.lon.toFixed(4)},${place.lat.toFixed(4)},16.5,55`, label: tt("f3d.survey") }} />
+          <Flood3dInline title={tt("f3d.title")} lead={tt("f3d.lead")} mapLabel={tt("f3d.frame", { town: place.name })} lat={place.lat} lon={place.lon} lang={lang} slug={place.slug} town={place.name} survey={{ href: `${lang === "en" ? "" : `/${lang}`}/flood-survey?ll=${place.lon.toFixed(4)},${place.lat.toFixed(4)},16.5,55`, label: tt("f3d.survey") }} />
         )}
 
         <TownFloodMap lang={lang} town={place.name} lat={place.lat} lon={place.lon} basin={g?.basin ?? null} />

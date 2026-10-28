@@ -4,6 +4,18 @@
 export type Lang = "en" | "si" | "ta";
 
 const SI: Record<string, string> = {
+  "Now {ft} ft": "දැන් අඩි {ft}",
+  "Alert {ft} ft": "අවවාද අඩි {ft}",
+  "Minor {ft} ft": "සුළු අඩි {ft}",
+  "Major {ft} ft": "මහා අඩි {ft}",
+  "Ditwah {ft} ft": "දිට්වා අඩි {ft}",
+  "What if the river rises to…": "ගඟ මෙතෙක් ඉහළ ගියොත්…",
+  "Showing {name}": "පෙන්වන්නේ: {name}",
+  "Alert level": "අවවාද මට්ටම",
+  "Minor flood level": "සුළු ගංවතුර මට්ටම",
+  "Major flood level": "මහා ගංවතුර මට්ටම",
+  "river now {ft} ft": "ගඟ දැන් අඩි {ft}",
+  "Live reading unavailable": "සජීවී මට්ටම දැන් නොලැබේ",
   "Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.": "මෙම ගං මට්ටමේදී ගංවතුර ඇතිවිය හැකි පහත් බිම් පිළිබඳ නිදර්ශනයකි (මීටර් 30 චන්ද්‍රිකා උස දත්ත). නිල ගංවතුර සිතියමක් නොවේ.",
   "In an emergency call 117.": "හදිසි අවස්ථාවකදී 117 අමතන්න.",
   "Where the Kelani could flood: Kelaniya first": "කැලණි ගඟෙන් ගංවතුර ඇතිවිය හැකි ස්ථාන: මුලින්ම කැලණිය",
@@ -288,6 +300,18 @@ const SI: Record<string, string> = {
 };
 
 const TA: Record<string, string> = {
+  "Now {ft} ft": "இப்போது {ft} அடி",
+  "Alert {ft} ft": "எச்சரிக்கை {ft} அடி",
+  "Minor {ft} ft": "சிறு {ft} அடி",
+  "Major {ft} ft": "பெரு {ft} அடி",
+  "Ditwah {ft} ft": "டிட்வா {ft} அடி",
+  "What if the river rises to…": "ஆறு இவ்வளவு உயர்ந்தால்…",
+  "Showing {name}": "காட்டுவது: {name}",
+  "Alert level": "எச்சரிக்கை மட்டம்",
+  "Minor flood level": "சிறு வெள்ள மட்டம்",
+  "Major flood level": "பெரு வெள்ள மட்டம்",
+  "river now {ft} ft": "ஆறு இப்போது {ft} அடி",
+  "Live reading unavailable": "நேரடி அளவீடு இப்போது கிடைக்கவில்லை",
   "Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.": "இந்த ஆற்று மட்டத்தில் வெள்ளம் வரக்கூடிய தாழ்நிலங்களின் விளக்கப்படம் (30 மீ செயற்கைக்கோள் உயரத் தரவு). அதிகாரப்பூர்வ வெள்ள வரைபடம் அல்ல.",
   "In an emergency call 117.": "அவசரநிலையில் 117 ஐ அழைக்கவும்.",
   "Where the Kelani could flood: Kelaniya first": "கெலனி ஆற்றால் எங்கு வெள்ளம் வரலாம்: முதலில் கெலனியா",
