@@ -36,6 +36,24 @@ const T = [[3, 2.6], [6, 3.7], [10, 7.4]];
 assert.equal(hanwellaMToNagFt(2, T), 2.6);
 assert.equal(hanwellaMToNagFt(12, T), 7.4);
 assert.ok(Math.abs(nagFtToHanwellaM(hanwellaMToNagFt(8, T), T) - 8) < 1e-6);
+// flood survey
+const sv = { kind: "past_wet", survey: true, event: "ditwah_2025", streetLevel: "chest", streetFt: 4.2, inside: "yes", insideLevel: "knee", steps: 2, peakDay: "2025-12-01", peakPart: "night", lat: 6.955, lon: 79.922, src: "pin", consent: true, hp: "", ms: 9000, test: true };
+const v1 = validateReport(sv);
+assert.equal(v1.ok, true);
+assert.equal(v1.report.depth, "above_waist"); // chest maps onto the old scale
+assert.equal(v1.report.survey.streetFt, 4.2);
+assert.equal(v1.report.test, true);
+assert.equal(validateReport({ ...sv, kind: "past_dry", streetLevel: undefined, inside: undefined, insideLevel: undefined }).report.survey.streetLevel, null); // "no water" needs nothing more
+assert.equal(validateReport({ ...sv, kind: "water_now" }).reason, "invalid"); // survey is about past floods only
+assert.equal(validateReport({ ...sv, streetLevel: "neck" }).reason, "invalid");
+assert.equal(validateReport({ ...sv, streetLevel: undefined }).reason, "invalid");
+assert.equal(validateReport({ ...sv, streetFt: 99 }).reason, "invalid");
+assert.equal(validateReport({ ...sv, peakDay: "2025-13-45x" }).reason, "invalid");
+assert.equal(validateReport({ ...sv, peakDay: "2031-01-01" }).reason, "invalid");
+assert.equal(validateReport({ ...sv, peakPart: "noon" }).reason, "invalid");
+assert.equal(validateReport({ ...sv, inside: "no", insideLevel: "knee" }).report.survey.insideLevel, null);
+assert.equal(validateReport({ ...sv, name: "A B", phone: "077" }).report.name, undefined);
+assert.equal(validateReport({ ...sv, event: undefined }).reason, "invalid");
 console.log("flood3d tests passed");
 
 import { makeT } from "../app/[lang]/lab/flood-3d/strings.ts";

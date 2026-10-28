@@ -1,4 +1,4 @@
-// POST /api/flood3d/report  {kind, depth?, event?, lat, lon, acc?, src, mapRight?, cellFt?, lang?, consent: true, hp, ms}
+// POST /api/flood3d/report  {kind, depth?, event?, survey?: true + streetLevel/streetFt/inside/insideLevel/insideFt/steps/peakDay/peakPart (see lib/flood3dReports.ts), lat, lon, acc?, src, mapRight?, cellFt?, lang?, consent: true, hp, ms}
 // GET  /api/flood3d/report  public area counts only ("23 reports around Kelaniya"), never a position.
 // Reports from the unlisted /lab/flood-3d test map go to Cloudflare D1 (flood3d_reports, d1/0012_flood3d_reports.sql, created here on
 // first use). The precise position and GPS accuracy stay private; the live Nagalagam / Hanwella (and 10-minute) levels are stamped
@@ -12,6 +12,7 @@ import { personDay } from "@/lib/personDay";
 import { colomboDay } from "@/lib/floodReport";
 import { getFlood3dLiveSafe } from "@/lib/flood3d";
 import { timeBox } from "@/lib/nextHour";
+import { addColumns, isMissingColumn } from "@/lib/d1Migrate";
 import { photoToken } from "@/lib/flood3dPhotoToken";
 import { AREAS, MAX_PER_PERSON_DAY, MIN_PUBLIC_COUNT, round3, validateReport } from "@/lib/flood3dReports";
 
@@ -22,6 +23,18 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_f3r_area ON flood3d_reports (lat3, lon3)`,
   `CREATE INDEX IF NOT EXISTS idx_f3r_person ON flood3d_reports (person_day, created_ms)`,
   `CREATE INDEX IF NOT EXISTS idx_f3r_ip ON flood3d_reports (ip_hash, created_ms)`,
+];
+// d1/0014_flood3d_survey.sql: survey answers (added on first use, like the photo columns)
+const SURVEY_COLS = [
+  "ALTER TABLE flood3d_reports ADD COLUMN survey INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE flood3d_reports ADD COLUMN street_level TEXT",
+  "ALTER TABLE flood3d_reports ADD COLUMN street_ft REAL",
+  "ALTER TABLE flood3d_reports ADD COLUMN inside TEXT",
+  "ALTER TABLE flood3d_reports ADD COLUMN inside_level TEXT",
+  "ALTER TABLE flood3d_reports ADD COLUMN inside_ft REAL",
+  "ALTER TABLE flood3d_reports ADD COLUMN steps_above_road INTEGER",
+  "ALTER TABLE flood3d_reports ADD COLUMN peak_day TEXT",
+  "ALTER TABLE flood3d_reports ADD COLUMN peak_part TEXT",
 ];
 const reply = (status: number, body: Record<string, unknown>) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 const missingTable = (e: unknown) => /no such table/i.test(String(e instanceof Error ? e.message : e));
@@ -61,6 +74,7 @@ export async function POST(req: NextRequest) {
   if (!v.ok) return v.reason === "bot" ? reply(200, { ok: true }) : reply(400, { ok: false, error: v.reason });
   if (!d1Configured()) return reply(503, { ok: false, error: "unavailable" });
   const r = v.report;
+  const sv = r.survey;
   const now = Date.now();
   const day = colomboDay(now);
   const ip = (req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown").trim();
@@ -74,8 +88,8 @@ export async function POST(req: NextRequest) {
     ]);
     if (Number(p[0]?.n ?? 0) >= MAX_PER_PERSON_DAY || Number(i10[0]?.n ?? 0) >= 5) return false;
     await d1Query(
-      "INSERT INTO flood3d_reports (created_ms, day, kind, depth, event, lat, lon, lat3, lon3, acc_m, src, map_right, cell_ft, nag_ft, han_ft, han_fast_ft, person_day, ip_hash, lang, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [now, day, r.kind, r.depth, r.event, r.lat, r.lon, round3(r.lat), round3(r.lon), r.acc, r.src, r.mapRight, r.cellFt, live?.nagalagam?.levelFt ?? null, live?.hanwella?.levelFt ?? null, live?.hanwella?.fastFt ?? null, person, hash, r.lang, r.test ? "test" : "new"],
+      "INSERT INTO flood3d_reports (created_ms, day, kind, depth, event, lat, lon, lat3, lon3, acc_m, src, map_right, cell_ft, nag_ft, han_ft, han_fast_ft, person_day, ip_hash, lang, status, survey, street_level, street_ft, inside, inside_level, inside_ft, steps_above_road, peak_day, peak_part) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [now, day, r.kind, r.depth, r.event, r.lat, r.lon, round3(r.lat), round3(r.lon), r.acc, r.src, r.mapRight, r.cellFt, live?.nagalagam?.levelFt ?? null, live?.hanwella?.levelFt ?? null, live?.hanwella?.fastFt ?? null, person, hash, r.lang, r.test ? "test" : "new", sv ? 1 : 0, sv?.streetLevel ?? null, sv?.streetFt ?? null, sv?.inside ?? null, sv?.insideLevel ?? null, sv?.insideFt ?? null, sv?.steps ?? null, sv?.peakDay ?? null, sv?.peakPart ?? null],
     );
     return true;
   };
@@ -84,8 +98,9 @@ export async function POST(req: NextRequest) {
     try {
       stored = await insert();
     } catch (e) {
-      if (!missingTable(e)) throw e;
+      if (!missingTable(e) && !isMissingColumn(e)) throw e;
       for (const s of SCHEMA) await d1Query(s);
+      await addColumns(SURVEY_COLS);
       stored = await insert();
     }
     if (!stored) return reply(429, { ok: false, error: "rate_limited" });

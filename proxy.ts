@@ -48,7 +48,7 @@ async function loadSlugs(origin: string): Promise<Slugs | null> {
 }
 
 // Top-level pages with exactly one address (plus the few sub-pages listed), and the rest of the site's shape.
-const SINGLE = new Set(["about", "help", "status", "data", "rain", "rivers", "flood-map", "colombo-canals", "news", "research", "flood", "reservoirs", "history"]);
+const SINGLE = new Set(["about", "help", "status", "data", "rain", "rivers", "flood-map", "flood-survey", "colombo-canals", "news", "research", "flood", "reservoirs", "history"]);
 const SUBPAGES = new Set(["research/wellampitiya-street-flooding", "reservoirs/spilling"]);
 const TOWNS = new Set(PLACES.map((p) => p.slug));
 

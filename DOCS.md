@@ -1118,6 +1118,15 @@ once, and only within two hours.
 20-line node:sqlite server) and run `next dev`; nothing reaches Cloudflare or Slack. `node --experimental-strip-types
 scripts/feedback.test.mts` covers validation, rounding, note cleaning, caps, the table definition and the join / aggregate maths.
 
+## Flood survey ("pin your spot, how deep did it get")
+
+Owner idea (28 Oct 2026): ask people who were flooded, mainly in Cyclone Ditwah (Nov-Dec 2025), to pin their spot and say how deep the water got, and use the answers to improve the 3D flood map.
+
+- **Where**: the map's "Tell us how deep it got" button (full map, `app/[lang]/lab/flood-3d/SurveyPanel.tsx`), a link under the map on the 22 town pages, and the shareable page `/[lang]/flood-survey` (opens straight into the survey; not in the sitemap, indexable).
+- **Questions**: pin (GPS "I'm here now", tap, drag, or search), which flood, did water reach here (yes / no); if yes: deepest water on the street outside (ankle, knee, waist, chest, above head, plus an optional number in feet), did water enter the house and how deep (same scale, optional), floor N steps above the road (optional), when it was deepest (day and part of day, optional). No free text, no names, no phone numbers.
+- **Store**: the existing `flood3d_reports` table, so consent, honeypot, the 10-per-person-per-day and 5-per-10-minutes limits, private precise position and public area counts of 3 or more all apply unchanged. Survey rows are `past_wet` / `past_dry` with `survey = 1` and the extra columns of `d1/0014_flood3d_survey.sql` (added on first use by `app/api/flood3d/report/route.ts`, safe for existing rows). `depth` is filled with the old scale (chest and above head count as `above_waist`) so `prep.py` and `learn-all.mjs` keep working. Test with `?f3dtest=1` (status `test`, never counted); `scripts/flood3d.test.mts` covers the validation.
+- **How answers improve the map**: `node scripts/flood3d/reports-export.mjs <out.json>` adds `street_m`, `inside_m`, `steps`, `peak_day` and the evidence gate `usable` (at least 2 independent reports at the same ~100 m spot and flood). The header comment of the script says what `prep.py` should read. Wet / dry answers already become bounds in `prep.py` (REPORTS=); the depth numbers are for checking the fitted ground level at a spot (flood level at the named stage minus street depth). Nothing from the survey reaches the live map automatically: a fit run, the usual false-alarm check and the owner's review come first. The map stays an illustration, never an official step or a verdict input.
+
 ## Learning from feedback (the loop that tunes notes and heads-ups)
 
 Added 27 Oct 2026 ("so our prediction and alert system improves"). **Hard rule: the verdict step (Normal, Alert, Minor flood, Major flood)

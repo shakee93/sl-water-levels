@@ -12,6 +12,7 @@ import { makeT, type Lang } from "./strings";
 import { ReplayCard, replayTime, type ReplayData } from "./Replay";
 import { depthM, poolTaper } from "./depth";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
+import { SurveyPanel } from "./SurveyPanel";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
 type Horizon = { h: number; level: number; low: number | null; high: number | null };
@@ -54,7 +55,7 @@ const KIND_LABEL = ["place", "landmark", "road"];
 const ORDER_RAMP: [number, number, number][] = [[76, 29, 120], [150, 40, 140], [214, 70, 110], [244, 127, 80], [250, 185, 100], [252, 230, 150]]; // "fills first" shading, dark to pale
 
 // embed: the compact version rendered inline in a town page (app/flood/Flood3dInline.tsx; view = [lon, lat, zoom]): 2D, live level only, no search / options / reports / replay.
-export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed = false, view }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang; embed?: boolean; view?: [number, number, number] }) {
+export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed = false, view, survey: surveyPage = false }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang; embed?: boolean; view?: [number, number, number]; survey?: boolean }) {
   const tr = useMemo(() => makeT(lang), [lang]);
   preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com");
   // start the map library download in the HTML, before hydration (fetch preloads of the data files made fetch() fail intermittently on throttled phones, so those are not preloaded)
@@ -174,7 +175,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     const ll = q.get("ll")?.split(",").map(Number); if (ll && ll.length === 3 && ll.every(Number.isFinite)) startView.current = [ll[0], ll[1], ll[2]];
     if (embed && view) startView.current = view; // inline on a town page: the town, whatever the page URL says
     if (q.has("d3")) forced3d.current = q.get("d3") === "1";
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount only: embed and view never change for a mounted map
   /* eslint-enable react-hooks/set-state-in-effect */
   const forced3d = useRef<boolean | null>(null);
 
@@ -288,6 +289,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
 
   // ---- GPS ("Locate me", only on tap, after the consent line) and "Report here" (GPS spot or a dragged pin)
   const [rep, setRep] = useState<RepPos | null>(null);
+  const [survey, setSurvey] = useState(false); // the flood survey sheet instead of the report sheet (same pin)
+  const surveyRef = useRef(false);
+  useEffect(() => { surveyRef.current = survey; });
   const [consentAsk, setConsentAsk] = useState(false);
   const [consented, setConsented] = useState(false);
   const [geoMsg, setGeoMsg] = useState<string | null>(null);
@@ -299,7 +303,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const meData = useRef<GeoJSON.FeatureCollection | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const openReportRef = useRef<((p: RepPos) => void) | null>(null);
-  useEffect(() => { openReportRef.current = (p) => { setRep(p); setPanelOpen(false); }; });
+  useEffect(() => { openReportRef.current = (p) => { setSurvey(false); setRep(p); setPanelOpen(false); }; });
   useEffect(() => {
     if (embed) return; // reports are not part of the embed
     fetch("/api/flood3d/report").then((r) => r.json()).then((d) => { setAreas(d.areas ?? []); setPhotosEnabled(!!d.photosEnabled); }).catch(() => {});
@@ -361,6 +365,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     const map = mapRef.current, m = meta.current;
     if (!map || !m) return;
     gps.current = { lat, lon, acc };
+    if (surveyRef.current) setRep({ lat, lon, src: "gps", acc }); // survey step 1: "I'm here now"
     // our own dot and accuracy circle (a 64-point polygon of acc metres)
     const ring: [number, number][] = [];
     for (let k = 0; k <= 64; k++) { const a = (k / 64) * 2 * Math.PI; ring.push([lon + (acc * Math.sin(a)) / (111320 * Math.cos((lat * Math.PI) / 180)), lat + (acc * Math.cos(a)) / 110574]); }
@@ -381,10 +386,34 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
       map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), acc > 500 ? 13.5 : 15), duration: 1400 });
     }
   };
+  const startSurvey = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    setPanelOpen(false); setSurvey(true);
+    const c = map.getCenter();
+    setRep({ lat: c.lat, lon: c.lng, src: "pin", acc: null });
+  };
+  const repRef = useRef<RepPos | null>(null);
+  useEffect(() => { repRef.current = rep; });
+  // the survey sheet covers the lower part of the map: keep the pin in the visible part above it
+  const onSurveySheet = useCallback((h: number) => {
+    const map = mapRef.current, p = repRef.current;
+    if (!map) return;
+    map.easeTo({ padding: { top: 0, left: 0, right: 0, bottom: h }, ...(h > 0 && p ? { center: [p.lon, p.lat] as [number, number] } : {}), duration: 250 });
+  }, []);
+  const surveyOpened = useRef(false);
+  useEffect(() => {
+    if (!surveyPage || !ready || surveyOpened.current) return;
+    surveyOpened.current = true;
+    startSurvey();
+    // bring the map (under the site header) to the top of the screen so the sheet and the pin are both in view
+    const top = wrap.current?.parentElement?.getBoundingClientRect().top;
+    if (top != null && top > 0) window.scrollTo({ top: window.scrollY + top - 56, behavior: "smooth" });
+  });
   const startReport = () => {
     const map = mapRef.current;
     if (!map) return;
-    setPanelOpen(false);
+    setPanelOpen(false); setSurvey(false);
     if (gps.current) setRep({ lat: gps.current.lat, lon: gps.current.lon, src: "gps", acc: gps.current.acc });
     else { const c = map.getCenter(); setRep({ lat: c.lat, lon: c.lng, src: "pin", acc: null }); }
   };
@@ -817,10 +846,11 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const dot = "·";
 
   // ---- header strip: title, one live chip, one info chip that expands the test notice
+  const Title = surveyPage ? "h2" : "h1";
   const header = (
     <div className="space-y-2">
       <div className="flex flex-nowrap items-center gap-x-2 overflow-x-auto whitespace-nowrap sm:gap-x-3 [&>*]:shrink-0">
-        <h1 className="shrink-0 text-sm font-semibold md:text-base tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map")}</h1>
+        <Title className="shrink-0 text-sm font-semibold md:text-base tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map")}</Title>
         <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
           <span aria-hidden className="size-2 rounded-full" style={{ background: stepColor }} />
           {replayOn && rp ? (
@@ -1048,6 +1078,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         <div ref={box} className={mapH} data-testid="flood3d-map" />
         <canvas ref={rainFx} className="pointer-events-none absolute inset-0 z-[5]" aria-hidden />
 
+        {!rep && !replayOn && !embed && (
+          <button type="button" onClick={startSurvey} disabled={!ready} data-testid="survey-open" className="absolute z-10 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-sky-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300" style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 64px)" : 60, left: full ? "calc(env(safe-area-inset-left, 0px) + 12px)" : 12 }}>
+            <Flag className="size-3.5" aria-hidden /> {tr("Tell us how deep it got")}
+          </button>
+        )}
+
         {/* top bar: search + map tools */}
         <div className="absolute z-20 flex items-start gap-2" style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 12px)" : 12, left: full ? "calc(env(safe-area-inset-left, 0px) + 12px)" : 12, right: 12 }}>
           <div className="w-full max-w-[22rem] min-w-0 flex-1">
@@ -1102,7 +1138,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
             <button type="button" role="menuitem" onClick={() => { const c = ctx; setCtx(null); openReportRef.current?.({ lat: c.lat, lon: c.lon, src: "pin", acc: null }); }} className="flex min-h-9 w-full items-center gap-2 rounded-md px-2 text-left hover:bg-slate-100 focus-visible:bg-slate-100 focus-visible:outline-none dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800"><Flag className="size-4 text-slate-500" aria-hidden />{tr("Report here")}</button>
           </div>
         )}
-        {rep && <ReportPanel pos={rep} cell={cell} onClose={() => setRep(null)} tr={tr} lang={lang} photosEnabled={photosEnabled} />}
+        {rep && (survey ? <SurveyPanel onSheet={onSurveySheet} pos={rep} cell={cell} onClose={() => { setRep(null); setSurvey(false); }} onLocate={locate} geoMsg={geoMsg} tr={tr} lang={lang} /> : <ReportPanel pos={rep} cell={cell} onClose={() => setRep(null)} tr={tr} lang={lang} photosEnabled={photosEnabled} />)}
 
         {/* panel: bottom sheet on phones, side card on desktop */}
         {!rep && (panelOpen ? (
