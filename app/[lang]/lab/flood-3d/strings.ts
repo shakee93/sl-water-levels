@@ -214,6 +214,10 @@ const SI: Record<string, string> = {
   "floods last": "අන්තිමට",
   "Test map · river flooding only · not official": "පරීක්ෂණ සිතියම · ගං ගංවතුර පමණි · නිල නොවේ",
   "Open the full flood map": "සම්පූර්ණ ගංවතුර සිතියම විවෘත කරන්න",
+  "Ditwah peak ({ft} ft)": "ඩිට්වා උච්ච මට්ටම ({ft} අඩි)",
+  "Cyclone Ditwah peak, 1 Dec 2025": "ඩිට්වා සුළි කුණාටුවේ උච්චය, 2025 දෙසැ. 1",
+  "Nagalagam {ft} ft": "නාගලගම අඩි {ft}",
+  "Water level shown": "පෙන්වන ජල මට්ටම",
 };
 
 const TA: Record<string, string> = {
@@ -427,6 +431,10 @@ const TA: Record<string, string> = {
   "floods last": "கடைசியில்",
   "Test map · river flooding only · not official": "சோதனை வரைபடம் · ஆற்று வெள்ளம் மட்டும் · அதிகாரப்பூர்வமற்றது",
   "Open the full flood map": "முழு வெள்ள வரைபடத்தைத் திற",
+  "Ditwah peak ({ft} ft)": "டிட்வா உச்சம் ({ft} அடி)",
+  "Cyclone Ditwah peak, 1 Dec 2025": "டிட்வா புயல் உச்சம், 2025 டிச. 1",
+  "Nagalagam {ft} ft": "நாகலகம் {ft} அடி",
+  "Water level shown": "காட்டப்படும் நீர் மட்டம்",
 };
 
 const DICT: Record<Lang, Record<string, string>> = { en: {}, si: SI, ta: TA };

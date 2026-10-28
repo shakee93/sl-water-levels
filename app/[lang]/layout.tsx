@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Geist, Geist_Mono, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
-import Script from "next/script";
 import "../globals.css";
+import { AnalyticsScripts } from "../AnalyticsScripts";
 import { Header } from "../Header";
 import { Footer } from "../Footer";
 import { LocationPrompt } from "../LocationPrompt";
@@ -171,14 +171,7 @@ export default async function RootLayout({
           </AlertSettingsProvider>
           </InstallProvider>
         </LocaleProvider>
-        {/* Google Analytics (G-NDXLV0T8QC, property "waterlevels.lk", created 27 Oct 2026): loaded after the page is idle so it
-            never slows the first view; production host only; Google signals and ad personalisation off. Privacy note: /about#privacy. */}
-        <Script id="ga-init" strategy="lazyOnload">{`if(location.hostname==="waterlevels.lk"){window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag("js",new Date());gtag("config","${GA_ID}",{allow_google_signals:false,allow_ad_personalization_signals:false});var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}";document.head.appendChild(s);}`}</Script>
-        <Script
-          defer
-          src="https://analytics.freshpixl.com/script.js"
-          data-website-id="a15ed279-5a97-4e07-8aa6-3d7431957c94"
-        />
+        <AnalyticsScripts gaId={GA_ID} />
       </body>
     </html>
   );
