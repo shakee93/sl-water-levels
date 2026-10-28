@@ -545,8 +545,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         if (dead || !box.current) return;
         meta.current = m; grid.current = png;
         const phone = window.innerWidth < 768;
-        // pixel budget: the draw loop visits W2 x H2 cells on every level change, so the upsampling factor follows the grid size (old 929 x 500 grid: 3 desktop / 2 phone; the extended 1680 x 930 grid: 2 / 1)
-        const S = Math.max(1, Math.min(phone ? 2 : 3, Math.round(Math.sqrt((phone ? 2.0e6 : 6.5e6) / (png.w * png.h)))));
+        // upsampling for smooth shorelines (3 desktop / 2 phone). The draw loop visits W2 x H2 cells on each level change (14M desktop / 6.2M phone on the
+        // extended 1680 x 930 grid); a lower factor made the water edges visibly blocky, which the owner had already rejected once.
+        const S = phone ? 2 : 3;
         const W2 = png.w * S, H2 = png.h * S;
         const out = document.createElement("canvas"); out.width = W2; out.height = H2;
         // water colour by depth below the level (0..8 ft, 1/32 ft steps): the natural blue (30,110,210) deepening with depth
