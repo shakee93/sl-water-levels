@@ -29,6 +29,17 @@ const D = {
     si: "{asOf}, {river} හි {name} හි ජල මට්ටම {lv} විය; {rel}{dir}.",
     ta: "{asOf}, {river} ஆற்றின் {name} இல் நீர்மட்டம் {lv}; {rel}{dir}.",
   },
+  sentenceNoMarks: {
+    en: "{asOf}, the water level at {name} was {lv}{dir}. No official flood levels are published for this gauge, so there is no flood step.",
+    si: "{asOf}, {name} හි ජල මට්ටම {lv} විය{dir}. මෙම මානයට නිල ගංවතුර මට්ටම් පළ කර නැති බැවින් ගංවතුර පියවරක් නැත.",
+    ta: "{asOf}, {name} இல் நீர்மட்டம் {lv}{dir}. இந்த அளவிக்கு அதிகாரப்பூர்வ வெள்ள மட்டங்கள் வெளியிடப்படவில்லை, எனவே வெள்ள நிலை இல்லை.",
+  },
+  // a RiverNet gauge that has stopped reporting: their network, not the Irrigation Department's (si/ta drafts)
+  noDataRivernet: {
+    en: "{name} has not sent a reading recently. The sensor is not reporting on RiverNet (the Disaster Management Centre's sensor network), so there is no level to show; it will appear here as soon as it reports again.",
+    si: "{name} මෑතකදී කියවීමක් එවා නැත. RiverNet (ආපදා කළමනාකරණ මධ්‍යස්ථානයේ සංවේදක ජාලය) හි මෙම සංවේදකය දත්ත නොඑවයි, එබැවින් පෙන්වීමට මට්ටමක් නැත; නැවත දත්ත එවූ විගස මෙහි පෙන්වයි.",
+    ta: "{name} சமீபத்தில் அளவீடு அனுப்பவில்லை. RiverNet (அனர்த்த முகாமைத்துவ நிலையத்தின் உணரி வலையமைப்பு) இல் இந்த உணரி தரவு அனுப்பவில்லை, எனவே காட்ட நீர்மட்டம் இல்லை; மீண்டும் அனுப்பியதும் இங்கே தோன்றும்.",
+  },
   sentenceNoRiver: {
     en: "{asOf}, the water level at {name} was {lv}, {rel}{dir}.",
     si: "{asOf}, {name} හි ජල මට්ටම {lv} විය; {rel}{dir}.",
@@ -67,7 +78,7 @@ const SLOW = 0.05;
 export function stationAnswer(lang: Locale, t: TFn, s: NationalStation): string {
   const name = stationDisplayName(s.station);
   const river = riverName(s.basin.trim(), lang);
-  if (!s.latest) return W(D.noData, lang, { name });
+  if (!s.latest) return W(s.source === "rivernet" ? D.noDataRivernet : D.noData, lang, { name });
   if (s.latest.water_level == null) return W(D.noLevel, lang, { name });
   const lv = lvText(s.latest.water_level, s.unit);
   const stamp = fullStamp(s.latest.ts, t);
@@ -85,6 +96,7 @@ export function stationAnswer(lang: Locale, t: TFn, s: NationalStation): string 
   }
   const r = s.rate3hM;
   const dir = r == null ? "" : W(Math.abs(r) < STEADY ? D.steady : r < 0 ? D.falling : r < SLOW ? D.risingSlow : D.rising, lang);
+  if (!["major", "minor", "alert", "watch", "normal"].includes(s.tier)) return W(D.sentenceNoMarks, lang, { asOf: W(D.asOf, lang, { stamp }), name, lv, dir });
   return W(river ? D.sentence : D.sentenceNoRiver, lang, { asOf: W(D.asOf, lang, { stamp }), river, name, lv, rel, dir });
 }
 
