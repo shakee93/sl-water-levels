@@ -239,7 +239,9 @@ async function readSubplot(img, a, page, spanH) {
   }
   const cols = curveColumns(img, a);
   const have = cols.filter(Boolean);
-  if (have.length < 20) return { ...base, status: "parse_error", detail: "no curve", level, obs };
+  // Fewer than 20 plotted columns with a clean title: the gauge has just come back (28 Oct: Rajasinghe Mw after an outage, one
+  // reading, an empty 30-minute axis). Not a layout change: keep the title reading only, like the no-tick-labels case below.
+  if (have.length < 20) return { ...base, status: "ok", obs, level, curveEnd: null, flag: "title_only", xResidH: null, step: null, samples: [{ t: obs, level, src: "title" }] };
   const last = have[have.length - 1];
   const yEnd = last.y;
 
