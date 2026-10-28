@@ -89,7 +89,8 @@ export async function GET(request: Request) {
           outlook: f.outlook,
           horizons: f.horizons,
           ...(withShadow ? { shadows: shadowVariants(f, s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level }))) } : {}),
-          crossings: f.crossings,
+          // the LOG keeps what the model said: uncapped chances and wording (the site shows the capped ones, lib/forecastRules.mjs)
+          crossings: f.rawCrossings ?? f.crossings,
           observations: s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level, rain: r.rain_fall })),
         });
       } catch (e) {

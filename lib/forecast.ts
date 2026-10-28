@@ -13,6 +13,9 @@
 //     shown, and the notes say so. The first fit had 8 days, one rain event and no flood.
 //  2. WORDING. "likely" needs probability >= 50%, "possible" 20-50%; below 20% the
 //     crossing is "unlikely" and never headlined. Probabilities are rounded to 5%.
+//     DISPLAY CAPS (28 Oct 2026, lib/forecastRules.mjs): the chance SHOWN for Minor is at most 30% and for Major at most 10%, and neither
+//     is ever "likely" (audit: stated ~0.49 at p >= 0.2, came true 0.18 for minor; major 0 of 1,180). `crossings` holds what is shown;
+//     `rawCrossings` holds the model's own figures for the log. Alert is not capped (well calibrated).
 //  3. PERSISTENCE. An ETA is only stated when the crossing probability clears the
 //     bar at two ADJACENT fitted horizons (e.g. both 6h and 12h), so a one-horizon
 //     blip cannot produce a "9 pm" claim.
@@ -38,6 +41,7 @@ import stormModelJson from "./model/storm-model.json";
 import stormV4Json from "./model/storm-model-v4.json";
 import type { GsmapFile, GsmapGauge } from "./gsmap";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
+import { shownChance, shownWording } from "./forecastRules.mjs";
 import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { isStormHour4, rainTotals, stormFeatures, stormFeatures4, tier4Bin, v4Rain } from "./model/stormModel.mjs";
@@ -137,6 +141,12 @@ export type Forecast = {
     etaTs: number | null;
     wording: Wording;
   }[];
+  /**
+   * What the model said before the display rules of lib/forecastRules.mjs (chance caps, fast-gauge horizon limit): same shape as
+   * `crossings`, over every fitted horizon, with the uncapped probability and the uncapped wording. For the forecast log only
+   * (/api/forecasts), so calibration can be refitted; never shown. Absent on trend-only and empty forecasts.
+   */
+  rawCrossings?: Forecast["crossings"];
   /** GloFAS flag. null = no GloFAS for this basin or the feed failed. */
   outlook: "normal" | "elevated" | null;
   headline: string;
@@ -478,35 +488,45 @@ function fromModel(
   // Every horizon from the 11-month v3 fit: no longer "experimental" (that label was about the 8-day rain fit).
   const experimentalNow = experimental && hs.some((x) => !v2h.has(x.h));
   const capP = (p: number) => r5(experimentalNow ? Math.min(MAX_PROB_EXPERIMENTAL, p) : p);
+  // One pass per mark: the model's own chance and wording (`raw`, logged), then the chance and wording a page may show (lib/forecastRules.mjs:
+  // minor capped at 30%, major at 10%, neither ever "likely"). Alert is untouched. ETAs follow the wording that is shown.
   const crossings: Forecast["crossings"] = [];
+  const rawCrossings: Forecast["crossings"] = [];
   for (const name of SEVERITY) {
     const T = th[name];
     if (T == null || T <= 0) continue;
     if (L0 >= T) {
-      crossings.push({ threshold: name, level: T, probability: 1, etaTs: null, wording: "already" });
+      const already = { threshold: name, level: T, probability: 1, etaTs: null, wording: "already" as Wording };
+      crossings.push(already);
+      rawCrossings.push(already);
       continue;
     }
     const P = hs.map((x) => 1 - mixCdf(T, x.mix));
     const persists = (cut: number) => P.some((p, i) => i + 1 < P.length && p >= cut && P[i + 1] >= cut);
     const maxP = Math.max(...P);
-    let wording: Wording = "unlikely";
-    if (maxP >= LIKELY && persists(LIKELY)) wording = "likely";
-    else if (maxP >= POSSIBLE && persists(POSSIBLE)) wording = "possible";
-    if (degraded && wording === "likely") wording = "possible";
-    let etaTs: number | null = null;
-    if (wording !== "unlikely" && !hardDegraded) {
-      const cut = wording === "likely" ? LIKELY : POSSIBLE;
-      // interpolate P hourly between fitted horizons (P at h=0 is 0: it is below T now)
-      for (let k = 1; k <= 24 && etaTs == null; k++) {
+    let rawWording: Wording = "unlikely";
+    if (maxP >= LIKELY && persists(LIKELY)) rawWording = "likely";
+    else if (maxP >= POSSIBLE && persists(POSSIBLE)) rawWording = "possible";
+    if (degraded && rawWording === "likely") rawWording = "possible";
+    const rawP = capP(maxP);
+    const shownP = r5(shownChance(name, rawP));
+    const wording = shownWording(name, rawWording, shownP) as Wording;
+    // interpolate P hourly between fitted horizons (P at h=0 is 0: it is below T now); the cut is the chance the stated wording needs
+    const etaFor = (w: Wording): number | null => {
+      if (w === "unlikely" || w === "already" || hardDegraded) return null;
+      const cut = w === "likely" ? LIKELY : POSSIBLE;
+      for (let k = 1; k <= 24; k++) {
         let j = hs.findIndex((x) => x.h >= k);
         if (j < 0) j = hs.length - 1;
         const a = j === 0 ? { h: 0, p: 0 } : { h: hs[j - 1].h, p: P[j - 1] };
         const b = { h: hs[j].h, p: P[j] };
         const pk = b.h === a.h ? b.p : a.p + ((b.p - a.p) * (k - a.h)) / (b.h - a.h);
-        if (pk >= cut) etaTs = anchor + k * HOUR_MS;
+        if (pk >= cut) return anchor + k * HOUR_MS;
       }
-    }
-    crossings.push({ threshold: name, level: T, probability: capP(maxP), etaTs, wording });
+      return null;
+    };
+    rawCrossings.push({ threshold: name, level: T, probability: rawP, etaTs: etaFor(rawWording), wording: rawWording });
+    crossings.push({ threshold: name, level: T, probability: shownP, etaTs: etaFor(wording), wording });
   }
 
   // ---- direction, outlook
@@ -597,7 +617,7 @@ function fromModel(
     method: "model", status: degraded ? "degraded" : "ok", direction, experimental: experimentalNow,
     basis,
     horizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })),
-    crossings, outlook, headline, notes,
+    crossings, rawCrossings, outlook, headline, notes,
     signals: signalsOf(trend, w?.past6hMm ?? null),
     rain: w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null,
     rainRisk: w ? rainRiskOf({ det: w.next24hMm.det, p90: w.next24hMm.p90 }) : null,
