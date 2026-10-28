@@ -5,7 +5,8 @@
 #     secret always means dry-run, and Slack says so once a day. IG_MODE=off is the kill switch: the job does nothing.
 #   - Started after every satellite-rain snapshot (gsmap-snapshot.yml, every 30 min, the same trigger as x-post.yml), plus two crons
 #     (GitHub's cron is best-effort): 07:00 Colombo for the morning story / post, 09:30 Colombo for the first keep-alive post of a calm day.
-#   - Manual: mode "run" = one normal pass; mode "sample" = up to 4 sample posts from today's data to Slack only.
+#   - Manual: mode "run" = one normal pass; mode "sample" = up to 4 sample posts from today's data to Slack only;
+#     mode "seed" = the 5 first feed posts of the account (once a day at most, through the same IG_MODE gate).
 # Optional variables: IG_LANGS (en,si,ta), IG_STORIES_MAX (20), IG_FEED_MAX (3), IG_KEEPALIVE_WEEK (3), IG_GRAPH_VERSION.
 
 name: Instagram account
@@ -17,9 +18,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "run = one normal pass now; sample = up to 4 sample posts from today's data, to Slack only"
+        description: "run = one normal pass now; sample = up to 4 sample posts from today's data, to Slack only; seed = the account's 5 first feed posts (live only with IG_MODE=live)"
         type: choice
-        options: [run, sample]
+        options: [run, sample, seed]
         default: run
 
 permissions:

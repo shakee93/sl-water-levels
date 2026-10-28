@@ -128,11 +128,11 @@ function RowItem({ r, d, last }: { r: StoryRow; d: Dim; last: boolean }) {
   );
 }
 
-function Frame({ d, tier, bar, children }: { d: Dim; tier: PillTier; bar?: string; children: React.ReactNode }) {
+function Frame({ d, tier, bar, top, children }: { d: Dim; tier: PillTier; bar?: string; /** stack from the top (lists) instead of spreading */ top?: boolean; children: React.ReactNode }) {
   return (
     <div style={{ ...COL, width: d.W, height: d.Hh, background: "linear-gradient(180deg, #e0f2fe 0%, #f8fafc 38%, #ffffff 100%)", color: INK, fontFamily: STORY_FAMILY, position: "relative" }}>
       <div style={{ ...F, height: 22, width: "100%", background: bar ?? TIER_COLOR[tier].bg }} />
-      <div style={{ ...COL, flex: 1, padding: `${d.top - 22}px ${d.pad}px ${d.bottom}px`, justifyContent: "space-between" }}>{children}</div>
+      <div style={{ ...COL, flex: 1, padding: `${d.top - 22}px ${d.pad}px ${d.bottom}px`, justifyContent: top ? "flex-start" : "space-between" }}>{children}</div>
     </div>
   );
 }
@@ -280,15 +280,16 @@ function Card({ m, d }: { m: StoryModel; d: Dim }) {
   const list = m.rows.length > 0 || m.kind === "river" || m.kind === "home";
   const stale = m.level == null && !list;
   return (
-    <Frame d={d} tier={m.tier}>
+    <Frame d={d} tier={m.tier} top={list}>
       <div style={{ ...COL, width: "100%" }}>
         <Brand lang={m.lang} size={d.sub * 0.8} />
-        <div style={{ ...F, fontSize: Math.round((list ? d.title : d.name) * (m.title.length > 34 ? 0.62 : m.title.length > 24 ? 0.78 : 1)), fontWeight: 800, letterSpacing: -2, lineHeight: 1.05, marginTop: d.gap * 0.5, lineClamp: 2 }}>{m.title}</div>
+        <div style={{ ...F, fontSize: Math.round((list ? d.title : d.name) * (m.title.length > 34 ? 0.62 : m.title.length > 28 ? 0.78 : m.title.length > 23 ? 0.9 : 1)), fontWeight: 800, letterSpacing: -2, lineHeight: 1.05, marginTop: d.gap * 0.5, lineClamp: 2 }}>{m.title}</div>
         {m.subtitle && <div style={{ ...F, fontSize: d.sub, fontWeight: 500, color: MUTED, marginTop: 8 }}>{m.subtitle}</div>}
       </div>
 
       {list ? (
-        <div style={{ ...COL, width: "100%" }}>
+        // flex: 1 keeps a short list (2-4 gauges) right under the title instead of floating mid-card
+        <div style={{ ...COL, width: "100%", marginTop: d.gap * 0.5 }}>
           {m.summary && (
             <div style={{ ...COL, alignItems: "flex-start", marginBottom: d.gap * 0.5 }}>
               <Pill tier={m.tier} label={m.rows.length ? m.step : "✓"} size={d.pill * 0.7} />
@@ -324,7 +325,7 @@ function Card({ m, d }: { m: StoryModel; d: Dim }) {
         </div>
       )}
 
-      <div style={{ ...COL, width: "100%", marginTop: d.gap * 0.6 }}>
+      <div style={{ ...COL, width: "100%", marginTop: list ? "auto" : d.gap * 0.6 }}>
         {!list && m.chart && <ChartCard m={m} d={d} w={w} />}
         {m.updated && <div style={{ ...F, fontSize: d.upd, fontWeight: 500, color: MUTED, marginTop: d.gap * 0.5, marginBottom: d.gap * 0.7 }}>{m.updated}</div>}
         <Footer m={m} d={d} />

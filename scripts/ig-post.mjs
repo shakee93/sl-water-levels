@@ -20,7 +20,7 @@ import { gate, publishImage, publishingUsage, fetchJpeg, IG_LIMIT_24H } from "..
 import { composeCaption, validateCaption } from "../lib/igCompose.ts";
 import { colomboDay } from "../lib/xCompose.ts";
 import { buildSnapshot } from "./x-post.mjs";
-import { planIg, emptyIgState, imageUrl, IG_DEFAULTS } from "./ig-engine.mjs";
+import { planIg, emptyIgState, imageUrl, IG_DEFAULTS, releasingCount } from "./ig-engine.mjs";
 import { tierLevel } from "./x-engine.mjs";
 
 export const IG_SCHEMA = [
@@ -234,7 +234,7 @@ export async function sample(o = {}) {
     top && { format: "story", label: `${top.station} (disaster-mode story)`, kind: "gauge_rise", media: { kind: "gauge", slug: slugOf(top.url) }, cap: { type: "gauge_rise", gauge: { station: top.station, river: top.river, tier: top.status, level: top.level, trend: top.trend, nextHour: top.nextHour && typeof top.nextHour.level_ft === "number" ? { level: top.nextHour.level_ft } : null } } },
     { format: "feed", label: "Rivers right now + rain outlook (weather-alert day)", kind: "weather_morning", media: { kind: "home", slug: "now" }, cap: homeCap(true) },
     snap.fallen && { format: "feed", label: "Rain, last 24 hours (calm-day keep-alive)", kind: "keepalive:rain", media: { kind: "rain", slug: "now" }, cap: { type: "rain", rain: snap.fallen } },
-    res[0] && { format: "feed", label: "Reservoirs spilling (calm-day keep-alive)", kind: "keepalive:reservoirs", media: { kind: "reservoirs", slug: "now" }, cap: { type: "reservoirs", reservoirs: { count: res.length, top: { name: res[0].name, cusecs: res[0].flow.cusecs, day: res[0].flow.day ?? res[0].readingDay ?? null } } } },
+    res[0] && { format: "feed", label: "Reservoirs spilling (calm-day keep-alive)", kind: "keepalive:reservoirs", media: { kind: "reservoirs", slug: "now" }, cap: { type: "reservoirs", reservoirs: { count: releasingCount(snap, colomboDay(snap.now ?? Date.now()).day), top: { name: res[0].name, cusecs: res[0].flow.cusecs, day: res[0].flow.day ?? res[0].readingDay ?? null } } } },
   ].filter(Boolean);
   const out = [];
   for (const [i, item] of items.entries()) {
@@ -251,14 +251,98 @@ export async function sample(o = {}) {
   return out;
 }
 
+/**
+ * The five first feed posts of a new account (owner, 28 Oct 2026: "add 5 posts and then start posting updates"), built from
+ * today's data: rain in the last 24 h, reservoirs spilling, the two rivers highest above their marks, and "Rivers right now".
+ * Published oldest-first so "Rivers right now" ends up first on the profile grid. Live only through the same gate as the
+ * normal run (IG_MODE=live + both secrets); otherwise each goes to Slack as a dry run. Each is claimed in ig_posts under
+ * seed:<kind>:<day>, so a second run the same day posts nothing again. `preview` builds and prints them, touching nothing.
+ */
+export function seedItems(snap) {
+  const us = snap.stations.filter((s) => tierLevel(s.status) != null && s.unit === "ft" && s.observedAt && typeof s.level === "number");
+  const ratio = (s) => (s.marks?.alert ? s.level / s.marks.alert : 0);
+  const pathParts = (u) => new URL(u).pathname.split("/").filter(Boolean).filter((x) => x !== "si" && x !== "ta");
+  const worst = us.slice().sort((a, b) => tierLevel(b.status) - tierLevel(a.status) || ratio(b) - ratio(a));
+  const rivers = [];
+  for (const s of worst) {
+    if (tierLevel(s.status) < 2 || rivers.some((r) => r.river === s.river)) continue;
+    rivers.push(s);
+    if (rivers.length === 2) break;
+  }
+  const res = (snap.reservoirs ?? []).filter((r) => (r.status === "spilling" || r.status === "releasing") && r.flow?.cusecs > 0).sort((a, b) => b.flow.cusecs - a.flow.cusecs);
+  const gauge = (s) => ({ station: s.station, river: s.river, tier: s.status, level: s.level, trend: s.trend, nextHour: s.nextHour && typeof s.nextHour.level_ft === "number" ? { level: s.nextHour.level_ft } : null });
+  return [
+    snap.fallen && { format: "feed", label: "Rain, last 24 hours", kind: "seed:rain", media: { kind: "rain", slug: "now" }, cap: { type: "rain", rain: snap.fallen } },
+    res[0] && { format: "feed", label: "Reservoirs spilling", kind: "seed:reservoirs", media: { kind: "reservoirs", slug: "now" }, cap: { type: "reservoirs", reservoirs: { count: releasingCount(snap, colomboDay(snap.now ?? Date.now()).day), top: { name: res[0].name, cusecs: res[0].flow.cusecs, day: res[0].flow.day ?? res[0].readingDay ?? null } } } },
+    ...rivers.slice().reverse().map((s) => ({ format: "feed", label: `${s.river} (${s.station}, ${s.status})`, kind: `seed:river:${pathParts(s.url)[0]}`, media: { kind: "river", slug: pathParts(s.url)[0] }, cap: { type: "gauge_rise", gauge: gauge(s) } })),
+    { format: "feed", label: "Rivers right now", kind: "seed:home", media: { kind: "home", slug: "now" }, cap: { type: "home", home: { atAlert: us.filter((s) => tierLevel(s.status) >= 2).length, nearAlert: us.filter((s) => s.status === "watch").length, assessed: us.length, rain: snap.rain ?? null, weather: false } } },
+  ].filter(Boolean);
+}
+
+export async function seed(o = {}) {
+  const env = o.env ?? process.env;
+  const doFetch = o.doFetch ?? fetch;
+  const now = o.now ?? Date.now();
+  const site = env.SITE_URL || SITE_DEFAULT;
+  const preview = !!o.preview;
+  const query = preview ? null : (o.query ?? d1Query);
+  const g = gate(env);
+  if (!preview && g.mode === "off") {
+    log("gate: off: no seed posts");
+    return [];
+  }
+  if (query) for (const s of IG_SCHEMA) await query(s);
+  const snap = o.snap ?? (await buildSnapshot({ site, now, doFetch, query: query ?? undefined }));
+  if (!snap.stations) throw new Error("the site's levels could not be read");
+  const day = colomboDay(now).day;
+  const langs = langsOf(env);
+  const items = seedItems(snap);
+  const out = [];
+  for (const [i, item] of items.entries()) {
+    const c = composeCaption(item.cap, { feed: true, langs });
+    const bad = validateCaption(c.text, { feed: true });
+    if (bad.length) throw new Error(`${item.label}: caption failed its checks: ${bad.join("; ")}`);
+    const url = imageUrl(site, item);
+    out.push({ item, caption: c.text, url });
+    if (preview) continue;
+    const dedupe = `${item.kind}:${day}`;
+    if (!(await claim({ ts: now, day, kind: item.kind, format: "feed", situation: "seed", dedupe, mode: g.mode, caption: c.text, url }, query))) {
+      log(`already posted today: ${dedupe}`);
+      continue;
+    }
+    const pic = await fetchJpeg(url, doFetch);
+    if (g.mode !== "live") {
+      await slack(dryRunMessage({ n: i + 1, of: items.length, item, caption: c.text, url, check: pic.ok ? `fetched, JPEG, ${Math.round(pic.bytes.length / 1024)} KB` : `NOT available (${pic.why})`, situation: { mode: "seed", why: "the account's first posts" }, reason: g.reason }), { env, doFetch });
+      await query("UPDATE ig_posts SET status = 'dry' WHERE dedupe_key = ?", [dedupe]);
+      continue;
+    }
+    if (!pic.ok) {
+      await query("UPDATE ig_posts SET status = 'failed', error = ?, dedupe_key = ? WHERE dedupe_key = ?", [`picture: ${pic.why}`, `${dedupe}#failed${now}`, dedupe]);
+      await slack(`:warning: Instagram first post skipped: its picture could not be fetched (${pic.why}): ${url}`, { env, doFetch });
+      continue;
+    }
+    const r = await publishImage(g.keys, { imageUrl: url, format: "feed", caption: c.text }, { doFetch, now, env });
+    if (!r.ok) {
+      await query("UPDATE ig_posts SET status = 'failed', error = ?, container_id = ?, dedupe_key = ? WHERE dedupe_key = ?", [`${r.stage}: ${r.detail}`, r.containerId, `${dedupe}#failed${now}`, dedupe]);
+      await slack(`:rotating_light: Instagram first post failed at ${r.stage} (${r.detail}); the rest are not tried.`, { env, doFetch });
+      break;
+    }
+    await query("UPDATE ig_posts SET status = 'posted', container_id = ?, media_id = ? WHERE dedupe_key = ?", [r.containerId, r.mediaId, dedupe]);
+    log(`posted ${item.label} (${r.mediaId})`);
+    await slack(`:camera: Instagram: posted "${item.label}" (first posts ${i + 1}/${items.length}).`, { env, doFetch });
+  }
+  return out;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const a = process.argv.slice(2);
   const val = (f) => (a.includes(f) ? a[a.indexOf(f) + 1] : null);
   if (val("--site")) process.env.SITE_URL = val("--site");
   const mode = val("--mode") ?? "run";
-  (mode === "sample" ? sample() : run())
+  (mode === "sample" ? sample() : mode === "seed" ? seed() : mode === "seed-preview" ? seed({ preview: true }) : run())
     .then((r) => {
       if (mode === "sample") for (const s of r) console.log(`\n${s.msg}`);
+      if (mode === "seed-preview") for (const s of r) console.log(`\n--- ${s.item.label}\n${s.url}\n${s.caption}`);
     })
     .catch(async (e) => {
       if (isD1ReadBlip(e)) {

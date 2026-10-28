@@ -168,6 +168,15 @@ export function planIg(snap, prev, ctx, cfgIn = {}) {
 
 const ORDER = ["rain", "reservoirs", "river", "survey", "embed"];
 
+/** How many reservoirs are spilling or releasing, counted like the reservoirs picture (with or without a published flow figure),
+ * so a caption never says 26 under a picture that says 31. The "largest" named in the caption still needs a figure. */
+export const releasingCount = (snap, day, maxAgeDays = IG_DEFAULTS.reservoirMaxAgeDays) =>
+  (snap.reservoirs ?? []).filter((r) => {
+    if (!(r.status === "spilling" || r.status === "releasing")) return false;
+    const d = r.flow?.day ?? r.readingDay;
+    return !d || !day || (Date.parse(day) - Date.parse(d)) / 86_400_000 <= maxAgeDays; // an old reading is not "spilling now"
+  }).length;
+
 /** The one keep-alive post for a calm day, or null (too soon, too many this week, outside the window, nothing eligible). */
 export function calmItem(snap, ctx, cfg, day, minutes) {
   if (minutes < cfg.calmFrom || minutes >= cfg.calmTo) return null;
@@ -194,7 +203,7 @@ export function calmItem(snap, ctx, cfg, day, minutes) {
     case "rain":
       return { ...base, dedupe: `keep:rain:${day}`, media: { kind: "rain", slug: "now" }, cap: { type: "rain", rain: { place: snap.fallen.place, mm: snap.fallen.mm } }, label: "Rain, last 24 hours" };
     case "reservoirs":
-      return { ...base, dedupe: `keep:reservoirs:${day}`, media: { kind: "reservoirs", slug: "now" }, cap: { type: "reservoirs", reservoirs: { count: spilling.length, top: { name: spilling[0].name, cusecs: spilling[0].flow.cusecs, day: spilling[0].flow.day ?? spilling[0].readingDay ?? null } } }, label: "Reservoirs spilling" };
+      return { ...base, dedupe: `keep:reservoirs:${day}`, media: { kind: "reservoirs", slug: "now" }, cap: { type: "reservoirs", reservoirs: { count: releasingCount(snap, day, cfg.reservoirMaxAgeDays), top: { name: spilling[0].name, cusecs: spilling[0].flow.cusecs, day: spilling[0].flow.day ?? spilling[0].readingDay ?? null } } }, label: "Reservoirs spilling" };
     case "river": {
       const name = rivers[week % rivers.length];
       const list = us.filter((s) => s.river === name);
