@@ -27,7 +27,7 @@ export type Survey = {
 };
 
 /** Corridor plus margin (same as the map's covered area); anything else is not a report about this map. */
-export const BOUNDS = { south: 6.85, north: 7.05, west: 79.79, east: 80.15 };
+export const BOUNDS = { south: 6.82, north: 7.12, west: 79.79, east: 80.33 };   // the extended picture (28 Oct 2026): mouth to Ruwanwella; keep in step with accuracy.json png + 0.02
 export const MAX_PER_PERSON_DAY = 10;
 export const MIN_FILL_MS = 2000;
 
@@ -112,5 +112,8 @@ export const AREAS: { name: string; south: number; north: number; west: number; 
   { name: "Wellampitiya and Kolonnawa", south: 6.915, north: 6.95, west: 79.84, east: 79.89 },
   { name: "Biyagama and Kaduwela", south: 6.9, north: 6.97, west: 79.96, east: 80.05 },
   { name: "Hanwella", south: 6.86, north: 6.95, west: 80.05, east: 80.13 },
+  { name: "Kosgama and Puwakpitiya", south: 6.9, north: 6.99, west: 80.13, east: 80.18 },
+  { name: "Avissawella and Seethawaka", south: 6.9, north: 7.01, west: 80.18, east: 80.25 },
+  { name: "Ruwanwella", south: 7.01, north: 7.12, west: 80.2, east: 80.33 },
 ];
 export const MIN_PUBLIC_COUNT = 3; // k-anonymity: smaller counts are not shown

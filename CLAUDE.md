@@ -176,8 +176,12 @@ lib/
   OSM via Overpass; run from a venv with rasterio/pyproj/shapely, small enough for the laptop) writes `public/flood3d/` (level.png =
   per-cell flood level in ft at Nagalagam, fitted on the EMSR851 maps; roads tagged with level; accuracy.json). Live gauges via
   `/api/flood3d` (`lib/flood3d.ts`, our caches only). MapLibre 5.24.0 is served from `public/flood3d/ml` (CSP build; the npm
-  package is a dev dependency for types only). Illustration, never an official step or verdict input. Coverage is limited to the Kelani-side
-  network inside the EMS footprints (the rest is greyed, no calibration); public reports (Locate me / Report here) go to D1 `flood3d_reports`
+  package is a dev dependency for types only). Illustration, never an official step or verdict input. Coverage (since 28 Oct 2026): the Kelani
+  from the mouth to Ruwanwella (79.84-80.31 E, 6.84-7.10 N, 1680 x 930 grid, 3 km corridor round the main stem + the arms of the 2016 polygon; the rest is greyed, no calibration).
+  `extend.py` (after fetch.py, fetch_upstream.py, fit-upstream.py) keeps every old covered pixel byte for byte and adds the rest: west of 80.10 E the old method and zone offsets, east of it
+  level = 2.3 ft + k x height above the Kelani main stem, k fitted per 3 km reach on the two dated EMS maps (Nagalagam at the satellite time), clipped to the observed brackets, 2016 extent as a floor.
+  Weakest part: two dated maps only, none east of 80.2 E (class 0 hatch there); the one scalar is Nagalagam, which Hanwella leads by ~18 h and Glencourse by ~48 h, so upstream water in a replay or live
+  view shows up half a day to two days late (a per-cell gauge driver would fix it; a gauge -> Nagalagam-equivalent rating was tried and dropped, see accuracy.json `upstream`); public reports (Locate me / Report here) go to D1 `flood3d_reports`
   (d1/0012, precise coordinates private, area counts of 3+ only; owner export `scripts/flood3d/reports-export.mjs` feeds `prep.py` via REPORTS=);
   `/api/flood3d/rain` blends satellite hour x gauge gain with live HMIS gauges for the optional Rain now layer.
   Optional private report photos: browser resize to JPEG, `/api/flood3d/photo` strips metadata and stores via the `workers/flood-photos` Worker in the

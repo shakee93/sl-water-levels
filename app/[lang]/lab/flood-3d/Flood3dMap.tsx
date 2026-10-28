@@ -355,7 +355,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
       const d = (await r.json()) as { city: string | null; lat?: number; lon?: number };
       const map = mapRef.current, m = meta.current;
       if (!d.city || d.lat == null || d.lon == null || !map || !m) return;
-      const inside = d.lon >= m.png.west - 0.03 && d.lon <= m.png.east + 0.17 && d.lat >= m.png.south - 0.03 && d.lat <= m.png.north + 0.03;
+      const inside = d.lon >= m.png.west - 0.03 && d.lon <= m.png.east + 0.03 && d.lat >= m.png.south - 0.03 && d.lat <= m.png.north + 0.03;
       if (!inside) { setGeoMsg(tr("We couldn't get your exact location. Your connection looks like {city}, which is outside the covered area (Kelani corridor).", { city: d.city })); return; }
       setGeoMsg(tr("We couldn't get your exact location, so we moved to {city} (approximate). Tap your street to check it.", { city: d.city }));
       map.flyTo({ center: [d.lon, d.lat], zoom: 13, duration: 1400 });
@@ -375,7 +375,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
       if (!meMarker.current) { const el = document.createElement("div"); el.style.cssText = "width:14px;height:14px;border-radius:50%;background:#0284c7;border:3px solid #fff;box-shadow:0 0 0 1px rgba(2,132,199,.5),0 1px 4px rgba(0,0,0,.35)"; meMarker.current = new ml.Marker({ element: el }).setLngLat([lon, lat]).addTo(map); }
       else meMarker.current.setLngLat([lon, lat]);
     });
-    const inside = lon >= m.png.west - 0.03 && lon <= m.png.east + 0.17 && lat >= m.png.south - 0.03 && lat <= m.png.north + 0.03;
+    const inside = lon >= m.png.west - 0.03 && lon <= m.png.east + 0.03 && lat >= m.png.south - 0.03 && lat <= m.png.north + 0.03;
     if (!inside) {
       const km = Math.round(Math.hypot((lon - CENTER[0]) * 111.32 * Math.cos((lat * Math.PI) / 180), (lat - CENTER[1]) * 110.57));
       map.setMaxBounds(null as never); // show where they are anyway
@@ -545,7 +545,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         if (dead || !box.current) return;
         meta.current = m; grid.current = png;
         const phone = window.innerWidth < 768;
-        const S = phone ? 2 : 3;
+        // pixel budget: the draw loop visits W2 x H2 cells on every level change, so the upsampling factor follows the grid size (old 929 x 500 grid: 3 desktop / 2 phone; the extended 1680 x 930 grid: 2 / 1)
+        const S = Math.max(1, Math.min(phone ? 2 : 3, Math.round(Math.sqrt((phone ? 2.0e6 : 6.5e6) / (png.w * png.h)))));
         const W2 = png.w * S, H2 = png.h * S;
         const out = document.createElement("canvas"); out.width = W2; out.height = H2;
         // water colour by depth below the level (0..8 ft, 1/32 ft steps): the natural blue (30,110,210) deepening with depth
@@ -555,7 +556,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         const buildUpLater = () => { up.current ??= buildUp(png, S); };
         schemeRef.current = dark0 ? "dark" : "light";
         setMapTheme(schemeRef.current);
-        map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true }, ...(embed ? { cooperativeGestures: true, locale: { "CooperativeGesturesHandler.WindowsHelpText": tr("Use Ctrl + scroll to zoom the map"), "CooperativeGesturesHandler.MacHelpText": tr("Use ⌘ + scroll to zoom the map"), "CooperativeGesturesHandler.MobileHelpText": tr("Use two fingers to move the map") } } : {}) });
+        map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.03, m.png.north + 0.03]], attributionControl: { compact: true }, ...(embed ? { cooperativeGestures: true, locale: { "CooperativeGesturesHandler.WindowsHelpText": tr("Use Ctrl + scroll to zoom the map"), "CooperativeGesturesHandler.MacHelpText": tr("Use ⌘ + scroll to zoom the map"), "CooperativeGesturesHandler.MobileHelpText": tr("Use two fingers to move the map") } } : {}) });
         mapRef.current = map;
         if (embed) {
           // the credit starts as the (i) button (the small map stays clear); tapping (i) opens it. MapLibre re-opens it on load and on style data, so keep it shut until the visitor taps.

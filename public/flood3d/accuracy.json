@@ -17,9 +17,9 @@
  },
  "cover_bounds": [
   79.812,
-  6.885,
-  80.13,
-  7.03
+  6.81,
+  80.34,
+  7.13
  ],
  "generated": "2026-10-27",
  "grid": {
@@ -28,14 +28,14 @@
   "res_m": 30.0
  },
  "png": {
-  "w": 929,
-  "h": 500,
+  "w": 1680,
+  "h": 930,
   "west": 79.84,
-  "east": 80.1,
-  "south": 6.86,
-  "north": 7.0,
+  "east": 80.31028,
+  "south": 6.83984,
+  "north": 7.10024,
   "deg": 0.00028,
-  "level": "R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)+128*settled (local streets nearby: depth estimate only)"
+  "level": "R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)+128*settled (local streets nearby: depth estimate only); upstream/edge cells added 28 Oct 2026 (see 'upstream')"
  },
  "drainage": "Kelani + connected canals",
  "minfilter": 3,
@@ -744,6 +744,445 @@
   "1000 m": {
    "learned": 0.98,
    "plain": 1.0
+  }
+ },
+ "upstream": {
+  "generated": "2026-10-28",
+  "note": "Rest of the Kelani (Hanwella to Ruwanwella) and the edge cells the first picture left uncovered. The first picture's covered pixels are unchanged, byte for byte. West of 80.10 E the new cells use the first picture's own method and zone offsets; east of it level = 2.3 ft + k * height above the Kelani main stem, k fitted per 3 km reach on the two dated Copernicus maps (Nagalagam at the satellite time), clipped to the observed wet / dry brackets, with the Irrigation Department's May 2016 extent as a floor. Cells with no EMS evidence near them are 'extrapolated' (class 0, hatched). Weaker calibration than the lower Kelani: two dated maps only, east of 80.2 E none.",
+  "old_box": {
+   "south": 6.86,
+   "west": 79.84,
+   "north": 7.0,
+   "east": 80.1
+  },
+  "split_lon": 80.139,
+  "gauges_at_satellite_time": {
+   "E1": {
+    "H": 10.77,
+    "G": 17.65
+   },
+   "E3": {
+    "H": 5.24,
+    "G": 10.97
+   }
+  },
+  "stage_relations": {
+   "hanwella": {
+    "lag_hours": 18,
+    "base_m": 0.3,
+    "table": [
+     [
+      0.0,
+      2.1
+     ],
+     [
+      2.0,
+      2.2
+     ],
+     [
+      3.25,
+      2.22
+     ],
+     [
+      3.75,
+      2.24
+     ],
+     [
+      4.25,
+      2.26
+     ],
+     [
+      4.75,
+      2.4
+     ],
+     [
+      5.25,
+      2.54
+     ],
+     [
+      5.75,
+      2.96
+     ],
+     [
+      6.25,
+      2.98
+     ],
+     [
+      6.75,
+      3.0
+     ],
+     [
+      7.25,
+      4.64
+     ],
+     [
+      7.75,
+      5.88
+     ],
+     [
+      8.25,
+      6.2
+     ],
+     [
+      8.75,
+      7.18
+     ],
+     [
+      9.25,
+      7.46
+     ],
+     [
+      9.75,
+      7.48
+     ],
+     [
+      10.25,
+      7.5
+     ],
+     [
+      10.75,
+      7.62
+     ],
+     [
+      10.95,
+      8.5
+     ]
+    ]
+   },
+   "glencourse": {
+    "lag_hours": 48,
+    "base_m": 8.4,
+    "table": [
+     [
+      8.4,
+      2.1
+     ],
+     [
+      10.5,
+      2.2
+     ],
+     [
+      10.75,
+      2.22
+     ],
+     [
+      11.25,
+      2.24
+     ],
+     [
+      11.75,
+      2.26
+     ],
+     [
+      12.25,
+      2.28
+     ],
+     [
+      12.75,
+      2.36
+     ],
+     [
+      13.25,
+      2.38
+     ],
+     [
+      13.75,
+      2.62
+     ],
+     [
+      14.25,
+      2.64
+     ],
+     [
+      14.75,
+      2.66
+     ],
+     [
+      15.25,
+      2.68
+     ],
+     [
+      15.75,
+      2.7
+     ],
+     [
+      17.25,
+      6.87
+     ],
+     [
+      18.25,
+      7.33
+     ],
+     [
+      18.75,
+      7.63
+     ],
+     [
+      19.25,
+      7.96
+     ],
+     [
+      19.75,
+      8.12
+     ],
+     [
+      20.25,
+      8.15
+     ],
+     [
+      20.75,
+      8.35
+     ],
+     [
+      21.9,
+      8.5
+     ]
+    ]
+   }
+  },
+  "zone_k_ft_per_m_new": {
+   "-115": {
+    "reach": "H",
+    "lon": 80.096,
+    "k": 0.45,
+    "wet_cells": 3549,
+    "weight": 1.0
+   },
+   "-114": {
+    "reach": "H",
+    "lon": 80.123,
+    "k": 0.4,
+    "wet_cells": 7117,
+    "weight": 1.0
+   },
+   "-113": {
+    "reach": "G",
+    "lon": 80.15,
+    "k": 0.4,
+    "wet_cells": 1682,
+    "weight": 1.0
+   },
+   "-112": {
+    "reach": "G",
+    "lon": 80.177,
+    "k": 0.55,
+    "wet_cells": 1043,
+    "weight": 1.0
+   },
+   "-111": {
+    "reach": "G",
+    "lon": 80.205,
+    "k": 0.55,
+    "wet_cells": 109,
+    "weight": 0.73
+   },
+   "-110": {
+    "reach": "G",
+    "lon": 80.232,
+    "k": 0.4,
+    "wet_cells": 0,
+    "weight": 0.0
+   },
+   "-109": {
+    "reach": "G",
+    "lon": 80.259,
+    "k": 0.4,
+    "wet_cells": 0,
+    "weight": 0.0
+   },
+   "-108": {
+    "reach": "G",
+    "lon": 80.286,
+    "k": 0.4,
+    "wet_cells": 0,
+    "weight": 0.0
+   },
+   "-107": {
+    "reach": "G",
+    "lon": 80.313,
+    "k": 0.4,
+    "wet_cells": 0,
+    "weight": 0.0
+   }
+  },
+  "area_wide_k_ft_per_m": 0.4,
+  "level_form": "L = 2.3 ft + k * HAND(m), k per 3 km reach",
+  "gauge_keyed_attempt": "Tried and dropped: a per-cell gauge rating (Hanwella / Glencourse reading at the satellite time -> Nagalagam-equivalent ft by stage_relations). The 3 Dec map is a falling limb with water lying on the plain and the 30 Nov map is 2 days after the Glencourse crest, so the extent-vs-gauge fit is not in equilibrium; Nagalagam does not respond to Glencourse below about 16 m (flat relation), and 4.6% of the new plain came out 'usually wet'. The map keeps the first picture's convention: Nagalagam at the satellite time. Relations kept for the lead times only.",
+  "loeo": [
+   {
+    "fit_on": "E1",
+    "test_on": "E3",
+    "area": "Hanwella to Kosgama",
+    "csi": 0.263,
+    "hit": 0.443,
+    "far": 0.607,
+    "n_wet": 1552,
+    "n_pred": 1752,
+    "plain_HAND_best": 0.281
+   },
+   {
+    "fit_on": "E1",
+    "test_on": "E3",
+    "area": "Puwakpitiya to Ruwanwella",
+    "csi": 0.235,
+    "hit": 0.392,
+    "far": 0.63,
+    "n_wet": 362,
+    "n_pred": 384,
+    "plain_HAND_best": 0.205
+   },
+   {
+    "fit_on": "E3",
+    "test_on": "E1",
+    "area": "Hanwella to Kosgama",
+    "csi": 0.606,
+    "hit": 0.783,
+    "far": 0.272,
+    "n_wet": 9114,
+    "n_pred": 9792,
+    "plain_HAND_best": 0.448
+   },
+   {
+    "fit_on": "E3",
+    "test_on": "E1",
+    "area": "Puwakpitiya to Ruwanwella",
+    "csi": 0.371,
+    "hit": 0.525,
+    "far": 0.441,
+    "n_wet": 2472,
+    "n_pred": 2319,
+    "plain_HAND_best": 0.353
+   }
+  ],
+  "insample_note": "in-sample scores reproduce the two dated maps by construction (bounds clip)",
+  "insample": {
+   "E1 Hanwella to Kosgama": {
+    "csi": 0.619,
+    "hit": 1.0,
+    "far": 0.381,
+    "n_wet": 9114,
+    "n_pred": 14727
+   },
+   "E1 Puwakpitiya to Ruwanwella": {
+    "csi": 0.561,
+    "hit": 1.0,
+    "far": 0.439,
+    "n_wet": 2472,
+    "n_pred": 4404
+   },
+   "E1 old-box newly covered": {
+    "csi": 0.648,
+    "hit": 1.0,
+    "far": 0.352,
+    "n_wet": 11811,
+    "n_pred": 18213
+   },
+   "E3 Hanwella to Kosgama": {
+    "csi": 0.909,
+    "hit": 0.909,
+    "far": 0.0,
+    "n_wet": 1552,
+    "n_pred": 1410
+   },
+   "E3 Puwakpitiya to Ruwanwella": {
+    "csi": 0.884,
+    "hit": 0.884,
+    "far": 0.0,
+    "n_wet": 362,
+    "n_pred": 320
+   },
+   "E3 old-box newly covered": {
+    "csi": 0.94,
+    "hit": 0.94,
+    "far": 0.0,
+    "n_wet": 2031,
+    "n_pred": 1909
+   }
+  },
+  "checks": {
+   "Irrigation Nov 2025 raw polygon, Hanwella to Kosgama: share predicted wet at the crest 8.43 ft": {
+    "n": 4611,
+    "share": 0.99
+   },
+   "Irrigation Nov 2025 raw polygon, Puwakpitiya to Ruwanwella: share predicted wet at the crest 8.43 ft": {
+    "n": 2586,
+    "share": 0.99
+   },
+   "Irrigation Nov 2025 raw polygon vs predicted at 8.43 ft, new area": null,
+   "AOI08_GRA_PRODUCT flood trace cells in new area": {
+    "n": 386,
+    "share_wet_at_crest": 0.992,
+    "share_wet_at_7_64": 0.99
+   },
+   "2016 polygon, new area: share of covered cells flooded at 7.64 ft": 1.0,
+   "2016 polygon, new area, covered cells": 41554
+  },
+  "new_area_painted_km2_by_stage_ft": {
+   "2.2": {
+    "east_of_80.10": 0.0,
+    "west_strips_and_edge": 0.04
+   },
+   "2.5": {
+    "east_of_80.10": 0.83,
+    "west_strips_and_edge": 0.33
+   },
+   "3.0": {
+    "east_of_80.10": 1.42,
+    "west_strips_and_edge": 0.85
+   },
+   "4.0": {
+    "east_of_80.10": 4.2,
+    "west_strips_and_edge": 1.79
+   },
+   "5.0": {
+    "east_of_80.10": 10.07,
+    "west_strips_and_edge": 4.54
+   },
+   "6.0": {
+    "east_of_80.10": 26.21,
+    "west_strips_and_edge": 9.69
+   },
+   "7.0": {
+    "east_of_80.10": 45.5,
+    "west_strips_and_edge": 13.9
+   },
+   "7.64": {
+    "east_of_80.10": 52.09,
+    "west_strips_and_edge": 21.0
+   },
+   "8.43": {
+    "east_of_80.10": 57.07,
+    "west_strips_and_edge": 22.72
+   },
+   "9.0": {
+    "east_of_80.10": 61.57,
+    "west_strips_and_edge": 23.04
+   },
+   "10.0": {
+    "east_of_80.10": 69.74,
+    "west_strips_and_edge": 23.29
+   }
+  },
+  "class_shares_new_cells_with_level": {
+   "east_of_80.10": {
+    "extrapolated": 0.398,
+    "interpolated": 0.402,
+    "observed_bounded": 0.2
+   },
+   "west_strips_and_edge": {
+    "extrapolated": 0.366,
+    "interpolated": 0.42,
+    "observed_bounded": 0.214
+   }
+  },
+  "new_cells": 370081,
+  "floor_2016": {
+   "lowered": 49822,
+   "reach": 1645
+  },
+  "corridor_cells": {
+   "west_of_80_10_old_method": 75705,
+   "east_of_80_10_new_method": 294376
   }
  }
 }
