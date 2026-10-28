@@ -49,7 +49,7 @@ export type Chart = {
   max: string;
 };
 
-export type Credit = { live: string; linkText: string; rest: string; href: string; /** Extra source credit (RiverNet) with a plain link. */ extra?: { text: string; href: string } };
+export type Credit = { live: string; linkText: string; href: string; /** " · RiverNet data", linking to rivernet.lk, when a shown gauge is a RiverNet gauge. */ extra?: { text: string; href: string } };
 
 type Base = {
   widget: Widget;
@@ -73,7 +73,7 @@ export type GaugePayload = Base & {
   chartTitle: string;
 };
 /** The simple card: one gauge, verdict first. Same data as the gauge widget. */
-export type CardPayload = Omit<GaugePayload, "kind"> & { kind: "card" };
+export type CardPayload = Omit<GaugePayload, "kind"> & { kind: "card"; /** "Forecast, not an official warning", shown by the next-hour line. */ forecastLabel: string | null };
 export type TownPayload = Base & {
   kind: "town";
   title: string;

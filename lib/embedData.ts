@@ -142,14 +142,13 @@ function rowOf(s: NationalStation, c: Ctx, nh: NextHour | null, o: { withMarks: 
   };
 }
 
-/** `rn`: how many of the shown rows are RiverNet gauges. Any -> the RiverNet credit is added; all -> the readings are named as RiverNet's, not the Irrigation Department's. */
-function credit(c: Ctx, path: string, resv = false, rn: { any: boolean; all: boolean } = { any: false, all: false }): Credit {
+/** The one-line footer: "Powered by waterlevels.lk" (link to the matching page), plus "RiverNet data" when a shown gauge is a RiverNet gauge. */
+function credit(c: Ctx, path: string, _resv = false, rn: { any: boolean; all: boolean } = { any: false, all: false }): Credit {
   return {
-    live: c.e("w.live"),
+    live: c.e("w.poweredBy"),
     linkText: "waterlevels.lk",
-    rest: c.e(resv ? "w.creditResv" : rn.all ? "w.creditRestRn" : "w.creditRest"),
     href: SITE + localePath(c.lang, path),
-    ...(rn.any ? { extra: { text: "RiverNet – DMC / Leecom SCADA (rivernet.lk)", href: "https://rivernet.lk" } } : {}),
+    ...(rn.any ? { extra: { text: c.e("w.riverNetData"), href: "https://rivernet.lk" } } : {}),
   };
 }
 const rnOf = (rows: { rivernet: boolean }[]) => ({ any: rows.some((r) => r.rivernet), all: rows.length > 0 && rows.every((r) => r.rivernet) });
@@ -291,7 +290,7 @@ async function buildGauge(slug: string, c: Ctx): Promise<GaugePayload | null> {
 /** The simple card: the gauge widget's data, drawn verdict-first. */
 async function buildCard(slug: string, c: Ctx): Promise<CardPayload | null> {
   const g = await buildGauge(slug, c);
-  return g ? { ...g, widget: "card", kind: "card" } : null;
+  return g ? { ...g, widget: "card", kind: "card", forecastLabel: g.row.next ? c.e("w.fcLabel") : null } : null;
 }
 
 const HOUR_ARROW: Record<string, Arrow> = { "dir.rising": "up", "dir.slow": "up", "dir.falling": "down", "dir.steady": "steady", "dir.tide": "steady" };

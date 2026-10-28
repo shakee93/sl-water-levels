@@ -332,7 +332,7 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
             <span className="sr-only" aria-live="polite">{copied ? "Code copied" : ""}</span>
             <p className="min-w-0 flex-1 basis-48 text-xs text-slate-500 dark:text-slate-400">The script is optional: it makes the box grow to fit. Without it the box keeps the height above.</p>
           </div>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Free to use: keep the credit link inside the box. Not an official warning service. Defaults ({DEFAULTS.unit}, {DEFAULTS.theme}, {DEFAULTS.size}) are left out of the address.</p>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Free to use: keep the Powered by link. Not an official warning service. Defaults ({DEFAULTS.unit}, {DEFAULTS.theme}, {DEFAULTS.size}) are left out of the address.</p>
         </div>
       </div>
     </div>

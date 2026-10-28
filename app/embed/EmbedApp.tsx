@@ -49,29 +49,17 @@ function Trend({ row }: { row: Pick<EmbedRow, "arrow" | "trend"> }) {
   );
 }
 
-function Credit({ credit, open }: { credit: Credit; open: { href: string; label: string } }) {
+function Credit({ credit, tight }: { credit: Credit; tight?: boolean }) {
   return (
-    <footer className="mt-3 border-t border-slate-200 dark:border-slate-800 pt-2.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
-      <p>
-        {credit.live}{" "}
-        <a href={credit.href} target="_blank" rel="noopener" className="emb-link font-semibold underline underline-offset-2">
-          {credit.linkText}
-        </a>
-        {" · "}
-        {credit.rest}
-        {credit.extra && (
-          <>
-            {" · "}
-            <a href={credit.extra.href} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">{credit.extra.text}</a>
-          </>
-        )}
-      </p>
-      <p className="mt-1">
-        <a href={open.href} target="_blank" rel="noopener" className="emb-link inline-flex items-center gap-1 font-medium underline underline-offset-2">
-          {open.label}
-          <ExternalLink className="size-3" aria-hidden />
-        </a>
-      </p>
+    <footer className={`${tight ? "mt-0.5" : "mt-3 text-right"} text-[11px] leading-snug text-slate-500 dark:text-slate-400`}>
+      {credit.live}{" "}
+      <a href={credit.href} target="_blank" rel="noopener" className="emb-link font-semibold underline underline-offset-2">{credit.linkText}</a>
+      {credit.extra && (
+        <>
+          {" · "}
+          <a href={credit.extra.href} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">{credit.extra.text}</a>
+        </>
+      )}
     </footer>
   );
 }
@@ -80,7 +68,7 @@ function Shell({ p, children, tone }: { p: EmbedPayload; children: React.ReactNo
   return (
     <section className={`emb-card ${TONE_CLS[tone ?? "normal"] ?? ""} rounded-xl border p-3 sm:p-4 shadow-sm ${CARD[tone ?? "normal"]}`} style={TONE_VAR[tone ?? "normal"]}>
       {children}
-      <Credit credit={p.credit} open={p.open} />
+      <Credit credit={p.credit} />
     </section>
   );
 }
@@ -526,18 +514,7 @@ function TickerView({ p }: { p: TickerPayload }) {
           ))}
         </a>
       </p>
-      <p className="mt-0.5 text-[11px] leading-tight text-slate-500 dark:text-slate-400">
-        {p.credit.live}{" "}
-        <a href={p.credit.href} target="_blank" rel="noopener" className="emb-link font-semibold underline underline-offset-2">{p.credit.linkText}</a>
-        {" · "}
-        {p.credit.rest}
-        {p.credit.extra && (
-          <>
-            {" · "}
-            <a href={p.credit.extra.href} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">{p.credit.extra.text}</a>
-          </>
-        )}
-      </p>
+      <Credit credit={p.credit} tight />
     </div>
   );
 }
@@ -572,6 +549,7 @@ function CardView({ p }: { p: CardPayload }) {
               {r.cross && <span className="font-semibold">· {r.cross}</span>}
             </p>
           )}
+          {full && r.next && p.forecastLabel && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{p.forecastLabel}</p>}
           {full && p.bar && <MarksBar bar={p.bar} />}
           {r.time && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</p>}
         </>
