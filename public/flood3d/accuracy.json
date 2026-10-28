@@ -1,4 +1,15 @@
 {
+ "floor_2016": {
+  "source": "Irrigation Department Flood_Map, Kelani May 2016 Major (drawn extent)",
+  "stage_ft": 7.64,
+  "cap_ft": 7.6,
+  "knee_ft": 5.0,
+  "reach_m_per_ft": 0.25,
+  "cells_in_polygon": 56048,
+  "cells_floored": 34658,
+  "cells_reach": 7665,
+  "note": "in-sample scores of the satellite maps below no longer reproduce them: the official 2016 extent is a floor and satellites miss water between houses"
+ },
  "reports_used": {
   "Kelaniya": 0,
   "Wellampitiya": 0,
@@ -523,29 +534,29 @@
   {
    "event": "E1",
    "area": "corridor",
-   "csi": 0.829,
+   "csi": 0.594,
    "hit": 1.0,
-   "far": 0.171,
+   "far": 0.406,
    "n_wet": 35013,
-   "n_pred": 42253
+   "n_pred": 58976
   },
   {
    "event": "E1",
    "area": "Kelaniya",
-   "csi": 0.653,
+   "csi": 0.426,
    "hit": 1.0,
-   "far": 0.347,
+   "far": 0.574,
    "n_wet": 11721,
-   "n_pred": 17951
+   "n_pred": 27483
   },
   {
    "event": "E1",
    "area": "Wellampitiya",
-   "csi": 0.46,
+   "csi": 0.344,
    "hit": 1.0,
-   "far": 0.54,
+   "far": 0.656,
    "n_wet": 3391,
-   "n_pred": 7377
+   "n_pred": 9860
   },
   {
    "event": "E3",

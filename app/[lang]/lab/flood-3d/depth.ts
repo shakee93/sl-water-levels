@@ -4,7 +4,8 @@
 //    7.4 ft and 0.25 m per ft above, so depth = pool surface minus the cell's own fill level. Agrees on 6.25 m at the 1 Dec peak from three independent lines (a bridge-deck
 //    reference, the 30 Nov satellite map, a resident's street depth).
 //  - elsewhere: rise of the river since the cell's own flood level, plus an offset in settled cells (kind 1: the satellite maps see water in the open before between houses and
-//    GLO-30 reads roof height in housing; 1.8 m = mean of four reported depths) or the depth at which a satellite first sees open ground (kind 0).
+//    GLO-30 reads roof height in housing; 1.8 m = mean of four reported depths) or the depth at which a satellite first sees open ground (kind 0). Cells whose level was
+//    lowered to the official May 2016 extent (scripts/flood3d/floor2016.py) are marked kind 0 in the grid: their level is a shallow extent edge, not a satellite first sight.
 export const FT = 0.3048;
 export const SETTLED_OFFSET_M = 1.8;
 export const OPEN_OFFSET_M = 0.3;

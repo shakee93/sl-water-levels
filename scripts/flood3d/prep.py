@@ -371,6 +371,19 @@ _take = PZ & (_Lp < np.where(np.isfinite(Lft), Lft, 99.0))
 Lft = np.where(_take, _Lp, Lft)
 cls = np.where(_take, 1, cls)
 print("pool zone cells", int(PZ.sum()), "lowered", int(_take.sum()), "share flooded at 8.5 ft before/after", round(_before, 2), round(float(np.mean((Lft <= 8.5)[PZ])), 2))
+# ---- The Irrigation Department's drawn May 2016 extent is a FLOOR (29 Oct 2026): see floor2016.py for the why and the method. FLOOR_2016 = path to the Flood_Map
+# layer 37 polygon (Kelani 2016 Major, GeoJSON, WGS84; public ArcGIS, fetched by hand, not committed). Without it the level is the satellite-fitted one.
+FLOOR_MOVED = np.zeros((H, W), bool); FLOOR_NOTE = None
+if os.environ.get("FLOOR_2016") and os.path.exists(os.environ["FLOOR_2016"]):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import floor2016
+    _g16 = json.load(open(os.environ["FLOOR_2016"]))
+    P16 = rfeat.rasterize([(shp_transform(lambda x, y, zz=None: T.transform(x, y), shape(f_["geometry"])), 1) for f_ in _g16["features"]], out_shape=(H, W), transform=TR, fill=0, dtype="uint8").astype(bool)
+    _L_before_floor = Lft.copy()
+    Lft, cls, FLOOR_INFO = floor2016.apply(Lft, cls, P16, okall, DRAIN, HAND, _F, z)
+    FLOOR_MOVED = np.isfinite(Lft) & ~(np.isfinite(_L_before_floor) & (_L_before_floor == Lft))
+    np.save(f"{WORK}/p16.npy", P16)
+    FLOOR_NOTE = dict(source="Irrigation Department Flood_Map, Kelani May 2016 Major (drawn extent)", stage_ft=floor2016.STAGE_2016, cap_ft=floor2016.CAP, knee_ft=floor2016.KNEE, reach_m_per_ft=floor2016.REACH_M_PER_FT, cells_in_polygon=int(FLOOR_INFO["polygon"].sum()), cells_floored=int(FLOOR_INFO["floored"]), cells_reach=int(FLOOR_INFO["reach"].sum()), note="in-sample scores of the satellite maps below no longer reproduce them: the official 2016 extent is a floor and satellites miss water between houses")
 BAND = np.select([HAND <= 1, HAND <= 2, HAND <= 3, HAND <= 5], [0, 1, 2, 3], 4)
 valid = okall & np.isfinite(Lft)
 R = np.where(valid & (Lft < 25), np.clip(np.round((Lft - 2) * 10) + 1, 1, 250), 0)
@@ -384,7 +397,10 @@ for e in json.load(open(f"{WORK}/osm_roads.json"))["elements"]:
     if e["tags"].get("highway") in ("motorway", "trunk", "primary", "secondary") or len(e.get("geometry") or []) < 2: continue
     _bd.line([px(g_["lon"], g_["lat"]) for g_ in e["geometry"]], fill=255, width=1)
 BUILT = ndi.uniform_filter((np.array(_bm) > 0).astype(float), 5) >= 0.03
-print("built-up share of land", float(BUILT[LAND].mean()))
+# Cells whose level the 2016 floor / reach moved are not 'settled' for the depth estimate: their level marks where the official 2016 extent ended (a shallow edge), not
+# where a satellite first saw water in the open, so the 1.8 m settled offset (calibrated on satellite-derived levels) would overstate the depth there. They use the open regime.
+BUILT &= ~FLOOR_MOVED
+print("built-up share of land", float(BUILT[LAND].mean()), "| depth regime reset on floor-moved cells:", int(FLOOR_MOVED.sum()))
 Bw = to_wgs(cls + 4 * BAND + 32 * UNC + 64 * WETL + 128 * BUILT, 0)
 img = np.stack([Rw, Gw, Bw], -1).astype(np.uint8)
 Image.fromarray(img).save(f"{OUT}/level.webp", "WEBP", lossless=True, quality=100, method=6)   # lossless WebP: 36% smaller than PNG
@@ -505,7 +521,7 @@ if os.path.exists(f"{WORK}/osm_places.json"):
     print("gazetteer", len(gz), os.path.getsize(f"{OUT}/gazetteer.json"))
 
 json.dump(dict(
-    reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)+128*settled (local streets nearby: depth estimate only)"),
+    floor_2016=FLOOR_NOTE, reports_used=used, cover_bounds=COV_BOUNDS, generated="2026-10-27", grid=dict(rows=H, cols=W, res_m=RES), png=dict(w=gw, h=gh, west=LW, east=LE, south=LS, north=LN, deg=DEG, level="R: 0 none, 255 river/sea, else ft=(R-1)/10+2; G half-width ft*10; B: class(0 extrapolated,1 interpolated,2 observed-bounded)+4*HANDband(0..4)+32*not covered (no calibration here)+64*usually-wet ground (fitted level <= 2.2 ft)+128*settled (local streets nearby: depth estimate only)"),
     drainage=VLAB, minfilter=VSM, variants=variants, events={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EV.items()}, extra_bounds={k: dict(label=v["label"], nag_ft=v["nag_ft"]) for k, v in EXTRA.items()},
     zone_offset_m={str(k): round(v, 2) for k, v in CZ.items()}, global_offset_m=round(CG, 2), half_width_ft=HW,
     plain_bands=acc_bands, loeo=LOEO, insample_note='reproduces the two observed maps by construction (bounds clip); not an accuracy figure', insample=insample, reliability_cell_part=rel, chance_calibration=dict(a=CAL[0], b=CAL[1], sd_ft=round(float(np.sqrt(HW['interpolated'] ** 2 / 3)), 2)), ground_truth_points=len(PTS), points_learned=pts_learned, points_plain_bands=pts_plain, points_random_baseline=base),
