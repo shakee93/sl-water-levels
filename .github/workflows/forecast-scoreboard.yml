@@ -1,0 +1,87 @@
+# Nightly forecast scoreboard (MEASURES ONLY: nothing here changes the live forecast, a verdict, an alert or a push).
+# Just after the Sri Lanka day ends (01:40 Colombo), for the two days before today:
+#   1. scripts/forecast-archive.mjs  D1 prediction log -> forecasts/YYYY/YYYY-MM-DD.jsonl on the `data` branch (each stored forecast point
+#      with the reading that followed it, the threshold chances and any shadow/candidate points). Yesterday is provisional (its 24 h points
+#      are not observed yet) and is rewritten the next night.
+#   2. scripts/forecast-scoreboard.mjs  archive -> scoreboard/YYYY-MM-DD.json + scoreboard/summary.csv (per group x horizon: n, MAE,
+#      persistence MAE, skill, bias, in-band, calibration, runs per hour, difficulty, a better/worse/not-comparable line), live and shadow.
+# Reads D1 with small queries (runs of one day, children by id range, observations per gauge by key range); needs only CLOUDFLARE_API_TOKEN.
+# Manual run: `from`/`to` (YYYY-MM-DD) re-archive and re-score a range, e.g. the 23-27 Oct backfill (D1 keeps readings for 7 days).
+# No Slack message is sent on success; a failed run tells Slack like the other snapshot jobs.
+
+name: Forecast scoreboard
+
+on:
+  schedule:
+    - cron: "10 20 * * *" # 01:40 Asia/Colombo
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "First Colombo day to archive and score (YYYY-MM-DD); empty = the two days before today"
+        required: false
+      to:
+        description: "Last day (YYYY-MM-DD); empty = same as from"
+        required: false
+
+permissions:
+  contents: write
+
+# Same group as the other jobs that push to `data`.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  scoreboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out data branch
+        run: |
+          git fetch --depth=1 origin data
+          git worktree add archive FETCH_HEAD
+          git -C archive checkout -B data
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Archive the stored forecasts
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+        run: |
+          range=""
+          [ -n "$FROM" ] && range="--from $FROM --to ${TO:-$FROM}"
+          node scripts/forecast-archive.mjs archive $range
+      - name: Score them
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+        run: |
+          range=""
+          [ -n "$FROM" ] && range="--from $FROM --to ${TO:-$FROM}"
+          node scripts/forecast-scoreboard.mjs archive $range | tee scoreboard.txt
+          { echo '### Forecast scoreboard'; echo '```'; cat scoreboard.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add forecasts scoreboard
+          if git diff --cached --quiet; then echo "No change."; exit 0; fi
+          git commit -m "Forecast archive and scoreboard $(date -u '+%F %H:%M') UTC"
+          git pull --rebase origin data || true
+          git push origin data
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true
