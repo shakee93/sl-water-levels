@@ -19,7 +19,7 @@ import { ReservoirFilter, type FilterItem } from "@/app/reservoirs/ReservoirFilt
 
 export const revalidate = 600;
 
-import { SITE } from "@/lib/seo";
+import { SITE, webPageLd } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
@@ -101,6 +101,8 @@ export default async function ReservoirsIndex({ params }: { params: Promise<{ la
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
+      // dated by the Irrigation Department's sheet (or the Mahaweli report), the readings the page shows
+      webPageLd({ lang, path: "/reservoirs", name: seoFor(lang)("rsvIndex.title"), description: seoFor(lang)("rsvIndex.desc", { n: items.length }).replace("  ", " "), modified: data.sheetDate ?? data.wmsDate ?? null, type: "CollectionPage" }),
       {
         "@type": "BreadcrumbList",
         itemListElement: [

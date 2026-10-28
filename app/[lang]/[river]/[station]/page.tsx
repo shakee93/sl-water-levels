@@ -235,7 +235,7 @@ export default async function StationPage({
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
-              __html: JSON.stringify(datasetLd(resolved.station, basin, stations, canonical, lang, nat?.latest?.ts)),
+              __html: JSON.stringify(datasetLd(resolved.station, basin, stations, canonical, lang, nat?.latest?.ts, nat?.source)),
             }}
           />
         )}
@@ -390,7 +390,17 @@ export default async function StationPage({
 const ARCGIS_GAUGES =
   "https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services/gauges_2_view/FeatureServer/0/query";
 
-function datasetLd(station: string, basin: string, stations: Station[], canonical: string, lang: Locale, modified?: number | null) {
+// Who measures the gauge: most are the Irrigation Department's (ArcGIS, hourly); the extra gauges come from HMIS (the
+// Department's own sensor network, 10-15 min) or RiverNet (the DMC's sensor network run by Leecom SCADA, 1 min). The
+// markup credits the right one and links the source feed only where one exists for that gauge.
+const GAUGE_SOURCE = {
+  arcgis: { creator: { "@type": "Organization", name: "Department of Irrigation, Sri Lanka", url: "https://www.irrigation.gov.lk" }, basedOn: "https://www.irrigation.gov.lk/", cadence: "Hourly" },
+  hmis: { creator: { "@type": "Organization", name: "Irrigation Department HMIS, Sri Lanka", url: "https://hmis.gov.lk" }, basedOn: "https://hmis.gov.lk/", cadence: "Frequent (sensor)" },
+  rivernet: { creator: { "@type": "Organization", name: "RiverNet – Disaster Management Centre / Leecom SCADA", url: "https://rivernet.lk" }, basedOn: "https://rivernet.lk/", cadence: "Frequent (sensor)" },
+} as const;
+
+function datasetLd(station: string, basin: string, stations: Station[], canonical: string, lang: Locale, modified?: number | null, source?: "arcgis" | "hmis" | "rivernet") {
+  const src = GAUGE_SOURCE[source ?? "arcgis"];
   const s = stations.find((x) => x.station === station);
   const end = new Date();
   const start = new Date(end.getTime() - 7 * 86_400_000);
@@ -400,16 +410,16 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
     "@context": "https://schema.org",
     "@type": "Dataset",
     name: `${name} river gauge water level (${basin.trim()})`,
-    description: `Hourly water-level readings at the ${name} gauge on the ${basin.trim()}, Sri Lanka, with alert, minor flood and major flood levels and a next-hour forecast. Last 7 days. Shown in feet.`,
+    description: `${src.cadence} water-level readings at the ${name} gauge on the ${basin.trim()}, Sri Lanka, with alert, minor flood and major flood levels and a next-hour forecast. Last 7 days. Shown in feet.`,
     url: `${SITE}${canonical}`,
     inLanguage: lang,
     isAccessibleForFree: true,
     // Google's Dataset rich result only accepts Organization/Person for creator.
     // license: the agencies publish no licence text; this page states the sources and terms.
     license: "https://waterlevels.lk/about#data-sources",
-    creator: { "@type": "Organization", name: "Department of Irrigation, Sri Lanka", url: "https://www.irrigation.gov.lk" },
+    creator: src.creator,
     publisher: publisherLd(),
-    isBasedOn: "https://www.irrigation.gov.lk/",
+    isBasedOn: src.basedOn,
     ...(modified ? { dateModified: new Date(modified).toISOString() } : {}),
     temporalCoverage: `${day(start)}/${day(end)}`,
     variableMeasured: [
@@ -433,12 +443,16 @@ function datasetLd(station: string, basin: string, stations: Station[], canonica
         encodingFormat: "application/json",
         contentUrl: `${SITE}/api/levels?station=${encodeURIComponent(stationSlug(station))}`,
       },
-      {
-        "@type": "DataDownload",
-        name: "Hourly readings, source service (JSON)",
-        encodingFormat: "application/json",
-        contentUrl: `${ARCGIS_GAUGES}?where=${encodeURIComponent(`gauge='${station}'`)}&outFields=*&orderByFields=CreationDate+DESC&f=json`,
-      },
+      ...((source ?? "arcgis") === "arcgis"
+        ? [
+            {
+              "@type": "DataDownload",
+              name: "Hourly readings, source service (JSON)",
+              encodingFormat: "application/json",
+              contentUrl: `${ARCGIS_GAUGES}?where=${encodeURIComponent(`gauge='${station}'`)}&outFields=*&orderByFields=CreationDate+DESC&f=json`,
+            },
+          ]
+        : []),
       { "@type": "DataDownload", name: "Archive of past readings", encodingFormat: "application/x-ndjson", contentUrl: DATA_BRANCH },
     ],
   };
