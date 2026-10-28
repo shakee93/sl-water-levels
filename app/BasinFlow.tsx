@@ -78,7 +78,8 @@ function buildWaveInsight(stations: BasinStation[], selectedStation: string) {
   if (selected.tier === "stale") return null;
   const upRising = stations
     .slice(0, selectedIdx)
-    .filter((s) => s.tier !== "stale" && s.rate3hM != null && s.rate3hM > 0.05);
+    // RiverNet gauges (tributaries, no measured travel time) are never named as the upstream rise.
+    .filter((s) => s.source !== "rivernet" && s.tier !== "stale" && s.rate3hM != null && s.rate3hM > 0.05);
   if (upRising.length === 0) return null;
   const fastest = upRising.reduce((a, b) => ((a.rate3hM ?? 0) > (b.rate3hM ?? 0) ? a : b));
   const selRate = selected.rate3hM;

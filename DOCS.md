@@ -1557,3 +1557,25 @@ cusecs through 8 gates". Used by `app/Forecast.tsx` (gauge page), `lib/stationVe
 `app/api/forecasts/route.ts` (`verdict`, plus `releaseAlert`), `lib/townRisk.ts` (town page, glance, index via `loadTownStates`) and the
 home "Needs attention" list (`ReleaseAlerts`). The 5,000 cusecs mark is chosen from one event, not fitted: revisit with `releases/` on
 the `data` branch. Tests: `scripts/release-alert.test.mts`, `scripts/town-risk.test.mts`.
+
+## RiverNet gauges (28 Oct 2026)
+
+RiverNet (rivernet.lk, Leecom SCADA Systems for the Disaster Management Centre) is a second public sensor network. The site adds the river gauges it
+does not already have and uses RiverNet's 1-minute sensors only as a "Latest" note. Credit everywhere: "RiverNet – DMC / Leecom SCADA (rivernet.lk)" with a plain
+link. Never called from the browser.
+
+- **Fetch** (`lib/rivernet.ts`, `lib/rivernetCalc.ts`): per device a small `title` (newest reading time, whether it is communicating, coordinates) and a `chart`
+  (24 h at 1 min, kept as 10-minute points) every 10 minutes, at most 3 requests at once, 2.5 s soft budget, fails soft. Chart times are Sri Lanka time labelled UTC
+  (subtract 5.5 h); a silent device's chart is flat padding, so points after the title's newest reading are dropped and a silent device is "Not reporting".
+- **New gauges** (10): Kuru Ganga (Kuruvita), Galathura Oya (Ayagama), Denawaka Ganga (Pelmadulla), Kukule Ganga (Kalawana), Wey Ganga (Kahawaththa), Niriella Ganga
+  (Elapatha) under Kalu Ganga; Mapitigama and Pugoda under Kelani Ganga (RiverNet publishes marks 6/7/8.5 m and 8/10/11.5 m, shown as official steps from RiverNet);
+  Miriswatta (Uruwal Oya) and Wattala (Wattala Kalu Ela) in Gampaha. A gauge with no published marks shows the level and trend, "No flood levels", and no step.
+  They get gauge pages, river pages, the map, search, the nearest-gauge logic and the embeds (all read `getNational`). They are never an upstream signal in forecasts,
+  the anomaly detector or the "rise upstream" note (no travel time has been measured).
+- **Duplicates** (9): Ratnapura (= ArcGIS Rathnapura, same value the same minute) and the eight east-coast bridges and anicuts (= HMIS, identical values). One rule: the
+  official source's number stays the headline, the pill and the step; RiverNet adds one line "Latest: X at hh:mm (1-minute sensor)" only when it is at least 10 minutes newer
+  and tracks the official reading (median offset over 24 h, spread under 0.12 m).
+- **Skipped**: tanks, lagoons, and 18 devices RiverNet gives no coordinates for. Add `lat`/`lon` to their `RIVERNET_CATALOG` row (decision "new") and they appear.
+- **Archive** (`scripts/rivernet-snapshot.mjs`, `.github/workflows/rivernet-snapshot.yml`, every 2 h): 5-minute points of every river device to `data:rivernet/YYYY/YYYY-MM-DD.json`,
+  plus the device lists once a night, for fitting tributary travel times later. Health: `rivernet` (warn) and `pipe-rivernet`; tests `node --experimental-strip-types scripts/rivernet.test.mts`.
+- **Removal**: make `getRivernetLevels()` return null; callers show nothing.

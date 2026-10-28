@@ -32,6 +32,7 @@ const en = {
   "g.news": "News reports on opened gates",
   "g.archive": "History and forecast records",
   "g.hmis": "HMIS: Irrigation Department hydro-met system (10-minute sensors, ground rain)",
+  "g.rivernet": "RiverNet: Disaster Management Centre sensor network (extra river gauges, 1-minute sensors)",
 } as const;
 
 export type StatusKey = keyof typeof en;
@@ -65,6 +66,7 @@ const si: Record<StatusKey, string> = {
   "g.news": "දොරටු විවෘත කිරීම් පිළිබඳ ප්‍රවෘත්ති",
   "g.archive": "ඉතිහාසය සහ පුරෝකථන වාර්තා",
   "g.hmis": "HMIS: වාරිමාර්ග දෙපාර්තමේන්තුවේ ජල-කාලගුණ පද්ධතිය (මිනිත්තු 10 සංවේදක, බිම් වර්ෂාව)",
+  "g.rivernet": "RiverNet: ආපදා කළමනාකරණ මධ්‍යස්ථානයේ සංවේදක ජාලය (අමතර ගං මාන, මිනිත්තු 1 සංවේදක)",
 };
 
 const ta: Record<StatusKey, string> = {
@@ -96,6 +98,7 @@ const ta: Record<StatusKey, string> = {
   "g.news": "மதகு திறப்பு குறித்த செய்திகள்",
   "g.archive": "வரலாறு மற்றும் முன்னறிவிப்புப் பதிவுகள்",
   "g.hmis": "HMIS: நீர்ப்பாசனத் திணைக்கள நீர்-வானிலைத் தகவல் அமைப்பு (10 நிமிட உணரிகள், நிலமட்ட மழை)",
+  "g.rivernet": "RiverNet: பேரிடர் மேலாண்மை மைய உணரி வலையமைப்பு (கூடுதல் ஆற்று அளவீட்டு நிலையங்கள், 1 நிமிட உணரிகள்)",
 };
 
 const DICTS: Record<Locale, Record<StatusKey, string>> = { en, si, ta };

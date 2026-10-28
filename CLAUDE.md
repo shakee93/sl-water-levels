@@ -168,6 +168,19 @@ lib/
   point-in-polygon on HMIS `basin/merge`), (3) ground-rain notes within 5 km, record <= 3 h old, ahead of GSMaP.
   HMIS gauges are never "upstream" of an ArcGIS gauge in forecasts or the anomaly detector (no fitted travel time).
 
+- **RiverNet (rivernet.lk)**, the DMC's public sensor dashboard run by Leecom SCADA Systems (owner decision 28 Oct 2026: public data, robots allow all, JSON marked
+  isPublic, "unified data adds credibility"; if they object, say so in the report, never argue). `lib/rivernet.ts` (fetcher) + `lib/rivernetCalc.ts` (pure, tables, tests
+  `node scripts/rivernet.test.mts`). The API (`api.rivernet.lk/cache-api.php?path=...`) serves only CACHED paths, ONE device per call (`keys=a,b` = 404, rain devices 404,
+  from/to ignored): per device a `title` (coordinates, `latest.time`, `communication`) and a `chart` (last 24 h at 1 min, marks in plotLines) every 10 min through
+  unstable_cache, <= 3 in flight, 2.5 s soft budget, UA with site URL + owner email, never from the browser. Gotchas: chart `x`/`t` and title times are SLT labelled UTC
+  (real = x - 5.5 h, same as HMIS levels); a dead device's chart is FLAT PADDING to now (Kukule Ganga since 26 Oct): trust only the title's newest-reading time and
+  `communication`; 18 of 37 river devices have coordinates {0,0} (skipped until located); values are metres, offsets already applied. What is used (catalogue =
+  `RIVERNET_CATALOG`, every device decided): 10 NEW gauges (6 Kalu Ganga tributaries, Mapitigama + Pugoda on the Kelani, Miriswatta / Wattala in Gampaha) merged like HMIS extras
+  (`source: "rivernet"` in fetchStations / getNational / fetchStationData; never "upstream" in forecast, anomaly or the BasinFlow wave note; marks only RiverNet's own,
+  none = no step); 9 DUPLICATES (Ratnapura = ArcGIS Rathnapura, 8 east-coast bridges = HMIS, identical values) get only a "Latest: X at hh:mm (1-minute sensor)" note
+  when >= 10 min newer (`app/FasterReading.tsx`); tanks, lagoons and coordinate-less devices are skipped. Credit "RiverNet – DMC / Leecom SCADA (rivernet.lk)" linked
+  (`app/RivernetNote.tsx`). Health check `rivernet` (warn) + archive `scripts/rivernet-snapshot.mjs` / `rivernet-snapshot.yml` (5-min points to `data:rivernet/`, every 2 h).
+  REMOVAL SWITCH: make `getRivernetLevels()` in `lib/rivernet.ts` return null (every caller shows nothing); then delete the catalogue callers. Plan: `research/rivernet-integration.md`.
 - **Gauge-corrected satellite rain** (`lib/rainCorrection.ts`, `scripts/rain-correct.mjs`, `rain-correct.yml`; DOCS.md "Gauge-corrected satellite rain"): the
   GSMaP 24 h rain adjusted with the live HMIS gauges (class x region median factor, shrunk to 1, plus faded gauge residuals). A NOTE and a /rain toggle only:
   the street-water rule, heavy-rain warning, push and official steps stay on RAW GSMaP until the logged corrected series (`data:rain-correction/log/`) is backtested.

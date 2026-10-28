@@ -20,6 +20,7 @@ import { NEWSWIRE_UA } from "./newsFeeds";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
 import { d1Query, d1Configured } from "./d1";
 import { getHmisLevels, getHmisRain, getHmisWarnings, hmisDirect, RAIN_MAX_AGE_MIN } from "./hmis";
+import { getRivernetLevels, rivernetDirect, RIVERNET_READ, type RivernetDevice } from "./rivernet";
 
 /** Hours since `fromMs`, not counting Saturdays and Sundays in Sri Lanka time. */
 function workingHoursSince(fromMs: number, now = Date.now()): number {
@@ -640,6 +641,29 @@ async function checkHmis(deep: boolean): Promise<HealthCheck> {
   });
 }
 
+// RiverNet (rivernet.lk): the extra river gauges and the 1-minute "Latest" notes. Normal mode reads the cached fetch; deep mode asks
+// RiverNet directly for two devices only (Pugoda, Kuru Ganga). Devices that stop reporting one at a time are normal (Kukule Ganga has been
+// offline since 26 Oct 2026); only a feed that is empty, mostly silent or stale fails. Warn only: the main gauges never depend on it.
+async function checkRivernet(deep: boolean): Promise<HealthCheck> {
+  return run("rivernet", "RiverNet (DMC / Leecom SCADA sensor network)", "The extra river gauges (Kalu Ganga tributaries, Mapitigama, Pugoda, Gampaha streams) and the 1-minute sensor notes are hidden; the main gauges are unaffected.", async () => {
+    let devices: RivernetDevice[];
+    if (deep) devices = await rivernetDirect(["693ymeaky0ow", "76k6cqo0ipwk"]);
+    else {
+      const lv = await getRivernetLevels(8000);
+      if (!lv) return { ok: false, detail: "no device could be read" };
+      devices = lv.devices;
+    }
+    const live = devices.filter((d) => d.series.length > 0);
+    const newest = devices.reduce((m, d) => Math.max(m, d.latestTs), 0);
+    const age = Date.now() - newest;
+    const detail = `${devices.length} of ${deep ? 2 : RIVERNET_READ.length} devices read, ${live.length} reporting, newest reading ${words(mins(age))} ago`;
+    if (devices.length < (deep ? 2 : Math.ceil(RIVERNET_READ.length * 0.7))) return { ok: false, detail: `${detail} (too few devices answered)`, ...fresh(newest) };
+    if (live.length < Math.ceil(devices.length / 2)) return { ok: false, detail: `${detail} (most sensors silent)`, ...fresh(newest) };
+    if (age > 3 * HOUR) return { ok: false, detail: `${detail}; newest reading is over 3 h old (timestamps are Sri Lanka time labelled UTC: see CLAUDE.md)`, ...fresh(newest) };
+    return { ok: true, detail, ...fresh(newest) };
+  });
+}
+
 // Vercel reports each production deploy as a GitHub commit status on main. A failed build
 // leaves the previous deploy live, so users see stale pages and fixes silently don't ship
 // (twice on 23 Oct 2026, ETIMEDOUT while prerendering). Flag failures and long-stuck builds.
@@ -704,6 +728,7 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
       return (h >= 6 && h < 23 ? 2 : 3) * HOUR; // runs every 15 min by day, hourly overnight
     }),
     checkWorkflow("pipe-hmis", "HMIS archive (data branch)", "hmis-snapshot.yml", "Nothing visible; the history that will let the 10-minute sensors and ground rain gauges be backtested has gaps (each run re-reads the last 24 h, so short gaps heal).", () => 3 * HOUR),
+    checkWorkflow("pipe-rivernet", "RiverNet archive (data branch)", "rivernet-snapshot.yml", "Nothing visible; the minute-level history that will let tributary travel times and the 1-minute sensors be fitted and backtested has gaps (each run re-reads the last 24 h, so short gaps heal).", () => 5 * HOUR),
     checkWorkflow("pipe-forecasts", "Hourly forecast store (Cloudflare D1)", "store-forecasts.yml", "Nothing visible; forecast accuracy checking has gaps.", () => 2 * HOUR),
     checkForecastRuns(deep),
     checkWorkflow("pipe-export", "Monthly prediction export", "export-predictions.yml", "Nothing visible; the monthly accuracy review has no new export.", () => null),
@@ -713,7 +738,7 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
 // ---------------------------------------------------------------- entry point
 
 export async function runHealthChecks(deep = false): Promise<HealthReport> {
-  const [gauges, sheet, season, wms, wmsWeekly, dmc, openai, weather, feeds, pipes, rainSensors, hmis] = await Promise.all([
+  const [gauges, sheet, season, wms, wmsWeekly, dmc, openai, weather, feeds, pipes, rainSensors, hmis, rivernet] = await Promise.all([
     checkGauges(deep),
     checkSheet(deep),
     checkSeason(deep),
@@ -726,8 +751,9 @@ export async function runHealthChecks(deep = false): Promise<HealthReport> {
     checkPipelines(deep),
     checkRainSensors(),
     checkHmis(deep),
+    checkRivernet(deep),
   ]);
-  const checks = [gauges, sheet, season, wms, wmsWeekly, dmc, openai, hmis, ...weather, rainSensors, ...feeds, ...pipes];
+  const checks = [gauges, sheet, season, wms, wmsWeekly, dmc, openai, hmis, rivernet, ...weather, rainSensors, ...feeds, ...pipes];
   return { ok: checks.every((c) => c.ok), checkedAt: new Date().toISOString(), deep, checks };
 }
 

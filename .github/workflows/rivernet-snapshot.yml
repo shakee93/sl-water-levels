@@ -1,0 +1,64 @@
+# Archives RiverNet (rivernet.lk) river levels to the `data` branch under rivernet/ (5-minute points per Colombo day)
+# (compact JSON per Colombo day, merged each run). Every 2 hours; RiverNet serves the last 24 h each time, so a skipped run heals.
+# This is the history RiverNet does not publish (it serves 24 h): the 1-minute sensors and the tributary gauges can later be backtested and their travel times fitted.
+
+name: RiverNet snapshot
+
+on:
+  schedule:
+    - cron: "23 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Same group as the other data-branch writers so they never push at once.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  rivernet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth=1 origin data
+            git worktree add archive FETCH_HEAD
+            git -C archive checkout -B data
+          else
+            git worktree add --orphan -b data archive
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Archive RiverNet
+        run: node --experimental-strip-types scripts/rivernet-snapshot.mjs archive
+
+      - name: Commit and push
+        working-directory: archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No change."
+            exit 0
+          fi
+          git commit -m "RiverNet $(TZ=Asia/Colombo date '+%F %H:%M')"
+          git push origin data
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true

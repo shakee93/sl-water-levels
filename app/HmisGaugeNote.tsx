@@ -2,6 +2,7 @@ import { hmisT } from "@/lib/i18n/hmis";
 import type { Locale } from "@/lib/i18n/config";
 import { formatDelta, formatLevel } from "@/lib/units";
 import type { NationalStation } from "@/lib/arcgis";
+import { RivernetNote } from "@/app/RivernetNote";
 
 const HOUR = 3_600_000;
 
@@ -19,6 +20,7 @@ export function HmisGaugeNote({ lang, station, nat, all }: { lang: Locale; stati
   const dir = change == null ? null : change > 0.02 ? "rising" : change < -0.02 ? "falling" : "steady";
   return (
     <>
+      {nat?.source === "rivernet" && <RivernetNote lang={lang} station={station} nat={nat} />}
       {nat?.source === "hmis" && (
         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400" data-testid="hmis-credit">
           {h("gauge.note", { n: nat.cadenceMin ?? 30 })} {h("creditWith", { inst: nat.institute ?? "" })}.{draft}

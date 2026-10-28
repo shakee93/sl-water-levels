@@ -63,6 +63,9 @@ export const UNIT_BY_STATION: Record<string, "ft" | "m"> = {
   // Gauges from HMIS (hmis.gov.lk), which publishes every level and threshold in metres (its sensor_type is "Waterlevel m").
   "Karawanella Bridge": "m", "Mahiyangana Bridge": "m", "Galodaya Bridge": "m", "Lavanai Aru Bridge": "m", "Maalayarkattu Bridge": "m",
   "Mullamunai Bridge": "m", "Pulipanchakal Bridge": "m", "Punani Anicut": "m", "Rajagalathenna Bridge": "m", "Vadamunai Bridge": "m",
+  // Gauges from RiverNet (rivernet.lk, lib/rivernetCalc.ts), also metres.
+  "Kuru Ganga (Kuruvita)": "m", "Galathura Oya (Ayagama)": "m", "Denawaka Ganga (Pelmadulla)": "m", "Kukule Ganga (Kalawana)": "m",
+  "Wey Ganga (Kahawaththa)": "m", "Niriella Ganga (Elapatha)": "m", "Mapitigama": "m", "Pugoda": "m", "Miriswatta": "m", "Wattala": "m",
 };
 
 // Callers that only have the thresholds (no gauge name) match on the alert/minor/major triple,

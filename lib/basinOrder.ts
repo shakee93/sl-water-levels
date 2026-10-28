@@ -11,7 +11,9 @@ export const BASIN_ORDER: Record<string, string[]> = {
     "Holombuwa",     // on Gurugoda Oya tributary
     "Deraniyagala",  // on Maguru Ganga tributary
     "Karawanella Bridge", // HMIS/ACCIMT gauge between Kithulgala and Glencourse
+    "Mapitigama", // RiverNet gauge, 4 km above Glencourse
     "Glencourse",
+    "Pugoda", // RiverNet gauge between Glencourse and Hanwella
     "Hanwella",
     "Nagalagam Street",
   ],
