@@ -1,5 +1,5 @@
 "use client";
-// Flood survey sheet: "pin your spot, how deep did it get". Past floods only (mainly Cyclone Ditwah). Fixed choices and optional numbers,
+// Flood survey sheet: "is your area flooded now?" first (water on the street right now, or dry), and past floods (mainly Cyclone Ditwah) as the second option. Fixed choices and optional numbers,
 // no free text, no names. Goes to the same private pipeline as "Report here" (POST /api/flood3d/report with survey: true): the exact spot
 // stays private, the public sees only area counts of 3 or more. The map is an illustration; answers never feed an official step.
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +25,7 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
   const box = useRef<HTMLDivElement>(null);
   const [opened] = useState(() => performance.now());
   const [step, setStep] = useState(0);
+  const [mode, setMode] = useState<"now" | "past">("now");
   const [event, setEvent] = useState<string | null>(null);
   const [wet, setWet] = useState<boolean | null>(null);
   const [street, setStreet] = useState<string | null>(null);
@@ -50,7 +51,7 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
     return () => { ro.disconnect(); onSheet(0); };
   }, [onSheet]);
 
-  const last = wet === false ? 1 : 3;
+  const last = wet === false ? 1 : mode === "now" ? 2 : 3;
   const num = (v: string) => (v.trim() === "" ? undefined : Number(v));
   const shareUrl = () => `${location.origin}${lang === "en" ? "" : `/${lang}`}/flood-survey`;
 
@@ -60,10 +61,11 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
       const r = await fetch("/api/flood3d/report", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          test: new URLSearchParams(location.search).has("f3dtest"), survey: true, kind: wet ? "past_wet" : "past_dry", event,
+          test: new URLSearchParams(location.search).has("f3dtest"), survey: true, kind: mode === "now" ? (wet ? "water_now" : "dry_now") : wet ? "past_wet" : "past_dry", event: mode === "now" ? undefined : event,
           streetLevel: wet ? street : undefined, streetFt: wet ? num(streetFt) : undefined, inside: wet ? inside ?? undefined : undefined,
           insideLevel: wet && inside === "yes" ? insideLevel ?? undefined : undefined, insideFt: wet && inside === "yes" ? num(insideFt) : undefined,
-          steps: wet ? num(steps) : undefined, floodMonth, peakDay: wet && day && day.startsWith(floodMonth) ? day : undefined, peakPart: wet ? part ?? undefined : undefined,
+          steps: wet ? num(steps) : undefined, floodMonth: mode === "now" ? colomboMonth() : floodMonth,
+          peakDay: mode === "past" && wet && day && day.startsWith(floodMonth) ? day : undefined, peakPart: mode === "past" && wet ? part ?? undefined : undefined,
           lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, cellFt: cell.cellFt ?? undefined, lang, consent: true, hp, ms: performance.now() - opened,
         }),
       });
@@ -77,7 +79,7 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
     }
   }
   async function share() {
-    const url = shareUrl(), text = tr("How deep did the flood get at your place? Pin your spot and tell us. It takes a minute and helps improve the flood map.");
+    const url = shareUrl(), text = tr("Is your area flooded? Pin your spot and say how deep the water is. It takes a minute and shows everyone where it is flooding.");
     try {
       if (navigator.share) { await navigator.share({ title: tr("Flood survey"), text, url }); return; }
       await navigator.clipboard.writeText(url);
@@ -92,13 +94,13 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
   const dmax = floodMonth ? (lastDay(floodMonth) < todayIso() ? lastDay(floodMonth) : todayIso()) : todayIso();
   const pickEvent = (k: string) => { setEvent(k); const m = FIRST_MONTH[k]; if (m) { setFYear(m.slice(0, 4)); setFMon(m.slice(5, 7)); } else { setFYear(""); setFMon(""); } setDay(""); };
   const years = Array.from({ length: +nowMonth.slice(0, 4) - 2009 }, (_, i) => String(+nowMonth.slice(0, 4) - i));
-  const nextOk = step === 0 ? true : step === 1 ? event != null && monthOk && wet != null : step === 2 ? street != null : true;
+  const nextOk = step === 0 ? true : step === 1 ? (mode === "now" || (event != null && monthOk)) && wet != null : step === 2 ? street != null : true;
   const consent = <p className="text-xs text-slate-600 dark:text-slate-400">{tr("Your exact spot is kept private and used only to improve the flood map. The public only ever sees counts for an area.")}</p>;
 
   return (
     <div ref={box} role="dialog" aria-label={tr("Flood survey")} className="absolute inset-x-0 bottom-0 z-20 max-h-[62%] overflow-y-auto rounded-t-xl border-t border-slate-300 bg-white p-3 text-sm text-slate-900 shadow-2xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
       <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold">{tr("How deep did it get?")}</p>
+        <p className="font-semibold">{mode === "now" ? tr("Is your area flooded now?") : tr("Tell us about a past flood")}</p>
         <button type="button" onClick={onClose} className="rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">{tr("Close")}</button>
       </div>
       {state === "done" ? (
@@ -124,8 +126,15 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
               {geoMsg && <p className="text-xs text-slate-600 dark:text-slate-400" role="status">{geoMsg}</p>}
             </div>
           )}
-          {step === 1 && (
+          {step === 1 && mode === "now" && (
             <div className="space-y-2">
+              <div className="space-y-1"><p className="text-xs font-medium">{tr("Is there flood water here right now?")}</p><div className="flex flex-wrap gap-2">{([[true, "Yes, there is water"], [false, "No, it is dry"]] as const).map(([k, l]) => <button key={String(k)} type="button" aria-pressed={wet === k} className={chip(wet === k)} onClick={() => setWet(k)}>{tr(l)}</button>)}</div></div>
+              <button type="button" className="text-xs text-sky-700 underline dark:text-sky-300" onClick={() => { setMode("past"); setWet(null); }}>{tr("Not flooded now? Tell us about a past flood (Cyclone Ditwah, 2016...)")}</button>
+            </div>
+          )}
+          {step === 1 && mode === "past" && (
+            <div className="space-y-2">
+              <button type="button" className="text-xs text-sky-700 underline dark:text-sky-300" onClick={() => { setMode("now"); setWet(null); }}>{tr("Back to: flooded now")}</button>
               <div className="space-y-1"><p className="text-xs font-medium">{tr("Which flood?")}</p><div className="flex flex-wrap gap-2">{EVENTS.map(([k, l]) => <button key={k} type="button" aria-pressed={event === k} className={chip(event === k)} onClick={() => pickEvent(k)}>{tr(l)}</button>)}</div></div>
               {event && (
                 <div className="space-y-1">
@@ -143,16 +152,16 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
           {step === 2 && (
             <div className="space-y-3">
               <div className="space-y-1">
-                <p className="text-xs font-medium">{tr("At its deepest, how deep was the water on the street outside?")}</p>
+                <p className="text-xs font-medium">{mode === "now" ? tr("How deep is the water on the street outside?") : tr("At its deepest, how deep was the water on the street outside?")}</p>
                 <div className="flex flex-wrap gap-2">{LEVELS.map(([k, l, h]) => <button key={k} type="button" aria-pressed={street === k} className={chip(street === k)} onClick={() => setStreet(k)} title={h}>{tr(l)} <span className="opacity-70">· {h}</span></button>)}</div>
                 <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">{tr("Or a number in feet (optional)")}<input type="number" inputMode="decimal" min={0} max={20} step={0.1} value={streetFt} onChange={(e) => setStreetFt(e.target.value)} className={field} aria-label={tr("Street depth in feet")} /></label>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium">{tr("Did water come inside the house?")} <span className="font-normal text-slate-500">({tr("optional")})</span></p>
+                <p className="text-xs font-medium">{mode === "now" ? tr("Is water inside the house?") : tr("Did water come inside the house?")} <span className="font-normal text-slate-500">({tr("optional")})</span></p>
                 <div className="flex flex-wrap gap-2">{([["no", "No"], ["yes", "Yes"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={inside === k} className={chip(inside === k)} onClick={() => setInside(inside === k ? null : k)}>{tr(l)}</button>)}</div>
                 {inside === "yes" && (
                   <>
-                    <p className="pt-1 text-xs">{tr("How deep was it inside?")}</p>
+                    <p className="pt-1 text-xs">{mode === "now" ? tr("How deep is it inside?") : tr("How deep was it inside?")}</p>
                     <div className="flex flex-wrap gap-2">{LEVELS.slice(0, 4).map(([k, l]) => <button key={k} type="button" aria-pressed={insideLevel === k} className={chip(insideLevel === k)} onClick={() => setInsideLevel(k)}>{tr(l)}</button>)}</div>
                     <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">{tr("Or a number in feet (optional)")}<input type="number" inputMode="decimal" min={0} max={15} step={0.1} value={insideFt} onChange={(e) => setInsideFt(e.target.value)} className={field} aria-label={tr("Depth inside in feet")} /></label>
                   </>

@@ -1,7 +1,7 @@
 // Reports from the 3D flood test map: what is accepted (pure, shared with the route and the tests) and the public area counts.
 // Free text is never accepted: only fixed choices, a position and a GPS accuracy.
 
-export const KINDS = ["water_now", "past_wet", "past_dry", "map_check"] as const;
+export const KINDS = ["water_now", "past_wet", "past_dry", "map_check", "dry_now"] as const; // dry_now: survey "no water here right now"
 export const DEPTHS = ["ankle", "knee", "waist", "above_waist", "house"] as const;
 export const EVENTS = ["ditwah_2025", "may_2016", "jun_2024", "other"] as const;
 export const MAP_RIGHT = ["yes", "no", "unsure"] as const;
@@ -65,9 +65,12 @@ export function validateReport(body: unknown): Verdict {
   let survey: Survey | null = null;
   let depthOut = needsDepth ? (depth as string) : null;
   if (body.survey === true) {
-    // survey: only past floods; "yes, water reached" (past_wet) needs a street level, "no" (past_dry) needs nothing more
-    if (kind !== "past_wet" && kind !== "past_dry") return { ok: false, reason: "invalid" };
-    const wet = kind === "past_wet";
+    // survey: "is your area flooded now?" (water_now / dry_now, the main question) or a past flood (past_wet / past_dry).
+    // Wet answers need a street level; dry answers need nothing more. A "now" answer is about this month and has no event or day.
+    if (kind !== "past_wet" && kind !== "past_dry" && kind !== "water_now" && kind !== "dry_now") return { ok: false, reason: "invalid" };
+    const now = kind === "water_now" || kind === "dry_now";
+    if (now && event != null) return { ok: false, reason: "invalid" };
+    const wet = kind === "past_wet" || kind === "water_now";
     if (wet && !oneOf(SURVEY_LEVELS, body.streetLevel)) return { ok: false, reason: "invalid" };
     const opt = <T extends string>(list: readonly T[], v: unknown): T | null | undefined => (v == null || v === "" ? null : oneOf(list, v) ? v : undefined);
     const inside = wet ? opt(SURVEY_INSIDE, body.inside) : null;
@@ -82,11 +85,12 @@ export function validateReport(body: unknown): Verdict {
     const day = body.peakDay == null || body.peakDay === "" ? null : typeof body.peakDay === "string" && /^20\d\d-[01]\d-[0-3]\d$/.test(body.peakDay) && !Number.isNaN(Date.parse(body.peakDay)) && body.peakDay >= "2016-04-01" && Date.parse(body.peakDay) <= Date.now() + 86_400_000 ? body.peakDay : undefined;
     if (day === undefined) return { ok: false, reason: "invalid" };
     // the month of the flood is required and must fit the named flood; a "deepest day" must fall in that month
-    const fm = typeof body.floodMonth === "string" && /^20\d\d-(0[1-9]|1[0-2])$/.test(body.floodMonth) ? body.floodMonth : null;
+    const fm = now ? colomboMonth() : typeof body.floodMonth === "string" && /^20\d\d-(0[1-9]|1[0-2])$/.test(body.floodMonth) ? body.floodMonth : null;
     if (!fm || fm < "2010-01" || fm > colomboMonth()) return { ok: false, reason: "invalid" };
     const allowed = EVENT_MONTHS[event as string];
     if (allowed && !allowed.includes(fm)) return { ok: false, reason: "invalid" };
     if (day && !day.startsWith(fm)) return { ok: false, reason: "invalid" };
+    if (now && (day || peakPart)) return { ok: false, reason: "invalid" };
     survey = {
       streetLevel: wet ? (body.streetLevel as string) : null, streetFt: streetFt == null ? null : Math.round(streetFt * 10) / 10, inside, insideLevel,
       insideFt: insideFt == null ? null : Math.round(insideFt * 10) / 10, steps: steps == null ? null : Math.round(steps), peakDay: day, peakPart, floodMonth: fm,

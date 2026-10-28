@@ -1094,7 +1094,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
 
         {!rep && !replayOn && !embed && (
           <button type="button" onClick={startSurvey} disabled={!ready} data-testid="survey-open" className="absolute z-10 inline-flex min-h-9 items-center gap-1.5 rounded-full bg-sky-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300" style={{ top: full ? "calc(env(safe-area-inset-top, 0px) + 64px)" : 60, left: full ? "calc(env(safe-area-inset-left, 0px) + 12px)" : 12 }}>
-            <Flag className="size-3.5" aria-hidden /> {tr("Tell us how deep it got")}
+            <Flag className="size-3.5" aria-hidden /> {tr("Is your area flooded now?")}
           </button>
         )}
 

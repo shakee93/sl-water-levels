@@ -44,7 +44,11 @@ assert.equal(v1.report.depth, "above_waist"); // chest maps onto the old scale
 assert.equal(v1.report.survey.streetFt, 4.2);
 assert.equal(v1.report.test, true);
 assert.equal(validateReport({ ...sv, kind: "past_dry", streetLevel: undefined, inside: undefined, insideLevel: undefined }).report.survey.streetLevel, null); // "no water" needs nothing more
-assert.equal(validateReport({ ...sv, kind: "water_now" }).reason, "invalid"); // survey is about past floods only
+assert.equal(validateReport({ ...sv, kind: "water_now" }).reason, "invalid"); // a "now" answer has no event or day
+const nowSv = { ...sv, kind: "water_now", event: undefined, peakDay: undefined, peakPart: undefined, floodMonth: undefined };
+assert.equal(validateReport(nowSv).ok, true); // "is your area flooded now?": the month is set by the server
+assert.equal(validateReport({ ...nowSv, kind: "dry_now", streetLevel: undefined, inside: undefined, insideLevel: undefined }).ok, true);
+assert.equal(validateReport({ ...nowSv, streetLevel: undefined }).reason, "invalid"); // water now needs a depth
 assert.equal(validateReport({ ...sv, streetLevel: "neck" }).reason, "invalid");
 assert.equal(validateReport({ ...sv, streetLevel: undefined }).reason, "invalid");
 assert.equal(validateReport({ ...sv, streetFt: 99 }).reason, "invalid");
