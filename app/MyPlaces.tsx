@@ -20,6 +20,7 @@ import { AlertsToggle } from "./AlertsToggle";
 import { useI18n } from "./LocaleProvider";
 import { TIER_DOT, TIER_TEXT_CLASS, colomboTime, type HomeStation } from "./tierUi";
 import { VERDICT } from "./verdict";
+import { STEADY_M_PER_H } from "@/lib/forecastRules.mjs";
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const CACHE_KEY = "sl_glance_v1";
@@ -67,7 +68,7 @@ function fromStation(s: HomeStation): Glance {
   const rate = s.rate3hM;
   return {
     key: `s:${s.station}`, kind: "s", name: stationDisplayName(s.station), href: s.href, tone: s.tier, street: null,
-    trend: s.tier === "stale" || rate == null ? "unknown" : Math.abs(rate) < 0.006 ? "steady" : rate > 0 ? "up" : "down",
+    trend: s.tier === "stale" || rate == null ? "unknown" : Math.abs(rate) < STEADY_M_PER_H ? "steady" : rate > 0 ? "up" : "down",
     levelText: null, rain24: null, rainNext24: null, gaugeStation: s.station, ts: s.ts,
   };
 }

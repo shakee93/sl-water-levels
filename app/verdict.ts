@@ -2,6 +2,7 @@
 // Sinhala and Tamil are machine translations (the cards say so when they are shown).
 import type { T3, VerdictTone } from "./ShareButton";
 import type { Unit } from "@/lib/units";
+import { STEADY_M_PER_H } from "../lib/forecastRules.mjs";
 
 export const VERDICT: Record<VerdictTone, T3> = {
   normal: { en: "Normal", si: "සාමාන්‍යයි", ta: "இயல்பு" },
@@ -25,7 +26,8 @@ export const DIR: Record<"fast" | "rising" | "slow" | "falling" | "steady", T3> 
 
 export const NEXT_HOUR: T3 = { en: "Next hour:", si: "ඊළඟ පැය:", ta: "அடுத்த மணி நேரம்:" };
 
-export const STEADY_M_PER_H = 0.006;
+// one threshold for the whole site: lib/forecastRules.mjs
+export { STEADY_M_PER_H };
 export const SLOW_M_PER_H = 0.05;
 /** About 0.8 ft an hour: Hanwella climbed 14 -> 22 ft in 9 h and Deraniyagala 8 -> 13 ft in 2 h on 26 Oct 2026 while the card only said "Rising". */
 export const FAST_M_PER_H = 0.25;

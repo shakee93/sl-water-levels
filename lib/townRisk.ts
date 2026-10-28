@@ -62,7 +62,7 @@ import type { Tier } from "./status";
 import { isTidalStation, liftVerdict } from "./verdictLift.ts";
 import type { Unit } from "./units";
 // @ts-ignore node strip-types needs explicit extensions
-import { hasNoForecast } from "./forecastRules.mjs";
+import { hasNoForecast, fallingOutlook, STEADY_M_PER_H } from "./forecastRules.mjs";
 // @ts-ignore node strip-types needs explicit extensions
 import { officialReleaseAlert } from "./releaseAlert.ts";
 
@@ -104,7 +104,7 @@ export const HEAVY_MM_6H = 50;
 /** ... or within 24 hours. */
 export const HEAVY_MM_24H = 100;
 /** A river rising by more than this (metres per hour) counts as rising; same as the gauge page. */
-export const RISING_M_PER_H = 0.006;
+export const RISING_M_PER_H = STEADY_M_PER_H;
 /** Personal level: within this fraction below the street's level counts as "close" (0.85, the same ratio as lib/status.ts WATCH_RATIO; kept literal so this file stays dependency-free). */
 export const PERSONAL_NEAR = 0.85;
 /** Rain below these totals is not worth a line in the reasons. */
@@ -514,7 +514,12 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     } else if (rain && rain.next24hP90Mm != null && rain.next24hP90Mm >= HEAVY_MM_24H) {
       day = { key: "n24.rainPossible", vars: { mm: r1(rain.next24hP90Mm) } };
     } else if (tone && rank(tone) >= rank("alert")) {
-      day = { key: "n24.stay", vars: {} };
+      // "Risk stays high" is wrong while the river falls (audit 28 Oct 2026: after a peak the model held the river high for a day while it dropped
+      // several feet). Falling over the last 3 h: say so. Tidal gauges are skipped: their 3 h rate is mostly the tide.
+      const fall = gauge && !isTidalStation(gauge.station)
+        ? fallingOutlook({ rate3hM: gauge.rate3hM, level: gauge.level, horizons: forecast?.horizons ?? [], mpu: forecast?.metresPerUnit ?? 1 })
+        : null;
+      day = { key: fall === "keeps" ? "n24.fallingKeeps" : fall === "now" ? "n24.falling" : "n24.stay", vars: {} };
     } else if (tone === "watch") {
       day = { key: "n24.watch", vars: {} };
     } else if (tone === "normal" && gauge && hasNoForecast(gauge.station)) {

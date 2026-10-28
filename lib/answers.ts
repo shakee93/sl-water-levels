@@ -8,6 +8,7 @@
 // files stay untouched.
 import type { NationalStation } from "./arcgis";
 import { stationDisplayName } from "./displayName";
+import { STEADY_M_PER_H } from "./forecastRules.mjs";
 import { fullStamp, riverName } from "./i18n/format";
 import type { Locale } from "./i18n/config";
 import type { TFn } from "./i18n/translate";
@@ -71,7 +72,7 @@ const D = {
 
 const lvText = (v: number, u: Unit, digits = 1) => (u ? `${shownNumber(v, u)} ft` : shownNumber(v, u, digits));
 
-const STEADY = 0.006; // m/h, same as app/verdict.ts
+const STEADY = STEADY_M_PER_H; // one threshold for the whole site (lib/forecastRules.mjs)
 const SLOW = 0.05;
 
 /** One sentence: the level now, against the official marks, and where it is heading. */

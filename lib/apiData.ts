@@ -8,6 +8,7 @@ import { stationSlug, basinSlug } from "./slug";
 import { toShown } from "./units";
 import { SITE } from "./seo";
 import { isTidalStation, riverRising } from "./verdictLift";
+import { STEADY_M_PER_H } from "./forecastRules.mjs";
 
 const r2 = (v: number | null) => (v == null ? null : Math.round(v * 100) / 100);
 const FT_IN_M = 0.3048;
@@ -19,8 +20,8 @@ export function levelRecord(s: NationalStation, now = Date.now()) {
   const st = statusFor(lvl, s.thresholds, s.latest?.ts, now);
   const rate = s.rate3hM;
   // a rise on a tidal gauge that is only the tide (level vs one tide cycle ago) is not "rising": X posts and answers read this field
-  const tideOnly = rate != null && rate >= 0.006 && isTidalStation(s.station) && !riverRising(s.station, s.trend24h, s.metresPerUnit, rate);
-  const trend = rate == null ? null : tideOnly || Math.abs(rate) < 0.006 ? "steady" : rate < 0 ? "falling" : rate < 0.05 ? "rising slowly" : "rising";
+  const tideOnly = rate != null && rate >= STEADY_M_PER_H && isTidalStation(s.station) && !riverRising(s.station, s.trend24h, s.metresPerUnit, rate);
+  const trend = rate == null ? null : tideOnly || Math.abs(rate) < STEADY_M_PER_H ? "steady" : rate < 0 ? "falling" : rate < 0.05 ? "rising slowly" : "rising";
   return {
     id: `${basinSlug(s.basin)}/${stationSlug(s.station)}`,
     station: stationDisplayName(s.station),

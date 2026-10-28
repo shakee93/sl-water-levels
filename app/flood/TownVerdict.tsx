@@ -143,9 +143,11 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
   // 3. a concrete "Next 24 hours" when the line would only say "Risk stays high" (forecast central levels the tiles already use)
   let dayKey = r.day.key as TKey;
   let dayVars: Record<string, string | number> = r.day.vars;
-  if (r.day.key === "n24.stay" && gg && !isTidalStation(gg.station) && input.forecast && input.forecast.status !== "unavailable") {
+  // "Falling now" stays unless the forecast sees the river rise again (peak / rising); only "Risk stays high" is swapped for the other day lines
+  const fallingDay = r.day.key === "n24.falling" || r.day.key === "n24.fallingKeeps";
+  if ((r.day.key === "n24.stay" || fallingDay) && gg && !isTidalStation(gg.station) && input.forecast && input.forecast.status !== "unavailable") {
     const o = dayOutlook({ level: gg.level, horizons: input.forecast.horizons, alertMark: gg.thresholds.alert, unit: gg.unit, shortOnly: isShortForecastGauge(gg.station) });
-    if (o) {
+    if (o && !(fallingDay && o.kind !== "peak" && o.kind !== "rising")) {
       const lv = (v: number) => formatLevel(v, gg.unit);
       if (o.kind === "peak") { dayKey = "n24.peak"; dayVars = { level: lv(o.level), time: timeAt(o.h) }; }
       else if (o.kind === "rising") { dayKey = "n24.rising"; dayVars = { level: lv(o.level) }; }

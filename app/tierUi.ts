@@ -1,5 +1,6 @@
 import type { Tier } from "@/lib/arcgis";
 import type { TFn } from "@/lib/i18n/translate";
+import { STEADY_M_PER_H } from "@/lib/forecastRules.mjs";
 
 // Shared tier vocabulary for the home page (list dots, favourites, map).
 // Worst first.
@@ -61,6 +62,6 @@ export type HomeStation = {
 };
 
 // Same threshold as lib/attention RISING_M_PER_H: below this a gauge is "steady".
-export const STEADY_M_PER_H = 0.006;
+export { STEADY_M_PER_H };
 
 export { formatAge, clock as colomboTime } from "@/lib/i18n/format";

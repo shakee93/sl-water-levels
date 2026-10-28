@@ -10,8 +10,8 @@ import { fetchBasinSnapshot, getNational } from "./arcgis";
 import { loadForecast, type Forecast } from "./forecast";
 import { rainRiskLine, type RainRisk } from "./rainRisk";
 import { FT_IN_M, toShown, type Unit } from "./units";
+import { STEADY_M_PER_H } from "./forecastRules.mjs";
 
-const STEADY_M_PER_H = 0.006; // same as app/verdict.ts
 const SLOW_M_PER_H = 0.05;
 const r2 = (v: number) => Math.round(v * 100) / 100;
 

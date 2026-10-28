@@ -27,7 +27,8 @@ import type { PillTier } from "@/app/TierPill";
 import type { EmbedCfg, Widget } from "./embedConfig";
 import { fetchBasinSnapshot } from "./arcgis";
 import { loadForecast } from "./forecast";
-import { ACTION, TIDE_RISE, forecastFact, smallChanceFact } from "@/app/Forecast";
+import { ACTION, TIDE_RISE, dayFact } from "@/app/Forecast";
+import { nextHourRateM } from "@/lib/forecastRules.mjs";
 import { VERDICT, directionFor, STEADY_M_PER_H } from "@/app/verdict";
 import { isTidalStation, liftVerdict, riverRising } from "./verdictLift";
 import { getReleases, releaseAffectingFrom } from "./releases";
@@ -489,7 +490,7 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     const now = f.asOfTs ?? me.latest?.ts ?? 0;
     const mpu = me.metresPerUnit ?? 1;
     const h1 = f.horizons.find((h) => h.h === 1);
-    const r = h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : (me.rate3hM ?? null);
+    const r = nextHourRateM({ h1ChangeM: h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null, rate3hM: me.rate3hM ?? null, source: me.source, method: f.method });
     const rising = riverRising(station, me.trend24h, mpu, me.rate3hM ?? null);
     const tideOnly = isTidalStation(station) && r != null && r > STEADY_M_PER_H && !rising;
     const lift = liftVerdict({ tier: nat.tier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
@@ -500,9 +501,8 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     const nearAlert = gapM != null && gapM > 0 && (gapM <= 1 || gapM <= alertLvl! * mpu * 0.2);
     const releaseLift = rising && nearAlert && !!release?.active && !!release?.confirmed;
     tone = relAlert ? "alert" : lift.verdict === "alert" && (nat.tier === "normal" || nat.tier === "watch") ? "alert" : (lift.verdict === "watch" || releaseLift) && nat.tier === "normal" ? "watch" : (nat.tier as VerdictTone);
-    const heavier = f.rainRisk != null || f.stormHorizons.length > 0;
-    const { fact } = forecastFact(f, nat.tier, now);
-    const day24 = lift.why === "small" && lift.crossing ? smallChanceFact(lift.crossing, lift.etaHours, heavier) : (fact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
+    // the same "Next 24 hours" line as the gauge page: one helper (app/Forecast.tsx dayFact), incl. "Falling now" for a falling river
+    const day24 = dayFact({ f, tier: nat.tier, now, lift, rate3hM: me.rate3hM ?? null, mpu, tidal: isTidalStation(station) });
     day = { label: c.e("w.fcDayLabel"), text: day24[L], ok: day24.en === "No flooding expected today" };
     const word = r == null ? null : tideOnly ? TIDE_RISE : directionFor(r);
     if (word) {

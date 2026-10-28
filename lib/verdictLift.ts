@@ -30,7 +30,7 @@ export const LIFT_P_CLOSE = 0.4;
 export const LIFT_CLOSE_FRAC = 0.15;
 export const LIFT_CLOSE_HOURS = 12;
 /** Non-tidal gauges: "rising" = 3 h rate above this (metres per hour), same as the steady band of the next-hour line. */
-export const RISING_M_PER_H = 0.006;
+export const RISING_M_PER_H = STEADY_M_PER_H;
 /** Tide repeats every 12.42 h (M2): comparing with the level this long ago compares the same tide phase. */
 export const TIDE_PERIOD_H = 12.4;
 /** Tidal gauges: a real rise = at least this much (metres, ~0.2 ft) above the level one tide cycle ago. */
@@ -45,6 +45,8 @@ export const TIDE_FIT_WINDOW_H = 6;
 export const TIDAL_STATIONS: ReadonlySet<string> = new Set(["Nagalagam Street", "Peradeniya", "Putupaula", "Thalgahagoda"]);
 // @ts-ignore node strip-types needs explicit extensions
 import { tideFt } from "./tide.ts";
+// @ts-ignore node strip-types needs explicit extensions
+import { STEADY_M_PER_H } from "./forecastRules.mjs";
 export const isTidalStation = (station: string): boolean => TIDAL_STATIONS.has(station);
 
 type Reading = { ts: number; water_level: number | null };

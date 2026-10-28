@@ -11,6 +11,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
 import { buildWaveInsight } from "@/lib/waveInsight";
 import { shortStamp } from "@/lib/i18n/format";
+import { STEADY_M_PER_H } from "@/lib/forecastRules.mjs";
 
 const dotForTone: Record<string, string> = {
   green: "bg-emerald-500",
@@ -26,7 +27,6 @@ function pct(level: number | null, threshold: number | null) {
   return Math.max(0, Math.min(150, (level / threshold) * 100));
 }
 
-const STEADY_M_PER_H = 0.006;
 
 function fmtRate(rateM: number, t: TFn) {
   const v = `${feetPerHour(rateM)} ${t("unit.ftPerH")}`;

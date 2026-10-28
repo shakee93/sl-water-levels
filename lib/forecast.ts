@@ -41,7 +41,8 @@ import stormModelJson from "./model/storm-model.json";
 import stormV4Json from "./model/storm-model-v4.json";
 import type { GsmapFile, GsmapGauge } from "./gsmap";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
-import { hasNoForecast, maxForecastHours, shownChance, shownWording } from "./forecastRules.mjs";
+import { STEADY_M_PER_H, fallingOutlook, hasNoForecast, maxForecastHours, shownChance, shownWording } from "./forecastRules.mjs";
+import { isTidalStation } from "./verdictLift";
 import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { isStormHour4, rainTotals, stormFeatures, stormFeatures4, tier4Bin, v4Rain } from "./model/stormModel.mjs";
@@ -107,8 +108,8 @@ const COLOMBO_MS = 5.5 * HOUR_MS;
 /** Scenario weights for the ensemble rain members at the 10th / 50th / 90th percentile of 24h total. */
 const SCEN_W = { p10: 0.3, p50: 0.4, p90: 0.3 };
 const Z80 = 1.2816;
-/** Below this the level is treated as steady: 0.018 m over 3h (the old 0.006 m/h). */
-const STEADY_3H_M = 0.018;
+/** Below this the level is treated as steady: 0.018 m over 3h = STEADY_M_PER_H (lib/forecastRules.mjs) times 3. */
+const STEADY_3H_M = STEADY_M_PER_H * 3;
 
 export type ThresholdName = "alert" | "minor" | "major";
 export type Wording = "likely" | "possible" | "unlikely" | "already";
@@ -611,7 +612,10 @@ function fromModel(
   if (above && upcoming) headline = `Above ${nameOf[above.threshold]} now and ${reach(upcoming)}.`;
   else if (above) {
     const stay = 1 - mixCdf(above.level, hLast.mix);
-    headline = stay >= LIKELY ? `Above ${nameOf[above.threshold]} now and expected to stay there for the next ${spanTxt}.` : `Above ${nameOf[above.threshold]} now but expected to ease below it within ${spanTxt}.`;
+    // Falling over the last 3 h: say so, never "expected to stay there" (audit 28 Oct 2026: the model held the river high for a day after a peak
+    // while it fell; "stay" was wrong in 71 of 71 checkable runs). A tidal gauge's fall is partly the tide, so it only gets "falling now".
+    const fall = fallingOutlook({ rate3hM: me.rate3hM, level: L0, horizons: isTidalStation(station) ? [] : hsV, mpu });
+    headline = fall ? `Above ${nameOf[above.threshold]} now and falling${fall === "keeps" ? "; expected to keep dropping" : ""}.` : stay >= LIKELY ? `Above ${nameOf[above.threshold]} now and expected to stay there for the next ${spanTxt}.` : `Above ${nameOf[above.threshold]} now but expected to ease below it within ${spanTxt}.`;
   } else if (upcoming) headline = cap(reach(upcoming)) + ".";
   else if (lowestName) {
     // A crossing that is "unlikely" by the persistence rule can still carry real probability (>= 20% at one horizon): hedge the wording.
@@ -835,7 +839,6 @@ function proximityWeight(distKm: number): number {
 // Thresholds were calibrated by eye on feet gauges; the metre values keep that
 // intent (0.02 ft/h ~ 0.006 m/h, 0.05 ft/h ~ 0.015 m/h, 0.1 ft/h ~ 0.03 m/h,
 // 0.5 ft ~ 0.15 m).
-const STEADY_M_PER_H = 0.006;
 const CONFIDENT_M_PER_H = 0.015;
 const LEADER_NOTE_M_PER_H = 0.03;
 const MIN_CLAMP_M = 0.15;

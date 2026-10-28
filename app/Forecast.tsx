@@ -28,6 +28,7 @@ import { PLACES } from "@/lib/places";
 import { fallSummary, heavyRainAround, nearRain24hClipped, riseSummary, townsNear } from "@/lib/levelNotes";
 import { CALL, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
 import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
+import { fallingOutlook, nextHourRateM } from "@/lib/forecastRules.mjs";
 
 const HOUR = 3_600_000;
 const mm = (v: number | null) => (v == null ? "—" : v < 10 ? v.toFixed(1) : String(Math.round(v)));
@@ -125,6 +126,41 @@ export const noEstimateBeyond = (h: number): T3 => ({
   ta: `இந்த வேகமான ஆற்றுக்கு ${h} மணி நேரத்துக்கு மேல் மதிப்பீடு இல்லை`,
 });
 
+/** "Falling now" / "Falling; expected to keep dropping": the day line for a river that fell over the last 3 h (lib/forecastRules.mjs fallingOutlook). si / ta: DRAFT translations. */
+export const FALLING_DAY: Record<"now" | "keeps", T3> = {
+  now: { en: "Falling now", si: "දැන් පහළ යයි", ta: "இப்போது குறைகிறது" },
+  keeps: { en: "Falling; expected to keep dropping", si: "පහළ යයි; තවදුරටත් පහළ යනු ඇතැයි අපේක්ෂා කෙරේ", ta: "குறைகிறது; தொடர்ந்து குறையும் என எதிர்பார்க்கப்படுகிறது" },
+};
+
+/**
+ * The "Next 24 hours" line of a gauge's card: the ONE place it is built (the gauge page and the forecast embed both call it).
+ * Order: no forecast for this gauge, a small-chance crossing, a crossing the forecast states, then (Alert or above, falling over the last
+ * 3 h) "Falling now" instead of any steady wording, then the forecast's own fact, then "No estimate yet".
+ */
+export function dayFact(o: {
+  f: ForecastT;
+  /** The gauge's own tier (not lifted). */
+  tier: string;
+  now: number;
+  lift: { why: string | null; crossing: { threshold: string } | null; etaHours: number | null } | null;
+  /** Last 3 h rate, metres per hour. */
+  rate3hM: number | null;
+  mpu: number;
+  tidal: boolean;
+}): T3 {
+  const { f } = o;
+  if (f.noForecast) return NO_FORECAST_FACT;
+  const heavier = f.rainRisk != null || f.stormHorizons.length > 0;
+  if (o.lift?.why === "small" && o.lift.crossing) return smallChanceFact(o.lift.crossing, o.lift.etaHours, heavier);
+  const { fact, target } = forecastFact(f, o.tier, o.now);
+  const elevated = o.tier === "alert" || o.tier === "minor" || o.tier === "major";
+  if (target < 0 && elevated) {
+    const fall = fallingOutlook({ rate3hM: o.rate3hM, level: f.currentLevel, horizons: o.tidal ? [] : f.horizons, mpu: o.mpu });
+    if (fall) return FALLING_DAY[fall];
+  }
+  return fact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" };
+}
+
 export const TIDE_RISE: T3 = {
   en: "Rising with the tide (about the same once the tide is allowed for)",
   si: "වඩින මුහුදු රැළි සමඟ ඉහළ යයි (රැළි සලකා බැලූ විට පාහේ එලෙසමයි)",
@@ -170,17 +206,15 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
 
   const stale = realTier === "stale";
   const now = f.asOfTs ?? latest?.ts ?? 0;
-  const { fact: forecastLine } = stale ? { fact: null } : forecastFact(f, realTier, now);
 
   // "Next hour": the forecast's 1 h change when there is one (metres, unit-aware),
   // otherwise the recent 3 h rate as a persistence guess.
   const h1 = f.horizons.find((h) => h.h === 1);
   const mpu = me?.metresPerUnit ?? 1;
+  // RiverNet / HMIS-only gauges have no model: the tile reads the measured 3 h rate, like the sentence at the top of the page (lib/forecastRules.mjs)
   const r = stale
     ? null
-    : h1 && f.currentLevel != null
-      ? (h1.level - f.currentLevel) * mpu
-      : (me?.rate3hM ?? null);
+    : nextHourRateM({ h1ChangeM: h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null, rate3hM: me?.rate3hM ?? null, source: me?.source, method: f.method });
   // "Rising" means the river is rising: on a tidal gauge (Nagalagam Street...) the twice-daily tide moves the level by
   // 0.6-0.8 ft, so it is judged against the level one tide cycle ago (lib/verdictLift.ts), and a tide-only rise is said so.
   const tidal = isTidalStation(selectedStation);
@@ -239,14 +273,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         ? "watch"
         : realTier;
   // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
-  const heavier = f.rainRisk != null || f.stormHorizons.length > 0;
-  const fact: T3 | null = stale
-    ? null
-    : noFc
-    ? NO_FORECAST_FACT
-    : lift?.why === "small" && lift.crossing
-      ? smallChanceFact(lift.crossing, lift.etaHours, heavier)
-      : (forecastLine ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
+  const fact: T3 | null = stale ? null : dayFact({ f, tier: realTier, now, lift, rate3hM: me?.rate3hM ?? null, mpu, tidal });
 
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const dc = elevated ? contactsForDistrict(district) : null;

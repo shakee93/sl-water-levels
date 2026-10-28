@@ -38,6 +38,7 @@ import type { TFn } from "@/lib/i18n/translate";
 const nowMs = () => Date.now();
 
 import { SITE } from "@/lib/seo";
+import { STEADY_M_PER_H } from "@/lib/forecastRules.mjs";
 
 const TIER_RANK: Record<Tier, number> = {
   major: 6, minor: 5, alert: 4, watch: 3, normal: 2, none: 1, stale: 0,
@@ -60,8 +61,8 @@ async function worstStatus(basin: string, t: TFn): Promise<string | null> {
 function trendCounts(list: { rate3hM: number | null }[]) {
   const have = list.filter((s) => s.rate3hM != null);
   if (!have.length) return null;
-  const same = have.filter((s) => Math.abs(s.rate3hM as number) < 0.006).length;
-  const up = have.filter((s) => (s.rate3hM as number) >= 0.006).length;
+  const same = have.filter((s) => Math.abs(s.rate3hM as number) < STEADY_M_PER_H).length;
+  const up = have.filter((s) => (s.rate3hM as number) >= STEADY_M_PER_H).length;
   return { up, same, down: have.length - same - up };
 }
 

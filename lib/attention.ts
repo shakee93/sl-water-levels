@@ -43,10 +43,12 @@ export const TIER_LABEL: Record<AttentionTier, string> = {
 // flooding the section with the whole dry-zone. Tune it in status.ts.
 export const APPROACHING_RATIO = WATCH_RATIO;
 
+import { STEADY_M_PER_H } from "./forecastRules.mjs";
+
 // A gauge counts as "rising" above this 3h rate, in METRES per hour so feet and
 // metre gauges are treated alike. 0.006 m/h is the old 0.02 ft/h (the point at
 // which BasinFlow's arrow stops calling a gauge "steady").
-export const RISING_M_PER_H = 0.006;
+export const RISING_M_PER_H = STEADY_M_PER_H;
 
 export type StationAttention = {
   station: string;
