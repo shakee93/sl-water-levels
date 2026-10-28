@@ -49,7 +49,13 @@ const D = {
     si: "{name} දැන් මට්ටමක් වාර්තා කරන්නේ නැත. අවසන් කියවීම {lv}, {stamp} (ශ්‍රී ලංකා වේලාවෙන්).",
     ta: "{name} தற்போதைய நிலையைத் தெரிவிக்கவில்லை. கடைசி அளவீடு {lv}, {stamp} (இலங்கை நேரம்).",
   },
-  noData: { en: "{name} has no water-level reading available right now.", si: "{name} සඳහා දැන් ජල මට්ටම් කියවීමක් නැත.", ta: "{name} க்கு இப்போது நீர்மட்ட அளவீடு இல்லை." },
+  noLevel: { en: "{name} has no water-level reading available right now.", si: "{name} සඳහා දැන් ජල මට්ටම් කියවීමක් නැත.", ta: "{name} க்கு இப்போது நீர்மட்ட அளவீடு இல்லை." },
+  // no reading in the Irrigation Department's feed at all: it keeps about 7 days, so the gauge itself has been silent at least that long (si/ta drafts)
+  noData: {
+    en: "{name} has not sent a reading in the last 7 days. The gauge is not reporting at the Irrigation Department, so there is no level to show; it will appear here as soon as the gauge reports again.",
+    si: "{name} පසුගිය දින 7 තුළ කියවීමක් එවා නැත. වාරිමාර්ග දෙපාර්තමේන්තුවේ මෙම මානය දත්ත නොඑවයි, එබැවින් පෙන්වීමට මට්ටමක් නැත; මානය නැවත දත්ත එවූ විගස මෙහි පෙන්වයි.",
+    ta: "{name} கடந்த 7 நாட்களில் எந்த அளவீட்டையும் அனுப்பவில்லை. நீர்ப்பாசனத் திணைக்களத்தில் இந்த அளவி தரவு அனுப்பவில்லை, எனவே காட்ட நீர்மட்டம் இல்லை; அளவி மீண்டும் தரவு அனுப்பியதும் இங்கே தோன்றும்.",
+  },
 } satisfies Record<string, L3>;
 
 const lvText = (v: number, u: Unit, digits = 1) => (u ? `${shownNumber(v, u)} ft` : shownNumber(v, u, digits));
@@ -61,7 +67,8 @@ const SLOW = 0.05;
 export function stationAnswer(lang: Locale, t: TFn, s: NationalStation): string {
   const name = stationDisplayName(s.station);
   const river = riverName(s.basin.trim(), lang);
-  if (!s.latest || s.latest.water_level == null) return W(D.noData, lang, { name });
+  if (!s.latest) return W(D.noData, lang, { name });
+  if (s.latest.water_level == null) return W(D.noLevel, lang, { name });
   const lv = lvText(s.latest.water_level, s.unit);
   const stamp = fullStamp(s.latest.ts, t);
   if (s.tier === "stale") return W(D.stale, lang, { name, lv, stamp });
