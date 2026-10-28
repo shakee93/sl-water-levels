@@ -38,6 +38,8 @@ import { Anomaly } from "@/app/Anomaly";
 import { TideLineClient } from "@/app/colombo/TideLineClient";
 import { BetweenReadings } from "@/app/colombo/BetweenReadings";
 import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
+import { SpotNudge } from "@/app/feedback/SpotNudge";
+import { fbFor } from "@/lib/i18n/feedback";
 import { d1Configured } from "@/lib/d1";
 import { BOUNDS } from "@/lib/flood3dReports";
 import { ReleaseCard } from "@/app/ReleaseCard";
@@ -292,6 +294,7 @@ export default async function StationPage({
           <Suspense key={`fast-${station}`} fallback={null}>
             <FasterReading lang={lang} station={station} />
           </Suspense>
+          {d1Configured() && nat && inFloodCorridor(nat.latitude, nat.longitude) && <SpotNudge label={fbFor(lang)("fb.spotNudge")} />}
         </header>
 
         {stationsError ? (

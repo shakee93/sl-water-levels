@@ -24,6 +24,8 @@ import { formatLevel } from "@/lib/units";
 import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
 import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
+import { SpotNudge } from "@/app/feedback/SpotNudge";
+import { fbFor } from "@/lib/i18n/feedback";
 import { LowSpot } from "@/app/flood/LowSpot";
 import { ColomboBlock, basinCanalHigh } from "@/app/colombo/ColomboBlock";
 import { getCanals } from "@/lib/curw";
@@ -161,6 +163,7 @@ export default async function TownPage({ params }: Params) {
             {lang === "en" && townAliases(place).length > 0 && ` · ${seoFor(lang)("town.also", { list: townAliases(place).join(", ") })}`}
           </p>
           <AnswerLine text={answer} note={mt} />
+          {d1Configured() && g && FLOOD3D_TOWNS.has(place.slug) && <SpotNudge label={fbFor(lang)("fb.spotNudge")} />}
         </header>
 
         <TownVerdict

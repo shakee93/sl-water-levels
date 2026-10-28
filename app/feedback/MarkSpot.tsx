@@ -4,7 +4,7 @@
 // this step: the map component, MapLibre and the base style are fetched then, never on page load. Sends exactly what the survey's "now" answers
 // send (POST /api/flood3d/report, survey: true, water_now / dry_now) through the same helper. The exact spot stays private (area counts of 3 or
 // more are all the public sees). Official steps and verdicts never read it.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { CircleCheck, LocateFixed, MapPinned, Map as MapIcon, X } from "lucide-react";
 import type { FT, FKey } from "@/lib/i18n/feedback";
@@ -28,6 +28,13 @@ const inBounds = (lat: number, lon: number) => lat >= BOUNDS.south && lat <= BOU
 
 export function MarkSpot({ ft, lang, lat, lon, page, target }: { ft: FT; lang: "en" | "si" | "ta"; lat: number; lon: number; page: string; target: string }) {
   const [open, setOpen] = useState(false);
+  // the "Flooded where you are? Tell us" link at the top of the page points at #mark-spot: arriving there opens this step
+  useEffect(() => {
+    const on = () => { if (location.hash === "#mark-spot") setOpen(true); };
+    on();
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
   const opened = useRef(0);
   const [pos, setPos] = useState<Pos | null>(null);
   const [geo, setGeo] = useState<"idle" | "busy" | "off" | "out">("idle");

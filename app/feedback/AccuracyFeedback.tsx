@@ -369,7 +369,7 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
           </p>
         </>
       )}
-      {spot && <MarkSpot ft={ft} lang={lang} lat={spot.lat} lon={spot.lon} page={page} target={target} />}
+      {spot && <div id="mark-spot" className="scroll-mt-24"><MarkSpot ft={ft} lang={lang} lat={spot.lat} lon={spot.lon} page={page} target={target} /></div>}
     </section>
   );
 }
