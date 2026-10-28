@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-28T18:50:41.802Z",
+  "updatedAt": "2026-10-28T22:54:11.643Z",
   "asOf": "2026-10-29",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 116,
-    "feedback": 102,
+    "total": 120,
+    "feedback": 105,
     "street": 12,
-    "flood3d": 2,
-    "newTonight": 9,
-    "trusted": 2,
+    "flood3d": 3,
+    "newTonight": 4,
+    "trusted": 3,
     "flagged": 0
   },
   "streetLevel": {
@@ -26,7 +26,7 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 46,
+      "steps": 52,
       "stepDays": 3,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 46,
+      "steps": 52,
       "stepDays": 3,
       "events": 4,
       "eventDays": 3,
@@ -97,7 +97,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 46,
+      "steps": 52,
       "stepDays": 3,
       "events": 0,
       "eventDays": 0,
@@ -106,7 +106,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 46,
+      "steps": 52,
       "stepDays": 3,
       "events": 0,
       "eventDays": 0,
@@ -115,7 +115,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 46,
+      "steps": 52,
       "stepDays": 3,
       "events": 0,
       "eventDays": 0,
@@ -124,7 +124,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 46,
+      "steps": 52,
       "stepDays": 3,
       "events": 0,
       "eventDays": 0,
@@ -134,21 +134,21 @@
   "forecast": {
     "window": {
       "from": "2026-10-22",
-      "to": "2026-10-28",
-      "points": 6756
+      "to": "2026-10-29",
+      "points": 7066
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 2296,
-          "maeBase": 0.14,
+          "n": 2396,
+          "maeBase": 0.15,
           "maeFit": 0.14,
           "gainPct": 1,
           "maePooled": 0.15,
           "pooledGainPct": -2
         },
         "3": {
-          "n": 2272,
+          "n": 2375,
           "maeBase": 0.34,
           "maeFit": 0.34,
           "gainPct": 1,
@@ -156,11 +156,11 @@
           "pooledGainPct": 0
         },
         "6": {
-          "n": 2182,
-          "maeBase": 0.66,
-          "maeFit": 0.66,
+          "n": 2289,
+          "maeBase": 0.65,
+          "maeFit": 0.65,
           "gainPct": 0,
-          "maePooled": 0.66,
+          "maePooled": 0.65,
           "pooledGainPct": 0
         }
       },
@@ -215,6 +215,14 @@
       "trusted": 0,
       "newTrusted": 0,
       "newPeople": 0,
+      "needNew": 10,
+      "needPeople": 3,
+      "due": false
+    },
+    "Kelani floodplain (elsewhere)": {
+      "trusted": 1,
+      "newTrusted": 1,
+      "newPeople": 1,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -297,6 +305,13 @@
     },
     {
       "kind": "map",
+      "name": "Kelani floodplain (elsewhere)",
+      "have": 1,
+      "need": 10,
+      "missing": 9
+    },
+    {
+      "kind": "map",
       "name": "Kelaniya",
       "have": 2,
       "need": 10,
@@ -305,13 +320,6 @@
     {
       "kind": "streetLevel",
       "name": "Moragaswewa",
-      "have": 1,
-      "need": 3,
-      "missing": 2
-    },
-    {
-      "kind": "streetLevel",
-      "name": "Dunamale",
       "have": 1,
       "need": 3,
       "missing": 2

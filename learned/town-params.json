@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-28T18:50:41.802Z",
+  "updatedAt": "2026-10-28T22:54:11.643Z",
   "asOf": "2026-10-29",
   "minimums": {
     "answers": 3,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 104,
-    "people": 99,
+    "answers": 105,
+    "people": 100,
     "streetReports": 12,
-    "days": 3
+    "days": 4
   },
   "stations": {
     "Badalgama": {
@@ -197,10 +197,10 @@
     },
     "Dunamale": {
       "answers": {
-        "n": 9,
-        "days": 2,
+        "n": 10,
+        "days": 3,
         "yes": 8,
-        "worse": 0,
+        "worse": 1,
         "better": 1,
         "unsure": 0
       },
@@ -218,6 +218,15 @@
         "better": 0,
         "errN": 7,
         "meanErrFt": 0.3
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.07
       }
     },
     "Peradeniya": {
@@ -470,6 +479,14 @@
   },
   "pending": [
     {
+      "kind": "streetLevel",
+      "station": "Dunamale",
+      "n": 2,
+      "days": 2,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
       "kind": "streetRain",
       "zone": "colombo-east",
       "n": 2,
@@ -487,14 +504,6 @@
     },
     {
       "kind": "streetLevel",
-      "station": "Dunamale",
-      "n": 1,
-      "days": 1,
-      "needN": 3,
-      "needDays": 2
-    },
-    {
-      "kind": "streetLevel",
       "station": "Kalawellawa (Millakanda)",
       "n": 1,
       "days": 1,
@@ -505,20 +514,20 @@
   "forecast": {
     "window": {
       "from": "2026-10-22",
-      "to": "2026-10-28",
-      "points": 6756
+      "to": "2026-10-29",
+      "points": 7066
     },
     "horizons": {
       "1": {
-        "n": 2296,
-        "maeBase": 0.14,
+        "n": 2396,
+        "maeBase": 0.15,
         "maeFit": 0.14,
         "gainPct": 1,
         "maePooled": 0.15,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 2272,
+        "n": 2375,
         "maeBase": 0.34,
         "maeFit": 0.34,
         "gainPct": 1,
@@ -526,11 +535,11 @@
         "pooledGainPct": 0
       },
       "6": {
-        "n": 2182,
-        "maeBase": 0.66,
-        "maeFit": 0.66,
+        "n": 2289,
+        "maeBase": 0.65,
+        "maeFit": 0.65,
         "gainPct": 0,
-        "maePooled": 0.66,
+        "maePooled": 0.65,
         "pooledGainPct": 0
       }
     },
