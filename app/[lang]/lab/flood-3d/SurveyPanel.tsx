@@ -63,7 +63,7 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
       insideLevel: wet && inside === "yes" ? insideLevel ?? undefined : undefined, insideFt: wet && inside === "yes" ? num(insideFt) : undefined,
       steps: wet ? num(steps) : undefined, floodMonth: mode === "now" ? colomboMonth() : floodMonth,
       peakDay: mode === "past" && wet && day && day.startsWith(floodMonth) ? day : undefined, peakPart: mode === "past" && wet ? part ?? undefined : undefined,
-      lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, cellFt: cell.cellFt ?? undefined, lang, consent: true, hp, ms: performance.now() - opened,
+      lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, cellFt: cell.cellFt ?? undefined, lang, page: location.pathname.includes("flood-survey") ? "survey" : "lab", consent: true, hp, ms: performance.now() - opened,
     });
     if (res.state === "done") { setArea(res.area); setState("done"); } else setState(res.state);
   }

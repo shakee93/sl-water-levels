@@ -25,6 +25,7 @@ import { basinPath } from "@/lib/slug";
 import { FloodReport } from "@/app/flood/FloodReport";
 import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
 import { SpotNudge } from "@/app/feedback/SpotNudge";
+import { SpotCard } from "@/app/feedback/SpotCard";
 import { fbFor } from "@/lib/i18n/feedback";
 import { LowSpot } from "@/app/flood/LowSpot";
 import { ColomboBlock, basinCanalHigh } from "@/app/colombo/ColomboBlock";
@@ -163,7 +164,7 @@ export default async function TownPage({ params }: Params) {
             {lang === "en" && townAliases(place).length > 0 && ` · ${seoFor(lang)("town.also", { list: townAliases(place).join(", ") })}`}
           </p>
           <AnswerLine text={answer} note={mt} />
-          {d1Configured() && g && FLOOD3D_TOWNS.has(place.slug) && <SpotNudge label={fbFor(lang)("fb.spotNudge")} />}
+          {d1Configured() && <SpotNudge label={fbFor(lang)("fb.spotNudge")} />}
         </header>
 
         <TownVerdict
@@ -182,7 +183,8 @@ export default async function TownPage({ params }: Params) {
         {place.rainZone && data.input.streetRain !== undefined && risk.lowSpot && lowSpotCard}
         {d1Configured() && risk.lowSpot && <FloodReport slug={place.slug} town={place.name} urgent />}
 
-        {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} spot={FLOOD3D_TOWNS.has(place.slug) ? { lat: place.lat, lon: place.lon } : undefined} />}
+        {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} spot={{ lat: place.lat, lon: place.lon }} />}
+        {d1Configured() && !g && <SpotCard lat={place.lat} lon={place.lon} page="town" target={place.slug} />}
 
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} learned={streetLevelOf(learned, g.station)} />}
 

@@ -28,6 +28,17 @@ export type Survey = {
 
 /** Corridor plus margin (same as the map's covered area); anything else is not a report about this map. */
 export const BOUNDS = { south: 6.82, north: 7.12, west: 79.79, east: 80.33 };   // the extended picture (28 Oct 2026): mouth to Ruwanwella; keep in step with accuracy.json png + 0.02
+/** The Kelani corridor, by its role: the only reports the 3D flood map is fitted and learned on (prep.py, reports-export.mjs, learn-all.mjs). */
+export const CORRIDOR_BOUNDS = BOUNDS;
+/** Sri Lanka with a small margin (28 Oct 2026): where a survey answer (now / past flood) is accepted from, on any town or gauge page. */
+export const SL_BOUNDS = { south: 5.85, north: 9.9, west: 79.5, east: 81.95 };
+export const inCorridor = (lat: number, lon: number): boolean => lat >= BOUNDS.south && lat <= BOUNDS.north && lon >= BOUNDS.west && lon <= BOUNDS.east;
+export const inSriLanka = (lat: number, lon: number): boolean => lat >= SL_BOUNDS.south && lat <= SL_BOUNDS.north && lon >= SL_BOUNDS.west && lon <= SL_BOUNDS.east;
+/** Rows (with lat / lon) that count for anything about the flood map: non-corridor rows are kept for pattern analysis only. */
+export const corridorOnly = <T extends { lat: number; lon: number }>(rows: T[]): T[] => rows.filter((r) => inCorridor(r.lat, r.lon));
+/** Pages a report can come from, and the shape of the page's target (town slug or gauge name): context for pattern analysis, never trusted for anything else. */
+export const PAGES = ["town", "station", "survey", "lab"] as const;
+const TARGET_RE = /^[A-Za-z0-9][A-Za-z0-9 .()'-]{0,63}$/;
 export const MAX_PER_PERSON_DAY = 10;
 export const MIN_FILL_MS = 2000;
 
@@ -38,6 +49,8 @@ export type Report = {
   test: boolean;
   /** Present when the report came from the flood survey (kind past_wet / past_dry, event set). */
   survey: Survey | null;
+  /** The page the survey was opened on ("town" | "station" | "survey" | "lab") and its target (town slug / gauge name); null when absent or not in the expected shape. */
+  page: string | null; target: string | null;
 };
 export type Verdict = { ok: true; report: Report } | { ok: false; reason: "invalid" | "outside" | "bot" };
 
@@ -54,7 +67,8 @@ export function validateReport(body: unknown): Verdict {
   if (!oneOf(KINDS, kind)) return { ok: false, reason: "invalid" };
   const lat = num(body.lat, -90, 90), lon = num(body.lon, -180, 180);
   if (lat == null || lon == null) return { ok: false, reason: "invalid" };
-  if (lat < BOUNDS.south || lat > BOUNDS.north || lon < BOUNDS.west || lon > BOUNDS.east) return { ok: false, reason: "outside" };
+  // survey answers ("water here now", a past flood) are welcome anywhere in Sri Lanka; the map's own reports stay inside the corridor
+  if (body.survey === true ? !inSriLanka(lat, lon) : !inCorridor(lat, lon)) return { ok: false, reason: "outside" };
   if (!oneOf(["gps", "pin"] as const, src)) return { ok: false, reason: "invalid" };
   const needsDepth = kind === "water_now" || kind === "past_wet";
   const needsEvent = kind === "past_wet" || kind === "past_dry";
@@ -98,11 +112,13 @@ export function validateReport(body: unknown): Verdict {
     depthOut = wet ? LEVEL_TO_DEPTH[body.streetLevel as (typeof SURVEY_LEVELS)[number]] : null;
   }
   const lg = oneOf(["en", "si", "ta"] as const, lang) ? lang : "en";
+  const page = oneOf(PAGES, body.page) ? body.page : null;
+  const target = page && typeof body.target === "string" && TARGET_RE.test(body.target) ? body.target : null;
   return {
     ok: true,
     report: {
       kind, depth: depthOut, event: needsEvent ? (event as string) : null, lat, lon,
-      acc: num(body.acc, 0, 100_000), src, mapRight: typeof mapRight === "string" ? mapRight : null, cellFt: num(body.cellFt, -10, 40), lang: lg, test: body.test === true, survey,
+      acc: num(body.acc, 0, 100_000), src, mapRight: typeof mapRight === "string" ? mapRight : null, cellFt: num(body.cellFt, -10, 40), lang: lg, test: body.test === true, survey, page, target,
     },
   };
 }

@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { CircleCheck, LocateFixed, MapPinned, Map as MapIcon, X } from "lucide-react";
 import type { FT, FKey } from "@/lib/i18n/feedback";
-import { BOUNDS, colomboMonth } from "@/lib/flood3dReports";
+import { colomboMonth, inCorridor, inSriLanka } from "@/lib/flood3dReports";
 import { LEVELS, postSurveyReport } from "@/app/[lang]/lab/flood-3d/surveyShared";
 import { trackEvent } from "@/lib/umami";
 
@@ -24,10 +24,10 @@ const chip = (on: boolean) =>
   }`;
 
 type Pos = { lat: number; lon: number; acc: number | null; src: "gps" | "pin" };
-const inBounds = (lat: number, lon: number) => lat >= BOUNDS.south && lat <= BOUNDS.north && lon >= BOUNDS.west && lon <= BOUNDS.east;
 
-export function MarkSpot({ ft, lang, lat, lon, page, target }: { ft: FT; lang: "en" | "si" | "ta"; lat: number; lon: number; page: string; target: string }) {
-  const [open, setOpen] = useState(false);
+export function MarkSpot({ ft, lang, lat, lon, page, target, startOpen = false }: { ft: FT; lang: "en" | "si" | "ta"; lat: number; lon: number; page: string; target: string; startOpen?: boolean }) {
+  const [open, setOpen] = useState(startOpen);
+  const [area, setArea] = useState<{ name: string; n: number } | null>(null);
   // the "Flooded where you are? Tell us" link at the top of the page points at #mark-spot: arriving there opens this step
   useEffect(() => {
     const on = () => { if (location.hash === "#mark-spot") setOpen(true); };
@@ -51,7 +51,7 @@ export function MarkSpot({ ft, lang, lat, lon, page, target }: { ft: FT; lang: "
     navigator.geolocation.getCurrentPosition(
       (p) => {
         const { latitude: la, longitude: lo, accuracy } = p.coords;
-        if (!inBounds(la, lo)) return setGeo("out");
+        if (!inSriLanka(la, lo)) return setGeo("out");
         setGeo("idle");
         setPos({ lat: la, lon: lo, acc: accuracy, src: "gps" });
       },
@@ -66,20 +66,23 @@ export function MarkSpot({ ft, lang, lat, lon, page, target }: { ft: FT; lang: "
     const res = await postSurveyReport({
       kind: wet ? "water_now" : "dry_now", floodMonth: colomboMonth(),
       streetLevel: wet ? street : undefined, inside: wet ? inside ?? undefined : undefined,
-      lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, lang, consent: true, hp, ms: performance.now() - opened.current,
+      lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, lang, page, target, consent: true, hp, ms: performance.now() - opened.current,
     });
     if (res.state === "done") trackEvent("feedback_spot_sent", { page, target, wet: wet ? "yes" : "no", how: pos.src });
+    if (res.state === "done") setArea(res.area);
     setState(res.state);
   }
 
   if (state === "done") {
+    // the flood map covers the Kelani corridor only: elsewhere there is nothing to link to
     const href = `${lang === "en" ? "" : `/${lang}`}/lab/flood-3d?ll=${pos!.lon.toFixed(4)},${pos!.lat.toFixed(4)},16.5,55`;
     return (
       <div className="mt-4 border-t border-sky-200 pt-4 text-sm text-slate-800 dark:border-sky-900 dark:text-slate-200" role="status" data-testid="spot-thanks">
         <p className="flex items-start gap-2"><CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {ft("fb.spotThanks")}</p>
-        <a href={href} className={`mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-sky-600 px-4 text-sm font-semibold text-sky-700 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950/40 ${ring}`}>
+        {area && <p className="mt-1 pl-6 text-xs text-slate-600 dark:text-slate-400">{ft("fb.spotCount", { n: area.n, area: area.name })}</p>}
+        {inCorridor(pos!.lat, pos!.lon) && <a href={href} className={`mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-sky-600 px-4 text-sm font-semibold text-sky-700 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950/40 ${ring}`}>
           <MapIcon className="size-4" aria-hidden /> {ft("fb.spotMap")}
-        </a>
+        </a>}
       </div>
     );
   }
@@ -115,7 +118,7 @@ export function MarkSpot({ ft, lang, lat, lon, page, target }: { ft: FT; lang: "
           <MiniPickMap
             center={[lon, lat]}
             pos={pos}
-            onPick={(la, lo) => { if (inBounds(la, lo)) setPos({ lat: la, lon: lo, acc: null, src: "pin" }); }}
+            onPick={(la, lo) => { if (inSriLanka(la, lo)) setPos({ lat: la, lon: lo, acc: null, src: "pin" }); }}
             help={{ win: ft("fb.spotGWin"), mac: ft("fb.spotGMac"), mobile: ft("fb.spotGMob") }}
             onFail={() => setMapFail(true)}
           />

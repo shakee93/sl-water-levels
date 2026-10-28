@@ -217,6 +217,7 @@ if os.environ.get("REPORTS") and os.path.exists(os.environ["REPORTS"]):
     cand = []
     for r in json.load(open(os.environ["REPORTS"])):
         if r.get("status") in ("outlier", "test"): continue
+        if not (6.82 <= r["lat"] <= 7.12 and 79.79 <= r["lon"] <= 80.33): skipped["outside"] += 1; continue   # BOUNDS of lib/flood3dReports.ts: survey answers from elsewhere in Sri Lanka are not map evidence
         k = r["kind"]
         if k == "water_now": st, wet = r.get("nag_ft"), True
         elif k == "past_wet": st, wet = REPORT_STAGE.get(r.get("event")), True

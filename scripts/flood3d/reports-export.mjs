@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // OWNER-SIDE ONLY. Exports the flood3d_reports table (precise positions!) from D1 to a local JSON file for scripts/flood3d/prep.py (REPORTS=file).
 // The file holds exact coordinates: keep it in the scratchpad, never commit it, never copy it to the public data branch.
+// CORRIDOR ONLY: survey answers from elsewhere in Sri Lanka are left out (the 3D map is fitted on the Kelani corridor); scripts/reports-export-all.mjs exports everything.
 // Read-only, one indexed query (id range). Usage: node scripts/flood3d/reports-export.mjs <out.json>   (needs wrangler's login, like feedback-export)
 //
 // WHAT prep.py SHOULD READ (prep.py is not changed by this commit; today it uses only kind / event / nag_ft / lat / lon / acc_m / status):
@@ -21,6 +22,7 @@
 //   map without a fit run and the usual false-alarm check.
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { BOUNDS } from "../../lib/flood3dReports.ts";
 const out = process.argv[2];
 if (!out) { console.error("usage: node scripts/flood3d/reports-export.mjs <out.json>"); process.exit(1); }
 
@@ -30,7 +32,7 @@ const OLD = "id, created_ms, kind, depth, event, lat, lon, lat3, lon3, acc_m, sr
 const NEW = "survey, street_level, street_ft, inside, inside_level, inside_ft, steps_above_road, peak_day, peak_part, flood_month, person_day AS person";
 const query = (cols) => {
   const raw = execFileSync("npx", ["-y", "wrangler@4", "d1", "execute", "sl-water-levels", "--remote", "--json", "--command",
-    `SELECT ${cols} FROM flood3d_reports WHERE status != 'test' ORDER BY id LIMIT 5000`],
+    `SELECT ${cols} FROM flood3d_reports WHERE status != 'test' AND lat BETWEEN ${BOUNDS.south} AND ${BOUNDS.north} AND lon BETWEEN ${BOUNDS.west} AND ${BOUNDS.east} ORDER BY id LIMIT 5000`],
     { encoding: "utf8", maxBuffer: 64 << 20, env: { ...process.env, CLOUDFLARE_ACCOUNT_ID: "83e812aa5ee674fe01ce3a9eb1e04cbe" }, stdio: ["ignore", "pipe", "pipe"] });
   return JSON.parse(raw.slice(raw.indexOf("[")))[0].results;
 };

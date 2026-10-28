@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import type { Map as MlMap, Marker } from "maplibre-gl";
 import { loadBaseStyle } from "./mapStyle";
 import { loadMl } from "./ml";
-import { BOUNDS } from "@/lib/flood3dReports";
+import { SL_BOUNDS } from "@/lib/flood3dReports";
 
 export type PickHelp = { win: string; mac: string; mobile: string };
 
@@ -26,7 +26,7 @@ export default function MiniPickMap({ center, pos, onPick, help, onFail }: { cen
         const [ml, style] = await Promise.all([loadMl(), loadBaseStyle(dark)]);
         if (dead || !box.current) return;
         const map = new ml.Map({
-          container: box.current, style: style as never, center, zoom: 15.5, maxBounds: [[BOUNDS.west, BOUNDS.south], [BOUNDS.east, BOUNDS.north]],
+          container: box.current, style: style as never, center, zoom: 15.5, maxBounds: [[SL_BOUNDS.west, SL_BOUNDS.south], [SL_BOUNDS.east, SL_BOUNDS.north]],
           attributionControl: { compact: true }, cooperativeGestures: true, dragRotate: false, pitchWithRotate: false,
           locale: { "CooperativeGesturesHandler.WindowsHelpText": help.win, "CooperativeGesturesHandler.MacHelpText": help.mac, "CooperativeGesturesHandler.MobileHelpText": help.mobile },
         });

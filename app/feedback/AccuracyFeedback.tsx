@@ -33,7 +33,7 @@ type Loc = { state: "none" } | { state: "busy" } | { state: "off" } | { state: "
 /**
  * "Is this right?" under the verdict. One tap answers; then an optional second step (what they see, a note, a rough location).
 
- * With `spot` (only where the flood map covers the place) it also offers "Mark it on the map": a mini flood survey (app/feedback/MarkSpot.tsx)
+ * With `spot` (every town and gauge page since 28 Oct 2026, anywhere in Sri Lanka) it also offers "Mark it on the map": a mini flood survey (app/feedback/MarkSpot.tsx)
  * whose map and MapLibre load only when it is opened.
  * Location is read only when the person taps the button and is rounded to 0.01 degree (about 1 km) here, before anything is sent.
  */

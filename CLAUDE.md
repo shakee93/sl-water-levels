@@ -172,6 +172,7 @@ lib/
   GSMaP 24 h rain adjusted with the live HMIS gauges (class x region median factor, shrunk to 1, plus faded gauge residuals). A NOTE and a /rain toggle only:
   the street-water rule, heavy-rain warning, push and official steps stay on RAW GSMaP until the logged corrected series (`data:rain-correction/log/`) is backtested.
 
+- **Flood survey from anywhere** (28 Oct 2026): the "Mark your spot" survey and its top pill show on ALL town and gauge pages; `/api/flood3d/report` accepts survey answers from the Sri Lanka box (`SL_BOUNDS`) and stamps page/target, district, the nearest river gauge and rain gauge (`lib/reportContext.ts`, d1/0017, from existing caches). Only corridor (`BOUNDS`) rows feed the 3D map or learning (`corridorOnly()`); `scripts/reports-export-all.mjs` is the owner's private all-rows export. See DOCS.md "Flood survey".
 - **3D flood test map** (unlisted, noindex): `/lab/flood-3d` (en only). Offline prep in `scripts/flood3d/` (fetch.py, prep.py; GLO-30 +
   OSM via Overpass; run from a venv with rasterio/pyproj/shapely, small enough for the laptop) writes `public/flood3d/` (level.png =
   per-cell flood level in ft at Nagalagam, fitted on the EMSR851 maps; roads tagged with level; accuracy.json). Live gauges via

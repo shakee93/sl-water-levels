@@ -1,7 +1,7 @@
 // @ts-nocheck (node strip-types test: explicit .ts extensions)
 // node --experimental-strip-types scripts/flood3d.test.mts
 import assert from "node:assert/strict";
-import { validateReport, round3, AREAS } from "../lib/flood3dReports.ts";
+import { validateReport, round3, AREAS, corridorOnly, inCorridor, inSriLanka, SL_BOUNDS, BOUNDS } from "../lib/flood3dReports.ts";
 import { phi, pWet, chanceClass, gaugeSpread, hanwellaMToNagFt, nagFtToHanwellaM } from "../app/[lang]/lab/flood-3d/chance.ts";
 
 const ok = { kind: "water_now", depth: "knee", lat: 6.955, lon: 79.922, acc: 12, src: "gps", consent: true, hp: "", ms: 5000, lang: "si" };
@@ -113,3 +113,25 @@ import { composeLive } from "../lib/flood3dCompose.ts";
   assert.equal(composeLive([], { now: 1 }, rec, [], 18, box, "Kelani Ganga"), null);
   console.log("flood3d live composition passed");
 }
+
+// survey answers from anywhere in Sri Lanka (28 Oct 2026); the map's own reports stay in the corridor
+const galle = { ...sv, lat: 6.0535, lon: 80.221 }, ratnapura = { ...sv, lat: 6.6828, lon: 80.3992 };
+assert.equal(validateReport(galle).ok, true);
+assert.equal(validateReport(ratnapura).ok, true);
+assert.equal(validateReport({ ...sv, lat: 9.66, lon: 80.01 }).ok, true); // Jaffna
+assert.equal(validateReport({ ...sv, lat: 12.97, lon: 77.59 }).reason, "outside"); // Bengaluru
+assert.equal(validateReport({ ...sv, lat: 5.0, lon: 80.2 }).reason, "outside"); // open sea south of the island
+assert.equal(validateReport({ ...ok, lat: 6.0535, lon: 80.221 }).reason, "outside"); // a non-survey map report from Galle: not about this map
+assert.equal(validateReport({ kind: "water_now", survey: true, streetLevel: "knee", lat: 6.0535, lon: 80.221, src: "pin", consent: true, hp: "", ms: 9000, page: "town", target: "galle" }).report.target, "galle");
+const ctx = (extra) => validateReport({ kind: "dry_now", survey: true, lat: 6.0535, lon: 80.221, src: "pin", consent: true, hp: "", ms: 9000, ...extra }).report;
+assert.equal(ctx({ page: "station", target: "Nagalagam Street" }).page, "station");
+assert.equal(ctx({ page: "station", target: "Nagalagam Street" }).target, "Nagalagam Street");
+assert.equal(ctx({ page: "evil", target: "galle" }).page, null); // an unknown page is dropped, the report is kept
+assert.equal(ctx({ page: "town", target: "<script>alert(1)</script>" }).target, null); // a target outside the strict pattern is dropped
+assert.equal(ctx({ page: "town", target: "x".repeat(80) }).target, null);
+assert.equal(ctx({ target: "galle" }).target, null); // no page, no target
+// corridor-only consumers (learn-all.mjs, reports-export.mjs, prep.py) drop the rest
+assert.ok(inCorridor(6.955, 79.922) && !inCorridor(6.0535, 80.221) && inSriLanka(6.0535, 80.221) && !inSriLanka(12.97, 77.59));
+assert.ok(SL_BOUNDS.south < BOUNDS.south && SL_BOUNDS.north > BOUNDS.north && SL_BOUNDS.west < BOUNDS.west && SL_BOUNDS.east > BOUNDS.east);
+assert.deepEqual(corridorOnly([{ id: 1, lat: 6.955, lon: 79.922 }, { id: 2, lat: 6.0535, lon: 80.221 }, { id: 3, lat: 7.12, lon: 80.33 }]).map((r) => r.id), [1, 3]);
+console.log("flood3d survey-anywhere tests ok");

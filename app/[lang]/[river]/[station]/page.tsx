@@ -41,7 +41,6 @@ import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
 import { SpotNudge } from "@/app/feedback/SpotNudge";
 import { fbFor } from "@/lib/i18n/feedback";
 import { d1Configured } from "@/lib/d1";
-import { BOUNDS } from "@/lib/flood3dReports";
 import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { RiverMap } from "@/app/RiverMap";
@@ -71,7 +70,7 @@ function heading(t: TFn, station: string, basin: string | null | undefined, lang
 }
 
 // the flood map (and its report route) covers only the Kelani corridor: gauges outside it get no "mark your spot" step
-const inFloodCorridor = (lat: number, lon: number) => Number.isFinite(lat) && Number.isFinite(lon) && lat >= BOUNDS.south && lat <= BOUNDS.north && lon >= BOUNDS.west && lon <= BOUNDS.east;
+const hasPoint = (lat: number, lon: number) => Number.isFinite(lat) && Number.isFinite(lon);
 
 export async function generateMetadata({
   params,
@@ -294,7 +293,7 @@ export default async function StationPage({
           <Suspense key={`fast-${station}`} fallback={null}>
             <FasterReading lang={lang} station={station} />
           </Suspense>
-          {d1Configured() && nat && inFloodCorridor(nat.latitude, nat.longitude) && <SpotNudge label={fbFor(lang)("fb.spotNudge")} />}
+          {d1Configured() && nat && hasPoint(nat.latitude, nat.longitude) && <SpotNudge label={fbFor(lang)("fb.spotNudge")} />}
         </header>
 
         {stationsError ? (
@@ -312,7 +311,7 @@ export default async function StationPage({
             {station === "Nagalagam Street" && <BetweenReadings />}
             {station === "Nagalagam Street" && <TideLineClient />}
 
-            {d1Configured() && nat && <AccuracyFeedback page="station" station={station} name={stationDisplayName(station)} tone={nat.tier} spot={inFloodCorridor(nat.latitude, nat.longitude) ? { lat: nat.latitude, lon: nat.longitude } : undefined} />}
+            {d1Configured() && nat && <AccuracyFeedback page="station" station={station} name={stationDisplayName(station)} tone={nat.tier} spot={hasPoint(nat.latitude, nat.longitude) ? { lat: nat.latitude, lon: nat.longitude } : undefined} />}
 
             <StationNearby
               current={station}

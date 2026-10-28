@@ -22,7 +22,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import { PLACES } from "../lib/places.ts";
-import { AREAS } from "../lib/flood3dReports.ts";
+import { AREAS, corridorOnly } from "../lib/flood3dReports.ts";
 import { pickRain } from "../lib/groundRain.ts";
 import { nearestGauge, distKm } from "../lib/feedbackCheck.mjs";
 import { FAR } from "../lib/feedbackCheck.mjs";
@@ -58,7 +58,8 @@ ev.flood3d ??= []; ev.groundLog ??= [];
 if (!ev.stations) ev.stations = readJson(path.join(arch, "stations.json")) ?? undefined;
 
 // ---------------------------------------------------------------------------------------------------------------- 3D-map reports: trust
-const f3 = ev.flood3d.filter((r) => r.status !== "test");
+// the 3D map learns from the Kelani corridor only: survey answers from other parts of Sri Lanka (accepted since 28 Oct 2026) are for pattern analysis, not this
+const f3 = corridorOnly(ev.flood3d.filter((r) => r.status !== "test"));
 const contradicted = neighbourFlags(f3);
 const f3Strength = new Map(f3.map((r) => [r.id, reportStrength(r, { contradicted: contradicted.has(r.id) })]));
 const areaOf = (lat, lon) => AREAS.find((a) => lat >= a.south && lat <= a.north && lon >= a.west && lon <= a.east)?.name ?? "Kelani floodplain (elsewhere)";
