@@ -12,6 +12,10 @@ import { STORY_STRINGS } from "./strings";
 import { STORY_FAMILY, storyFonts } from "./fonts";
 import { ChartSvg, plotChart, TIER_COLOR } from "./chart";
 
+/** Satori does not shape the joiner (U+200D / U+200C) in Sinhala yansaya and rakaransaya, which leaves a stray mark: without it the letters read correctly. */
+const z = (v: string) => v.replace(/[\u200c\u200d]/g, "");
+const clean = <T,>(v: T): T => (typeof v === "string" ? (z(v) as T) : Array.isArray(v) ? (v.map(clean) as T) : v && typeof v === "object" ? (Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === "readings" || k === "forecast" ? x : clean(x)])) as T) : v);
+
 const F: CSSProperties = { display: "flex" };
 const COL: CSSProperties = { display: "flex", flexDirection: "column" };
 const INK = "#0f172a", MUTED = "#475569", BRAND = "#0369a1";
@@ -62,7 +66,7 @@ function Brand({ lang, size }: { lang: StoryModel["lang"]; size: number }) {
   return (
     <div style={{ ...F, alignItems: "center", fontSize: size, fontWeight: 800, color: BRAND }}>
       <Drop size={size * 1.3} />
-      <div style={{ ...F, marginLeft: size * 0.35 }}>{t("site.name")}</div>
+      <div style={{ ...F, marginLeft: size * 0.35 }}>{z(t("site.name"))}</div>
     </div>
   );
 }
@@ -72,7 +76,7 @@ function Footer({ m, d }: { m: StoryModel; d: Dim }) {
   return (
     <div style={{ ...COL, alignItems: "center", width: "100%" }}>
       <div style={{ ...F, fontSize: d.brand, fontWeight: 800, color: BRAND, letterSpacing: -1 }}>waterlevels.lk</div>
-      {m.where !== "waterlevels.lk" && <div style={{ ...F, fontSize: d.where, fontWeight: 500, color: MUTED, marginTop: 6 }}>{`${s.liveAt} ${m.where}`}</div>}
+      {m.where !== "waterlevels.lk" && <div style={{ ...F, fontSize: d.where, fontWeight: 500, color: MUTED, marginTop: 6 }}>{z(`${s.liveAt} ${m.where}`)}</div>}
     </div>
   );
 }
@@ -82,7 +86,7 @@ function ChartCard({ m, d, w }: { m: StoryModel; d: Dim; w: number }) {
   const e = embedT(m.lang);
   const t = getI18n(m.lang).t;
   const s = STORY_STRINGS[m.lang];
-  const lab = { alert: t("mark.alert"), minor: t("mark.minor"), major: t("mark.major") };
+  const lab = { alert: z(t("mark.alert")), minor: z(t("mark.minor")), major: z(t("mark.major")) };
   const innerW = w - 2 * 28;
   const plot = plotChart(c, innerW, d.chartH, lab, c.unit === "m" ? 2 : 1);
   if (!plot.has) return null;
@@ -91,8 +95,8 @@ function ChartCard({ m, d, w }: { m: StoryModel; d: Dim; w: number }) {
   return (
     <div style={{ ...COL, width: w, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 36, padding: 28 }}>
       <div style={{ ...F, justifyContent: "space-between", fontSize: small, fontWeight: 500, color: MUTED, marginBottom: 14 }}>
-        <div style={F}>{s.last24}</div>
-        {plot.fc && <div style={{ ...F, color: "#0284c7", fontWeight: 800 }}>{`${s.forecast} →`}</div>}
+        <div style={F}>{z(s.last24)}</div>
+        {plot.fc && <div style={{ ...F, color: "#0284c7", fontWeight: 800 }}>{`${z(s.forecast)} →`}</div>}
       </div>
       <div style={{ ...F, position: "relative", width: innerW, height: d.chartH }}>
         <ChartSvg plot={plot} w={innerW} h={d.chartH} stroke={d.chartH > 400 ? 7 : 6} tier={m.tier} />
@@ -243,7 +247,8 @@ function Og({ m }: { m: StoryModel }) {
 
 const CACHE = "public, s-maxage=300, stale-while-revalidate=600";
 
-export async function renderStory(m: StoryModel, format: StoryFormat): Promise<Response> {
+export async function renderStory(model: StoryModel, format: StoryFormat): Promise<Response> {
+  const m = clean(model);
   const size = SIZES[format];
   const fonts = await storyFonts(m.lang);
   const img = new ImageResponse(format === "og" ? <Og m={m} /> : <Card m={m} d={DIM[format]} />, { ...size, fonts, headers: { "Cache-Control": CACHE, "CDN-Cache-Control": CACHE, "Vercel-CDN-Cache-Control": CACHE } });
