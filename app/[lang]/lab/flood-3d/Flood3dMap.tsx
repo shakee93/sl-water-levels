@@ -170,7 +170,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const nearShot = replayOn && rp ? rp.shots.find((x) => Math.abs(x.h - rpI) <= 6) ?? null : null;
 
   // Deep link for testing and sharing a view: ?lv=7.2 (what-if Nagalagam ft) &chance=6 (horizon h) &past=1 &plain=1 &d3=0|1
-  const startView = useRef<[number, number, number] | null>(null);
+  const startView = useRef<[number, number, number, number?] | null>(null);
   /* eslint-disable react-hooks/set-state-in-effect -- reads the URL once on mount (client only, so no hydration mismatch) */
   useEffect(() => {
     const q = new URLSearchParams(embed ? "" : location.search); // inline on a town page: the page URL is not the map's
@@ -180,7 +180,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     if (q.get("plain")) setPlain(true);
     if (q.get("order")) setOrder(true);
     if (q.get("replay")) { setReplayOn(true); const t = +(q.get("t") ?? ""); if (Number.isFinite(t) && q.get("t")) setRpIdx(t); else setPlaying(true); }
-    const ll = q.get("ll")?.split(",").map(Number); if (ll && ll.length === 3 && ll.every(Number.isFinite)) startView.current = [ll[0], ll[1], ll[2]];
+    // ll=lon,lat,zoom[,pitch]: links from town pages open close in, tilted, with the 3D buildings (pitch 0-70)
+    const ll = q.get("ll")?.split(",").map(Number); if (ll && (ll.length === 3 || ll.length === 4) && ll.every(Number.isFinite)) { startView.current = [ll[0], ll[1], ll[2], Math.max(0, Math.min(70, ll[3] ?? 0))]; if ((ll[3] ?? 0) > 0) setThreeD(true); }
     if (embed && view) startView.current = view; // inline on a town page: the town, whatever the page URL says
     if (q.has("d3")) forced3d.current = q.get("d3") === "1";
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount only: embed and view never change for a mounted map
@@ -640,7 +641,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
           for (const t of ["touchend", "touchcancel", "dragstart", "zoomstart"] as const) map.on(t, cancel);
           map.on("movestart", () => { if (!adjusting.current) setCtxRef.current?.(null); });
           for (const id of ["roads-main", "roads-local", "f3d-gauges", "f3d-rain-gauges"]) { map.on("mouseenter", id, () => (map!.getCanvas().style.cursor = "pointer")); map.on("mouseleave", id, () => (map!.getCanvas().style.cursor = "")); }
-          if (startView.current) map.jumpTo({ center: [startView.current[0], startView.current[1]], zoom: startView.current[2] });
+          if (startView.current) map.jumpTo({ center: [startView.current[0], startView.current[1]], zoom: startView.current[2], pitch: startView.current[3] ?? 0 });
           setThreeD(embed ? false : forced3d.current ?? !phone);
           }
           buildUpLater(); // the heavy upsampling runs after the base map has started loading its tiles
@@ -1052,7 +1053,8 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
       const m = mapRef.current, c = m?.getCenter(), z = m?.getZoom();
       const base = lang === "en" ? "/lab/flood-3d" : `/${lang}/lab/flood-3d`;
       const rp0 = ditwah ? "replay=1&t=155&" : "";
-      return c && z != null ? `${base}?${rp0}ll=${c.lng.toFixed(5)},${c.lat.toFixed(5)},${z.toFixed(1)}` : `${base}${ditwah ? "?replay=1&t=155" : ""}`;
+      // the full map opens at street level (zoom 16.5 or closer, tilted 55 degrees) so houses and streets are readable
+      return c && z != null ? `${base}?${rp0}ll=${c.lng.toFixed(5)},${c.lat.toFixed(5)},${Math.max(16.5, z).toFixed(1)},55` : `${base}${ditwah ? "?replay=1&t=155" : ""}`;
     };
     return (
       <div className="flex h-full min-h-0 flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" data-testid="flood3d-embed">
