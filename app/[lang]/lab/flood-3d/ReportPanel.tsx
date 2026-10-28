@@ -2,6 +2,7 @@
 // "Report here" sheet for the 3D flood test map. Fixed choices only (no free text), position and accuracy from the GPS spot or the dragged
 // pin. The consent line is shown right above the Send button; the position is sent to our own /api/flood3d/report and kept private.
 import { useRef, useState } from "react";
+import { trackEvent } from "@/lib/umami";
 import { Camera, X } from "lucide-react";
 import { preparePhoto, type Prepared } from "./photos";
 
@@ -69,6 +70,7 @@ export function ReportPanel({ pos, cell, onClose, tr, lang, photosEnabled = fals
         if (sent < photos.length) setPhotoMsg(tr("Your report was saved, but {n} photo(s) could not be sent.", { n: photos.length - sent }));
       }
       setState("done");
+      trackEvent("f3d_report_sent", { kind: kind ?? "map_check", how: pos.src });
     } catch {
       setState("error");
     }

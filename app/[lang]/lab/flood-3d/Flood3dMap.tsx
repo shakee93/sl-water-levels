@@ -14,6 +14,7 @@ import { ReplayCard, replayTime, type ReplayData } from "./Replay";
 import { depthM, poolTaper } from "./depth";
 import { ReportPanel, type CellInfo, type RepPos } from "./ReportPanel";
 import { SurveyPanel } from "./SurveyPanel";
+import { trackEvent } from "@/lib/umami";
 import { chanceClass, gaugeSpread, hanwellaMToNagFt, pWet, type Calibration, type Chance } from "./chance";
 
 type Horizon = { h: number; level: number; low: number | null; high: number | null };
@@ -77,6 +78,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const toggleFull = useCallback(() => {
     const el = embed ? embedRoot.current : wrap.current;
     if (!full) {
+      trackEvent("f3d_fullscreen", { where: embed ? "card" : "map" });
       setFull(true);
       el?.requestFullscreen?.().catch(() => {});
     } else {
@@ -346,16 +348,24 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const cell: CellInfo = rep ? cellAtLL(rep.lon, rep.lat) : { covered: false, shaded: false, cellFt: null };
    
   const locate = () => { if (!consented) setConsentAsk(true); else findMe(); };
+  useEffect(() => {
+    if (!embed || !full || !ready) return;
+    let off = false;
+    navigator.permissions?.query({ name: "geolocation" as PermissionName }).then((p) => { if (!off && p.state === "granted") findMe(); }).catch(() => {});
+    return () => { off = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embed, full, ready]);
   // Locate me: navigator.geolocation directly (never on load, only after the consent line). First a precise try, then a coarser, patient one.
   const findMe = () => {
     if (!navigator.geolocation) { setGeoMsg(tr("Your browser cannot share its location.")); return; }
     setGeoMsg(tr("Finding your location\u2026"));
     const msgFor = (code: number) => code === 1 ? tr("Location is blocked for this site. Allow it in the browser's site settings (padlock icon).") : code === 2 ? tr("Your device couldn't find its location. Turn Wi-Fi on (Macs locate using nearby Wi-Fi), even on Ethernet. On a Mac, turn on Location Services for your browser in System Settings \u203a Privacy & Security \u203a Location Services; on a phone, turn on Location.") : tr("Finding your location took too long. Try again near a window or with Wi-Fi on.");
-    const ok = (pos: GeolocationPosition) => showMe(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+    const ok = (pos: GeolocationPosition) => { trackEvent("f3d_locate", { where: embed ? "card" : "map", result: "ok" }); showMe(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy); };
     const fail = (err: GeolocationPositionError, stage: number) => {
       console.warn("[flood3d] geolocation error", err.code, err.message, "stage", stage);
       if (stage === 0 && (err.code === 2 || err.code === 3)) { navigator.geolocation.getCurrentPosition(ok, (e) => fail(e, 1), { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }); return; }
       setGeoMsg(msgFor(err.code));
+      trackEvent("f3d_locate", { where: embed ? "card" : "map", result: err.code === 1 ? "denied" : "failed" });
       void approxCity();
     };
     navigator.geolocation.getCurrentPosition(ok, (e) => fail(e, 0), { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
@@ -663,6 +673,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
           }
           buildUpLater(); // the heavy upsampling runs after the base map has started loading its tiles
           setReady(true);
+          trackEvent("f3d_map_loaded", { where: embed ? "card" : "map" });
         });
         map.on("error", (e) => { if (!dead && /style|tiles\.openfreemap/i.test(String(e?.error?.message ?? ""))) setErr(tr("The base map could not load.")); });
       } catch (e) {
@@ -853,6 +864,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
    
   const hitCovered = hits.map((h) => cellAtLL(h.lon, h.lat).covered);
   const goTo = (h: Hit) => {
+    trackEvent("f3d_search", { where: embed ? "card" : "map", kind: h.tag });
     const map = mapRef.current;
     if (!map) return;
     setQ(h.n); setQOpen(false);
@@ -1052,13 +1064,14 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
 
   // full width and the full screen height: viewport minus the site header (3.5 rem), this strip (~2.75 rem) and, on phones, the bottom nav; vh first, dvh over it (see the style tag)
   const mapH = full ? "h-full w-full" : "f3d-map w-full overflow-hidden";
+  const PANEL = embed ? "border border-slate-200 bg-white/95 text-slate-900 shadow-lg backdrop-blur-md" : GLASS;
   const results = (
     <>
-      {qOpen && q.trim().length >= 2 && hits.length === 0 && gaz && <p className={`mt-1 rounded-lg px-3 py-2 text-xs text-slate-600 dark:text-slate-300 ${GLASS}`}>{tr("No match. Try a town, road or landmark.")}</p>}
+      {qOpen && q.trim().length >= 2 && hits.length === 0 && gaz && <p className={`mt-1 rounded-lg px-3 py-2 text-xs text-slate-600 ${embed ? "" : "dark:text-slate-300"} ${PANEL}`}>{tr("No match. Try a town, road or landmark.")}</p>}
       {qOpen && hits.length > 0 && (
-        <ul id="f3d-search-list" role="listbox" className={`mt-1 max-h-64 overflow-y-auto rounded-lg text-xs ${GLASS}`}>
+        <ul id="f3d-search-list" role="listbox" className={`mt-1 max-h-64 overflow-y-auto rounded-lg text-xs ${PANEL}`}>
           {hits.map((h, i) => (
-            <li key={`${h.n}-${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); goTo(h); }} onMouseEnter={() => setActive(i)} className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 ${i === active ? "bg-sky-50 dark:bg-slate-800" : ""}`}>
+            <li key={`${h.n}-${i}`} role="option" aria-selected={i === active} onMouseDown={(e) => { e.preventDefault(); goTo(h); }} onMouseEnter={() => setActive(i)} className={`flex cursor-pointer items-center justify-between gap-2 px-3 py-2 ${i === active ? (embed ? "bg-sky-50" : "bg-sky-50 dark:bg-slate-800") : ""}`}>
               <span className="truncate">{h.n}</span>
               <span className="shrink-0 text-[10px] text-slate-500">{tr(h.tag)}{hitCovered[i] ? "" : ` ${dot} ${tr("not covered yet")}`}</span>
             </li>
@@ -1101,13 +1114,13 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         <div className="shrink-0 px-3 pb-2">
           <div className="mb-1 flex items-center justify-between gap-2">
             <p id="f3d-whatif" className="text-[11px] font-medium text-slate-600">{tr("What if the river rises to…")}</p>
-            <button type="button" aria-pressed={threeD} onClick={() => setThreeD((v) => !v)} data-testid="f3d-3d" className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${threeD ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"}`}>
+            <button type="button" aria-pressed={threeD} onClick={() => { if (!threeD) trackEvent("f3d_3d", { where: "card" }); setThreeD((v) => !v); }} data-testid="f3d-3d" className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${threeD ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"}`}>
               <Box className="size-3.5" aria-hidden /> {tr("3D view")}
             </button>
           </div>
           <div role="radiogroup" aria-labelledby="f3d-whatif" className="flex flex-wrap gap-1.5">
             {chips.map((c) => (
-              <button key={c.v} type="button" role="radio" aria-checked={scen === c.v} onClick={() => setScen(c.v)} data-testid={`f3d-chip-${c.v}`} className={`min-h-10 rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${scen === c.v ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-100"}`}>{c.t}</button>
+              <button key={c.v} type="button" role="radio" aria-checked={scen === c.v} onClick={() => { setScen(c.v); trackEvent("f3d_whatif", { level: c.v }); }} data-testid={`f3d-chip-${c.v}`} className={`min-h-10 rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${scen === c.v ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-100"}`}>{c.t}</button>
             ))}
           </div>
         </div>
@@ -1115,7 +1128,29 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
           <div ref={box} className="h-full w-full overflow-hidden" data-testid="flood3d-map" />
           {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{tr("Loading map…")}</div>}
           {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
-          {full && <button type="button" onClick={toggleFull} data-testid="flood3d-close" className="absolute left-3 top-3 z-10 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold text-slate-900 shadow-lg ring-1 ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"><X className="size-4" aria-hidden />{tr("Close")}</button>}
+          {full && (
+            <div className="absolute left-16 right-14 top-3 z-20 flex items-start gap-2 sm:left-[7.25rem]">
+              <div className="min-w-0 max-w-[22rem] flex-1">
+                <div className="flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 shadow-lg">
+                  <Search className="size-4 shrink-0 text-slate-500" aria-hidden />
+                  <input
+                    type="search" role="combobox" aria-expanded={qOpen && hits.length > 0} aria-controls="f3d-search-list" aria-label={tr("Search a place, road or gauge")} placeholder={tr("Search a place or road")}
+                    value={q} onChange={(e) => { setQ(e.target.value); setQOpen(true); setActive(0); }} onFocus={() => { loadGaz(); setQOpen(true); }} onBlur={() => setTimeout(() => setQOpen(false), 150)} onKeyDown={onSearchKey}
+                    className="h-11 w-full min-w-0 bg-transparent text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none"
+                  />
+                </div>
+                {results}
+              </div>
+              <button type="button" onClick={findMe} data-testid="flood3d-locate" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-800 shadow-lg hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500" aria-label={tr("Locate me")} title={tr("Locate me")}><LocateFixed className="size-5" aria-hidden /></button>
+            </div>
+          )}
+          {full && geoMsg && (
+            <div role="status" className="absolute left-3 right-14 top-[4.25rem] z-10 flex items-start gap-2 rounded-lg border border-slate-200 bg-white/95 py-2 pl-3 pr-1 text-xs text-slate-800 shadow-lg sm:right-auto sm:max-w-sm">
+              <p className="flex-1 pt-1">{geoMsg}</p>
+              <button type="button" onClick={() => setGeoMsg(null)} aria-label={tr("Close")} className="-my-2 flex size-11 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"><X className="size-4" /></button>
+            </div>
+          )}
+          {full && <button type="button" onClick={toggleFull} data-testid="flood3d-close" aria-label={tr("Close")} className="absolute left-3 top-3 z-10 inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-full bg-white px-0 sm:px-4 text-sm font-semibold text-slate-900 shadow-lg ring-1 ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"><X className="size-5 sm:size-4" aria-hidden /><span className="hidden sm:inline">{tr("Close")}</span></button>}
         </div>
         <div className="shrink-0 space-y-1 px-3 py-2 text-[11px] text-slate-700">
           <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-700" aria-label={tr("Legend")}>
@@ -1125,7 +1160,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
           </ul>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
             <p>{tr("River flooding only · not official")}</p>
-            <a href={fullHref()} target="_top" onClick={(e) => { e.currentTarget.href = fullHref(); }} className="inline-flex min-h-8 items-center gap-1 font-medium text-sky-800 underline underline-offset-2"><ExternalLink className="size-3.5" aria-hidden />{tr("Open the full flood map")}</a>
+            <a href={fullHref()} target="_top" onClick={(e) => { e.currentTarget.href = fullHref(); trackEvent("f3d_open_full", { mode: ditwah ? "ditwah" : "now" }); }} className="inline-flex min-h-8 items-center gap-1 font-medium text-sky-800 underline underline-offset-2"><ExternalLink className="size-3.5" aria-hidden />{tr("Open the full flood map")}</a>
           </div>
         </div>
       </div>

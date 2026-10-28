@@ -7,6 +7,7 @@ import { Share2 } from "lucide-react";
 import type { CellInfo, RepPos } from "./ReportPanel";
 import { EVENT_MONTHS, colomboMonth } from "@/lib/flood3dReports";
 import { LEVELS, postSurveyReport } from "./surveyShared";
+import { trackEvent } from "@/lib/umami";
 
 const EVENTS: [string, string][] = [["ditwah_2025", "Cyclone Ditwah, Nov–Dec 2025"], ["may_2016", "May 2016"], ["jun_2024", "June 2024"], ["other", "Another flood"]];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -65,7 +66,7 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
       peakDay: mode === "past" && wet && day && day.startsWith(floodMonth) ? day : undefined, peakPart: mode === "past" && wet ? part ?? undefined : undefined,
       lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, cellFt: cell.cellFt ?? undefined, lang, page: location.pathname.includes("flood-survey") ? "survey" : "lab", consent: true, hp, ms: performance.now() - opened,
     });
-    if (res.state === "done") { setArea(res.area); setState("done"); } else setState(res.state);
+    if (res.state === "done") { setArea(res.area); setState("done"); trackEvent("survey_sent", { mode, wet: wet ? "yes" : "no", how: pos.src }); } else setState(res.state);
   }
   async function share() {
     const url = shareUrl(), text = tr("Is your area flooded? Pin your spot and say how deep the water is. It takes a minute and shows everyone where it is flooding.");
