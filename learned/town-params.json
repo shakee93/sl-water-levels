@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-27T22:40:44.068Z",
-  "asOf": "2026-10-28",
+  "updatedAt": "2026-10-28T18:50:41.802Z",
+  "asOf": "2026-10-29",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 94,
-    "people": 90,
+    "answers": 104,
+    "people": 99,
     "streetReports": 12,
-    "days": 2
+    "days": 3
   },
   "stations": {
     "Badalgama": {
@@ -55,17 +55,17 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 32,
-        "days": 2,
-        "yes": 18,
+        "n": 36,
+        "days": 3,
+        "yes": 21,
         "worse": 7,
-        "better": 0,
+        "better": 1,
         "unsure": 7
       },
       "seen": {
-        "n": 3,
+        "n": 4,
         "higher": 0,
-        "same": 2,
+        "same": 3,
         "lower": 1
       },
       "rising": {
@@ -78,13 +78,13 @@
         "meanErrFt": 0.52
       },
       "falling": {
-        "n": 5,
-        "days": 1,
-        "yes": 3,
+        "n": 9,
+        "days": 2,
+        "yes": 6,
         "worse": 2,
-        "better": 0,
-        "errN": 5,
-        "meanErrFt": 0
+        "better": 1,
+        "errN": 9,
+        "meanErrFt": -0.03
       }
     },
     "Holombuwa": {
@@ -117,10 +117,10 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 17,
-        "days": 2,
+        "n": 20,
+        "days": 3,
         "yes": 9,
-        "worse": 2,
+        "worse": 5,
         "better": 2,
         "unsure": 4
       },
@@ -131,30 +131,30 @@
         "lower": 0
       },
       "rising": {
-        "n": 8,
-        "days": 2,
+        "n": 9,
+        "days": 3,
         "yes": 6,
-        "worse": 0,
+        "worse": 1,
         "better": 2,
-        "errN": 8,
-        "meanErrFt": 0.03
+        "errN": 9,
+        "meanErrFt": 0.02
       },
       "falling": {
-        "n": 3,
-        "days": 1,
+        "n": 4,
+        "days": 2,
         "yes": 2,
-        "worse": 1,
+        "worse": 2,
         "better": 0,
-        "errN": 3,
-        "meanErrFt": -0.19
+        "errN": 4,
+        "meanErrFt": -0.15
       },
       "streetLevel": {
-        "ft": 3.1,
-        "n": 5,
-        "days": 3,
+        "ft": 3,
+        "n": 6,
+        "days": 4,
         "defaultFt": 5,
-        "clamped": false,
-        "dryBelowN": 1
+        "clamped": true,
+        "dryBelowN": 3
       }
     },
     "Deraniyagala": {
@@ -361,21 +361,21 @@
     },
     "Panadugama": {
       "answers": {
-        "n": 3,
-        "days": 2,
-        "yes": 1,
+        "n": 6,
+        "days": 3,
+        "yes": 4,
         "worse": 1,
         "better": 1,
         "unsure": 0
       },
       "rising": {
-        "n": 1,
-        "days": 1,
-        "yes": 1,
+        "n": 2,
+        "days": 2,
+        "yes": 2,
         "worse": 0,
         "better": 0,
-        "errN": 1,
-        "meanErrFt": 0.55
+        "errN": 2,
+        "meanErrFt": 0.26
       },
       "falling": {
         "n": 2,
@@ -506,11 +506,11 @@
     "window": {
       "from": "2026-10-22",
       "to": "2026-10-28",
-      "points": 5029
+      "points": 6756
     },
     "horizons": {
       "1": {
-        "n": 1716,
+        "n": 2296,
         "maeBase": 0.14,
         "maeFit": 0.14,
         "gainPct": 1,
@@ -518,23 +518,23 @@
         "pooledGainPct": -2
       },
       "3": {
-        "n": 1698,
-        "maeBase": 0.36,
-        "maeFit": 0.36,
+        "n": 2272,
+        "maeBase": 0.34,
+        "maeFit": 0.34,
         "gainPct": 1,
-        "maePooled": 0.36,
-        "pooledGainPct": 1
+        "maePooled": 0.34,
+        "pooledGainPct": 0
       },
       "6": {
-        "n": 1609,
-        "maeBase": 0.72,
-        "maeFit": 0.72,
+        "n": 2182,
+        "maeBase": 0.66,
+        "maeFit": 0.66,
         "gainPct": 0,
-        "maePooled": 0.72,
-        "pooledGainPct": -1
+        "maePooled": 0.66,
+        "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 4,
+    "gaugesPassingOwnTest": 5,
     "useful": false,
     "wired": false
   }
