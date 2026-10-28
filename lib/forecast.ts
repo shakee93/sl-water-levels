@@ -26,7 +26,7 @@
 
 import { cache } from "react";
 import type { BasinStation } from "./arcgis";
-import { BASIN_ORDER, normaliseBasin, orderStations } from "./basinOrder";
+import { BASIN_ORDER, normaliseBasin, orderStations, isRn } from "./basinOrder";
 import { gaugeRainNow, measuredRainFor, type GaugeRain, type MeasuredRain } from "./measuredRain";
 import { stationDisplayName } from "./displayName";
 import { ageMinutes, HOUR_MS, isStale, rainTotal, rate, STALE_MINUTES } from "./readings";
@@ -831,7 +831,7 @@ function trendForecast(
   catchRain6h: number | null = null,
 ): TrendResult {
   // Gauges from HMIS or RiverNet (source "hmis" / "rivernet") have no fitted travel time: they are never an upstream signal for another gauge.
-  const ordered = orderStations(basin, snapshot.filter((s) => (s.source !== "hmis" && s.source !== "rivernet") || s.station === selectedStation));
+  const ordered = orderStations(basin, snapshot.filter((s) => s.station === selectedStation || (!isRn(snapshot, selectedStation) && s.source !== "hmis" && s.source !== "rivernet")));
   const myIdx = ordered.findIndex((s) => s.station === selectedStation);
   if (myIdx < 0) {
     return emptyForecast(["Selected station not in basin snapshot."]);

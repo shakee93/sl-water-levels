@@ -65,19 +65,34 @@ export function normaliseBasin(b: string | null | undefined): string {
   return (b ?? "").trim();
 }
 
-export function orderStations<T extends { station: string; longitude: number }>(
+/**
+ * Main-stem order first (BASIN_ORDER, else longitude desc), then tributary gauges (`tributary: true`, RiverNet) after the main stem,
+ * longitude desc: a tributary is never "downstream" of the main stem, so lists group them apart (see splitTributaries).
+ */
+export function orderStations<T extends { station: string; longitude: number; tributary?: boolean }>(
   basin: string,
   stations: T[],
 ): T[] {
   const order = BASIN_ORDER[normaliseBasin(basin)];
-  if (order) {
-    const rank = new Map(order.map((s, i) => [s, i]));
-    return [...stations].sort((a, b) => {
+  const rank = new Map((order ?? []).map((s, i) => [s, i]));
+  return [...stations].sort((a, b) => {
+    const ta = a.tributary ? 1 : 0, tb = b.tributary ? 1 : 0;
+    if (ta !== tb) return ta - tb;
+    if (order) {
       const ra = rank.get(a.station) ?? Number.MAX_SAFE_INTEGER;
       const rb = rank.get(b.station) ?? Number.MAX_SAFE_INTEGER;
       if (ra !== rb) return ra - rb;
-      return b.longitude - a.longitude;
-    });
-  }
-  return [...stations].sort((a, b) => b.longitude - a.longitude);
+    }
+    return b.longitude - a.longitude;
+  });
+}
+
+/** An ordered list split into the main stem and its tributary gauges. */
+export function splitTributaries<T extends { tributary?: boolean }>(ordered: T[]): { main: T[]; tributaries: T[] } {
+  return { main: ordered.filter((s) => !s.tributary), tributaries: ordered.filter((s) => s.tributary) };
+}
+
+/** True when `name` is a RiverNet gauge in `snapshot`: it has no known gauge upstream of it (no travel time measured), so forecasts and the anomaly detector treat it alone. */
+export function isRn(snapshot: { station: string; source?: string }[], name: string): boolean {
+  return snapshot.find((x) => x.station === name)?.source === "rivernet";
 }

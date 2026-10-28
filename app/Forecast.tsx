@@ -19,7 +19,7 @@ import { formatDelta, formatLevel, publishedAs, shownNumber } from "@/lib/units"
 import { stationDisplayName } from "@/lib/displayName";
 import { stationPath } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
-import { clock, riverName } from "@/lib/i18n/format";
+import { clock, riverName, shortStamp } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
 import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareButton";
@@ -240,6 +240,8 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
     <>
       {t("common.readingAt", { time: clock(latest.ts, t) })} · <TimeAgo ts={latest.ts} serverNow={renderedAt()} />
     </>
+  ) : me?.lastSeenTs ? (
+    t("common.lastReadingAt", { when: shortStamp(me.lastSeenTs, t) })
   ) : (
     t("common.noReading")
   );

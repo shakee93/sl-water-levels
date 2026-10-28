@@ -64,7 +64,7 @@ export const si: Dict = {
   "tier.alert": "අනතුරු ඇඟවීම",
   "tier.watch": "සාමාන්‍යයි",
   "tier.normal": "සාමාන්‍යයි",
-  "tier.none": "ගංවතුර මට්ටම් නැත",
+  "tier.none": "මට්ටම පමණි",
   "tier.stale": "දත්ත නොලැබේ",
   "needs.nearNote": "අනතුරු මට්ටමට ආසන්නයි: අනතුරු මට්ටමට වඩා {amount} පහළයි",
   "tier.nearShort": "අනතුරු මට්ටමට ආසන්නයි",
@@ -107,6 +107,7 @@ export const si: Dict = {
   "level.info": "{level} යනු {gauge} මානයේ ගඟේ උස, මානයේම මිනුම් පරිමාණයෙන් කියවූ අගයයි. එය වීදිවල ජලය කොතරම් ගැඹුරුද යන්න නොවේ. වැදගත් වන්නේ එය පහත ගංවතුර සලකුණුවලට (අනතුරු ඇඟවීම, සුළු ගංවතුර, බරපතල ගංවතුර) කොතරම් ළඟද යන්නයි.",
   "level.infoAria": "මෙම අංකයේ තේරුම කුමක්ද?",
   "common.noReading": "කියවීමක් නැත",
+  "common.lastReadingAt": "අවසන් කියවීම {when}",
   "common.officialWarning": "නිල අනතුරු ඇඟවීම:",
   "common.englishNote": "(ඉංග්‍රීසියෙන්)",
   "common.callDmcOffice": "{district} ආපදා කළමනාකරණ කාර්යාලය",
@@ -221,6 +222,8 @@ export const si: Dict = {
   "gauges.upstream": "ඉහළ",
   "gauges.downstream": "පහළ (මුහුද)",
   "gauges.notReporting": "දත්ත නොලැබේ",
+  "gauges.notReportingSince": "{when} සිට දත්ත නොලැබේ",
+  "gauges.tributaries": "අතු ගංගා",
   "gauges.last24": "පසුගිය පැය 24",
 
   // ---- station page ----

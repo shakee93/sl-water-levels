@@ -28,7 +28,7 @@ const WINDOW = () => {
 let inFlight = 0;
 const waiting: (() => void)[] = [];
 async function slot<T>(f: () => Promise<T>): Promise<T> {
-  if (inFlight >= 3) await new Promise<void>((r) => waiting.push(r));
+  if (inFlight >= 6) await new Promise<void>((r) => waiting.push(r));
   inFlight++;
   try { return await f(); } finally { inFlight--; waiting.shift()?.(); }
 }
@@ -47,8 +47,10 @@ export type RivernetLevels = { fetchedAt: number; devices: RivernetDevice[] };
 async function loadDevice(key: string): Promise<RivernetDevice> {
   const w = WINDOW();
   const q = `keys=${key}&last24HoursData=1&isPublic=1`;
-  const title = await getJson(`api/reports/river-level/title/minute/${w}?${q}`);
-  const chart = await getJson(`api/reports/river-level/chart/minute/${w}?${q}`);
+  const [title, chart] = await Promise.all([
+    getJson(`api/reports/river-level/title/minute/${w}?${q}`),
+    getJson(`api/reports/river-level/chart/minute/${w}?${q}`),
+  ]);
   const d = buildDevice(key, title, chart);
   if (!d) throw new Error(`RiverNet device ${key}: unexpected shape`);
   return d;
@@ -80,3 +82,6 @@ export async function rivernetDirect(keys: string[]): Promise<RivernetDevice[]> 
   for (const k of keys) out.push(await loadDevice(k));
   return out;
 }
+
+/** One device (2 requests, same per-device cache as getRivernetLevels): a gauge page must not wait for all 19 on a cold cache. null when slow or down. */
+export const getRivernetDevice = (key: string, budgetMs = 4000): Promise<RivernetDevice | null> => soft(deviceCached(key)().catch(() => null), budgetMs, null);

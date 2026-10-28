@@ -69,7 +69,7 @@ export const en = {
   "tier.alert": "Alert",
   "tier.watch": "Normal", // never a verdict step: the near-alert reason is a note (needs.nearNote)
   "tier.normal": "Normal",
-  "tier.none": "No flood levels",
+  "tier.none": "Level only",
   "tier.stale": "Not reporting",
   "needs.nearNote": "Near alert: {amount} below the alert mark",
   "tier.nearShort": "near alert",
@@ -112,6 +112,7 @@ export const en = {
   "level.info": "{level} is the height of the river at the {gauge} gauge, read on the gauge's own measuring scale. It is not how deep the water is on the streets. What matters is how close it is to the flood marks below: alert, minor flood and major flood.",
   "level.infoAria": "What does this number mean?",
   "common.noReading": "No reading",
+  "common.lastReadingAt": "Last reading {when}",
   "common.officialWarning": "Official warning:",
   "common.englishNote": "(English)",
   "common.callDmcOffice": "{district} DMC office",
@@ -227,6 +228,8 @@ export const en = {
   "gauges.upstream": "Upstream",
   "gauges.downstream": "Downstream (sea)",
   "gauges.notReporting": "Not reporting",
+  "gauges.notReportingSince": "Not reporting since {when}",
+  "gauges.tributaries": "Tributaries",
   "gauges.last24": "Last 24 hours",
 
   // ---- station page --------------------------------------------------------------------------

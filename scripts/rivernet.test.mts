@@ -5,6 +5,8 @@ import {
   fixRivernetX, parseSltStamp, parseChart, parseMarks, parseTitle, trimToLatest, downsample, buildDevice,
   fasterThanOfficial, RIVERNET_CATALOG, RIVERNET_NEW, RIVERNET_FAST, RIVERNET_READ,
 } from "../lib/rivernetCalc.ts";
+import { buildWaveInsight } from "../lib/waveInsight.ts";
+import { orderStations, splitTributaries, isRn } from "../lib/basinOrder.ts";
 
 const MIN = 60_000, HOUR = 3_600_000;
 const slt = (s: string) => Date.parse(s + "Z"); // a stamp that is SLT labelled Z, as the chart's x
@@ -49,8 +51,9 @@ assert.equal(dead.latestTs, Date.parse("2026-10-26T10:55:00Z"));
 // a live device keeps its points up to the title's newest reading and nothing after it
 const live = buildDevice("k", title(6.58, 80.327, "2026-10-28 18:30:00"), flat, Date.parse("2026-10-28T13:05:00Z"))!;
 assert.ok(live.series.length > 0 && live.series[live.series.length - 1].ts <= Date.parse("2026-10-28T13:00:00Z") + 2 * MIN);
-// communicating but silent for over 6 h: not live either
-assert.equal(buildDevice("k", title(6.58, 80.327, "2026-10-28 01:00:00"), flat, Date.parse("2026-10-28T13:30:00Z"))!.series.length, 0);
+// communicating but silent for over an hour: not live either (a 1-minute sensor read every 10 minutes)
+assert.equal(buildDevice("k", title(6.58, 80.327, "2026-10-28 17:00:00"), flat, Date.parse("2026-10-28T13:30:00Z"))!.series.length, 0);
+assert.ok(buildDevice("k", title(6.58, 80.327, "2026-10-28 18:30:00"), flat, Date.parse("2026-10-28T13:35:00Z"))!.series.length > 0, "10 minutes old is live");
 assert.equal(buildDevice("k", { results: {} }, flat), null);
 assert.equal(buildDevice("k", title(6.58, 80.327), { results: {} }), null);
 
@@ -96,5 +99,28 @@ const stations = new Set(RIVERNET_NEW.map((g) => g.station));
 assert.equal(stations.size, RIVERNET_NEW.length, "station names are unique (they are URL slugs)");
 // none of the new names is one we already have from ArcGIS / HMIS
 for (const n of ["Hanwella", "Glencourse", "Rathnapura", "Karawanella Bridge", "Ampara", "Wellawaya"]) assert.ok(!stations.has(n), n);
+
+// the "rise upstream may reach X" note: never a RiverNet gauge, never a tributary, as source or as target (28 Oct 2026: Magura -> Wey Ganga)
+const st = (station: string, rate: number | null, extra: Record<string, unknown> = {}) => ({ station, tier: "alert" as const, rate3hM: rate, ...extra });
+const kalu = [st("Rathnapura", 0), st("Ellagawa", 0), st("Magura", 0.3), st("Putupaula", 0), st("Wey Ganga (Kahawaththa)", -0.1, { source: "rivernet", tributary: true }), st("Kuru Ganga (Kuruvita)", 0.2, { source: "rivernet", tributary: true })];
+assert.equal(buildWaveInsight(kalu, "Wey Ganga (Kahawaththa)"), null, "a tributary is never the target");
+assert.equal(buildWaveInsight(kalu, "Kuru Ganga (Kuruvita)"), null);
+assert.deepEqual(buildWaveInsight(kalu, "Putupaula"), { upstreamStation: "Magura", rateM: 0.3 }, "main stem still works");
+assert.equal(buildWaveInsight([st("Hanwella", 0.4, { source: "rivernet" }), st("Nagalagam Street", 0)], "Nagalagam Street"), null, "a RiverNet gauge is never the source");
+assert.equal(buildWaveInsight([st("Glencourse", 0.4), st("Pugoda", 0, { source: "rivernet" })], "Pugoda"), null, "an on-stem RiverNet gauge is never the target");
+assert.equal(buildWaveInsight([st("Magura", 0.3), st("Rathnapura", 0, { tier: "stale" as never })], "Rathnapura"), null);
+
+// order: main stem first, tributaries after as their own group, whatever their longitude
+const ordered = orderStations("Kalu Ganga", [
+  { station: "Wey Ganga (Kahawaththa)", longitude: 80.57, tributary: true }, { station: "Putupaula", longitude: 80.06 }, { station: "Rathnapura", longitude: 80.39 },
+  { station: "Kuru Ganga (Kuruvita)", longitude: 80.36, tributary: true }, { station: "Magura", longitude: 80.24 }, { station: "Ellagawa", longitude: 80.22 },
+]);
+assert.deepEqual(ordered.map((s) => s.station), ["Rathnapura", "Ellagawa", "Magura", "Putupaula", "Wey Ganga (Kahawaththa)", "Kuru Ganga (Kuruvita)"]);
+const sp = splitTributaries(ordered);
+assert.equal(sp.main.length, 4);
+assert.equal(sp.tributaries.length, 2);
+assert.deepEqual(orderStations("Kelani Ganga", [{ station: "Hanwella", longitude: 80.08 }, { station: "Pugoda", longitude: 80.12 }, { station: "Glencourse", longitude: 80.19 }, { station: "Mapitigama", longitude: 80.22 }, { station: "Karawanella Bridge", longitude: 80.26 }]).map((s) => s.station), ["Karawanella Bridge", "Mapitigama", "Glencourse", "Pugoda", "Hanwella"]);
+assert.ok(isRn([{ station: "A", source: "rivernet" }], "A") && !isRn([{ station: "A" }], "A") && !isRn([], "A"));
+assert.equal(RIVERNET_NEW.filter((g) => g.tributary).length, 6, "the six Kalu Ganga tributaries");
 
 console.log("rivernet tests passed");

@@ -1,13 +1,16 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Minus, TrendingUp } from "lucide-react";
 import { fetchBasinSnapshot, statusFor, type BasinStation } from "@/lib/arcgis";
-import { orderStations } from "@/lib/basinOrder";
+import { orderStations, splitTributaries } from "@/lib/basinOrder";
 import { stationPath } from "@/lib/slug";
 import { feetPerHour, formatDelta, formatLevel, type Unit } from "@/lib/units";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
+import { buildWaveInsight } from "@/lib/waveInsight";
+import { shortStamp } from "@/lib/i18n/format";
 
 const dotForTone: Record<string, string> = {
   green: "bg-emerald-500",
@@ -71,22 +74,6 @@ function Arrow({ t, rate }: { t: TFn; rate: number }) {
   return <ArrowDown className="size-4 text-emerald-600 dark:text-emerald-400" aria-label={t("trend.falling")} />;
 }
 
-function buildWaveInsight(stations: BasinStation[], selectedStation: string) {
-  const selectedIdx = stations.findIndex((s) => s.station === selectedStation);
-  if (selectedIdx <= 0) return null;
-  const selected = stations[selectedIdx];
-  if (selected.tier === "stale") return null;
-  const upRising = stations
-    .slice(0, selectedIdx)
-    // RiverNet gauges (tributaries, no measured travel time) are never named as the upstream rise.
-    .filter((s) => s.source !== "rivernet" && s.tier !== "stale" && s.rate3hM != null && s.rate3hM > 0.05);
-  if (upRising.length === 0) return null;
-  const fastest = upRising.reduce((a, b) => ((a.rate3hM ?? 0) > (b.rate3hM ?? 0) ? a : b));
-  const selRate = selected.rate3hM;
-  if (selRate != null && selRate >= (fastest.rate3hM ?? 0) * 0.6) return null;
-  return { upstreamStation: fastest.station, rateM: fastest.rate3hM ?? 0 };
-}
-
 type RelToneClass = {
   red: string;
   orange: string;
@@ -140,6 +127,7 @@ export async function BasinFlow({
   if (raw.length <= 1) return null;
   const stations = orderStations(basin, raw);
   const insight = buildWaveInsight(stations, selectedStation);
+  const { main, tributaries } = splitTributaries(stations);
 
   return (
     <section className="mt-6">
@@ -159,7 +147,7 @@ export async function BasinFlow({
       )}
 
       <ol className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-        {stations.map((s, i) => {
+        {[...main.map((s, i) => ({ s, i, n: main.length })), ...tributaries.map((s, i) => ({ s, i, n: tributaries.length, head: i === 0 }))].map(({ s, i, n, head }: { s: BasinStation; i: number; n: number; head?: boolean }) => {
           const status = statusFor(s.latest?.water_level ?? null, s.thresholds, s.latest?.ts);
           const isSelected = s.station === selectedStation;
           const stale = status.tier === "stale";
@@ -169,7 +157,11 @@ export async function BasinFlow({
           const rel = stale ? null : relativeToThreshold(t, s.latest?.water_level, s.unit, s.thresholds);
 
           return (
-            <li key={s.station}>
+            <Fragment key={s.station}>
+            {head && (
+              <li aria-hidden className="bg-slate-50 dark:bg-slate-800/60 px-3 sm:px-4 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">{t("gauges.tributaries")}</li>
+            )}
+            <li>
               <Link
                 href={p(stationPath(s.basin, s.station))}
                 aria-current={isSelected ? "page" : undefined}
@@ -179,7 +171,7 @@ export async function BasinFlow({
               >
                 <div className="flex flex-col items-center w-4 shrink-0">
                   <span className={`size-2 rounded-full ${dotForTone[status.tone]}`} />
-                  {i < stations.length - 1 && (
+                  {i < n - 1 && (
                     <span className="w-px flex-1 bg-slate-200 dark:bg-slate-700 mt-1 -mb-3 h-3" />
                   )}
                 </div>
@@ -191,7 +183,7 @@ export async function BasinFlow({
                   </div>
                   {stale ? (
                     <div className="text-xs mt-0.5 text-slate-600 dark:text-slate-400">
-                      {s.ageMin != null ? t("flow.lastReading", { h: Math.round(s.ageMin / 60) }) : t("gauges.notReporting")}
+                      {s.ageMin != null ? t("flow.lastReading", { h: Math.round(s.ageMin / 60) }) : s.lastSeenTs ? t("gauges.notReportingSince", { when: shortStamp(s.lastSeenTs, t) }) : t("gauges.notReporting")}
                     </div>
                   ) : (
                     rel && (
@@ -239,6 +231,7 @@ export async function BasinFlow({
                 )}
               </Link>
             </li>
+            </Fragment>
           );
         })}
       </ol>

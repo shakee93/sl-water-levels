@@ -8,6 +8,8 @@ import { STEADY_M_PER_H, tierLabel } from "./tierUi";
 import { getI18n } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
+import { shortStamp } from "@/lib/i18n/format";
+import { splitTributaries } from "@/lib/basinOrder";
 
 type Style = { pill: string; bar: string; line: string; dot: string };
 
@@ -139,7 +141,7 @@ function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: N
       </div>
 
       {notReporting ? (
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("gauges.notReporting")}</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{s.lastSeenTs ? t("gauges.notReportingSince", { when: shortStamp(s.lastSeenTs, t) }) : t("gauges.notReporting")}</p>
       ) : (
         <>
           <div className={`mt-1.5 flex items-center gap-3 ${stale ? "opacity-60" : ""}`}>
@@ -158,16 +160,17 @@ function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: N
   );
 }
 
-/** Upstream → downstream list with a thin connector showing flow direction. */
+/** Upstream → downstream list with a thin connector showing flow direction; tributary gauges (RiverNet) follow as their own labelled group. */
 export function RiverGauges({ lang, stations, serverNow }: { lang: Locale; stations: NationalStation[]; serverNow: number }) {
   const { t, p } = getI18n(lang);
   const label = "text-xs text-slate-500 dark:text-slate-400 font-medium";
-  const multi = stations.length > 1;
+  const { main, tributaries } = splitTributaries(stations);
+  const multi = main.length > 1;
   return (
     <section aria-label={t("gauges.aria")}>
       {multi && <p className={`${label} pl-7 mb-1.5`}>{t("gauges.upstream")}</p>}
       <ul>
-        {stations.map((s, i) => {
+        {main.map((s, i) => {
           const muted = s.latest == null || s.tier === "stale";
           const tier = s.tier === "stale" ? s.levelTier : s.tier;
           const dot = !muted && STYLE[tier] ? STYLE[tier]!.dot : "bg-slate-300 dark:bg-slate-600";
@@ -179,7 +182,7 @@ export function RiverGauges({ lang, stations, serverNow }: { lang: Locale; stati
                     aria-hidden
                     className={`absolute left-[9px] w-px bg-slate-300 dark:bg-slate-700 ${
                       i === 0 ? "top-1/2" : "top-0"
-                    } ${i === stations.length - 1 ? "bottom-1/2" : "bottom-0"}`}
+                    } ${i === main.length - 1 ? "bottom-1/2" : "bottom-0"}`}
                   />
                   <span
                     aria-hidden
@@ -193,6 +196,18 @@ export function RiverGauges({ lang, stations, serverNow }: { lang: Locale; stati
         })}
       </ul>
       {multi && <p className={`${label} pl-7 mt-1.5`}>{t("gauges.downstream")}</p>}
+      {tributaries.length > 0 && (
+        <div className="mt-4">
+          <p className={`${label} mb-1.5`}>{t("gauges.tributaries")}</p>
+          <ul className="space-y-2">
+            {tributaries.map((s) => (
+              <li key={s.href}>
+                <Row t={t} p={p} s={s} serverNow={serverNow} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

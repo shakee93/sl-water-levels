@@ -64,7 +64,7 @@ export const ta: Dict = {
   "tier.alert": "எச்சரிக்கை",
   "tier.watch": "இயல்பு",
   "tier.normal": "இயல்பு",
-  "tier.none": "வெள்ள மட்டங்கள் இல்லை",
+  "tier.none": "மட்டம் மட்டும்",
   "tier.stale": "தரவு வரவில்லை",
   "needs.nearNote": "எச்சரிக்கை மட்டத்தை நெருங்குகிறது: எச்சரிக்கை மட்டத்தை விட {amount} கீழே",
   "tier.nearShort": "எச்சரிக்கை மட்டத்தை நெருங்குகிறது",
@@ -107,6 +107,7 @@ export const ta: Dict = {
   "level.info": "{level} என்பது {gauge} அளவியில் ஆற்றின் உயரம், அளவியின் சொந்த அளவுகோலில் படித்தது. இது தெருக்களில் தண்ணீர் எவ்வளவு ஆழம் என்பது அல்ல. முக்கியமானது கீழே உள்ள வெள்ளக் குறிகளுக்கு (எச்சரிக்கை, சிறு வெள்ளம், பெரு வெள்ளம்) அது எவ்வளவு அருகில் உள்ளது என்பதே.",
   "level.infoAria": "இந்த எண்ணின் பொருள் என்ன?",
   "common.noReading": "அளவீடு இல்லை",
+  "common.lastReadingAt": "கடைசி அளவீடு {when}",
   "common.officialWarning": "அதிகாரப்பூர்வ எச்சரிக்கை:",
   "common.englishNote": "(ஆங்கிலத்தில்)",
   "common.callDmcOffice": "{district} பேரிடர் மேலாண்மை அலுவலகம்",
@@ -221,6 +222,8 @@ export const ta: Dict = {
   "gauges.upstream": "மேல்நிலை",
   "gauges.downstream": "கீழ்நிலை (கடல்)",
   "gauges.notReporting": "தரவு வரவில்லை",
+  "gauges.notReportingSince": "{when} முதல் தரவு வரவில்லை",
+  "gauges.tributaries": "துணை ஆறுகள்",
   "gauges.last24": "கடந்த 24 மணி நேரம்",
 
   // ---- station page ----

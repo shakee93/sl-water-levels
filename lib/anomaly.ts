@@ -1,5 +1,5 @@
 import type { BasinStation } from "./arcgis";
-import { orderStations } from "./basinOrder";
+import { orderStations, isRn } from "./basinOrder";
 import { formatDelta } from "./units";
 import { isStale, rainTotal, rate } from "./readings";
 
@@ -62,7 +62,7 @@ export function detectAnomaly(
     message: null,
   };
   if (snapshot.length === 0) return empty;
-  const ordered = orderStations(basin, snapshot.filter((s) => (s.source !== "hmis" && s.source !== "rivernet") || s.station === selectedStation));
+  const ordered = orderStations(basin, snapshot.filter((s) => s.station === selectedStation || (!isRn(snapshot, selectedStation) && s.source !== "hmis" && s.source !== "rivernet")));
   const myIdx = ordered.findIndex((s) => s.station === selectedStation);
   if (myIdx < 0) return empty;
   const me = ordered[myIdx];

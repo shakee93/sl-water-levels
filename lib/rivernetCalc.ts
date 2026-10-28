@@ -107,6 +107,9 @@ export function downsample(pts: Pt[], bucketMs = 10 * MIN): Pt[] {
   return out;
 }
 
+/** A 1-minute sensor read every 10 minutes that is over an hour old is not reporting (the site's 3 h rule is for hourly gauges). */
+export const LIVE_MAX_MIN = 60;
+
 export type RivernetDevice = {
   key: string;
   series: Pt[];
@@ -122,7 +125,7 @@ export function buildDevice(key: string, title: unknown, chart: unknown, now = D
   if (!t || !Number.isFinite(t.latestTs)) return null;
   const pts = parseChart(chart);
   if (!pts) return null;
-  const live = t.communicating && now - t.latestTs < 6 * HOUR;
+  const live = t.communicating && now - t.latestTs < LIVE_MAX_MIN * MIN;
   const series = live ? downsample(trimToLatest(pts, t.latestTs)) : [];
   return { key, series, latestTs: t.latestTs, communicating: t.communicating, marks: parseMarks(chart) };
 }
@@ -146,6 +149,8 @@ export type RnCatalogEntry = {
   lon?: number;
   /** Marks RiverNet published on 28 Oct 2026 (metres), used when the live chart carries none. */
   marks?: RnMarks;
+  /** A tributary of the river it sits under (not on the main stem): grouped apart in lists, never upstream or downstream of a main-stem gauge. */
+  tributary?: true;
   /** Why it is skipped, or what it duplicates. */
   why: string;
 };
@@ -154,12 +159,12 @@ const M = (alert: number, minor: number, major: number, critical: number | null 
 export const RIVERNET_CATALOG: RnCatalogEntry[] = [
   // ratnapura region (Kalu Ganga basin)
   { key: "2bq292rf6uz", unit: "I97", name: "Kalu Ganga (Ratnapura)", region: "ratnapura", decision: "duplicate", station: "Rathnapura", basin: "Kalu Ganga", why: "same gauge as ArcGIS Rathnapura (5.86 m at the same minute; RiverNet's pin 6.728N 80.199E is wrong, 25 km west). RiverNet marks 5.2/7.5/9.5/10.5 differ from ours 5.2/8/10: ours stay." },
-  { key: "76k6cqo0ipwk", unit: "ID3", name: "Kuru Ganga (Kuruvita)", region: "ratnapura", decision: "new", station: "Kuru Ganga (Kuruvita)", basin: "Kalu Ganga", lat: 6.79874, lon: 80.36843, why: "tributary gauge, no marks published" },
-  { key: "6nb2troqa5c0", unit: "ID4", name: "Galathura Oya (Ayagama)", region: "ratnapura", decision: "new", station: "Galathura Oya (Ayagama)", basin: "Kalu Ganga", lat: 6.695, lon: 80.385, why: "tributary gauge, no marks (coordinates rounded to 3 decimals by RiverNet)" },
-  { key: "1kp1hhh7zbu", unit: "ID5", name: "Denawaka Ganga (Pelmadulla)", region: "ratnapura", decision: "new", station: "Denawaka Ganga (Pelmadulla)", basin: "Kalu Ganga", lat: 6.70926, lon: 80.29092, why: "tributary gauge, no marks" },
-  { key: "5asknpp28bs", unit: "ID6", name: "Kukule Ganga (Kalawana)", region: "ratnapura", decision: "new", station: "Kukule Ganga (Kalawana)", basin: "Kalu Ganga", lat: 6.58019, lon: 80.32701, why: "tributary gauge, no marks; offline since 26 Oct 2026 (RiverNet's chart is flat padding): shown as no recent reading" },
-  { key: "5f4al4atv8ws", unit: "ID7", name: "Wey Ganga (Kahawaththa)", region: "ratnapura", decision: "new", station: "Wey Ganga (Kahawaththa)", basin: "Kalu Ganga", lat: 6.58173, lon: 80.57361, why: "tributary gauge, no marks" },
-  { key: "2q6uiwmovjcw", unit: "ID8", name: "Niriella Ganga (Elapatha)", region: "ratnapura", decision: "new", station: "Niriella Ganga (Elapatha)", basin: "Kalu Ganga", lat: 6.63163, lon: 80.3656, why: "tributary gauge, no marks" },
+  { key: "76k6cqo0ipwk", unit: "ID3", name: "Kuru Ganga (Kuruvita)", region: "ratnapura", decision: "new", station: "Kuru Ganga (Kuruvita)", basin: "Kalu Ganga", tributary: true, lat: 6.79874, lon: 80.36843, why: "tributary gauge, no marks published" },
+  { key: "6nb2troqa5c0", unit: "ID4", name: "Galathura Oya (Ayagama)", region: "ratnapura", decision: "new", station: "Galathura Oya (Ayagama)", basin: "Kalu Ganga", tributary: true, lat: 6.695, lon: 80.385, why: "tributary gauge, no marks (coordinates rounded to 3 decimals by RiverNet)" },
+  { key: "1kp1hhh7zbu", unit: "ID5", name: "Denawaka Ganga (Pelmadulla)", region: "ratnapura", decision: "new", station: "Denawaka Ganga (Pelmadulla)", basin: "Kalu Ganga", tributary: true, lat: 6.70926, lon: 80.29092, why: "tributary gauge, no marks" },
+  { key: "5asknpp28bs", unit: "ID6", name: "Kukule Ganga (Kalawana)", region: "ratnapura", decision: "new", station: "Kukule Ganga (Kalawana)", basin: "Kalu Ganga", tributary: true, lat: 6.58019, lon: 80.32701, why: "tributary gauge, no marks; offline since 26 Oct 2026 (RiverNet's chart is flat padding): shown as no recent reading" },
+  { key: "5f4al4atv8ws", unit: "ID7", name: "Wey Ganga (Kahawaththa)", region: "ratnapura", decision: "new", station: "Wey Ganga (Kahawaththa)", basin: "Kalu Ganga", tributary: true, lat: 6.58173, lon: 80.57361, why: "tributary gauge, no marks" },
+  { key: "2q6uiwmovjcw", unit: "ID8", name: "Niriella Ganga (Elapatha)", region: "ratnapura", decision: "new", station: "Niriella Ganga (Elapatha)", basin: "Kalu Ganga", tributary: true, lat: 6.63163, lon: 80.3656, why: "tributary gauge, no marks" },
   // kelaniya region
   { key: "m1wy7g3guyo", unit: "ID1", name: "Kelani Ganga Level at Mapitigama", region: "kelaniya", decision: "new", station: "Mapitigama", basin: "Kelani Ganga", lat: 7.00315, lon: 80.22181, marks: M(6, 7, 8.5), why: "new Kelani gauge between Karawanella and Glencourse; RiverNet marks 6/7/8.5 m; flat at 4.22 m since 06:06 on 28 Oct (floor or stuck: unknown)" },
   { key: "693ymeaky0ow", unit: "ID2", name: "Kelani Ganga Level at Pugoda", region: "kelaniya", decision: "new", station: "Pugoda", basin: "Kelani Ganga", lat: 6.9742, lon: 80.12328, marks: M(8, 10, 11.5), why: "new Kelani gauge between Glencourse and Hanwella; RiverNet marks 8/10/11.5 m; its 1.497 m offset is already inside the reading" },
@@ -203,6 +208,8 @@ export type RnNewDef = RnCatalogEntry & { station: string; basin: string; lat: n
 export const RIVERNET_NEW: RnNewDef[] = RIVERNET_CATALOG.filter((e): e is RnNewDef => e.decision === "new" && e.station != null && e.basin != null && e.lat != null && e.lon != null);
 /** Duplicates: RiverNet's 1-minute sensor for a gauge we already have. The official reading stays with the other source. */
 export const RIVERNET_FAST = RIVERNET_CATALOG.filter((e) => e.decision === "duplicate");
+/** Names of the gauges that are tributaries of the river page they sit under. */
+export const RIVERNET_TRIBUTARIES = new Set(RIVERNET_NEW.filter((g) => g.tributary).map((g) => g.station));
 export const RIVERNET_NEW_BY_STATION = new Map(RIVERNET_NEW.map((g) => [g.station, g]));
 export const RIVERNET_FAST_BY_STATION = new Map(RIVERNET_FAST.map((g) => [g.station as string, g]));
 /** Every device the site reads: the ones we add and the ones that back a "Latest" note. */

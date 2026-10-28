@@ -20,7 +20,7 @@ import { levelTier, statusFor, type Tier } from "./status";
 import { basinPath, basinSlug, stationPath } from "./slug";
 import { detectUnit, type Unit } from "./units";
 import { getHmisLevels, HMIS_GAUGES, HMIS_GAUGE_BY_STATION, type HmisDevice, type HmisGaugeDef } from "./hmis";
-import { getRivernetLevels, RIVERNET_NEW, RIVERNET_NEW_BY_STATION, type RivernetDevice, type RnNewDef } from "./rivernet";
+import { getRivernetDevice, getRivernetLevels, RIVERNET_NEW, RIVERNET_TRIBUTARIES, RIVERNET_NEW_BY_STATION, type RivernetDevice, type RnNewDef } from "./rivernet";
 
 export { statusFor } from "./status";
 export type { Status, StatusTone, Tier } from "./status";
@@ -277,9 +277,8 @@ export async function fetchStationData(stationName: string, days = 4): Promise<S
   const rdef = RIVERNET_NEW_BY_STATION.get(stationName);
   if (rdef) {
     // RiverNet gauge: its last 24 h at 10-minute spacing, metres.
-    const rn = await getRivernetLevels(4000);
-    const dev = rn?.devices.find((d) => d.key === rdef.key);
-    if (!rn || !dev) throw new Error(`RiverNet has no reading for ${stationName} right now`);
+    const dev = await getRivernetDevice(rdef.key, 6000);
+    if (!dev) throw new Error(`RiverNet has no reading for ${stationName} right now`);
     const n = buildRivernetNational(rdef, dev);
     return { station: stationName, basin: rdef.basin, thresholds: n.thresholds, readings: rivernetRows(rdef, dev).map(toReading).sort((a, b) => a.ts - b.ts), latest: n.latest };
   }
@@ -366,6 +365,10 @@ export type NationalStation = {
   /** HMIS only: who runs the sensor (Irrigation Department / ACCIMT) and how often it reports. */
   institute?: string;
   cadenceMin?: number;
+  /** RiverNet only: newest reading time of a gauge that is not reporting (real UTC ms), for "not reporting since". */
+  lastSeenTs?: number;
+  /** A tributary of this river (RiverNet): listed apart from the main stem, never upstream of it. */
+  tributary?: boolean;
 };
 
 const NATIONAL_HOURS = 26;
@@ -456,7 +459,7 @@ export const getNational = cache(async (): Promise<NationalStation[]> => {
 
   const arc = stations.filter((s) => !HMIS_GAUGE_BY_STATION.has(s.station) && !RIVERNET_NEW_BY_STATION.has(s.station)).map((s) => buildNational(s, byGauge.get(s.station) ?? []));
   // HMIS-only gauges, merged as an extra source. Left out entirely while HMIS is slow or down (callers see the ArcGIS gauges, as before).
-  const [hmis, rn] = await Promise.all([getHmisLevels(1500), getRivernetLevels(1500)]);
+  const [hmis, rn] = await Promise.all([getHmisLevels(1500), getRivernetLevels(3000)]);
   const extra: NationalStation[] = [];
   if (hmis) {
     for (const def of HMIS_GAUGES) {
@@ -485,7 +488,7 @@ export function buildHmisNational(def: HmisGaugeDef, dev: HmisDevice): NationalS
 export function buildRivernetNational(def: RnNewDef, dev: RivernetDevice): NationalStation {
   const st = { basin: def.basin, station: def.station, latitude: def.lat, longitude: def.lon };
   const n = buildNational(st, rivernetRows(def, dev));
-  return { ...n, source: "rivernet", institute: "DMC / Leecom SCADA", cadenceMin: 10 };
+  return { ...n, source: "rivernet", institute: "DMC / Leecom SCADA", cadenceMin: 10, lastSeenTs: Number.isFinite(dev.latestTs) ? dev.latestTs : undefined, tributary: RIVERNET_TRIBUTARIES.has(def.station) || undefined };
 }
 
 // ---------------------------------------------------------------------------

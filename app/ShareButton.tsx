@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LevelGauge } from "./LevelGauge";
 import { useI18n } from "./LocaleProvider";
+import { DIR } from "./verdict";
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Info, Minus, MessageCircle, Phone, Share2, Siren, Waves, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
 
 const KEY = "sl_favourites";
@@ -316,12 +317,17 @@ export function VerdictCard({
   children: React.ReactNode;
 }) {
   const { lang, t } = useI18n();
-  const { icon: Icon, text } = TONE[tone];
   const look = SURFACE[tone];
   const btn =
     "inline-flex items-center justify-center gap-2 h-12 w-full rounded-lg px-4 text-base font-semibold transition-colors";
   const trend = outlook ? TREND[outlook.trend] : null;
   const TrendIcon = trend?.icon ?? null;
+  // A gauge with no published flood levels (tone "none") has a level but no step: the headline is its direction ("Falling"), or "Level only",
+  // with one plain line under it, instead of "No flood levels published" with an info icon (owner, 28 Oct 2026).
+  const levelOnly = tone === "none" && level != null;
+  const Icon = levelOnly && TrendIcon ? TrendIcon : TONE[tone].icon;
+  const text = TONE[tone].text;
+  const headline = levelOnly && outlook && outlook.trend !== "unknown" ? DIR[outlook.trend === "up" ? "rising" : outlook.trend === "down" ? "falling" : "steady"][lang] : verdict[lang];
   return (
     <section aria-label={t("verdict.aria")} data-tier={tone} className={`rounded-xl border ${look.card} shadow-sm`}>
       <div className="p-4 sm:p-6">
@@ -335,7 +341,7 @@ export function VerdictCard({
         <div className="mt-3 sm:mt-4 flex items-end justify-between gap-3 sm:gap-4" lang={lang}>
           <h2 className={`flex min-w-0 items-center gap-2 text-2xl sm:text-3xl font-semibold tracking-tight ${text}`}>
             <Icon className="size-7 shrink-0" aria-hidden />
-            {verdict[lang]}
+            {headline}
           </h2>
           {level && (
             <div className="relative shrink-0 text-right leading-tight">
@@ -346,6 +352,12 @@ export function VerdictCard({
             </div>
           )}
         </div>
+
+        {levelOnly && (
+          <p data-verdict-note className="mt-1 text-sm text-slate-600 dark:text-slate-400" lang={lang}>
+            {t("card.noLevels")}
+          </p>
+        )}
 
         {note && (
           <p data-verdict-note className="mt-1 text-sm text-slate-600 dark:text-slate-400" lang={lang}>

@@ -26,9 +26,9 @@ import {
 // New strings kept here (si/ta are drafts that need native review) so the shared i18n files
 // stay untouched.
 const COPY = {
-  en: { stale: "No recent reading", none: "No flood levels published" },
-  si: { stale: "මෑත කියවීමක් නැත", none: "ගංවතුර මට්ටම් ප්‍රකාශයට පත් කර නැත" },
-  ta: { stale: "சமீபத்திய அளவீடு இல்லை", none: "வெள்ள மட்டங்கள் வெளியிடப்படவில்லை" },
+  en: { stale: "No recent reading", none: "Level only" },
+  si: { stale: "මෑත කියවීමක් නැත", none: "මට්ටම පමණි" },
+  ta: { stale: "சமீபத்திய அளவீடு இல்லை", none: "மட்டம் மட்டும்" },
 } as const;
 
 const FLAGGED: Tier[] = ["major", "minor", "alert"]; // near alert reads Normal, so no bold
