@@ -5,6 +5,7 @@ import type { Locale } from "./config";
 
 const en = {
   "fb.title": "Is this right?",
+  "fb.float": "Is this right? Tell us",
   "fb.intro": "Each answer helps us improve the forecast for your area.",
   "fb.yes": "Yes, matches what I see",
   "fb.worse": "No, it's worse",
@@ -63,6 +64,7 @@ type Dict = Record<FKey, string>;
 
 const si: Dict = {
   "fb.title": "මෙය නිවැරදිද?",
+  "fb.float": "මෙය නිවැරදිද? අපට කියන්න",
   "fb.intro": "ඔබේ සෑම පිළිතුරක්ම ඔබේ ප්‍රදේශයේ පුරෝකථනය වඩා හොඳ කිරීමට අපට උදව් වේ.",
   "fb.yes": "ඔව්, මා දකින දේට ගැලපේ",
   "fb.worse": "නැහැ, තත්ත්වය මීට වඩා නරකයි",
@@ -119,6 +121,7 @@ const si: Dict = {
 
 const ta: Dict = {
   "fb.title": "இது சரியா?",
+  "fb.float": "இது சரியா? சொல்லுங்கள்",
   "fb.intro": "உங்கள் ஒவ்வொரு பதிலும் உங்கள் பகுதிக்கான முன்னறிவிப்பை மேம்படுத்த உதவும்.",
   "fb.yes": "ஆம், நான் பார்ப்பதுடன் பொருந்துகிறது",
   "fb.worse": "இல்லை, நிலைமை இதைவிட மோசம்",

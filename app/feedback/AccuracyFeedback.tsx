@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Check, CircleCheck, CircleHelp, MapPin, MessageCircleQuestion, TrendingDown, TrendingUp, X } from "lucide-react";
 import { FB_RAIN, FB_RIVER, FB_WATER, NOTE_MAX, colomboDay, fbCookieName, roundCoord, type FbAnswer, type FbPage, type FbRain, type FbRiver, type FbWater } from "@/lib/feedback";
 import { fbFor, type FKey } from "@/lib/i18n/feedback";
@@ -39,6 +39,28 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
   const target = page === "station" ? (station as string) : (town as string);
   const cookie = fbCookieName(page, target);
   const already = useSyncExternalStore(subscribe, answeredToday(cookie), () => false);
+  // a floating "Is this right? Tell us" pill: shown once the visitor has scrolled a screen down, hidden while the card itself is on screen
+  // and once they have answered (or answered earlier today); tapping it scrolls to the card and briefly rings it
+  const box = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.15 });
+    io.observe(el);
+    const onScroll = () => setScrolled(window.scrollY > window.innerHeight * 0.6);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { io.disconnect(); window.removeEventListener("scroll", onScroll); };
+  }, []);
+  const goToCard = () => {
+    box.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setFlash(true);
+    window.setTimeout(() => setFlash(false), 1800);
+    trackEvent("feedback_float_tap", { page });
+  };
   const [phase, setPhase] = useState<Phase>("idle");
   const [hp, setHp] = useState("");
   const [token, setToken] = useState<string | null>(null);
@@ -173,10 +195,15 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
   const done = phase === "done";
 
   return (
-    <section aria-label={ft("fb.title")} lang={lang} className="mt-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5">
-      <h2 className="flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-        <MessageCircleQuestion className="size-4" aria-hidden /> {ft("fb.title")}
+    <section ref={box} id="is-this-right" aria-label={ft("fb.title")} lang={lang} className={`mt-4 scroll-mt-24 rounded-xl border-2 border-sky-300 bg-sky-50/70 p-4 transition-shadow sm:p-5 dark:border-sky-800 dark:bg-sky-950/30 ${flash ? "ring-4 ring-sky-400/60" : ""}`}>
+      <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
+        <MessageCircleQuestion className="size-5 text-sky-600 dark:text-sky-400" aria-hidden /> {ft("fb.title")}
       </h2>
+      {!already && !done && scrolled && !inView && (
+        <button type="button" onClick={goToCard} className={`fixed right-3 z-30 flex items-center gap-1.5 rounded-full bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-sky-700 bottom-[calc(3.5rem+env(safe-area-inset-bottom)+5.5rem)] sm:bottom-24 sm:right-6 ${ring}`}>
+          <MessageCircleQuestion className="size-4" aria-hidden /> {ft("fb.float")}
+        </button>
+      )}
 
       {already && !done ? (
         <p className="mt-2 flex items-start gap-2 text-sm text-slate-800 dark:text-slate-200" role="status">
