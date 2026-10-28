@@ -62,6 +62,13 @@ export async function loadBaseStyle(dark: boolean): Promise<Style> {
   style.layers = style.layers.filter((l) => !["airport", "label_state", "label_country_3", "label_country_2", "label_country_1", "highway-shield-non-us", "highway-shield-us-interstate", "road_shield_us"].includes(l.id));
   // thinner, quieter minor roads
   for (const l of style.layers) if (l.id === "highway_minor" && l.paint) l.paint["line-opacity"] = 0.7;
+  // rivers, canals and lakes in the flood map's own blue (its colour at about 1.5 ft deep, same opacity), so water leaving
+  // the river looks like the same water; set after the dark pass so both themes composite it the same way as the flood layer
+  for (const l of style.layers) {
+    if (!l.paint) continue;
+    if (l.id === "water") { l.paint["fill-color"] = "rgb(21, 89, 195)"; l.paint["fill-opacity"] = 0.56; }
+    if (l.id === "waterway") { l.paint["line-color"] = "rgb(21, 89, 195)"; l.paint["line-opacity"] = 0.56; }
+  }
   const firstSymbol = style.layers.find((l) => l.type === "symbol")?.id;
   const b3d: Layer = {
     id: "building-3d", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building",
