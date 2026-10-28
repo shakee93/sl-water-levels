@@ -179,5 +179,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api(?:/|$)|mcp(?:/|$)|embed/(?:river|gauge|forecast|town|now|reservoirs|ticker)(?:/|$)|_next|.*\\..*).*)"],
+  matcher: ["/((?!api(?:/|$)|mcp(?:/|$)|embed/(?:card|river|gauge|forecast|town|now|reservoirs|ticker)(?:/|$)|_next|.*\\..*).*)"],
 };

@@ -34,7 +34,7 @@ import { getReleases, releaseAffectingFrom } from "./releases";
 import { officialReleaseAlert } from "./releaseAlert";
 import type { VerdictTone } from "@/app/ShareButton";
 import type { FChart, ForecastPayload } from "./embedTypes";
-import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, GaugePayload, MarkInfo, NowPayload, ReservoirsPayload, ResRow, RiverPayload, TickerPayload, TownPayload } from "./embedTypes";
+import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, CardPayload, GaugePayload, MarkInfo, NowPayload, ReservoirsPayload, ResRow, RiverPayload, TickerPayload, TownPayload } from "./embedTypes";
 
 const MARKS = ["alert", "minor", "major"] as const;
 const TIER_ORDER: Record<string, number> = { major: 5, minor: 4, alert: 3, normal: 2, none: 1, stale: 0 };
@@ -137,6 +137,8 @@ function rowOf(s: NationalStation, c: Ctx, nh: NextHour | null, o: { withMarks: 
     outcome: outcomeOf(s, c),
     stale,
     rivernet: s.source === "rivernet",
+    tributary: !!s.tributary,
+    since: stale && s.lastSeenTs ? c.t("gauges.notReportingSince", { when: timeOf(s.lastSeenTs, c) }) : null,
   };
 }
 
@@ -252,6 +254,7 @@ async function buildRiver(slug: string, c: Ctx): Promise<RiverPayload | null> {
     summary: riverSummary(list, c),
     upstream: c.e("w.upstream"),
     downstream: c.e("w.downstream"),
+    tributaries: c.t("gauges.tributaries"),
     rows,
   };
 }
@@ -283,6 +286,12 @@ async function buildGauge(slug: string, c: Ctx): Promise<GaugePayload | null> {
     chart,
     chartTitle: c.e("w.lastN", { n: c.cfg.hours || 24 }),
   };
+}
+
+/** The simple card: the gauge widget's data, drawn verdict-first. */
+async function buildCard(slug: string, c: Ctx): Promise<CardPayload | null> {
+  const g = await buildGauge(slug, c);
+  return g ? { ...g, widget: "card", kind: "card" } : null;
 }
 
 const HOUR_ARROW: Record<string, Arrow> = { "dir.rising": "up", "dir.slow": "up", "dir.falling": "down", "dir.steady": "steady", "dir.tide": "steady" };
@@ -596,6 +605,7 @@ export async function buildEmbed(widget: Widget, id: string | null, cfg: EmbedCf
   switch (widget) {
     case "river": return id ? buildRiver(id, c) : null;
     case "gauge": return id ? buildGauge(id, c) : null;
+    case "card": return id ? buildCard(id, c) : null;
     case "forecast": return id ? buildForecast(id, c) : null;
     case "town": return id ? buildTown(id, c) : null;
     case "now": return buildNow(c);

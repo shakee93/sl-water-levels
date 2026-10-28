@@ -16,6 +16,7 @@ export type BuilderLists = {
 };
 
 const NAMES: Record<Widget, { name: string; hint: string }> = {
+  card: { name: "Card", hint: "The simplest box: one gauge, verdict first" },
   river: { name: "River", hint: "All gauges of one river" },
   gauge: { name: "Gauge", hint: "One gauge with marks and chart" },
   forecast: { name: "Forecast", hint: "Next hour, next 24 hours and the forecast chart for one gauge" },
@@ -113,7 +114,7 @@ export function EmbedBuilder(props: { lists: BuilderLists; lang: Locale; origin:
 }
 
 function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Locale; origin: string; init: Record<string, string> }) {
-  const [widget, setWidget] = useState<Widget>(isWidget(init.w) ? init.w : "river");
+  const [widget, setWidget] = useState<Widget>(isWidget(init.w) ? init.w : "card");
   const [cfg, setCfg] = useState<EmbedCfg>(() => ({ ...parseCfg(init), lang: init.lang ? parseCfg(init).lang : lang }));
   const [id, setId] = useState<string>(init.id ?? "");
   const [tickerBy, setTickerBy] = useState<"river" | "gauge">(init.gauge ? "gauge" : "river");
@@ -129,15 +130,15 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
   const fixed = styled.fixed;
 
   // a sensible id when the widget needs one and none (or one of another kind) is chosen
-  const idOk = widget === "river" ? lists.rivers.some((r) => r.slug === id) : (widget === "gauge" || widget === "forecast") ? lists.gauges.some((g) => g.slug === id) : widget === "town" ? lists.towns.some((x) => x.slug === id) : true;
-  const effId = idOk ? id : widget === "river" ? "kalu-ganga" : widget === "gauge" ? "rathnapura" : widget === "forecast" ? "nagalagam-street" : widget === "town" ? "ratnapura" : "";
+  const idOk = widget === "river" ? lists.rivers.some((r) => r.slug === id) : (widget === "card" || widget === "gauge" || widget === "forecast") ? lists.gauges.some((g) => g.slug === id) : widget === "town" ? lists.towns.some((x) => x.slug === id) : true;
+  const effId = idOk ? id : widget === "river" ? "kalu-ganga" : widget === "gauge" || widget === "card" ? "rathnapura" : widget === "forecast" ? "nagalagam-street" : widget === "town" ? "ratnapura" : "";
 
-  const path = widget === "river" || widget === "gauge" || widget === "forecast" || widget === "town" ? `/embed/${widget}/${effId}` : `/embed/${widget}`;
+  const path = widget === "card" || widget === "river" || widget === "gauge" || widget === "forecast" || widget === "town" ? `/embed/${widget}/${effId}` : `/embed/${widget}`;
   const query = cfgQuery({ ...cfg, gauge: widget === "ticker" && tickerBy === "gauge" ? cfg.gauge : null, rivers: widget === "ticker" && tickerBy === "gauge" ? [] : cfg.rivers }, widget);
   const rel = `${path}${query}`;
   const nGauges = widget === "river" ? lists.rivers.find((r) => r.slug === effId)?.count ?? 4 : widget === "now" ? 4 : 4;
-  const fixedH = fixedHeight(widget, cfg.size, nGauges);
-  const title = widget === "river" ? `${lists.rivers.find((r) => r.slug === effId)?.name ?? ""} live river levels` : widget === "gauge" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} live river level` : widget === "forecast" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} river forecast` : widget === "town" ? `${lists.towns.find((x) => x.slug === effId)?.name ?? ""} flood status` : widget === "now" ? "Sri Lanka rivers right now" : widget === "reservoirs" ? "Reservoirs spilling in Sri Lanka" : "Live river level";
+  const fixedH = fixedHeight(widget, cfg.size, nGauges, cfg.layout === "cards");
+  const title = widget === "river" ? `${lists.rivers.find((r) => r.slug === effId)?.name ?? ""} live river levels` : widget === "gauge" || widget === "card" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} live river level` : widget === "forecast" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} river forecast` : widget === "town" ? `${lists.towns.find((x) => x.slug === effId)?.name ?? ""} flood status` : widget === "now" ? "Sri Lanka rivers right now" : widget === "reservoirs" ? "Reservoirs spilling in Sri Lanka" : "Live river level";
   const code =
     `<iframe src="${origin}${rel}" width="100%" height="${fixedH}" style="border:0;max-width:${widget === "ticker" ? "760" : "560"}px" loading="lazy" title="${title.trim()}"></iframe>` +
     (script ? `\n<script src="${origin}/embed.js" async></script>` : "");
@@ -193,7 +194,7 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
             </select>
           </label>
         )}
-        {(widget === "gauge" || widget === "forecast") && (
+        {(widget === "card" || widget === "gauge" || widget === "forecast") && (
           <label className="block">
             <span className={field}>Gauge</span>
             <select className={select} value={effId} onChange={(e) => setId(e.target.value)}>
@@ -238,6 +239,7 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
         )}
 
         <div className="flex flex-wrap gap-x-4 gap-y-3 min-w-0">
+          {widget === "river" && <Seg label="Layout" value={cfg.layout} options={[{ v: "list", l: "List" }, { v: "cards", l: "Cards" }]} onChange={(v) => set("layout", v)} />}
           {widget !== "ticker" && <Seg label="Size" value={cfg.size} options={[{ v: "full", l: "Full" }, { v: "compact", l: "Compact" }]} onChange={(v) => set("size", v)} />}
           <Seg label="Language" value={cfg.lang} options={[{ v: "en", l: "English" }, { v: "si", l: "සිංහල" }, { v: "ta", l: "தமிழ்" }]} onChange={(v) => set("lang", v)} />
           <Seg label="Theme" value={cfg.theme} options={[{ v: "light", l: "Light" }, { v: "auto", l: "Match page" }, { v: "dark", l: "Dark" }]} onChange={(v) => set("theme", v)} />

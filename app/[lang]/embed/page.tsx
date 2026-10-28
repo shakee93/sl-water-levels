@@ -86,7 +86,7 @@ export default async function EmbedGuide({ params }: { params: Promise<{ lang: s
 
         <h2 className={sec}>{e("e.widgetsH")}</h2>
         <ul className="mt-2 space-y-1.5 text-sm">
-          {(["river", "gauge", "forecast", "town", "now", "reservoirs", "ticker"] as const).map((w) => (
+          {(["card", "river", "gauge", "forecast", "town", "now", "reservoirs", "ticker"] as const).map((w) => (
             <li key={w} className={li}>
               <span className="font-medium text-slate-900 dark:text-slate-100">{e(`wd.${w}.name` as "wd.river.name")}</span>
               {": "}

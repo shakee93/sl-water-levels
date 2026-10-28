@@ -3,7 +3,7 @@
 // The credit line and its link are NOT settings: every widget always carries them.
 import { isLocale, type Locale } from "./i18n/config";
 
-export const WIDGETS = ["river", "gauge", "forecast", "town", "now", "reservoirs", "ticker"] as const;
+export const WIDGETS = ["card", "river", "gauge", "forecast", "town", "now", "reservoirs", "ticker"] as const;
 export type Widget = (typeof WIDGETS)[number];
 export const isWidget = (v: unknown): v is Widget => typeof v === "string" && (WIDGETS as readonly string[]).includes(v);
 
@@ -17,6 +17,8 @@ export type EmbedCfg = {
   hours: 0 | 24 | 72;
   forecast: boolean;
   marks: boolean;
+  /** River widget: one row per gauge ("list") or one small card per gauge ("cards"). */
+  layout: "list" | "cards";
   /** now / reservoirs / ticker filters: river (basin) slugs, comma separated in the URL. */
   rivers: string[];
   gauge: string | null;
@@ -39,7 +41,7 @@ export type EmbedCfg = {
 export const FONTS = ["system", "sans", "serif", "noto-sans", "noto-serif", "inter", "roboto", "merriweather"] as const;
 export type EmbedFont = (typeof FONTS)[number];
 
-export const DEFAULTS: EmbedCfg = { lang: "en", theme: "light", size: "full", unit: "ft", hours: 24, forecast: true, marks: true, rivers: [], gauge: null, accent: null, bg: null, text: null, font: "system", scale: 100, radius: 12, border: true, shadow: true, pad: "normal", title: true };
+export const DEFAULTS: EmbedCfg = { lang: "en", theme: "light", size: "full", unit: "ft", hours: 24, forecast: true, marks: true, layout: "list", rivers: [], gauge: null, accent: null, bg: null, text: null, font: "system", scale: 100, radius: 12, border: true, shadow: true, pad: "normal", title: true };
 
 const hex = (v: string | undefined): string | null => {
   const m = /^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec((v ?? "").trim());
@@ -65,6 +67,7 @@ export function parseCfg(sp: Sp): EmbedCfg {
     hours: hours === 0 || hours === 72 ? hours : hours === 24 ? 24 : DEFAULTS.hours,
     forecast: flag(g("forecast"), true),
     marks: flag(g("marks"), true),
+    layout: g("layout") === "cards" ? "cards" : "list",
     rivers: slugs(g("river") ?? g("rivers") ?? g("basin")),
     gauge: slugs(g("gauge"))[0] ?? null,
     accent: hex(g("accent")),
@@ -90,6 +93,7 @@ export function cfgQuery(c: Partial<EmbedCfg>, w: Widget): string {
   if ((w === "gauge" || w === "forecast") && c.hours != null && c.hours !== DEFAULTS.hours) q.set("hours", String(c.hours));
   if (c.forecast === false) q.set("forecast", "0");
   if (c.marks === false) q.set("marks", "0");
+  if (w === "river" && c.layout === "cards") q.set("layout", "cards");
   if (c.rivers?.length) q.set(w === "reservoirs" ? "basin" : "river", c.rivers.join(","));
   if (w === "ticker" && c.gauge) q.set("gauge", c.gauge);
   if (c.accent) q.set("accent", c.accent);
@@ -108,6 +112,7 @@ export function cfgQuery(c: Partial<EmbedCfg>, w: Widget): string {
 
 /** Which settings a widget uses (the builder only shows these). */
 export const USES: Record<Widget, { unit: boolean; hours: boolean; forecast: boolean; marks: boolean; filter: "none" | "rivers" | "river-or-gauge" }> = {
+  card: { unit: true, hours: false, forecast: true, marks: true, filter: "none" },
   river: { unit: true, hours: false, forecast: true, marks: true, filter: "none" },
   gauge: { unit: true, hours: true, forecast: true, marks: true, filter: "none" },
   forecast: { unit: true, hours: true, forecast: false, marks: true, filter: "none" },
@@ -118,10 +123,11 @@ export const USES: Record<Widget, { unit: boolean; hours: boolean; forecast: boo
 };
 
 /** A fixed iframe height that fits the widget when the resize script is not used. */
-export function fixedHeight(w: Widget, size: "compact" | "full", n = 4): number {
+export function fixedHeight(w: Widget, size: "compact" | "full", n = 4, cfgLayoutCards = false): number {
   const full = size === "full";
   switch (w) {
-    case "river": return (full ? 150 : 108) + n * (full ? 64 : 44);
+    case "card": return full ? 300 : 190;
+    case "river": return cfgLayoutCards ? 150 + Math.ceil(n / 2) * (full ? 190 : 120) : (full ? 150 : 108) + n * (full ? 64 : 44);
     case "gauge": return full ? 470 : 250;
     case "forecast": return full ? 640 : 330;
     case "town": return full ? 400 : 260;

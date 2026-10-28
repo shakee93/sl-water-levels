@@ -29,6 +29,10 @@ export type EmbedRow = {
   stale: boolean;
   /** Reading comes from RiverNet (DMC / Leecom SCADA), not the Irrigation Department feed. */
   rivernet: boolean;
+  /** A tributary of the river (RiverNet): listed apart from the main stem. */
+  tributary: boolean;
+  /** "Not reporting since 26 Oct, 4:25 pm" for a gauge with no recent reading and a known last reading; shown once, in place of the time and the pill. */
+  since: string | null;
 };
 
 export type Chart = {
@@ -58,7 +62,7 @@ type Base = {
   unavailable?: string;
 };
 
-export type RiverPayload = Base & { kind: "river"; title: string; summary: string; rows: EmbedRow[]; upstream: string; downstream: string };
+export type RiverPayload = Base & { kind: "river"; title: string; summary: string; rows: EmbedRow[]; upstream: string; downstream: string; /** Heading over the tributary rows. */ tributaries: string };
 export type GaugePayload = Base & {
   kind: "gauge";
   title: string;
@@ -68,6 +72,8 @@ export type GaugePayload = Base & {
   chart: Chart | null;
   chartTitle: string;
 };
+/** The simple card: one gauge, verdict first. Same data as the gauge widget. */
+export type CardPayload = Omit<GaugePayload, "kind"> & { kind: "card" };
 export type TownPayload = Base & {
   kind: "town";
   title: string;
@@ -124,4 +130,4 @@ export type ResRow = { key: string; name: string; river: string | null; href: st
 export type ReservoirsPayload = Base & { kind: "reservoirs"; title: string; summary: string; items: ResRow[]; officialNote: string };
 export type TickerPayload = Base & { kind: "ticker"; segments: string[]; tier: PillTier; href: string; label: string };
 
-export type EmbedPayload = RiverPayload | GaugePayload | ForecastPayload | TownPayload | NowPayload | ReservoirsPayload | TickerPayload;
+export type EmbedPayload = RiverPayload | CardPayload | GaugePayload | ForecastPayload | TownPayload | NowPayload | ReservoirsPayload | TickerPayload;

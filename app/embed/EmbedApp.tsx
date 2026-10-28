@@ -2,12 +2,12 @@
 
 // The embeddable widgets: one client shell (refresh every 5 minutes from /api/embed, height to the parent window, one analytics
 // event) and a view per widget. Plain server-made strings in, markup out: no dictionaries, no calls to any data source.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, Minus } from "lucide-react";
 import { PILL, StepWord, TierPill, type PillTier } from "@/app/TierPill";
 import type { EmbedCfg, Widget } from "@/lib/embedConfig";
 import { styleOf } from "@/lib/embedStyle";
-import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, FChart, ForecastPayload, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
+import type { Arrow, CardPayload, Chart, Credit, EmbedPayload, EmbedRow, FChart, ForecastPayload, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
 
 const REFRESH_MS = 5 * 60_000;
 const link = "underline underline-offset-2 decoration-slate-400/70 hover:decoration-current";
@@ -100,11 +100,11 @@ function RowView({ r, full, nameLink = true }: { r: EmbedRow; full: boolean; nam
             )}
             {r.river && <span className="font-normal text-slate-500 dark:text-slate-400"> · {r.river}</span>}
           </p>
-          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time ? <><span className="whitespace-nowrap">{r.time}</span>{r.age && <> · <span className="whitespace-nowrap">{r.age}</span></>}</> : r.step}</p>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.since ? r.since : r.time ? <><span className="whitespace-nowrap">{r.time}</span>{r.age && <> · <span className="whitespace-nowrap">{r.age}</span></>}</> : r.step}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:gap-2.5">
           {r.level && <span className="min-w-[4.5rem] text-right text-lg font-semibold tabular-nums leading-none whitespace-nowrap">{r.level}</span>}
-          <TierPill label={r.step} tier={r.tier} />
+          {!r.since && <TierPill label={r.step} tier={r.tier} />}
         </div>
       </div>
       {(r.trend || (full && (r.next || r.cross))) && (
@@ -124,6 +124,36 @@ function RowView({ r, full, nameLink = true }: { r: EmbedRow; full: boolean; nam
   );
 }
 
+function TribHeading({ text, className = "" }: { text: string; className?: string }) {
+  return <p className={`mt-1 text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-500 ${className}`}>{text}</p>;
+}
+
+/** One gauge as a small card (river widget, layout=cards). Its border takes the step colour above Normal. */
+function MiniCard({ r, full }: { r: EmbedRow; full: boolean }) {
+  return (
+    <div className={`emb-chip rounded-lg border p-2.5 ${TONE_CLS[r.tier] ?? ""} ${CARD[r.tier]}`} style={TONE_VAR[r.tier]}>
+      <p className="font-semibold leading-snug [overflow-wrap:anywhere]">
+        <a href={r.href} target="_blank" rel="noopener" className="hover:underline underline-offset-2">{r.name}</a>
+      </p>
+      {r.since ? (
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{r.since}</p>
+      ) : (
+        <>
+          <p className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <span className={`text-2xl font-semibold tabular-nums leading-none ${r.level ? "" : "text-slate-400"}`}>{r.level ?? "—"}</span>
+            <TierPill label={r.step} tier={r.tier} />
+          </p>
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+            <Trend row={r} />
+            {r.time && <span className="text-slate-500 dark:text-slate-400 tabular-nums">{r.time}</span>}
+          </p>
+          {full && r.next && <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{r.next}</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function RiverView({ p }: { p: RiverPayload }) {
   const full = p.cfg.size === "full";
   const worst = p.rows.reduce<PillTier>((a, r) => (rank(r.tier) > rank(a) ? r.tier : a), "normal");
@@ -137,11 +167,25 @@ function RiverView({ p }: { p: RiverPayload }) {
           <span>{p.downstream} ↓</span>
         </p>
       )}
-      <ul className={`${full ? "mt-1.5" : "mt-2.5"} divide-y divide-slate-200/80 dark:divide-slate-800`}>
-        {p.rows.map((r, i) => (
-          <RowView key={`${r.key}-${i}`} r={r} full={full} />
-        ))}
-      </ul>
+      {p.cfg.layout === "cards" ? (
+        <div className="mt-3 grid gap-2.5 min-[480px]:grid-cols-2">
+          {p.rows.map((r, i) => (
+            <Fragment key={`${r.key}-${i}`}>
+              {r.tributary && !p.rows[i - 1]?.tributary && <TribHeading text={p.tributaries} className="min-[480px]:col-span-2" />}
+              <MiniCard r={r} full={full} />
+            </Fragment>
+          ))}
+        </div>
+      ) : (
+        <ul className={`${full ? "mt-1.5" : "mt-2.5"} divide-y divide-slate-200/80 dark:divide-slate-800`}>
+          {p.rows.map((r, i) => (
+            <Fragment key={`${r.key}-${i}`}>
+              {r.tributary && !p.rows[i - 1]?.tributary && <li className="pt-3 pb-1 text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-500">{p.tributaries}</li>}
+              <RowView r={r} full={full} />
+            </Fragment>
+          ))}
+        </ul>
+      )}
     </Shell>
   );
 }
@@ -498,11 +542,50 @@ function TickerView({ p }: { p: TickerPayload }) {
   );
 }
 
+// ---- card: the simplest box, one gauge, verdict first ----------------------------------------------------------------------------------
+
+function CardView({ p }: { p: CardPayload }) {
+  const r = p.row;
+  const full = p.cfg.size === "full";
+  return (
+    <Shell p={p} tone={r.tier}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="emb-title text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{p.river}</p>
+        </div>
+        {!r.since && <TierPill label={r.step} tier={r.tier} />}
+      </div>
+      {r.since ? (
+        <p className="mt-3 text-sm font-medium">{r.since}</p>
+      ) : (
+        <>
+          <p className="mt-2.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className={`text-4xl font-semibold tabular-nums leading-none ${r.level ? "" : "text-slate-400"}`}>{r.level ?? "—"}</span>
+            <Trend row={r} />
+          </p>
+          {r.outcome && <p className="mt-1.5 text-sm font-medium">{r.outcome}</p>}
+          {full && (r.next || r.cross) && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-700 dark:text-slate-300">
+              <ArrowIcon a={r.nextArrow} className="size-4" />
+              <span>{r.next}</span>
+              {r.cross && <span className="font-semibold">· {r.cross}</span>}
+            </p>
+          )}
+          {full && p.bar && <MarksBar bar={p.bar} />}
+          {r.time && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</p>}
+        </>
+      )}
+    </Shell>
+  );
+}
+
 // ---- the shell -------------------------------------------------------------------------------------------------------------------------
 
 function View({ p }: { p: EmbedPayload }) {
   switch (p.kind) {
     case "river": return <RiverView p={p} />;
+    case "card": return <CardView p={p} />;
     case "gauge": return <GaugeView p={p} />;
     case "forecast": return <ForecastView p={p} />;
     case "town": return <TownView p={p} />;

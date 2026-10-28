@@ -10,7 +10,7 @@ export default async function EmbedPage({ params, searchParams }: { params: Prom
   await connection();
   const [{ widget, slug }, sp] = await Promise.all([params, searchParams]);
   if (!isWidget(widget)) notFound();
-  const needsId = widget === "river" || widget === "gauge" || widget === "forecast" || widget === "town";
+  const needsId = widget === "card" || widget === "river" || widget === "gauge" || widget === "forecast" || widget === "town";
   if ((needsId && slug?.length !== 1) || (!needsId && slug?.length)) notFound();
   const cfg = parseCfg(sp);
   const id = slug?.[0]?.toLowerCase() ?? null;
