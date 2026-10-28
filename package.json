@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",
+    "heic-to": "1.6.5",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.16.0",
     "mcp-handler": "^1.1.0",

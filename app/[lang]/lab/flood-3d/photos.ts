@@ -44,14 +44,18 @@ export function readExif(buf: ArrayBuffer): { time: string | null; gps: string |
   return none;
 }
 
-/** Resize a photo to a metadata-free JPEG. Throws "format" when the browser cannot decode it (for example HEIC in Chrome), "size" when still too big. */
+/** Resize a photo to a metadata-free JPEG. Throws "format" when it cannot be decoded (HEIC goes through a decoder loaded on demand), "size" when still too big. */
 export async function preparePhoto(file: File): Promise<Prepared> {
   if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) throw new Error("format");
   if (file.size > 30_000_000) throw new Error("size");
   let exifTime: string | null = null, exifGps: string | null = null;
   if (/jpe?g/i.test(file.type) || /\.jpe?g$/i.test(file.name)) { const e = readExif(await file.arrayBuffer()); exifTime = e.time; exifGps = e.gps; }
   let bmp: ImageBitmap;
-  try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); } catch { throw new Error("format"); }
+  try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); } catch {
+    // iPhone photos are HEIC, which only Safari decodes: elsewhere a HEIC decoder (heic-to, ~3 MB, loaded only now) turns it into a bitmap
+    if (!/hei[cf]/i.test(file.type) && !/\.hei[cf]$/i.test(file.name)) throw new Error("format");
+    try { const { heicTo } = await import("heic-to/next"); bmp = await heicTo({ blob: file, type: "bitmap", options: { imageOrientation: "from-image" } }); } catch { throw new Error("format"); }
+  }
   const k = Math.min(1, 2048 / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
   c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();
