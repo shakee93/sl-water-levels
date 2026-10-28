@@ -18,6 +18,7 @@ import { colomboToday, loadSeason, getSeasonSummary } from "./seasonStorage";
 import { aiConfigured } from "./openai";
 import { NEWSWIRE_UA } from "./newsFeeds";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
+import { d1Query, d1Configured } from "./d1";
 import { getHmisLevels, getHmisRain, getHmisWarnings, hmisDirect, RAIN_MAX_AGE_MIN } from "./hmis";
 
 /** Hours since `fromMs`, not counting Saturdays and Sundays in Sri Lanka time. */
@@ -659,6 +660,36 @@ async function checkDeploy(): Promise<HealthCheck> {
   });
 }
 
+// Runs per hour in the prediction log. `pipe-forecasts` only proves the store workflow succeeded; on 24-26 Oct 2026 the workflow ran
+// green for 26 h while an old ISR copy of /api/forecasts meant almost nothing new was logged (fixed in c1558b0). This counts what actually
+// reached D1: gauges with a reading in the last 2 h that have a forecast run stored in the last 2 h. Warn only; measuring, never alerting users.
+const RUNS_MIN_SHARE = 0.8;
+const forecastRunsStored = unstable_cache(
+  async (since: number): Promise<number> => {
+    const rows = await d1Query("SELECT COUNT(DISTINCT station) AS n FROM forecast_runs WHERE stored_at >= ?", [since]);
+    return Number(rows[0]?.n ?? 0);
+  },
+  ["health-forecast-runs"],
+  { revalidate: 600 },
+);
+
+async function checkForecastRuns(deep: boolean): Promise<HealthCheck> {
+  return run("pipe-forecast-runs", "Forecast log: runs in the last 2 hours", "Nothing visible; forecast accuracy checking and the nightly scoreboard have gaps.", async () => {
+    if (!d1Configured()) return unchecked("no D1 token on the site");
+    const national = await getNational();
+    const expected = national.filter((s) => s.latest && (s.ageMin ?? Infinity) < 120).length;
+    if (expected < 10) return unchecked(`only ${expected} gauges with a fresh reading`);
+    // round the window start to the minute so the cache key repeats within the revalidate window
+    const since = Math.floor((Date.now() - 2 * HOUR) / (10 * MIN)) * (10 * MIN);
+    const logged = deep ? Number((await d1Query("SELECT COUNT(DISTINCT station) AS n FROM forecast_runs WHERE stored_at >= ?", [since]))[0]?.n ?? 0) : await forecastRunsStored(since);
+    const share = logged / expected;
+    return {
+      ok: share >= RUNS_MIN_SHARE,
+      detail: `${logged} of ${expected} gauges with a fresh reading have a forecast run logged in the last 2 h (${Math.round(share * 100)}%, warn below ${RUNS_MIN_SHARE * 100}%)`,
+    };
+  });
+}
+
 async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
   return Promise.all([
     checkDeploy(),
@@ -674,6 +705,7 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
     }),
     checkWorkflow("pipe-hmis", "HMIS archive (data branch)", "hmis-snapshot.yml", "Nothing visible; the history that will let the 10-minute sensors and ground rain gauges be backtested has gaps (each run re-reads the last 24 h, so short gaps heal).", () => 3 * HOUR),
     checkWorkflow("pipe-forecasts", "Hourly forecast store (Cloudflare D1)", "store-forecasts.yml", "Nothing visible; forecast accuracy checking has gaps.", () => 2 * HOUR),
+    checkForecastRuns(deep),
     checkWorkflow("pipe-export", "Monthly prediction export", "export-predictions.yml", "Nothing visible; the monthly accuracy review has no new export.", () => null),
   ]);
 }
