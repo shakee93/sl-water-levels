@@ -6,6 +6,7 @@ import { FB_RAIN, FB_RIVER, FB_WATER, NOTE_MAX, colomboDay, fbCookieName, roundC
 import { fbFor, type FKey } from "@/lib/i18n/feedback";
 import { trackEvent } from "@/lib/umami";
 import { useI18n } from "../LocaleProvider";
+import { MarkSpot } from "./MarkSpot";
 
 const ring = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const ANSWERS: { id: FbAnswer; key: FKey; Icon: typeof Check }[] = [
@@ -31,9 +32,12 @@ type Loc = { state: "none" } | { state: "busy" } | { state: "off" } | { state: "
 
 /**
  * "Is this right?" under the verdict. One tap answers; then an optional second step (what they see, a note, a rough location).
+
+ * With `spot` (only where the flood map covers the place) it also offers "Mark it on the map": a mini flood survey (app/feedback/MarkSpot.tsx)
+ * whose map and MapLibre load only when it is opened.
  * Location is read only when the person taps the button and is rounded to 0.01 degree (about 1 km) here, before anything is sent.
  */
-export function AccuracyFeedback({ page, station, town, name, tone }: { page: FbPage; station: string | null; town?: string; name: string; tone: string }) {
+export function AccuracyFeedback({ page, station, town, name, tone, spot }: { page: FbPage; station: string | null; town?: string; name: string; tone: string; spot?: { lat: number; lon: number } }) {
   const { lang } = useI18n();
   const ft = fbFor(lang);
   const target = page === "station" ? (station as string) : (town as string);
@@ -365,6 +369,7 @@ export function AccuracyFeedback({ page, station, town, name, tone }: { page: Fb
           </p>
         </>
       )}
+      {spot && <MarkSpot ft={ft} lang={lang} lat={spot.lat} lon={spot.lon} page={page} target={target} />}
     </section>
   );
 }

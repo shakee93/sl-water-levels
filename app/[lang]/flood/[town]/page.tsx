@@ -179,7 +179,7 @@ export default async function TownPage({ params }: Params) {
         {place.rainZone && data.input.streetRain !== undefined && risk.lowSpot && lowSpotCard}
         {d1Configured() && risk.lowSpot && <FloodReport slug={place.slug} town={place.name} urgent />}
 
-        {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} />}
+        {d1Configured() && g && <AccuracyFeedback page="town" town={place.slug} station={g.station} name={place.name} tone={risk.tone} spot={FLOOD3D_TOWNS.has(place.slug) ? { lat: place.lat, lon: place.lon } : undefined} />}
 
         {g && <MyStreetLevel station={g.station} name={g.name} unit={g.unit} level={g.level} learned={streetLevelOf(learned, g.station)} />}
 

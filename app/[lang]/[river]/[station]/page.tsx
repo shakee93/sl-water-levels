@@ -39,6 +39,7 @@ import { TideLineClient } from "@/app/colombo/TideLineClient";
 import { BetweenReadings } from "@/app/colombo/BetweenReadings";
 import { AccuracyFeedback } from "@/app/feedback/AccuracyFeedback";
 import { d1Configured } from "@/lib/d1";
+import { BOUNDS } from "@/lib/flood3dReports";
 import { ReleaseCard } from "@/app/ReleaseCard";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { RiverMap } from "@/app/RiverMap";
@@ -66,6 +67,9 @@ function heading(t: TFn, station: string, basin: string | null | undefined, lang
   const rv = (basin ?? "").trim();
   return rv ? t("station.heading", { name, river: riverName(rv, lang) }) : t("station.headingNoRiver", { name });
 }
+
+// the flood map (and its report route) covers only the Kelani corridor: gauges outside it get no "mark your spot" step
+const inFloodCorridor = (lat: number, lon: number) => Number.isFinite(lat) && Number.isFinite(lon) && lat >= BOUNDS.south && lat <= BOUNDS.north && lon >= BOUNDS.west && lon <= BOUNDS.east;
 
 export async function generateMetadata({
   params,
@@ -305,7 +309,7 @@ export default async function StationPage({
             {station === "Nagalagam Street" && <BetweenReadings />}
             {station === "Nagalagam Street" && <TideLineClient />}
 
-            {d1Configured() && nat && <AccuracyFeedback page="station" station={station} name={stationDisplayName(station)} tone={nat.tier} />}
+            {d1Configured() && nat && <AccuracyFeedback page="station" station={station} name={stationDisplayName(station)} tone={nat.tier} spot={inFloodCorridor(nat.latitude, nat.longitude) ? { lat: nat.latitude, lon: nat.longitude } : undefined} />}
 
             <StationNearby
               current={station}

@@ -7,6 +7,7 @@ import type { Map as MlMap, GeoJSONSource, CanvasSource, MapMouseEvent, Popup, M
 import { preconnect, preload } from "react-dom";
 import { Activity, Box, CloudRain, Copy, Droplets, ExternalLink, Flag, Gauge, History, Info, Layers, LocateFixed, Maximize2, MapPin, Minimize2, PanelRightClose, Play, Route, Search, SlidersHorizontal, Waves, X } from "lucide-react";
 import { loadBaseStyle } from "./mapStyle";
+import { ML_VERSION, loadMl, type Ml } from "./ml";
 import { GLASS, ICON_BTN, Seg, SectionTitle, SwitchRow } from "./ui";
 import { makeT, type Lang } from "./strings";
 import { ReplayCard, replayTime, type ReplayData } from "./Replay";
@@ -22,23 +23,6 @@ type RainNow = { generatedAt: string; grid: { west: number; north: number; south
 const STEP_COLOR: Record<string, string> = { normal: "#16a34a", watch: "#ca8a04", alert: "#ea580c", minor: "#dc2626", major: "#7f1d1d", stale: "#64748b", none: "#64748b" };
 type Live = { gauges?: MapGauge[]; hanwellaLagH?: number; stale?: boolean; partial?: boolean; generatedAt: string; nagalagam: Gauge | null; hanwella: Gauge | null; hanwellaToNag: [number, number][] };
 type Meta = { png: { w: number; h: number; west: number; east: number; south: number; north: number; deg: number }; chance_calibration: Calibration; cover_bounds: [number, number, number, number]; reports_used?: Record<string, number> };
-
-type Ml = typeof import("maplibre-gl");
-const ML_VERSION = "5.24.0"; // files in /public/flood3d/ml are copied from the maplibre-gl@5.24.0 npm package (CSP build: no inline worker, works with Next)
-let mlPromise: Promise<Ml> | null = null;
-/** Loads MapLibre on demand from our own static files: nothing of it is in the page bundle. */
-function loadMl(): Promise<Ml> {
-  mlPromise ??= new Promise<Ml>((resolve, reject) => {
-    const w = window as unknown as { maplibregl?: Ml };
-    if (w.maplibregl) return resolve(w.maplibregl);
-    const css = document.createElement("link"); css.rel = "stylesheet"; css.href = `/flood3d/ml/maplibre-gl.css?v=${ML_VERSION}`; document.head.appendChild(css);
-    const sc = document.createElement("script"); sc.src = `/flood3d/ml/maplibre-gl-csp.js?v=${ML_VERSION}`; sc.async = true;
-    sc.onload = () => { const ml = w.maplibregl!; ml.setWorkerUrl(`/flood3d/ml/maplibre-gl-csp-worker.js?v=${ML_VERSION}`); resolve(ml); };
-    sc.onerror = () => { mlPromise = null; reject(new Error("maplibre")); };
-    document.head.appendChild(sc);
-  });
-  return mlPromise;
-}
 
 const DITWAH_PEAK_FT = 8.43; // Nagalagam Street, 1 Dec 2025 (the replay hour 155 of public/flood3d/ditwah.json)
 const POLL_MS = 5 * 60 * 1000;
