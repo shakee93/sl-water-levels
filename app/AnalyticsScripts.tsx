@@ -1,11 +1,7 @@
-"use client";
-// Google Analytics and the Umami-style counter, moved out of the root layout so they can skip the flood test map's embed address
-// (/lab/flood-3d/embed, opened inside town pages): an open of the embed is not a page view.
+// Google Analytics and the Umami-style counter, kept out of the root layout file.
 import Script from "next/script";
-import { usePathname } from "next/navigation";
 
 export function AnalyticsScripts({ gaId }: { gaId: string }) {
-  if (/\/lab\/flood-3d\/embed\/?$/.test(usePathname() ?? "")) return null;
   return (
     <>
     {/* Google Analytics (G-NDXLV0T8QC, property "waterlevels.lk", created 27 Oct 2026): loaded after the page is idle so it

@@ -53,8 +53,8 @@ type GazItem = [name: string, lat: number, lon: number, kind: number, si?: strin
 const KIND_LABEL = ["place", "landmark", "road"];
 const ORDER_RAMP: [number, number, number][] = [[76, 29, 120], [150, 40, 140], [214, 70, 110], [244, 127, 80], [250, 185, 100], [252, 230, 150]]; // "fills first" shading, dark to pale
 
-// embed: the small version inside a town page's iframe (/lab/flood-3d/embed): 2D, live level only, no search / options / reports / replay.
-export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed = false }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang; embed?: boolean }) {
+// embed: the compact version rendered inline in a town page (app/flood/Flood3dInline.tsx; view = [lon, lat, zoom]): 2D, live level only, no search / options / reports / replay.
+export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed = false, view }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang; embed?: boolean; view?: [number, number, number] }) {
   const tr = useMemo(() => makeT(lang), [lang]);
   preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com");
   // start the map library download in the HTML, before hydration (fetch preloads of the data files made fetch() fail intermittently on throttled phones, so those are not preloaded)
@@ -164,7 +164,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const startView = useRef<[number, number, number] | null>(null);
   /* eslint-disable react-hooks/set-state-in-effect -- reads the URL once on mount (client only, so no hydration mismatch) */
   useEffect(() => {
-    const q = new URLSearchParams(location.search);
+    const q = new URLSearchParams(embed ? "" : location.search); // inline on a town page: the page URL is not the map's
     const lv = q.get("lv"); if (lv && +lv >= 2 && +lv <= 12) { setDriver("nag"); setWhatNag(+lv); }
     const ch = q.get("chance"); if (ch !== null && !lv) { setChanceOn(true); setHorizon(([0, 3, 6].includes(+ch) ? +ch : 0) as 0 | 3 | 6); }
     if (q.get("past")) setPast(true);
@@ -172,6 +172,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     if (q.get("order")) setOrder(true);
     if (q.get("replay")) { setReplayOn(true); const t = +(q.get("t") ?? ""); if (Number.isFinite(t) && q.get("t")) setRpIdx(t); else setPlaying(true); }
     const ll = q.get("ll")?.split(",").map(Number); if (ll && ll.length === 3 && ll.every(Number.isFinite)) startView.current = [ll[0], ll[1], ll[2]];
+    if (embed && view) startView.current = view; // inline on a town page: the town, whatever the page URL says
     if (q.has("d3")) forced3d.current = q.get("d3") === "1";
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -510,7 +511,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     (async () => {
       try {
         let dark0 = false;
-        try { dark0 = localStorage.getItem("f3d-map-theme") === "dark"; } catch { /* default light */ }
+        try { dark0 = embed ? document.documentElement.classList.contains("dark") : localStorage.getItem("f3d-map-theme") === "dark"; } catch { /* default light */ }
         const [ml, m, png, base] = await Promise.all([loadMl(), fetch("/flood3d/accuracy.json").then((r) => r.json() as Promise<Meta>), loadGrid(), loadBaseStyle(dark0)]);
         if (dead || !box.current) return;
         meta.current = m; grid.current = png;
@@ -525,7 +526,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         const buildUpLater = () => { up.current ??= buildUp(png, S); };
         schemeRef.current = dark0 ? "dark" : "light";
         setMapTheme(schemeRef.current);
-        map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true } });
+        map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true }, ...(embed ? { cooperativeGestures: true, locale: { "CooperativeGesturesHandler.WindowsHelpText": tr("Use Ctrl + scroll to zoom the map"), "CooperativeGesturesHandler.MacHelpText": tr("Use ⌘ + scroll to zoom the map"), "CooperativeGesturesHandler.MobileHelpText": tr("Use two fingers to move the map") } } : {}) });
         mapRef.current = map;
         if (embed) {
           // the credit starts as the (i) button (the small map stays clear); tapping (i) opens it. MapLibre re-opens it on load and on style data, so keep it shut until the visitor taps.
@@ -1010,7 +1011,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
       return c && z != null ? `${base}?${rp0}ll=${c.lng.toFixed(5)},${c.lat.toFixed(5)},${z.toFixed(1)}` : `${base}${ditwah ? "?replay=1&t=155" : ""}`;
     };
     return (
-      <div className="flex h-dvh min-h-0 flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" data-testid="flood3d-embed">
+      <div className="flex h-full min-h-0 flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" data-testid="flood3d-embed">
         <style>{".f3d-popup .maplibregl-popup-close-button{width:44px;height:44px;font-size:24px;line-height:1;color:#475569;border-radius:0 12px 0 12px} .f3d-popup .maplibregl-popup-content{padding:12px 44px 12px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.22)} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
         <div className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
           <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: stepColor }} />

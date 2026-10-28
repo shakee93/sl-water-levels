@@ -43,7 +43,7 @@ import { breadcrumbLd, placeLd, webPageLd } from "@/lib/seo";
 import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { TownFloodMap } from "@/app/flood/OfficialFloodMap";
-import { Flood3dEmbed } from "@/app/flood/Flood3dEmbed";
+import { Flood3dInline } from "@/app/flood/Flood3dInline";
 import { FLOOD3D_TOWNS } from "@/lib/flood3dCoverage";
 
 // Town pages are rendered per request and CDN-cached for 60 s (proxy.ts), never at build time: a build that had
@@ -208,9 +208,9 @@ export default async function TownPage({ params }: Params) {
           </Suspense>
         )}
 
-        {/* the unlisted 3D flood test map, only for towns inside its calibrated area (scripts/flood3d/town-coverage.mjs); loads on tap */}
+        {/* the unlisted 3D flood test map, only for towns inside its calibrated area (scripts/flood3d/town-coverage.mjs); loads when the card scrolls near the viewport */}
         {FLOOD3D_TOWNS.has(place.slug) && (
-          <Flood3dEmbed title={tt("f3d.title")} lead={tt("f3d.lead")} show={tt("f3d.show")} frameTitle={tt("f3d.frame", { town: place.name })} lat={place.lat} lon={place.lon} lang={lang} />
+          <Flood3dInline title={tt("f3d.title")} lead={tt("f3d.lead")} mapLabel={tt("f3d.frame", { town: place.name })} lat={place.lat} lon={place.lon} lang={lang} />
         )}
 
         <TownFloodMap lang={lang} town={place.name} lat={place.lat} lon={place.lon} basin={g?.basin ?? null} />
