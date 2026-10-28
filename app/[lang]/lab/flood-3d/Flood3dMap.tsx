@@ -26,10 +26,6 @@ type Meta = { png: { w: number; h: number; west: number; east: number; south: nu
 
 const DITWAH_PEAK_FT = 8.43; // Nagalagam Street, 1 Dec 2025 (the replay hour 155 of public/flood3d/ditwah.json)
 const POLL_MS = 5 * 60 * 1000;
-const FS_ICON = {
-  open: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
-  close: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>',
-};
 const CENTER: [number, number] = [79.922, 6.955]; // Kelaniya
 const PX = { lo: 2, step: 10 }; // level.png: R = round((ft - 2) * 10) + 1
 
@@ -156,7 +152,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const rpI = rp ? Math.max(0, Math.min(rp.hours - 1, Math.round(rpIdx))) : 0;
   const scenMarks = { alert: live?.nagalagam?.marks?.alert ?? MARKS0.alert, minor: live?.nagalagam?.marks?.minor ?? MARKS0.minor, major: live?.nagalagam?.marks?.major ?? MARKS0.major };
   const scenFt = scen === "ditwah" ? DITWAH_PEAK_FT : scen === "alert" ? scenMarks.alert : scen === "minor" ? scenMarks.minor : scen === "major" ? scenMarks.major : null;
-  const level = embed && scenFt != null ? scenFt : replayOn && rp ? rp.nag[rpI] / 100 : driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
+  const level = embed && scenFt != null ? scenFt : replayOn && rp ? rp.nag[rpI] / 100 : driver === "live" ? liveNag?.ft ?? (embed ? 0 : 3.7) : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
   const lagH = live?.hanwellaLagH ?? 18;
   // Upstream follows Hanwella. Nagalagam rises 12-18 h after Hanwella, so on a rising river the towns from Kaduwela to Ruwanwella were shown late.
   // Hanwella's reading, converted to Nagalagam-equivalent ft (the same table as the Hanwella option), raises the water there when it is higher than
@@ -298,9 +294,10 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
-    if (threeD) { map.setTerrain({ source: "dem", exaggeration: 2.5 }); map.easeTo({ pitch: 58, bearing: -25, duration: 900 }); }
+    // in the town card the 3D view also comes in to street level (zoom 15.8+), where the 3D buildings start
+    if (threeD) { map.setTerrain({ source: "dem", exaggeration: 2.5 }); map.easeTo({ pitch: 58, bearing: -25, duration: 900, ...(embed ? { zoom: Math.max(map.getZoom(), 15.8) } : {}) }); }
     else { map.setTerrain(null); map.easeTo({ pitch: 0, bearing: 0, duration: 700 }); }
-  }, [ready, threeD]);
+  }, [ready, threeD, embed]);
 
   // ---- GPS ("Locate me", only on tap, after the consent line) and "Report here" (GPS spot or a dragged pin)
   const [rep, setRep] = useState<RepPos | null>(null);
@@ -554,7 +551,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     const m = mapRef.current;
     if (m?.cooperativeGestures) { if (full) m.cooperativeGestures.disable(); else m.cooperativeGestures.enable(); }
     const b = fullBtn.current;
-    if (b) { const lab = full ? tr("Exit full screen") : tr("Full screen"); b.innerHTML = full ? FS_ICON.close : FS_ICON.open; b.setAttribute("aria-label", lab); b.title = lab; }
+    if (b) { const lab = full ? tr("Exit full screen") : tr("Full screen"); b.className = full ? "maplibregl-ctrl-shrink" : "maplibregl-ctrl-fullscreen"; b.setAttribute("aria-label", lab); b.title = lab; }
     const t = setTimeout(() => m?.resize(), 120);
     return () => clearTimeout(t);
   }, [embed, ready, full, tr]);
@@ -598,11 +595,10 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         if (new URLSearchParams(location.search).has("debug")) (window as unknown as { __f3d?: unknown }).__f3d = { map, cv: cv.current, grid: grid.current };
         map.addControl(new ml.NavigationControl({ visualizePitch: !embed, showCompass: !embed }), embed || phone ? "top-right" : "bottom-left");
         if (embed) {
-          // full screen button in the same group as the zoom buttons: the whole card (strip, what-if chips, map, note) fills the screen
-          const grp = document.createElement("div"); grp.className = "maplibregl-ctrl maplibregl-ctrl-group";
-          const b = document.createElement("button"); b.type = "button"; b.className = "f3d-fs-btn"; b.setAttribute("aria-label", tr("Full screen")); b.title = tr("Full screen");
-          b.innerHTML = FS_ICON.open; b.addEventListener("click", () => toggleFullRef.current()); grp.appendChild(b); fullBtn.current = b;
-          map.addControl({ onAdd: () => grp, onRemove: () => { grp.remove(); } }, "top-right");
+          // full screen: a third button in MapLibre's own zoom group, with MapLibre's own full screen / shrink icons, so it matches + and -
+          const grp = box.current?.querySelector(".maplibregl-ctrl-top-right .maplibregl-ctrl-group");
+          const b = document.createElement("button"); b.type = "button"; b.className = "maplibregl-ctrl-fullscreen"; b.setAttribute("aria-label", tr("Full screen")); b.title = tr("Full screen");
+          b.innerHTML = '<span class="maplibregl-ctrl-icon" aria-hidden="true"></span>'; b.addEventListener("click", () => toggleFullRef.current()); grp?.appendChild(b); fullBtn.current = b;
         }
         if (!phone && !embed) map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
         setUsed(m.reports_used?.Kelaniya ?? 0);
@@ -1103,7 +1099,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
           </span>
         </div>
         <div className="shrink-0 px-3 pb-2">
-          <p id="f3d-whatif" className="mb-1 text-[11px] font-medium text-slate-600">{tr("What if the river rises to…")}</p>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p id="f3d-whatif" className="text-[11px] font-medium text-slate-600">{tr("What if the river rises to…")}</p>
+            <button type="button" aria-pressed={threeD} onClick={() => setThreeD((v) => !v)} data-testid="f3d-3d" className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${threeD ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"}`}>
+              <Box className="size-3.5" aria-hidden /> {tr("3D view")}
+            </button>
+          </div>
           <div role="radiogroup" aria-labelledby="f3d-whatif" className="flex flex-wrap gap-1.5">
             {chips.map((c) => (
               <button key={c.v} type="button" role="radio" aria-checked={scen === c.v} onClick={() => setScen(c.v)} data-testid={`f3d-chip-${c.v}`} className={`min-h-10 rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${scen === c.v ? "border-sky-700 bg-sky-700 text-white" : "border-slate-300 bg-white text-slate-800 hover:bg-slate-100"}`}>{c.t}</button>
@@ -1117,11 +1118,11 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
           {full && <button type="button" onClick={toggleFull} data-testid="flood3d-close" className="absolute left-3 top-3 z-10 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold text-slate-900 shadow-lg ring-1 ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"><X className="size-4" aria-hidden />{tr("Close")}</button>}
         </div>
         <div className="shrink-0 space-y-1 px-3 py-2 text-[11px] text-slate-700">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-slate-600">{tr("shallow")}</span>
-            <div className="h-2 flex-1 rounded-full" style={{ background: "linear-gradient(90deg, rgba(30,110,210,.5), rgba(24,96,190,.75) 50%, rgba(12,68,180,.95))" }} aria-hidden />
-            <span className="text-[11px] text-slate-600">{tr("deep")}</span>
-          </div>
+          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-700" aria-label={tr("Legend")}>
+            <li className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-6 rounded-sm" style={{ background: "linear-gradient(90deg, rgba(30,110,210,.45), rgba(12,68,180,.95))" }} />{tr("Water (darker = deeper)")}</li>
+            <li className="inline-flex items-center gap-1.5"><span aria-hidden className="h-1 w-5 rounded-full" style={{ background: "#b91c1c" }} />{tr("Road under water")}</li>
+            <li className="inline-flex items-center gap-1.5"><span aria-hidden className="h-1 w-5 rounded-full" style={{ background: "#d97706" }} />{tr("Road within 1 ft")}</li>
+          </ul>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
             <p>{tr("River flooding only · not official")}</p>
             <a href={fullHref()} target="_top" onClick={(e) => { e.currentTarget.href = fullHref(); }} className="inline-flex min-h-8 items-center gap-1 font-medium text-sky-800 underline underline-offset-2"><ExternalLink className="size-3.5" aria-hidden />{tr("Open the full flood map")}</a>
