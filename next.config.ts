@@ -66,6 +66,8 @@ const nextConfig: NextConfig = {
       { source: `${l}/flood/:town`, headers },
       { source: `${l}/reservoirs/:slug`, headers },
       { source: `${l}/news`, headers },
+      // the flood test map inside town pages (app/flood/Flood3dEmbed.tsx): may be framed by our own pages only; this address only, nothing else changes
+      { source: `${l}/lab/flood-3d/embed`, headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self'" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ]).concat([
       // sitemap renders on request (app/sitemap.ts): one copy an hour from the CDN
       { source: "/sitemap.xml", headers: [{ key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }, { key: "CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }] },

@@ -212,6 +212,8 @@ const SI: Record<string, string> = {
   "Fills first (dark floods first)": "මුලින් පිරෙන තැන් (අඳුරු = මුලින්ම)",
   "floods first": "මුලින්ම",
   "floods last": "අන්තිමට",
+  "Test map · river flooding only · not official": "පරීක්ෂණ සිතියම · ගං ගංවතුර පමණි · නිල නොවේ",
+  "Open the full flood map": "සම්පූර්ණ ගංවතුර සිතියම විවෘත කරන්න",
 };
 
 const TA: Record<string, string> = {
@@ -423,6 +425,8 @@ const TA: Record<string, string> = {
   "Fills first (dark floods first)": "முதலில் நிரம்பும் இடங்கள் (அடர் = முதலில்)",
   "floods first": "முதலில்",
   "floods last": "கடைசியில்",
+  "Test map · river flooding only · not official": "சோதனை வரைபடம் · ஆற்று வெள்ளம் மட்டும் · அதிகாரப்பூர்வமற்றது",
+  "Open the full flood map": "முழு வெள்ள வரைபடத்தைத் திற",
 };
 
 const DICT: Record<Lang, Record<string, string>> = { en: {}, si: SI, ta: TA };

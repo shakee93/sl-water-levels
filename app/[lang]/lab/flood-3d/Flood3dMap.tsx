@@ -52,7 +52,8 @@ type GazItem = [name: string, lat: number, lon: number, kind: number, si?: strin
 const KIND_LABEL = ["place", "landmark", "road"];
 const ORDER_RAMP: [number, number, number][] = [[76, 29, 120], [150, 40, 140], [214, 70, 110], [244, 127, 80], [250, 185, 100], [252, 230, 150]]; // "fills first" shading, dark to pale
 
-export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang }) {
+// embed: the small version inside a town page's iframe (/lab/flood-3d/embed): 2D, live level only, no search / options / reports / replay.
+export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed = false }: { towns?: SearchItem[]; gauges?: SearchItem[]; lang?: Lang; embed?: boolean }) {
   const tr = useMemo(() => makeT(lang), [lang]);
   preconnect("https://tiles.openfreemap.org"); preconnect("https://s3.amazonaws.com");
   // start the map library download in the HTML, before hydration (fetch preloads of the data files made fetch() fail intermittently on throttled phones, so those are not preloaded)
@@ -297,8 +298,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
   const openReportRef = useRef<((p: RepPos) => void) | null>(null);
   useEffect(() => { openReportRef.current = (p) => { setRep(p); setPanelOpen(false); }; });
   useEffect(() => {
+    if (embed) return; // reports are not part of the embed
     fetch("/api/flood3d/report").then((r) => r.json()).then((d) => { setAreas(d.areas ?? []); setPhotosEnabled(!!d.photosEnabled); }).catch(() => {});
-  }, []);
+  }, [embed]);
   useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
@@ -523,9 +525,10 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         setMapTheme(schemeRef.current);
         map = new ml.Map({ container: box.current, style: base as never, center: CENTER, zoom: phone ? 12.4 : 13, pitch: 0, maxPitch: 70, maxBounds: [[m.png.west - 0.03, m.png.south - 0.03], [m.png.east + 0.17, m.png.north + 0.03]], attributionControl: { compact: true } });
         mapRef.current = map;
+        if (embed) map.once("idle", () => box.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show")); // attribution starts as the (i) button: the small map stays clear
         if (new URLSearchParams(location.search).has("debug")) (window as unknown as { __f3d?: unknown }).__f3d = { map, cv: cv.current, grid: grid.current };
-        map.addControl(new ml.NavigationControl({ visualizePitch: true }), phone ? "top-right" : "bottom-left");
-        if (!phone) map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
+        map.addControl(new ml.NavigationControl({ visualizePitch: !embed, showCompass: !embed }), embed || phone ? "top-right" : "bottom-left");
+        if (!phone && !embed) map.addControl(new ml.ScaleControl({ maxWidth: 100, unit: "metric" }), "bottom-left");
         setUsed(m.reports_used?.Kelaniya ?? 0);
         let bound = false;
         map.on("style.load", () => {
@@ -574,17 +577,17 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
           bound = true;
           map.on("zoomend", () => addLocalRef.current?.());
           map.on("click", (ev) => tapRef.current?.(ev));
-          map.on("contextmenu", (ev) => { ev.preventDefault(); openCtxRef.current?.(ev.point.x, ev.point.y, ev.lngLat.lng, ev.lngLat.lat); });
+          if (!embed) map.on("contextmenu", (ev) => { ev.preventDefault(); openCtxRef.current?.(ev.point.x, ev.point.y, ev.lngLat.lng, ev.lngLat.lat); });
           // long press (about half a second, finger still): opens the same menu on phones without fighting pan or pinch
           let lp: ReturnType<typeof setTimeout> | undefined, p0: { x: number; y: number } | null = null;
           const cancel = () => { if (lp) clearTimeout(lp); lp = undefined; p0 = null; };
-          map.on("touchstart", (ev) => { cancel(); if ((ev.originalEvent as TouchEvent).touches?.length !== 1) return; p0 = { x: ev.point.x, y: ev.point.y }; const { lng, lat } = ev.lngLat, { x, y } = ev.point; lp = setTimeout(() => { lp = undefined; openCtxRef.current?.(x, y, lng, lat); }, 500); });
+          map.on("touchstart", (ev) => { cancel(); if (embed) return; if ((ev.originalEvent as TouchEvent).touches?.length !== 1) return; p0 = { x: ev.point.x, y: ev.point.y }; const { lng, lat } = ev.lngLat, { x, y } = ev.point; lp = setTimeout(() => { lp = undefined; openCtxRef.current?.(x, y, lng, lat); }, 500); });
           map.on("touchmove", (ev) => { if (p0 && Math.hypot(ev.point.x - p0.x, ev.point.y - p0.y) > 10) cancel(); });
           for (const t of ["touchend", "touchcancel", "dragstart", "zoomstart"] as const) map.on(t, cancel);
           map.on("movestart", () => { if (!adjusting.current) setCtxRef.current?.(null); });
           for (const id of ["roads-main", "roads-local", "f3d-gauges", "f3d-rain-gauges"]) { map.on("mouseenter", id, () => (map!.getCanvas().style.cursor = "pointer")); map.on("mouseleave", id, () => (map!.getCanvas().style.cursor = "")); }
           if (startView.current) map.jumpTo({ center: [startView.current[0], startView.current[1]], zoom: startView.current[2] });
-          setThreeD(forced3d.current ?? !phone);
+          setThreeD(embed ? false : forced3d.current ?? !phone);
           }
           buildUpLater(); // the heavy upsampling runs after the base map has started loading its tiles
           setReady(true);
@@ -692,7 +695,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         add(String(pr.name), true);
         add(`${pr.level} ${pr.fast ? tr("(10-min sensor)") + " " : ""}· ${pr.statusLabel}${pr.trend ? `, ${tr(String(pr.trend))}` : ""}`);
         if (pr.at) add(tr("Hourly reading from {time}.", { time: clock(String(pr.at)) }));
-        const a = document.createElement("a"); a.href = String(pr.url); a.textContent = tr("Open the gauge page"); a.style.cssText = "color:#0369a1;font-size:12px;text-decoration:underline"; lines.appendChild(a);
+        const a = document.createElement("a"); a.href = String(pr.url); a.textContent = tr("Open the gauge page"); a.style.cssText = "color:#0369a1;font-size:12px;text-decoration:underline"; if (embed) a.target = "_top"; lines.appendChild(a);
       } else {
         add(String(pr.name), true);
         add(`${pr.inst}. ${tr("Last hour: {x} mm (at least), 24 h: {y} mm. Reported {m} min ago.", { x: Number(pr.mm) < 0 ? tr("not known") : String(pr.mm), y: String(pr.mm24), m: String(pr.age) })}${Number(pr.stale) ? " " + tr("(old)") : ""}`);
@@ -741,6 +744,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
         }
       }
     }
+    if (embed) { showPopup(ev.lngLat, lines); return; }
     const rb = document.createElement("button");
     rb.textContent = tr("Report here"); rb.style.cssText = "margin-top:6px;padding:4px 10px;border-radius:6px;background:#0284c7;color:#fff;font:600 12px system-ui,sans-serif;border:0;cursor:pointer";
     rb.onclick = () => { popRef.current?.remove(); openReportRef.current?.({ lat: ev.lngLat.lat, lon: ev.lngLat.lng, src: "pin", acc: null }); };
@@ -986,6 +990,42 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
       )}
     </>
   );
+
+  // ---- embed: map between a one-line live strip and a note + link; the iframe's own height is the layout
+  if (embed) {
+    const fullHref = () => {
+      const m = mapRef.current, c = m?.getCenter(), z = m?.getZoom();
+      const base = lang === "en" ? "/lab/flood-3d" : `/${lang}/lab/flood-3d`;
+      return c && z != null ? `${base}?ll=${c.lng.toFixed(5)},${c.lat.toFixed(5)},${z.toFixed(1)}` : base;
+    };
+    return (
+      <div className="flex h-dvh min-h-0 flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100" data-testid="flood3d-embed">
+        <style>{".f3d-popup .maplibregl-popup-close-button{width:44px;height:44px;font-size:24px;line-height:1;color:#475569;border-radius:0 12px 0 12px} .f3d-popup .maplibregl-popup-content{padding:12px 44px 12px 14px;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,.22)} .maplibregl-ctrl-group{border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,.18)}"}</style>
+        <div className="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: stepColor }} />
+          <span className="min-w-0 truncate">
+            {nagUsable && nag ? <><span className="font-semibold">{tr("Nagalagam Street {ft} ft", { ft: f1(nag.levelFt ?? 0) })}</span>{nag.trend && <> {dot} {tr(nag.trend)} {arrow(nag.trend)}</>}{nag.hourlyAt && <span className="text-slate-500 dark:text-slate-400"> {dot} {clock(nag.hourlyAt)}</span>}</> : liveErr ? tr("Live readings unavailable") : tr("Loading the latest readings…")}
+          </span>
+        </div>
+        <div ref={wrap} className="relative min-h-0 flex-1">
+          <div ref={box} className="h-full w-full overflow-hidden" data-testid="flood3d-map" />
+          {!ready && !err && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{tr("Loading map…")}</div>}
+          {err && <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-700">{err}</div>}
+        </div>
+        <div className="shrink-0 space-y-1 px-3 py-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">{tr("shallow")}</span>
+            <div className="h-2 flex-1 rounded-full" style={{ background: "linear-gradient(90deg, rgba(30,110,210,.5), rgba(24,96,190,.75) 50%, rgba(12,68,180,.95))" }} aria-hidden />
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">{tr("deep")}</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
+            <p>{tr("Test map · river flooding only · not official")}</p>
+            <a href={fullHref()} target="_top" onClick={(e) => { e.currentTarget.href = fullHref(); }} className="inline-flex min-h-8 items-center gap-1 font-medium text-sky-700 underline underline-offset-2 dark:text-sky-300"><ExternalLink className="size-3.5" aria-hidden />{tr("Open the full flood map")}</a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
