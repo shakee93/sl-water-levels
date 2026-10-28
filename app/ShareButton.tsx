@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LevelGauge } from "./LevelGauge";
 import { useI18n } from "./LocaleProvider";
 import { DIR } from "./verdict";
+import { ShareControl, type StoryRef } from "./StoryShare";
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleHelp, Clock, Copy, Info, Minus, MessageCircle, Phone, Share2, Siren, Waves, Sparkles, Star, TriangleAlert, ListChecks } from "lucide-react";
 
 const KEY = "sl_favourites";
@@ -40,52 +41,10 @@ function parse(raw: string): Fav[] {
 }
 
 /** Share + save-as-favourite buttons for the status block. `text` is the share line without the URL. */
-export function StationActions({ href, name, text }: { href: string; name: string; text: string }) {
+export function StationActions({ href, name, text, story }: { href: string; name: string; text: string; story?: StoryRef }) {
   const { t } = useI18n();
   const raw = useSyncExternalStore(subscribe, readRaw, () => "[]");
   const saved = parse(raw).some((f) => f.href === href);
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const url = () => window.location.origin + href;
-  const full = () => `${text} ${url()}`;
-
-  async function share() {
-    if (typeof navigator.share === "function") {
-      try {
-        await navigator.share({ title: name, text, url: url() });
-        return;
-      } catch (e) {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-      }
-    }
-    setOpen((o) => !o);
-  }
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(full());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* clipboard blocked: the WhatsApp link still works */
-    }
-  }
 
   function toggleSave() {
     const list = parse(readRaw());
@@ -99,7 +58,7 @@ export function StationActions({ href, name, text }: { href: string; name: strin
   }
 
   return (
-    <div className="flex items-center gap-2" ref={box}>
+    <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={toggleSave}
@@ -110,36 +69,7 @@ export function StationActions({ href, name, text }: { href: string; name: strin
         <Star className={`size-5 ${saved ? "fill-amber-400 text-amber-500" : ""}`} aria-hidden />
         <span className="hidden sm:inline">{saved ? t("verdict.saved") : t("verdict.save")}</span>
       </button>
-      <div className="relative">
-        <button type="button" onClick={share} aria-expanded={open} className={`${iconBtn} ${ring}`}>
-          <Share2 className="size-5" aria-hidden />
-          <span className="hidden sm:inline">{t("verdict.share")}</span>
-          <span className="sm:hidden sr-only">{t("verdict.share")}</span>
-        </button>
-        {open && (
-          <div className="absolute right-0 top-full mt-2 z-20 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-1">
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(open ? full() : "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`flex items-center gap-2 min-h-11 px-3 rounded-md text-sm hover:bg-slate-50 dark:hover:bg-slate-800 ${ring}`}
-            >
-              <MessageCircle className="size-4" aria-hidden /> {t("verdict.whatsapp")}
-            </a>
-            <button
-              type="button"
-              onClick={copy}
-              className={`flex w-full items-center gap-2 min-h-11 px-3 rounded-md text-sm hover:bg-slate-50 dark:hover:bg-slate-800 ${ring}`}
-            >
-              {copied ? <Check className="size-4 text-emerald-600" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-              {copied ? t("verdict.copied") : t("verdict.copy")}
-            </button>
-          </div>
-        )}
-      </div>
-      <span className="sr-only" aria-live="polite">
-        {copied ? t("verdict.copiedLive") : ""}
-      </span>
+      {story && <ShareControl href={href} name={name} text={text} story={story} />}
     </div>
   );
 }
@@ -309,7 +239,7 @@ export function VerdictCard({
   levelInfo?: string | null;
   /** Horizontal gauge data; omitted when the gauge has no flood levels or no reading. */
   gauge?: React.ComponentProps<typeof LevelGauge> | null;
-  share: { href: string; name: string; text: string };
+  share: { href: string; name: string; text: string; story?: StoryRef };
   /** The reason a near-alert gauge or town still reads Normal ("Near alert: 1.4 ft below the alert mark, rising"); small, under the verdict. */
   note?: string | null;
   /** Further small notes under the first (rose / falling since the peak / street water): same look, never change the tone. */

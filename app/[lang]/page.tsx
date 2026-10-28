@@ -4,7 +4,7 @@ import { soft } from "@/lib/soft";
 import Link from "next/link";
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ogBase } from "@/lib/seoMeta";
+import { ogBase, ogImages } from "@/lib/seoMeta";
 import { seoFor } from "@/lib/i18n/seo";
 import { ArrowRight, Clock, LifeBuoy } from "lucide-react";
 import { getNational, fetchStations, type NationalStation } from "@/lib/arcgis";
@@ -38,6 +38,7 @@ import type { TFn } from "@/lib/i18n/translate";
 export const revalidate = 60;
 
 import { SITE } from "@/lib/seo";
+import { ShareControl } from "@/app/StoryShare";
 const nowMs = () => Date.now();
 const STALE_MS = 3 * 3_600_000;
 
@@ -51,7 +52,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     title: { absolute: sf("home.title") },
     description: sf("home.desc"),
     alternates: { ...alternates, types: { "application/atom+xml": `${SITE}/feed.xml` } },
-    openGraph: { ...ogBase(lang), title: sf("home.title"), description: sf("home.desc"), url: `${SITE}${alternates.canonical}`, type: "website", siteName: t("site.name") },
+    openGraph: { ...ogBase(lang), title: sf("home.title"), description: sf("home.desc"), url: `${SITE}${alternates.canonical}`, type: "website", siteName: t("site.name"), images: ogImages("home", "now", lang) },
+    twitter: { card: "summary_large_image", title: sf("home.title"), description: sf("home.desc"), images: ogImages("home", "now", lang).map((i) => i.url) },
   };
 }
 
@@ -128,6 +130,17 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
 
             <div className="mb-5 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
               <NationalLine t={t} snapshot={national} serverNow={serverNow} />
+              <div className="flex items-center gap-3">
+                <ShareControl
+                  href={p("/")}
+                  name={t("site.name")}
+                  text={(() => {
+                    const hot = (national ?? []).filter((s) => s.tier === "alert" || s.tier === "minor" || s.tier === "major").length;
+                    return hot > 0 ? t("share.homeSome", { n: hot }) : t("share.homeCalm");
+                  })()}
+                  story={{ kind: "home", slug: "now" }}
+                  iconOnlyOnMobile={false}
+                />
               <Link
                 href={p("/help")}
                 className="inline-flex items-center gap-1 text-sm py-2.5 -my-2.5 text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"
@@ -136,6 +149,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                 {t("common.floodHelpLink")}
                 <ArrowRight className="size-3" aria-hidden />
               </Link>
+              </div>
             </div>
 
             {/* the answer for the places this visitor saved comes first; nothing when none are saved */}

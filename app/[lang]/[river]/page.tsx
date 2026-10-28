@@ -32,12 +32,13 @@ import { breadcrumbLd, webPageLd } from "@/lib/seo";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
-import { riverMeta, ogBase } from "@/lib/seoMeta";
+import { riverMeta, ogBase, ogImages } from "@/lib/seoMeta";
 import type { TFn } from "@/lib/i18n/translate";
 
 const nowMs = () => Date.now();
 
 import { SITE } from "@/lib/seo";
+import { ShareControl } from "@/app/StoryShare";
 import { STEADY_M_PER_H } from "@/lib/forecastRules.mjs";
 
 const TIER_RANK: Record<Tier, number> = {
@@ -115,11 +116,13 @@ export async function generateMetadata({
       description,
       url: `${SITE}${alternates.canonical}`,
       type: "website",
+      images: ogImages("river", river, lang),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: ogImages("river", river, lang).map((i) => i.url),
     },
   };
 }
@@ -265,7 +268,19 @@ export default async function BasinPage({
         </nav>
 
         <header className="mb-4">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{meta.h1}</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="min-w-0 text-2xl sm:text-3xl font-semibold tracking-tight">{meta.h1}</h1>
+            <ShareControl
+              href={p(`/${river}`)}
+              name={riverName(basin, lang)}
+              text={
+                newest != null && reporting.length > 0
+                  ? t("share.river", { river: riverName(basin, lang), status: flagged.length > 0 ? t("river.flagged", { n: flagged.length, m: reporting.length }) : t("river.allNormal", { n: reporting.length }), time: colomboTime(newest, t) })
+                  : `${riverName(basin, lang)}: ${t("river.noReadings")}.`
+              }
+              story={{ kind: "river", slug: river }}
+            />
+          </div>
           {meta.also && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{meta.also}</p>}
           <p className={`mt-1.5 text-sm tabular-nums ${statusTone}`}>{status}</p>
           <p className="sr-only">

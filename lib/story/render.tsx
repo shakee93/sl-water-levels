@@ -1,0 +1,267 @@
+// The one renderer behind every share image: Instagram / WhatsApp / Facebook story (1080x1920), square (1080x1080) and the link-preview
+// image the pages use as og:image (1200x630). Same colours, same pill, same chart, so a shared image and a link preview look alike.
+import { ImageResponse } from "next/og";
+import type { CSSProperties } from "react";
+import type { Arrow } from "@/lib/embedTypes";
+import type { PillTier } from "@/app/TierPill";
+import { embedT } from "@/lib/i18n/embed";
+import { getI18n } from "@/lib/i18n/server";
+import type { StoryModel, StoryRow } from "./model";
+import { SIZES, type StoryFormat } from "./url";
+import { STORY_STRINGS } from "./strings";
+import { STORY_FAMILY, storyFonts } from "./fonts";
+import { ChartSvg, plotChart, TIER_COLOR } from "./chart";
+
+const F: CSSProperties = { display: "flex" };
+const COL: CSSProperties = { display: "flex", flexDirection: "column" };
+const INK = "#0f172a", MUTED = "#475569", BRAND = "#0369a1";
+const ARROW_COLOR: Record<string, string> = { up: "#b45309", down: "#047857", steady: "#475569" };
+
+function ArrowIcon({ a, size }: { a: Arrow; size: number }) {
+  if (!a) return null;
+  const d = a === "up" ? "M12 19V5M5 12l7-7 7 7" : a === "down" ? "M12 5v14M19 12l-7 7-7-7" : "M5 12h14";
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={ARROW_COLOR[a]} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d={d} />
+    </svg>
+  );
+}
+
+function Pill({ tier, label, size, pad }: { tier: PillTier; label: string; size: number; pad?: number }) {
+  const c = TIER_COLOR[tier];
+  return <div style={{ ...F, fontSize: size, fontWeight: 800, padding: `${pad ?? size * 0.22}px ${size * 0.7}px`, borderRadius: 999, background: c.bg, color: c.fg, lineHeight: 1.15 }}>{label}</div>;
+}
+
+function Drop({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2.5C12 2.5 5 10 5 15a7 7 0 0 0 14 0c0-5-7-12.5-7-12.5z" fill={BRAND} />
+    </svg>
+  );
+}
+
+/** "19.0 ft" -> value and unit, so the unit can be set smaller. */
+function Level({ text, size, unit }: { text: string; size: number; unit: number }) {
+  const m = /^(.+?)\s+(ft|m)$/.exec(text);
+  return (
+    <div style={{ ...F, alignItems: "flex-end", color: INK }}>
+      <div style={{ ...F, fontSize: size, fontWeight: 800, letterSpacing: -4, lineHeight: 1 }}>{m ? m[1] : text}</div>
+      {m && <div style={{ ...F, fontSize: unit, fontWeight: 800, marginLeft: unit * 0.25, marginBottom: size * 0.08, color: MUTED }}>{m[2]}</div>}
+    </div>
+  );
+}
+
+type Dim = { W: number; Hh: number; pad: number; top: number; bottom: number; name: number; sub: number; level: number; unit: number; pill: number; trend: number; next: number; chartH: number; upd: number; brand: number; where: number; rowH: number; rowName: number; rowSub: number; rowLvl: number; rowPill: number; title: number; sum: number; gap: number };
+const DIM: Record<"story" | "square", Dim> = {
+  story: { W: 1080, Hh: 1920, pad: 64, top: 250, bottom: 250, name: 92, sub: 46, level: 210, unit: 92, pill: 58, trend: 56, next: 46, chartH: 470, upd: 34, brand: 92, where: 32, rowH: 112, rowName: 44, rowSub: 28, rowLvl: 48, rowPill: 28, title: 80, sum: 42, gap: 40 },
+  square: { W: 1080, Hh: 1080, pad: 56, top: 44, bottom: 40, name: 62, sub: 32, level: 124, unit: 54, pill: 40, trend: 38, next: 32, chartH: 215, upd: 28, brand: 64, where: 26, rowH: 66, rowName: 33, rowSub: 20, rowLvl: 34, rowPill: 20, title: 58, sum: 32, gap: 26 },
+};
+
+function Brand({ lang, size }: { lang: StoryModel["lang"]; size: number }) {
+  const t = getI18n(lang).t;
+  return (
+    <div style={{ ...F, alignItems: "center", fontSize: size, fontWeight: 800, color: BRAND }}>
+      <Drop size={size * 1.3} />
+      <div style={{ ...F, marginLeft: size * 0.35 }}>{t("site.name")}</div>
+    </div>
+  );
+}
+
+function Footer({ m, d }: { m: StoryModel; d: Dim }) {
+  const s = STORY_STRINGS[m.lang];
+  return (
+    <div style={{ ...COL, alignItems: "center", width: "100%" }}>
+      <div style={{ ...F, fontSize: d.brand, fontWeight: 800, color: BRAND, letterSpacing: -1 }}>waterlevels.lk</div>
+      {m.where !== "waterlevels.lk" && <div style={{ ...F, fontSize: d.where, fontWeight: 500, color: MUTED, marginTop: 6 }}>{`${s.liveAt} ${m.where}`}</div>}
+    </div>
+  );
+}
+
+function ChartCard({ m, d, w }: { m: StoryModel; d: Dim; w: number }) {
+  const c = m.chart!;
+  const e = embedT(m.lang);
+  const t = getI18n(m.lang).t;
+  const s = STORY_STRINGS[m.lang];
+  const lab = { alert: t("mark.alert"), minor: t("mark.minor"), major: t("mark.major") };
+  const innerW = w - 2 * 28;
+  const plot = plotChart(c, innerW, d.chartH, lab, c.unit === "m" ? 2 : 1);
+  if (!plot.has) return null;
+  const small = d.upd;
+  void e;
+  return (
+    <div style={{ ...COL, width: w, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 36, padding: 28 }}>
+      <div style={{ ...F, justifyContent: "space-between", fontSize: small, fontWeight: 500, color: MUTED, marginBottom: 14 }}>
+        <div style={F}>{s.last24}</div>
+        {plot.fc && <div style={{ ...F, color: "#0284c7", fontWeight: 800 }}>{`${s.forecast} →`}</div>}
+      </div>
+      <div style={{ ...F, position: "relative", width: innerW, height: d.chartH }}>
+        <ChartSvg plot={plot} w={innerW} h={d.chartH} stroke={d.chartH > 400 ? 7 : 6} tier={m.tier} />
+        {plot.marks.map((mk) => (
+          <div key={mk.key} style={{ ...F, position: "absolute", ...(Math.abs(plot.first - mk.y) >= Math.abs(plot.last - mk.y) ? { left: 0 } : { right: 0 }), top: Math.max(0, mk.y - small - 8), fontSize: small * 0.9, fontWeight: 800, color: mk.key === "alert" ? "#b45309" : mk.key === "minor" ? "#c2410c" : "#b91c1c", background: "rgba(255,255,255,0.85)", padding: "0 6px", borderRadius: 6 }}>
+            {mk.label}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RowItem({ r, d, last }: { r: StoryRow; d: Dim; last: boolean }) {
+  return (
+    <div style={{ ...F, alignItems: "center", justifyContent: "space-between", height: d.rowH, borderBottom: last ? "none" : "2px solid #e2e8f0" }}>
+      <div style={{ ...COL, flex: 1, marginRight: 16, minWidth: 0 }}>
+        <div style={{ ...F, fontSize: d.rowName, fontWeight: 800, color: INK, lineHeight: 1.15, lineClamp: 1 }}>{r.name}</div>
+        {r.sub && <div style={{ ...F, fontSize: d.rowSub, fontWeight: 500, color: MUTED }}>{r.sub}</div>}
+      </div>
+      <div style={{ ...F, alignItems: "center" }}>
+        {r.level && <div style={{ ...F, fontSize: d.rowLvl, fontWeight: 800, color: INK, marginRight: 14 }}>{r.level}</div>}
+        <ArrowIcon a={r.arrow} size={d.rowLvl} />
+        <div style={{ ...F, marginLeft: 12 }}>
+          <Pill tier={r.tier} label={r.step} size={d.rowPill} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Frame({ d, tier, children }: { d: Dim; tier: PillTier; children: React.ReactNode }) {
+  return (
+    <div style={{ ...COL, width: d.W, height: d.Hh, background: "linear-gradient(180deg, #e0f2fe 0%, #f8fafc 38%, #ffffff 100%)", color: INK, fontFamily: STORY_FAMILY, position: "relative" }}>
+      <div style={{ ...F, height: 22, width: "100%", background: TIER_COLOR[tier].bg }} />
+      <div style={{ ...COL, flex: 1, padding: `${d.top - 22}px ${d.pad}px ${d.bottom}px`, justifyContent: "space-between" }}>{children}</div>
+    </div>
+  );
+}
+
+function Card({ m, d }: { m: StoryModel; d: Dim }) {
+  const w = d.W - 2 * d.pad;
+  const list = m.rows.length > 0 || m.kind === "river" || m.kind === "home";
+  const stale = m.level == null && !list;
+  return (
+    <Frame d={d} tier={m.tier}>
+      <div style={{ ...COL, width: "100%" }}>
+        <Brand lang={m.lang} size={d.sub * 0.8} />
+        <div style={{ ...F, fontSize: Math.round((list ? d.title : d.name) * (m.title.length > 34 ? 0.62 : m.title.length > 24 ? 0.78 : 1)), fontWeight: 800, letterSpacing: -2, lineHeight: 1.05, marginTop: d.gap * 0.5, lineClamp: 2 }}>{m.title}</div>
+        {m.subtitle && <div style={{ ...F, fontSize: d.sub, fontWeight: 500, color: MUTED, marginTop: 8 }}>{m.subtitle}</div>}
+      </div>
+
+      {list ? (
+        <div style={{ ...COL, width: "100%" }}>
+          {m.summary && (
+            <div style={{ ...COL, alignItems: "flex-start", marginBottom: d.gap * 0.5 }}>
+              <Pill tier={m.tier} label={m.rows.length ? m.step : "✓"} size={d.pill * 0.7} />
+              <div style={{ ...F, fontSize: d.sum, fontWeight: 500, color: INK, lineHeight: 1.25, marginTop: 10 }}>{m.summary}</div>
+            </div>
+          )}
+          {m.rows.length > 0 && (
+            <div style={{ ...COL, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 36, padding: "6px 30px" }}>
+              {m.rows.map((r, i) => (
+                <RowItem key={`${r.name}-${i}`} r={r} d={d} last={i === m.rows.length - 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ ...COL, width: "100%" }}>
+          {m.level ? <Level text={m.level} size={d.level} unit={d.unit} /> : <div style={{ ...F, fontSize: d.next * 1.3, fontWeight: 800, color: MUTED }}>{m.summary ?? "—"}</div>}
+          <div style={{ ...F, alignItems: "center", marginTop: d.gap * 0.7 }}>
+            <Pill tier={m.tier} label={m.step} size={d.pill} />
+            {m.trend && !stale && (
+              <div style={{ ...F, alignItems: "center", marginLeft: 28, fontSize: d.trend, fontWeight: 800, color: ARROW_COLOR[m.arrow ?? "steady"] }}>
+                <ArrowIcon a={m.arrow} size={d.trend * 1.1} />
+                <div style={{ ...F, marginLeft: 8 }}>{m.trend}</div>
+              </div>
+            )}
+          </div>
+          {m.next && (
+            <div style={{ ...F, alignItems: "center", fontSize: d.next, fontWeight: 800, color: "#075985", background: "#e0f2fe", borderRadius: 24, padding: `${d.next * 0.35}px ${d.next * 0.7}px`, marginTop: d.gap * 0.8, alignSelf: "flex-start" }}>
+              <ArrowIcon a={m.nextArrow} size={d.next * 1.1} />
+              <div style={{ ...F, marginLeft: 10 }}>{m.next}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ ...COL, width: "100%", marginTop: d.gap * 0.6 }}>
+        {!list && m.chart && <ChartCard m={m} d={d} w={w} />}
+        {m.updated && <div style={{ ...F, fontSize: d.upd, fontWeight: 500, color: MUTED, marginTop: d.gap * 0.5, marginBottom: d.gap * 0.7 }}>{m.updated}</div>}
+        <Footer m={m} d={d} />
+      </div>
+    </Frame>
+  );
+}
+
+// ---- link preview (1200x630): name, level and step on the left, the chart or the worst gauges on the right ----
+function Og({ m }: { m: StoryModel }) {
+  const W = 1200, Hh = 630;
+  const list = m.rows.length > 0 || m.kind === "river" || m.kind === "home";
+  const d: Dim = { ...DIM.square, W, Hh, rowH: 64, rowName: 28, rowSub: 20, rowLvl: 28, rowPill: 20, chartH: 300, upd: 24 };
+  const rightW = 560;
+  return (
+    <div style={{ ...COL, width: W, height: Hh, background: "linear-gradient(135deg, #e0f2fe 0%, #f8fafc 45%, #ffffff 100%)", fontFamily: STORY_FAMILY, color: INK }}>
+      <div style={{ ...F, height: 16, width: "100%", background: TIER_COLOR[m.tier].bg }} />
+      <div style={{ ...F, flex: 1, padding: "28px 52px 0" }}>
+        <div style={{ ...COL, width: 500, justifyContent: "space-between" }}>
+          <div style={COL}>
+            <Brand lang={m.lang} size={22} />
+            <div style={{ ...F, fontSize: m.title.length > 22 ? 52 : 64, fontWeight: 800, letterSpacing: -2, lineHeight: 1.05, marginTop: 14, lineClamp: 2 }}>{m.title}</div>
+            {m.subtitle && <div style={{ ...F, fontSize: 28, fontWeight: 500, color: MUTED, marginTop: 6 }}>{m.subtitle}</div>}
+          </div>
+          <div style={COL}>
+            {!list && (m.level ? <Level text={m.level} size={120} unit={52} /> : null)}
+            <div style={{ ...F, alignItems: "center", marginTop: 14 }}>
+              <Pill tier={m.tier} label={m.rows.length ? m.step : m.step} size={34} />
+              {m.trend && !list && (
+                <div style={{ ...F, alignItems: "center", marginLeft: 20, fontSize: 32, fontWeight: 800, color: ARROW_COLOR[m.arrow ?? "steady"] }}>
+                  <ArrowIcon a={m.arrow} size={36} />
+                  <div style={{ ...F, marginLeft: 6 }}>{m.trend}</div>
+                </div>
+              )}
+            </div>
+            {list && m.summary && <div style={{ ...F, fontSize: 28, fontWeight: 500, color: INK, marginTop: 12, lineHeight: 1.25 }}>{m.summary}</div>}
+            {!list && m.next && <div style={{ ...F, fontSize: 28, fontWeight: 800, color: "#075985", marginTop: 12 }}>{m.next}</div>}
+          </div>
+        </div>
+        <div style={{ ...COL, flex: 1, marginLeft: 32, justifyContent: "center" }}>
+          {!list && m.chart ? <ChartCard m={m} d={d} w={rightW + 40} /> : null}
+          {list && m.rows.length > 0 && (
+            <div style={{ ...COL, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 28, padding: "4px 22px", width: rightW + 40 }}>
+              {m.rows.slice(0, 5).map((r, i, a) => (
+                <RowItem key={`${r.name}-${i}`} r={r} d={d} last={i === a.length - 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ ...F, justifyContent: "space-between", alignItems: "center", padding: "0 52px 24px" }}>
+        <div style={{ ...F, fontSize: 40, fontWeight: 800, color: BRAND }}>waterlevels.lk</div>
+        {m.updated && <div style={{ ...F, fontSize: 24, fontWeight: 500, color: MUTED }}>{m.updated}</div>}
+      </div>
+    </div>
+  );
+}
+
+const CACHE = "public, s-maxage=300, stale-while-revalidate=600";
+
+export async function renderStory(m: StoryModel, format: StoryFormat): Promise<Response> {
+  const size = SIZES[format];
+  const fonts = await storyFonts(m.lang);
+  const img = new ImageResponse(format === "og" ? <Og m={m} /> : <Card m={m} d={DIM[format]} />, { ...size, fonts, headers: { "Cache-Control": CACHE, "CDN-Cache-Control": CACHE, "Vercel-CDN-Cache-Control": CACHE } });
+  return img;
+}
+
+/** A plain card when the sources cannot be read, so a shared link never gets a broken image. Short cache so it recovers quickly. */
+export async function renderFallback(format: StoryFormat, title: string): Promise<Response> {
+  const size = SIZES[format];
+  const fonts = await storyFonts("en");
+  const C = "public, s-maxage=60";
+  return new ImageResponse(
+    (
+      <div style={{ ...COL, width: size.width, height: size.height, alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)", color: "#fff", fontFamily: STORY_FAMILY }}>
+        <div style={{ ...F, fontSize: format === "og" ? 64 : 84, fontWeight: 800, textAlign: "center", padding: 60 }}>{title}</div>
+        <div style={{ ...F, fontSize: format === "og" ? 36 : 56, fontWeight: 500, marginTop: 20 }}>waterlevels.lk</div>
+      </div>
+    ),
+    { ...size, fonts, headers: { "Cache-Control": C, "CDN-Cache-Control": C, "Vercel-CDN-Cache-Control": C } },
+  );
+}

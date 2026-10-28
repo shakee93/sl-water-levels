@@ -3,7 +3,7 @@ import { stationDisplayName } from "@/lib/displayName";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
-import { gaugeMeta, ogBase } from "@/lib/seoMeta";
+import { gaugeMeta, ogBase, ogImages } from "@/lib/seoMeta";
 import type { TFn } from "@/lib/i18n/translate";
 import { Suspense } from "react";
 import { connection } from "next/server";
@@ -132,11 +132,13 @@ export async function generateMetadata({
         description: descBits,
         url: `${SITE}${canonical}`,
         type: "website",
+        images: ogImages("gauge", stationSlug(resolved.station), lang),
       },
       twitter: {
         card: "summary_large_image",
         title: titleBits,
         description: descBits,
+        images: ogImages("gauge", stationSlug(resolved.station), lang).map((i) => i.url),
       },
     };
   } catch {

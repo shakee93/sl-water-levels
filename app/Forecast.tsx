@@ -17,7 +17,7 @@ import { contactsForDistrict } from "@/lib/help";
 import { statusFor } from "@/lib/status";
 import { formatDelta, formatLevel, publishedAs, shownNumber } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
-import { stationPath } from "@/lib/slug";
+import { stationPath, stationSlug } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
 import { clock, riverName, shortStamp } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
@@ -323,12 +323,22 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
             : null;
   const shareText = stale
     ? t("share.stale", { name, river: rn, last: level != null ? t("share.staleLast", { level: formatLevel(level, unit) }) : "" })
-    : t("share.live", {
+    : // at Alert or above the share line names the official step ("Kalu Ganga at Ratnapura is at Alert, 19.0 ft, river falling")
+      realTier === "alert" || realTier === "minor" || realTier === "major"
+      ? t("share.alert", {
+          name,
+          river: rn,
+          step: VERDICT[realTier][lang],
+          level: formatLevel(level, unit),
+          dir: direction ? `, ${direction[lang].replace(/\s*[(（].*$/, "").toLowerCase()}` : "",
+          time: latest ? clock(latest.ts, t) : "",
+        })
+      : t("share.live", {
         name,
         river: rn,
         level: formatLevel(level, unit),
         verdict: VERDICT[tone][lang],
-        dir: direction ? `, ${direction[lang].toLowerCase()}` : "",
+        dir: direction ? `, ${direction[lang].replace(/\s*[(（].*$/, "").toLowerCase()}` : "",
         time: latest ? clock(latest.ts, t) : "",
       });
 
@@ -465,7 +475,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
             ? { tone, level, next24: f.horizons.find((h) => h.h === 24)?.level ?? null, unit, thresholds: me.thresholds }
             : null
         }
-        share={{ href: p(stationPath(basin, selectedStation)), name: `${name} (${rn})`, text: shareText }}
+        share={{ href: p(stationPath(basin, selectedStation)), name: `${name} (${rn})`, text: shareText, story: { kind: "gauge", slug: stationSlug(selectedStation) } }}
         note={nearNote}
         moreNotes={moreNotes}
       >

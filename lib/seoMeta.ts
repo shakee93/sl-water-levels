@@ -1,6 +1,7 @@
 // Builders for titles, H1s and meta descriptions per page type. Pure: pages pass live facts in, strings come out.
 // Templates live in lib/i18n/seo.ts, spellings in lib/seoNames.ts. See DOCS.md "SEO".
 import { OG_LOCALE, type Locale } from "./i18n/config";
+import { storyPath, timeBucket, type StoryKind } from "./story/url";
 import { getI18n } from "./i18n/server";
 import { seoFor } from "./i18n/seo";
 import { byGaugeDemand, gaugeAliases, nativeRiver, reservoirAliases, riverNames, siGenitive } from "./seoNames";
@@ -93,4 +94,13 @@ export function reservoirMeta(lang: Locale, o: { name: string; shown: string; ca
  * og:site_name and og:locale. A page's own `openGraph` replaces the layout's whole object (Next does not deep-merge), so
  * without this spread every page lost both. Use: `openGraph: { ...ogBase(lang), title, description, url, type: "website" }`.
  */
-export const ogBase = (lang: Locale) => ({ siteName: getI18n(lang).t("site.name"), locale: OG_LOCALE[lang] });
+export const ogBase = (lang: Locale) => ({ siteName: getI18n(lang).t("site.name"), locale: OG_LOCALE[lang], images: ogImages("home", "now", lang, false) });
+
+/**
+ * The link-preview picture (1200x630) for a page: the live level and official step, drawn by /api/story (the same picture as the share
+ * image). `fresh` adds a 10-minute bucket to the address: WhatsApp and Facebook keep previews per address, so without it a shared link
+ * would show the first level it ever saw. Pages that are not about one gauge use the national picture at a fixed address.
+ */
+export function ogImages(kind: StoryKind, slug: string, lang: Locale, fresh = true) {
+  return [{ url: storyPath(kind, slug, { format: "og", lang, t: fresh ? timeBucket() : undefined }), width: 1200, height: 630, alt: getI18n(lang).t("site.name") }];
+}

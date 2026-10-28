@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ogImages } from "@/lib/seoMeta";
 import { Geist, Geist_Mono, Noto_Sans_Sinhala, Noto_Sans_Tamil } from "next/font/google";
 import "../globals.css";
 import { AnalyticsScripts } from "../AnalyticsScripts";
@@ -103,11 +104,13 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       siteName: t("site.name"),
       title: seoFor(lang)("home.title"),
       description: seoFor(lang)("home.desc"),
+      images: ogImages("home", "now", lang, false),
     },
     twitter: {
       card: "summary_large_image",
       title: seoFor(lang)("home.title"),
       description: seoFor(lang)("home.desc"),
+      images: ogImages("home", "now", lang, false).map((i) => i.url),
     },
     robots: {
       index: true,

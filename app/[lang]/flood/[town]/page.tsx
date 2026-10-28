@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ogBase } from "@/lib/seoMeta";
+import { ogBase, ogImages } from "@/lib/seoMeta";
 import { seoFor } from "@/lib/i18n/seo";
 import { townAliases } from "@/lib/seoNames";
 import { LifeBuoy } from "lucide-react";
@@ -70,8 +70,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     title: { absolute: title },
     description,
     alternates,
-    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website" },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: { ...ogBase(lang), title, description, url: `${SITE}${alternates.canonical}`, type: "website", images: ogImages("town", place.slug, lang) },
+    twitter: { card: "summary_large_image", title, description, images: ogImages("town", place.slug, lang).map((i) => i.url) },
   };
 }
 

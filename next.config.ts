@@ -26,6 +26,8 @@ const leaf = ":leaf((?!opengraph-image|twitter-image)[^/]+)";
 const nextConfig: NextConfig = {
   // app/global-not-found.tsx: the body of the 404 that proxy.ts returns for addresses that do not exist (no root layout to compose it from).
   experimental: { globalNotFound: true },
+  // the story images (app/api/story) read their Noto font files from disk: make sure the deployment carries them
+  outputFileTracingIncludes: { "/api/story/**": ["./lib/story/fonts/**"] },
   images: {
     // Reservoir photos (app/ReservoirPhotos.tsx) are Wikimedia Commons thumbnails and nothing else.
     remotePatterns: [{ protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/commons/**", search: "" }],
@@ -84,6 +86,8 @@ const nextConfig: NextConfig = {
     ])).concat([
       // /api/embed would otherwise match the /<river>/<gauge> rule above (60 s): the widgets' data gets the longer embed window
       { source: "/api/embed", headers: [{ key: "Vercel-CDN-Cache-Control", value: EMBED_CDN }, { key: "CDN-Cache-Control", value: EMBED_CDN }] },
+      // the share images: five minutes fresh, ten stale (also set by the route itself)
+      { source: "/api/story/:kind/:slug", headers: [{ key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=600" }, { key: "CDN-Cache-Control", value: "public, s-maxage=300, stale-while-revalidate=600" }] },
       // sitemap renders on request (app/sitemap.ts): one copy an hour from the CDN
       { source: "/sitemap.xml", headers: [{ key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }, { key: "CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }] },
     ]);

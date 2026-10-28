@@ -211,7 +211,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
         level={level != null && !stale ? formatLevel(level, gauge?.unit ?? null) : null}
         levelInfo={level != null && !stale && gauge ? t("level.info", { level: formatLevel(level, gauge.unit ?? null), gauge: gauge.name }) : null}
         gauge={!stale && gauge && level != null ? { tone, level, next24: gauge.next24, unit: gauge.unit, thresholds: gauge.thresholds } : null}
-        share={{ href, name: `${townName} · ${tt("estimate")}`, text: `${townName} · ${tt("estimate")}: ${verdict[lang]}` }}
+        share={{ href, name: `${townName} · ${tt("estimate")}`, text: `${townName} · ${tt("estimate")}: ${verdict[lang]}${level != null && !stale ? `, ${formatLevel(level, gauge?.unit ?? null)}` : ""}${gauge?.ts != null && !stale ? ` (${clock(gauge.ts, t)})` : ""}.`, story: { kind: "town", slug: href.split("/").filter(Boolean).pop() ?? "" } }}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
           <p className="font-medium">{tt("details.how")}</p>
