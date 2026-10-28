@@ -1591,3 +1591,67 @@ link. Never called from the browser.
 - **Archive** (`scripts/rivernet-snapshot.mjs`, `.github/workflows/rivernet-snapshot.yml`, every 2 h): 5-minute points of every river device to `data:rivernet/YYYY/YYYY-MM-DD.json`,
   plus the device lists once a night, for fitting tributary travel times later. Health: `rivernet` (warn) and `pipe-rivernet`; tests `node --experimental-strip-types scripts/rivernet.test.mts`.
 - **Removal**: make `getRivernetLevels()` return null; callers show nothing.
+
+## Instagram (@waterlevels.lk, built 28 Oct 2026)
+
+Automatic posting to the site's Instagram Business account through the Instagram Graph API (Facebook Login, `graph.facebook.com`). It is the X
+account's sibling: same event detection, same dry-run-first habit, same Slack. **Until the two GitHub secrets exist it only runs in dry-run**
+(every post is shown in Slack as "DRY RUN" with its picture and caption; nothing is sent). Plan and owner rules: `research/instagram-plan.md` (private).
+
+| Piece | Where |
+|---|---|
+| Mode decision, selection, caps, quiet hours, all-clear hold, keep-alive rotation (pure) | `scripts/ig-engine.mjs` (rises and new bulletins come from `scripts/x-engine.mjs evaluate`, so Instagram and X agree; Instagram keeps its own copy of that memory) |
+| Captions (English first, Sinhala, Tamil, address line, place hashtags on feed posts) | `lib/igCompose.ts` |
+| Gate (off / dry / live), container -> wait -> `media_publish`, error classes | `lib/igClient.ts` |
+| One run: snapshot (x-post's `buildSnapshot`), plan, claim, send, remember; `--mode sample` | `scripts/ig-post.mjs` |
+| Pictures: JPEG variants of the share pictures, plus the new `rain` and `reservoirs` pictures | `app/api/story/[kind]/[slug]/route.tsx`, `lib/story/{model,render,url}.ts(x)` |
+| Schedule | `.github/workflows/ig-post.yml`: started after every satellite-rain snapshot (like `x-post.yml`, via `gsmap-snapshot.yml`), plus crons 07:00 and 09:30 Colombo; one run at a time (`concurrency: ig-post`) |
+| Memory | D1 `ig_posts` (every post and its status) and `ig_state` (per gauge: told level and since when below Alert; the day's morning post; pause-until after an error); `d1/0018_ig_posts.sql`, created idempotently by each run (`IG_SCHEMA`) |
+| Tests | `node --experimental-strip-types --no-warnings scripts/ig-post.test.mts` (fake D1, Slack and Graph API; nothing can reach graph.facebook.com) |
+
+### Pictures
+
+`/api/story/<gauge|town|river|home|rain|reservoirs>/<slug>.jpg?format=story|square` (or `.png` with `ext=jpg`). Same renderer, same 5-minute CDN cache; the JPEG is
+the PNG flattened on white and re-encoded with `sharp` (quality 90, about 150-260 KB; Instagram takes JPEG only, at a public URL, up to 8 MB). A JPEG request that
+cannot be built returns 503 (never the placeholder card), so a failed picture can never be posted. Story = 1080x1920 for stories, square = 1080x1080 for feed posts.
+- `rain/now`: the heaviest river areas by rain in the last 24 h (the gauge-corrected satellite field when the correction file is fresh, otherwise raw GSMaP; mean over each
+  official river area, `lib/rainMapCalc.ts`), bars, a small map of Sri Lanka coloured by the same field, the heaviest HMIS ground gauge, the satellite credit. `lib/story/model.ts rainStoryFrom`.
+- `reservoirs/now`: official spilling / releasing reservoirs with the cusec figure and the reading's day (the same rows as the site's embed widget; reports from the news are left out). Sinhala / Tamil headings are drafts.
+
+### Modes (decided every run; official steps decide, a forecast never does)
+
+| Mode | When | What goes out |
+|---|---|---|
+| **Disaster** | any gauge at Alert or above, or an official DMC / Irrigation flood bulletin in force, or a gauge we told about is still waiting for its all-clear | **Stories**: one per gauge reaching Alert / Minor / Major (the X engine's rise rules), one more when it steps up, an all-clear after **3 h continuously below Alert** (a bounce resets the hold), one river story per new official bulletin, the morning "Rivers right now" (06:30-11:00). **One feed post** (river picture) when a gauge reaches Minor or Major: the worst river. Caps: 20 stories + 3 feed posts a day (`IG_STORIES_MAX`, `IG_FEED_MAX`). |
+| **Weather** | no gauge at Alert, but a Met Department advisory is in force (or 100 mm forecast in 24 h) | **One feed post** a day, morning: "Rivers right now" + the rain outlook. No stories. |
+| **Calm** | nothing active | **Keep-alive feed posts**, at most 3 in any 7 days, at least 30 h apart, 09:00-20:00 only, rotating rain (a gauge measured 15 mm or more), reservoirs spilling (reading at most 2 days old), river of the week (a river with 2+ gauges, by week), flood-survey call, embed call. |
+| none | levels or bulletins unreadable | nothing: unknown is never calm |
+
+Weather and calm posts never go out 22:00-06:00; disaster stories do. Weather and calm modes make **one post a day in total** (a disaster story earlier the same day counts). Dry runs count like real posts (separately from live ones). A story we never told about gets no all-clear; a gauge already at Alert when the account starts is silent until it steps up (the morning story covers it), exactly like X and push.
+
+### Captions
+
+Line 1 English, then a Sinhala line and a Tamil line (`IG_LANGS=en,si,ta`; Sinhala and Tamil are **drafts** reused from the push messages and the story strings, to be read by a native speaker), then `Live levels: waterlevels.lk` (always), then on **feed posts only** up to 5 place hashtags (`#KaluGanga #Ratnapura #SriLankaFloods`). No links (not clickable). Minor / Major and bulletins add "Emergency: 117.". A story's caption is not shown by Instagram (API stories take none): it is composed, checked and logged, and the picture carries the address. `validateCaption` rejects links, a missing address line, hashtags on a story, over 5 tags, @mentions, over 2200 characters; a post that fails is not sent and Slack says why.
+
+### Safety
+
+- **Never retried**: any failure (picture not fetched, container error, API error) skips that post, marks it `failed` in `ig_posts`, and tells Slack. An account-wide error (expired token 190, missing permission, rate limit, 5xx) also pauses posting for 6 h / 6 h / 1 h / 15 min; nothing is called while paused.
+- **Dedupe**: each post claims a unique key in D1 before it is sent, so two runs never post the same thing.
+- **API limit**: about 50 API posts per account per 24 h. Before a live run posts, `content_publishing_limit` is read; at 45 or more nothing is posted. Our own caps stay far below it.
+- **Secrets**: the token travels only in an `Authorization` header, never in a URL, the log or Slack.
+- **Missing secrets**: `IG_MODE=live` without both secrets stays dry and says so in Slack **once a day**, not every run. `IG_MODE=off` is the kill switch (nothing is composed or sent).
+- The Graph API version is `IG_GRAPH_VERSION` in `lib/igClient.ts` (v24.0 when written); Meta retires versions after about two years, so check [the changelog](https://developers.facebook.com/docs/graph-api/changelog) when you set this up and override with the repository variable `IG_GRAPH_VERSION` if needed.
+
+### Setup checklist for the owner's team (about half a day)
+
+1. **Instagram account**: `@waterlevels.lk` as a **Business** (or Creator) account. Put `https://waterlevels.lk` in the profile link (captions have no links).
+2. **Facebook Page** linked to that Instagram account (Instagram app: Settings, Account centre / Linked accounts; or Page settings, Linked accounts). The Page needs to be managed by the same Facebook user or Business Manager that will own the app.
+3. **Meta developer app** (developers.facebook.com, type Business): add the **Instagram Graph API** product with Facebook Login. Permissions needed: `instagram_basic`, `instagram_content_publish`, `pages_show_list`, `pages_read_engagement` (and `business_management` if the Page sits in a Business Manager). While the app is in development mode only app roles can use them, which is enough for posting to the team's own account; go through App Review only if Meta asks.
+4. **Token that does not expire after 60 days**: in **Business Manager** (business.facebook.com, Business settings): add the app and the Page and the Instagram account to the Business, create a **System User** (Admin), assign it the Page and Instagram account with full control and the app, then **Generate token** for the app with the four permissions above and "Never" expiry. That long-lived token is `IG_ACCESS_TOKEN`. (A user token from the Graph API Explorer expires in an hour; exchanging it gives 60 days only. Use the System User.)
+5. **Instagram user id** (`IG_USER_ID`, a number): `GET https://graph.facebook.com/v24.0/<page-id>?fields=instagram_business_account&access_token=<token>` returns `instagram_business_account.id`; or Graph API Explorer: `me/accounts` then the Page's `instagram_business_account`.
+6. **Add the two GitHub secrets** (repository Settings, Secrets and variables, Actions, or `gh secret set IG_ACCESS_TOKEN` and `gh secret set IG_USER_ID`). With only these set the account **still runs dry**.
+7. **Dry run for a week**: `gh workflow run ig-post.yml -f mode=sample` sends four sample posts to Slack; the real runs show each post that would go out. Review pictures, wording and the Sinhala / Tamil lines.
+8. **Go live**: `gh variable set IG_MODE --body live`. To stop at any time: `gh variable set IG_MODE --body off` (nothing runs) or `--body dry`.
+9. After the first real event, check reach and consider fewer update stories (`IG_STORIES_MAX`).
+
+Open owner decisions (from the plan): whether captions keep all three languages (`IG_LANGS`), and whether disaster feed posts also go to the Facebook Page (the same API, not built).

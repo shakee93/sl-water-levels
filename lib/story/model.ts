@@ -15,6 +15,10 @@ import { getNational, type NationalStation } from "@/lib/arcgis";
 import { basinSlug } from "@/lib/slug";
 import { FT_IN_M } from "@/lib/units";
 import { sanitizeThresholds } from "@/lib/readings";
+import { getRainMap } from "@/lib/rainMap";
+import { basinSatellite, correctedTotal, perBasin, satelliteTotal, type RainMapData } from "@/lib/rainMapCalc";
+import { COAST } from "@/lib/geo/geo";
+import { riverName } from "@/lib/i18n/format";
 
 export type StoryRow = { name: string; sub: string | null; level: string | null; tier: PillTier; step: string; arrow: Arrow };
 export type StoryModel = {
@@ -37,7 +41,23 @@ export type StoryModel = {
   summary: string | null;
   /** "waterlevels.lk/kalu-ganga/ratnapura" */
   where: string;
+  /** kind "rain": the last 24 h of rain (Instagram keep-alive picture). */
+  rain?: RainStory;
+  /** kind "reservoirs": reservoirs spilling or releasing now. */
+  res?: ResStory;
 };
+
+export type RainStory = {
+  /** The heaviest river areas, mm over the last 24 h, heaviest first; `frac` = share of the heaviest one (bar length). */
+  rows: { name: string; mm: number; frac: number }[];
+  maxMm: number;
+  /** The heaviest ground gauge, if HMIS has one over 5 mm. */
+  gauge: { name: string; mm: number } | null;
+  corrected: boolean;
+  /** Map strip: land pixels with their rain, and the coast as path data in pixel units. */
+  map: { nx: number; ny: number; cells: [col: number, row: number, mm: number][]; coast: string };
+};
+export type ResStory = { rows: { name: string; river: string | null; figure: string | null; when: string | null; source: string }[]; more: number; sheetDay: string | null };
 
 const TIER_ORDER: Record<string, number> = { major: 5, minor: 4, alert: 3, normal: 2, none: 1, stale: 0 };
 const MAX_ROWS = 8;
@@ -89,7 +109,80 @@ function localRow(r: EmbedRow, sub: string | null, lang: Locale): StoryRow {
 const localTitle = (en: string, sub: string | null, nat: string | null) => (nat ? { title: nat, subtitle: [en, sub].filter(Boolean).join(" · ") } : { title: en, subtitle: sub });
 const whereOf = (href: string) => href.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
+// ---- rain (last 24 h) ----
+const inRing = (x: number, y: number, ring: [number, number][]) => {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+};
+/** Pure: the rain story from the rain-map payload (tests feed it a small fake). */
+export function rainStoryFrom(d: RainMapData, lang: Locale): RainStory | null {
+  const corr = correctedTotal(d, 24);
+  const px = corr ?? satelliteTotal(d, 24);
+  if (!px) return null;
+  const per = corr ? perBasin(d, (i) => px[i]) : basinSatellite(d, 24);
+  const ranked = d.basins
+    .map((b, i) => ({ name: riverName(b.basin, lang), mm: per[i] }))
+    .filter((r): r is { name: string; mm: number } => r.mm != null && r.mm >= 1)
+    .sort((a, b) => b.mm - a.mm)
+    .slice(0, 6);
+  const maxMm = Math.max(1, ...ranked.map((r) => r.mm));
+  const top = (d.ground ?? []).slice().sort((a, b) => b[4] - a[4])[0];
+  const g = d.grid;
+  // land pixels only: a pixel counts when its centre is inside a coast ring
+  const cells: RainStory["map"]["cells"] = [];
+  for (let i = 0; i < g.nx * g.ny; i++) {
+    const v = px[i];
+    if (v == null) continue;
+    const col = i % g.nx, row = Math.floor(i / g.nx);
+    const lon = g.lon0 + col * g.step, lat = g.lat0 - row * g.step;
+    if (COAST.some((ring) => inRing(lon, lat, ring))) cells.push([col, row, Math.round(v * 10) / 10]);
+  }
+  const X = (lon: number) => Math.round(((lon - g.lon0) / g.step + 0.5) * 100) / 100;
+  const Y = (lat: number) => Math.round(((g.lat0 - lat) / g.step + 0.5) * 100) / 100;
+  const coast = COAST.filter((r) => r.some(([lon, lat]) => lon > g.lon0 - 0.2 && lon < g.lon0 + g.nx * g.step && lat < g.lat0 + 0.2 && lat > g.lat0 - g.ny * g.step))
+    .map((ring) => ring.map(([lon, lat], k) => `${k ? "L" : "M"}${X(lon)} ${Y(lat)}`).join("") + "Z")
+    .join("");
+  return {
+    rows: ranked.map((r) => ({ name: r.name, mm: Math.round(r.mm), frac: r.mm / maxMm })),
+    maxMm: Math.round(maxMm),
+    gauge: top ? { name: top[0], mm: Math.round(top[4]) } : null,
+    corrected: !!corr,
+    map: { nx: g.nx, ny: g.ny, cells, coast },
+  };
+}
+
+async function buildRain(lang: Locale): Promise<StoryModel | null> {
+  const d = await getRainMap().catch(() => null);
+  const r = d ? rainStoryFrom(d, lang) : null;
+  if (!d || !r) return null;
+  const s = STORY_STRINGS[lang];
+  return {
+    kind: "rain", lang, title: s.rainTitle, subtitle: s.rainSub, tier: "normal", step: "", level: null, arrow: null, trend: null, next: null, nextArrow: null,
+    updated: stamp(lang, new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Colombo", hour: "numeric", minute: "2-digit", hour12: true }).format(d.generatedAt).replace(/\s?([ap]m)/i, (_, m) => ` ${m.toLowerCase()}`), d.generatedAt),
+    chart: null, rows: [], summary: null, where: "waterlevels.lk/rain", rain: r,
+  };
+}
+
+async function buildReservoirsStory(lang: Locale, unit: "ft" | "m"): Promise<StoryModel | null> {
+  const p = await buildEmbed("reservoirs", null, parseCfg({ lang, unit, hours: "24" }));
+  if (!p || p.kind !== "reservoirs" || p.unavailable) return null;
+  const items = p.items.filter((i) => i.official);
+  const MAX = 8;
+  const s = STORY_STRINGS[lang];
+  return {
+    kind: "reservoirs", lang, title: p.title, subtitle: s.resSub, tier: "none", step: "", level: null, arrow: null, trend: null, next: null, nextArrow: null,
+    updated: null, chart: null, rows: [], summary: p.summary, where: "waterlevels.lk/reservoirs/spilling",
+    res: { rows: items.slice(0, MAX).map((i) => ({ name: i.name, river: i.river, figure: i.figure, when: i.when, source: i.source })), more: Math.max(0, items.length - MAX), sheetDay: null },
+  };
+}
+
 export async function buildStory(kind: StoryKind, slug: string, lang: Locale, unit: "ft" | "m"): Promise<StoryModel | null> {
+  if (kind === "rain") return buildRain(lang);
+  if (kind === "reservoirs") return buildReservoirsStory(lang, unit);
   const cfg = parseCfg({ lang, unit, hours: "24" });
   if (kind === "gauge") {
     const [g, f] = await Promise.all([buildEmbed("gauge", slug, cfg), buildEmbed("forecast", slug, cfg).catch(() => null)]);

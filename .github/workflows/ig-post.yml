@@ -1,0 +1,84 @@
+# The site's Instagram account (@waterlevels.lk): stories in disaster time, one morning post on a weather-alert day, a few
+# keep-alive posts a week when it is calm (scripts/ig-post.mjs). See DOCS.md "Instagram".
+#   - DRY RUN by default: every post goes to the owner's Slack (SLACK_WEBHOOK_URL) marked "DRY RUN", nothing goes to Instagram.
+#   - LIVE only when the repository VARIABLE IG_MODE is "live" AND both secrets exist (IG_ACCESS_TOKEN, IG_USER_ID). A missing
+#     secret always means dry-run, and Slack says so once a day. IG_MODE=off is the kill switch: the job does nothing.
+#   - Started after every satellite-rain snapshot (gsmap-snapshot.yml, every 30 min, the same trigger as x-post.yml), plus two crons
+#     (GitHub's cron is best-effort): 07:00 Colombo for the morning story / post, 09:30 Colombo for the first keep-alive post of a calm day.
+#   - Manual: mode "run" = one normal pass; mode "sample" = up to 4 sample posts from today's data to Slack only.
+# Optional variables: IG_LANGS (en,si,ta), IG_STORIES_MAX (20), IG_FEED_MAX (3), IG_KEEPALIVE_WEEK (3), IG_GRAPH_VERSION.
+
+name: Instagram account
+
+on:
+  schedule:
+    - cron: "30 1 * * *"
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "run = one normal pass now; sample = up to 4 sample posts from today's data, to Slack only"
+        type: choice
+        options: [run, sample]
+        default: run
+
+permissions:
+  contents: read
+  actions: read # failure history for the Slack rule
+
+# One at a time, never cancelled half-way: two runs must not post the same thing.
+concurrency:
+  group: ig-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Post
+        env:
+          MODE: ${{ github.event.inputs.mode || 'run' }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_MODE: ${{ vars.IG_MODE }}
+          IG_LANGS: ${{ vars.IG_LANGS }}
+          IG_STORIES_MAX: ${{ vars.IG_STORIES_MAX }}
+          IG_FEED_MAX: ${{ vars.IG_FEED_MAX }}
+          IG_KEEPALIVE_WEEK: ${{ vars.IG_KEEPALIVE_WEEK }}
+          IG_GRAPH_VERSION: ${{ vars.IG_GRAPH_VERSION }}
+        run: |
+          if [ "$MODE" != "sample" ] && [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is missing: the Instagram account keeps its memory in D1, so nothing is posted."
+            exit 0
+          fi
+          node --experimental-strip-types --no-warnings scripts/ig-post.mjs --mode "$MODE"
+
+      # Slack only hears about a workflow that has failed 3 runs in a row (the 3rd failure, then every 12th), like x-post.yml.
+      - name: Tell Slack the workflow failed (3 in a row)
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          n=0
+          if hist=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "${{ github.workflow }}" --status completed --limit 30 --json databaseId,conclusion --jq '[.[] | select(.databaseId != ${{ github.run_id }}) | select(.conclusion == "success" or .conclusion == "failure") | .conclusion] | join(" ")' 2>/dev/null); then
+            for c in $hist; do [ "$c" = "failure" ] && n=$((n+1)) || break; done
+          else
+            n=2
+          fi
+          streak=$((n+1))
+          if [ "$streak" -ne 3 ] && [ $((streak % 12)) -ne 0 ]; then
+            echo "Failed run #$streak in a row: not alerting Slack until the 3rd."
+            exit 0
+          fi
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"⚠️ Workflow failed $streak runs in a row: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$SLACK_WEBHOOK_URL" || true

@@ -143,6 +143,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run x-post.yml --repo "${{ github.repository }}"
 
+      # The Instagram account (scripts/ig-post.mjs): same trigger as the X account, dry-run to Slack until IG_MODE=live and both
+      # secrets exist. Its own concurrency group. Never fails the snapshot.
+      - name: Start the Instagram account job
+        if: steps.secrets.outputs.ready == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ig-post.yml --repo "${{ github.repository }}"
+
       # Slack only hears about a workflow that has failed 3 runs in a row (the 3rd failure, then every 12th): a single D1 or API
       # blip on a job that runs every 5-30 minutes fixes itself on the next run. Cancelled/skipped runs do not count either way.
       # If the history cannot be read, it alerts (fail open).

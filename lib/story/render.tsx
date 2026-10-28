@@ -6,8 +6,8 @@ import type { Arrow } from "@/lib/embedTypes";
 import type { PillTier } from "@/app/TierPill";
 import { embedT } from "@/lib/i18n/embed";
 import { getI18n } from "@/lib/i18n/server";
-import type { StoryModel, StoryRow } from "./model";
-import { SIZES, type StoryFormat } from "./url";
+import type { StoryModel, StoryRow, RainStory } from "./model";
+import { SIZES, type StoryExt, type StoryFormat } from "./url";
 import { STORY_STRINGS } from "./strings";
 import { STORY_FAMILY, storyFonts } from "./fonts";
 import { ChartSvg, plotChart, TIER_COLOR } from "./chart";
@@ -128,16 +128,154 @@ function RowItem({ r, d, last }: { r: StoryRow; d: Dim; last: boolean }) {
   );
 }
 
-function Frame({ d, tier, children }: { d: Dim; tier: PillTier; children: React.ReactNode }) {
+function Frame({ d, tier, bar, children }: { d: Dim; tier: PillTier; bar?: string; children: React.ReactNode }) {
   return (
     <div style={{ ...COL, width: d.W, height: d.Hh, background: "linear-gradient(180deg, #e0f2fe 0%, #f8fafc 38%, #ffffff 100%)", color: INK, fontFamily: STORY_FAMILY, position: "relative" }}>
-      <div style={{ ...F, height: 22, width: "100%", background: TIER_COLOR[tier].bg }} />
+      <div style={{ ...F, height: 22, width: "100%", background: bar ?? TIER_COLOR[tier].bg }} />
       <div style={{ ...COL, flex: 1, padding: `${d.top - 22}px ${d.pad}px ${d.bottom}px`, justifyContent: "space-between" }}>{children}</div>
     </div>
   );
 }
 
+// ---- rain card: the heaviest river areas with bars, and a small map of Sri Lanka coloured by the same rain ----
+/** Rain colour ramp (mm in 24 h): pale blue, blue, deep blue, violet for flood-making amounts. */
+const RAIN_STOPS: [number, string][] = [[0, "#e0f2fe"], [10, "#7dd3fc"], [25, "#38bdf8"], [50, "#0284c7"], [100, "#1d4ed8"], [150, "#7e22ce"]];
+export function rainColor(mm: number): string {
+  if (mm < 1) return "#f1f5f9";
+  for (let i = RAIN_STOPS.length - 1; i >= 0; i--) if (mm >= RAIN_STOPS[i][0]) return RAIN_STOPS[i][1];
+  return RAIN_STOPS[0][1];
+}
+
+function RainMapSvg({ map, w, h }: { map: RainStory["map"]; w: number; h: number }) {
+  const cw = w / map.nx, ch = h / map.ny;
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${map.nx} ${map.ny}`} xmlns="http://www.w3.org/2000/svg">
+      <path d={map.coast} fill="#eaf0f6" />
+      {map.cells.map(([c, r, mm]) => (
+        <rect key={`${c}-${r}`} x={c} y={r} width={1.02} height={1.02} fill={rainColor(mm)} />
+      ))}
+      <path d={map.coast} fill="none" stroke="#334155" strokeWidth={0.12} strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function RainLegend({ d }: { d: Dim; compact?: boolean }) {
+  const items: [string, string][] = [["10", rainColor(10)], ["25", rainColor(25)], ["50", rainColor(50)], ["100+", rainColor(100)]];
+  return (
+    <div style={{ ...F, alignItems: "center", fontSize: d.rowSub, fontWeight: 800, color: MUTED }}>
+      {items.map(([t, c]) => (
+        <div key={t} style={{ ...F, alignItems: "center", marginRight: 10 }}>
+          <div style={{ ...F, width: d.rowSub, height: d.rowSub, borderRadius: 6, background: c, marginRight: 6 }} />
+          <div style={F}>{t}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RainCard({ m, d }: { m: StoryModel; d: Dim }) {
+  const r = m.rain!;
+  const s = STORY_STRINGS[m.lang];
+  const sq = d.Hh === d.W;
+  const innerW = d.W - 2 * d.pad;
+  // list left, map right in both formats (the story has more height, so everything is bigger)
+  const mapH = sq ? 520 : 760;
+  const mapW = Math.round((mapH * r.map.nx) / r.map.ny);
+  const listW = innerW - mapW - 24;
+  const rowH = sq ? 82 : 122;
+  const nameSize = sq ? 30 : 34, mmSize = sq ? 36 : 46;
+  const rows = r.rows.slice(0, 6);
+  return (
+    <Frame d={d} tier="normal" bar={BRAND}>
+      <div style={{ ...COL, width: "100%" }}>
+        <Brand lang={m.lang} size={d.sub * 0.8} />
+        <div style={{ ...F, fontSize: d.title, fontWeight: 800, letterSpacing: -2, lineHeight: 1.05, marginTop: d.gap * 0.5, lineClamp: 2 }}>{m.title}</div>
+        {m.subtitle && <div style={{ ...F, fontSize: d.sub, fontWeight: 500, color: MUTED, marginTop: 8 }}>{m.subtitle}</div>}
+      </div>
+
+      <div style={{ ...F, width: "100%", alignItems: "flex-start" }}>
+        <div style={{ ...COL, width: listW, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 36, padding: "4px 28px" }}>
+          {rows.length === 0 && <div style={{ ...F, fontSize: nameSize, fontWeight: 800, color: MUTED, padding: "24px 0" }}>—</div>}
+          {rows.map((x, i) => (
+            <div key={x.name} style={{ ...COL, justifyContent: "center", height: rowH, borderBottom: i === rows.length - 1 ? "none" : "2px solid #e2e8f0" }}>
+              <div style={{ ...F, alignItems: "baseline", justifyContent: "space-between" }}>
+                <div style={{ ...F, fontSize: nameSize, fontWeight: 800, color: INK, lineClamp: 1, flex: 1, marginRight: 12 }}>{x.name}</div>
+                <div style={{ ...F, alignItems: "flex-end", color: INK }}>
+                  <div style={{ ...F, fontSize: mmSize, fontWeight: 800, lineHeight: 1 }}>{x.mm}</div>
+                  <div style={{ ...F, fontSize: mmSize * 0.5, fontWeight: 800, color: MUTED, marginLeft: 6 }}>{s.mm}</div>
+                </div>
+              </div>
+              <div style={{ ...F, width: "100%", height: sq ? 14 : 20, borderRadius: 10, background: "#f1f5f9", marginTop: 8 }}>
+                <div style={{ ...F, width: `${Math.max(6, Math.round(x.frac * 100))}%`, height: "100%", borderRadius: 10, background: rainColor(x.mm) === "#e0f2fe" ? "#7dd3fc" : rainColor(x.mm) }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ ...COL, alignItems: "center", marginLeft: 24 }}>
+          <div style={{ ...F, justifyContent: "center", width: mapW, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 36, padding: 6 }}>
+            <RainMapSvg map={r.map} w={mapW - 16} h={mapH - 16} />
+          </div>
+          <div style={{ ...F, marginTop: 10 }}>
+            <RainLegend d={d} compact />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ ...COL, width: "100%", marginTop: d.gap * 0.4 }}>
+        {r.gauge && (
+          <div style={{ ...F, fontSize: d.upd, fontWeight: 800, color: "#075985", background: "#e0f2fe", borderRadius: 24, padding: `${d.upd * 0.3}px ${d.upd * 0.7}px`, alignSelf: "flex-start", marginBottom: d.gap * 0.4 }}>{z(`${s.rainGauge}: ${r.gauge.name}, ${r.gauge.mm} ${s.mm}`)}</div>
+        )}
+        <div style={{ ...F, fontSize: d.upd, fontWeight: 500, color: MUTED, marginBottom: d.gap * 0.5 }}>{z(`${s.rainSat}${m.updated ? ` · ${m.updated}` : ""}`)}</div>
+        <Footer m={m} d={d} />
+      </div>
+    </Frame>
+  );
+}
+
+function ResCard({ m, d }: { m: StoryModel; d: Dim }) {
+  const r = m.res!;
+  const s = STORY_STRINGS[m.lang];
+  const sq = d.Hh === d.W;
+  const rows = r.rows.slice(0, 6);
+  const more = r.more + (r.rows.length - rows.length);
+  const rowH = sq ? 84 : 118;
+  return (
+    <Frame d={d} tier="none" bar={BRAND}>
+      <div style={{ ...COL, width: "100%" }}>
+        <Brand lang={m.lang} size={d.sub * 0.8} />
+        <div style={{ ...F, fontSize: d.title, fontWeight: 800, letterSpacing: -2, lineHeight: 1.05, marginTop: d.gap * 0.5, lineClamp: 2 }}>{m.title}</div>
+        {m.summary && <div style={{ ...F, fontSize: d.sum, fontWeight: 500, color: INK, lineHeight: 1.25, marginTop: 10 }}>{m.summary}</div>}
+      </div>
+      <div style={{ ...COL, width: "100%" }}>
+        {rows.length > 0 && (
+          <div style={{ ...COL, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 36, padding: "4px 30px" }}>
+            {rows.map((x, i) => (
+              <div key={`${x.name}-${i}`} style={{ ...F, alignItems: "center", justifyContent: "space-between", height: rowH, borderBottom: i === rows.length - 1 ? "none" : "2px solid #e2e8f0" }}>
+                <div style={{ ...COL, flex: 1, marginRight: 16, minWidth: 0 }}>
+                  <div style={{ ...F, fontSize: sq ? 34 : 46, fontWeight: 800, color: INK, lineHeight: 1.15, lineClamp: 1 }}>{x.name}</div>
+                  {x.river && <div style={{ ...F, fontSize: d.rowSub, fontWeight: 500, color: MUTED }}>{x.river}</div>}
+                </div>
+                <div style={{ ...COL, alignItems: "flex-end" }}>
+                  {x.figure && <div style={{ ...F, fontSize: sq ? 34 : 46, fontWeight: 800, color: "#075985" }}>{x.figure}</div>}
+                  {x.when && <div style={{ ...F, fontSize: d.rowSub, fontWeight: 500, color: MUTED }}>{x.when}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {more > 0 && <div style={{ ...F, fontSize: d.upd, fontWeight: 800, color: MUTED, marginTop: 14 }}>{s.more.replace("{n}", String(more))}</div>}
+      </div>
+      <div style={{ ...COL, width: "100%", marginTop: d.gap * 0.4 }}>
+        <div style={{ ...F, fontSize: d.upd, fontWeight: 500, color: MUTED, marginBottom: d.gap * 0.5 }}>{z(`${s.resSub} · ${Array.from(new Set(r.rows.map((x) => x.source))).join(", ")}`)}</div>
+        <Footer m={m} d={d} />
+      </div>
+    </Frame>
+  );
+}
+
 function Card({ m, d }: { m: StoryModel; d: Dim }) {
+  if (m.rain) return <RainCard m={m} d={d} />;
+  if (m.res) return <ResCard m={m} d={d} />;
   const w = d.W - 2 * d.pad;
   const list = m.rows.length > 0 || m.kind === "river" || m.kind === "home";
   const stale = m.level == null && !list;
@@ -247,12 +385,23 @@ function Og({ m }: { m: StoryModel }) {
 
 const CACHE = "public, s-maxage=300, stale-while-revalidate=600";
 
-export async function renderStory(model: StoryModel, format: StoryFormat): Promise<Response> {
+export async function renderStory(model: StoryModel, format: StoryFormat, ext: StoryExt = "png"): Promise<Response> {
   const m = clean(model);
   const size = SIZES[format];
   const fonts = await storyFonts(m.lang);
-  const img = new ImageResponse(format === "og" ? <Og m={m} /> : <Card m={m} d={DIM[format]} />, { ...size, fonts, headers: { "Cache-Control": CACHE, "CDN-Cache-Control": CACHE, "Vercel-CDN-Cache-Control": CACHE } });
-  return img;
+  const img = new ImageResponse(m.rain || m.res ? (format === "og" ? <Card m={m} d={{ ...DIM.square }} /> : <Card m={m} d={DIM[format]} />) : format === "og" ? <Og m={m} /> : <Card m={m} d={DIM[format]} />, { ...size, fonts, headers: { "Cache-Control": CACHE, "CDN-Cache-Control": CACHE, "Vercel-CDN-Cache-Control": CACHE } });
+  return ext === "jpg" ? toJpeg(img) : img;
+}
+
+/**
+ * Instagram accepts JPEG only. The same picture, flattened on white (no transparency) and re-encoded with sharp; same cache headers.
+ * Quality 90 keeps small text crisp and stays well under Instagram's 8 MB limit (a story picture is about 250 KB).
+ */
+export async function toJpeg(png: Response): Promise<Response> {
+  const sharp = (await import("sharp")).default;
+  const out = await sharp(Buffer.from(await png.arrayBuffer())).flatten({ background: "#ffffff" }).jpeg({ quality: 90, mozjpeg: true, chromaSubsampling: "4:4:4" }).toBuffer();
+  const headers = new Headers({ "Content-Type": "image/jpeg", "Cache-Control": CACHE, "CDN-Cache-Control": CACHE, "Vercel-CDN-Cache-Control": CACHE });
+  return new Response(new Uint8Array(out), { headers });
 }
 
 /** A plain card when the sources cannot be read, so a shared link never gets a broken image. Short cache so it recovers quickly. */
