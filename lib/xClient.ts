@@ -106,6 +106,28 @@ export async function uploadMedia(keys: XKeys, bytes: Uint8Array, mime: string, 
   throw new Error(`media upload failed: ${errs.join(" | ")}`);
 }
 
+export const MEDIA_META_URL = "https://api.x.com/2/media/metadata";
+export const MEDIA_META_URL_V1 = "https://upload.twitter.com/1.1/media/metadata/create.json";
+
+/** Sets the alt text (max 1000 characters) of an uploaded image. v2 first, then v1.1; JSON bodies are not part of the OAuth signature.
+ *  Billed separately on the pay-per-use plan ("Media Metadata"). Returns false instead of throwing: a missing description never blocks a post. */
+export async function setAltText(keys: XKeys, mediaId: string, text: string, doFetch: typeof fetch = fetch): Promise<boolean> {
+  const alt = text.slice(0, 1000);
+  const tries: [string, unknown][] = [
+    [MEDIA_META_URL, { id: mediaId, metadata: { alt_text: { text: alt } } }],
+    [MEDIA_META_URL_V1, { media_id: mediaId, alt_text: { text: alt } }],
+  ];
+  for (const [url, body] of tries) {
+    try {
+      const res = await doFetch(url, { method: "POST", headers: { Authorization: oauthHeader("POST", url, keys), "Content-Type": "application/json", "User-Agent": "sl-water-levels-x-poster" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20_000) });
+      if (res.ok) return true;
+    } catch {
+      /* try the next endpoint */
+    }
+  }
+  return false;
+}
+
 /** Deletes one of the account's own posts. True when X confirms it is gone. */
 export async function deleteTweet(keys: XKeys, id: string, doFetch: typeof fetch = fetch): Promise<{ ok: boolean; detail: string }> {
   const url = `${TWEETS_URL}/${encodeURIComponent(id)}`;

@@ -18,6 +18,8 @@
 // X_MIN_GAP_MIN (default 45) minutes of the last post waits (state.deferred); Minor/Major crossings and official warnings go
 // at once. X_LONG_POSTS=1 lifts the 280 limit (X Premium); otherwise "+N more on waterlevels.lk". Never a thread of updates.
 //   --mode preview --events file.json [--at ISO]  prints the combined post for engine events, sends nothing.
+// Pictures (scripts/x-media.mjs): X_MEDIA=off|alerts|all (default alerts = Alert/Minor/Major rises and the morning summary) attaches the
+// site's square story image with alt text; costs X_COST_MEDIA (0) + X_COST_MEDIA_ALT (0.005) per post; a failed picture never blocks a post.
 // Cost (the X API is pay-per-use; a post with a link costs about 13 times a post without): links are OFF by default
 // (X_LINKS=off|alerts|all; "alerts" = major-flood rises, major official warnings), thread
 // replies are OFF (X_REPLIES=on), and a monthly budget guard (X_MONTHLY_BUDGET_USD, default 10; X_COST_POST=0.015,
@@ -30,6 +32,7 @@ import {
   composeWarning, composeSummary, composeStorm, stormTide, composeRiversRising, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
 } from "../lib/xCompose.ts";
 import { OPENAI_MODEL } from "../lib/openai.ts";
+import { mediaMode, pickMedia, mediaCost, fetchImage, attachMedia } from "./x-media.mjs";
 import { evaluate, emptyState, summaryEvent, tierLevel, DEFAULTS } from "./x-engine.mjs";
 import { refreshEvents, composeCombined, validateCombined, decide, capBatch, batchKey, MIN_GAP_MS, DEFER_MAX_AGE_MS } from "../lib/xAggregate.ts";
 import { PLACES } from "../lib/places.ts";
@@ -181,9 +184,9 @@ export function isCritical(ev) {
 }
 
 /** Estimated API cost in dollars of a post (and its replies). */
-export function costOf(text, replies, rates) {
+export function costOf(text, replies, rates, media = false) {
   const one = (t) => (/https?:\/\//.test(t) ? rates.link : rates.post);
-  return one(text) + replies.reduce((n, t) => n + one(t), 0);
+  return one(text) + replies.reduce((n, t) => n + one(t), 0) + (media ? mediaCost(rates) : 0);
 }
 
 /** The raw facts of an event, the shape lunaFacts() reads. */
@@ -239,10 +242,11 @@ async function slack(text, { env = process.env, doFetch = fetch } = {}) {
 
 const quote = (t) => t.split("\n").map((l) => `> ${l}`).join("\n");
 
-export function dryRunMessage({ n, of, kind, text, reply, extra, ai, why, reason, cost = null, sample = false }) {
+export function dryRunMessage({ n, of, kind, text, reply, extra, ai, why, reason, cost = null, sample = false, media = null, mediaCheck = null }) {
   return [
     `*${sample ? "SAMPLE, " : ""}DRY RUN: not posted to X* (${n}/${of}) [${kind}] ${tweetLength(text)}/${MAX_TWEET} characters, ${ai ? `written by ${OPENAI_MODEL}, every number checked${why ? ` (${why})` : ""}` : `plain template${why ? ` (${why})` : ""}`}${cost != null ? `, est. cost $${cost.toFixed(3)}` : ""}`,
     quote(text),
+    media ? `_Image (would be attached, square):_ ${media.url}\n_Alt text:_ ${media.alt}${mediaCheck ? `\n_Image check:_ ${mediaCheck}` : ""}` : null,
     reply ? `_Thread reply:_\n${quote(reply)}` : null,
     ...(extra ?? []).map((x) => `_${x.lang} reply (draft):_\n${quote(x.text)}`),
     reason ? `_${reason}_` : null,
@@ -276,6 +280,8 @@ async function claim(row, query) {
   return !!mine && mine.status === "claimed" && Number(mine.id) > 0;
 }
 
+const snapSite = (env) => env.SITE_URL || SITE_DEFAULT;
+
 // ---- one run -------------------------------------------------------------------------------------------------------
 
 /**
@@ -303,7 +309,10 @@ export async function run(o = {}) {
   const replies = (env.X_REPLIES ?? "").trim().toLowerCase() === "on";
   const num = (v, d) => (Number(v) > 0 ? Number(v) : d);
   const budget = num(env.X_MONTHLY_BUDGET_USD, 10);
-  const rates = { post: num(env.X_COST_POST, 0.015), link: num(env.X_COST_LINK_POST, 0.2) };
+  // X's pay-per-use price list shows no separate charge for the image upload itself; the alt-text call ("Media Metadata") is $0.005.
+  const rates = { post: num(env.X_COST_POST, 0.015), link: num(env.X_COST_LINK_POST, 0.2), media: Number(env.X_COST_MEDIA) >= 0 && env.X_COST_MEDIA ? Number(env.X_COST_MEDIA) : 0, alt: Number(env.X_COST_MEDIA_ALT) >= 0 && env.X_COST_MEDIA_ALT ? Number(env.X_COST_MEDIA_ALT) : 0.005 };
+  const mmode = mediaMode(env);
+  const site = snapSite(env);
   const langs = (replies ? (env.X_LANGS ?? "en") : "en").split(",").map((s) => s.trim()).filter((s) => s === "si" || s === "ta");
   const meta = (await loadValue("meta", query)) ?? {};
   const live = g.mode === "live";
@@ -385,13 +394,15 @@ export async function run(o = {}) {
         const t = localisedReply(ev, lang);
         if (t) extra.push({ lang, text: t });
       }
-      return { text: r.text, reply: r.reply, ai: r.ai, why: r.why, extra, cost: costOf(r.text, [r.reply, ...extra.map((x) => x.text)].filter(Boolean), rates) };
+      const media = pickMedia(list, mmode, site);
+      return { text: r.text, reply: r.reply, ai: r.ai, why: r.why, extra, media, cost: costOf(r.text, [r.reply, ...extra.map((x) => x.text)].filter(Boolean), rates, !!media) };
     }
     const link = links === "all" || list.some((e) => linkWanted(e, links)) ? (snap.site || SITE_DEFAULT) : "";
     const c = composeCombined(list, { now, link, long });
     const bad = validateCombined(c.text, list, c.headAt, long);
     if (bad.length) return { error: `the combined post failed its own checks (${bad.join("; ")})` };
-    return { text: c.text, reply: null, ai: false, why: `${list.length} updates combined, ${c.shown} of ${c.total} lines shown`, extra: [], cost: costOf(c.text, [], rates) };
+    const media = pickMedia(list, mmode, site);
+    return { text: c.text, reply: null, ai: false, why: `${list.length} updates combined, ${c.shown} of ${c.total} lines shown`, extra: [], media, cost: costOf(c.text, [], rates, !!media) };
   };
   if (batch.length) {
     let r = await build(batch);
@@ -425,12 +436,33 @@ export async function run(o = {}) {
       continue;
     }
     if (!live) {
-      await note(dryRunMessage({ n: i + 1, of: total, kind: item.kind, text: item.text, reply: item.reply, extra: item.extra, ai: item.ai, why: item.why, reason: g.reason, cost: item.cost }));
+      let mediaCheck = null;
+      if (item.media) {
+        const chk = await fetchImage(item.media.url, doFetch);
+        mediaCheck = chk.ok ? `fetched, ${Math.round(chk.bytes.length / 1024)} KB` : `NOT available (${chk.why}): the post would go out text-only`;
+        if (!chk.ok) {
+          item.cost = Math.max(0, item.cost - mediaCost(rates));
+          await query("UPDATE x_posts SET cost_usd = ? WHERE dedupe_key = ?", [item.cost, item.dedupe]);
+        }
+      }
+      await note(dryRunMessage({ n: i + 1, of: total, kind: item.kind, text: item.text, reply: item.reply, extra: item.extra, ai: item.ai, why: item.why, reason: g.reason, cost: item.cost, media: item.media, mediaCheck }));
       await query("UPDATE x_posts SET status = 'dry' WHERE dedupe_key = ?", [item.dedupe]);
       posted++;
       continue;
     }
-    const r = await postTweet(g.keys, item.text, { doFetch, now });
+    // the picture is optional: any failure here posts the text alone (and takes the picture's cost off the estimate)
+    let mediaIds;
+    if (item.media) {
+      const m = await attachMedia(g.keys, item.media, { doFetch });
+      if (m.mediaIds) mediaIds = m.mediaIds;
+      else {
+        log(`no picture: ${m.why}`);
+        item.cost = Math.max(0, item.cost - mediaCost(rates));
+        await query("UPDATE x_posts SET cost_usd = ? WHERE dedupe_key = ?", [item.cost, item.dedupe]);
+        await note(`:information_source: X post went out without its picture: ${m.why}.`);
+      }
+    }
+    const r = await postTweet(g.keys, item.text, { doFetch, now, mediaIds });
     if (!r.ok) {
       failed++;
       const fail = `${item.dedupe}#failed${now}`;
@@ -497,8 +529,10 @@ export async function sample(o = {}) {
   for (const [i, ev] of evs.slice(0, 3).entries()) {
     const r = await prepare(ev, llm, { recent, offReason });
     if (r.error) throw new Error(r.error);
+    const media = pickMedia([ev], mediaMode(env), snap.site || SITE_DEFAULT);
+    const mediaCheck = media ? await fetchImage(media.url, doFetch).then((c) => (c.ok ? `fetched, ${Math.round(c.bytes.length / 1024)} KB` : `NOT available (${c.why})`)) : null;
     recent.unshift(r.text);
-    const msg = dryRunMessage({ n: i + 1, of: Math.min(3, evs.length), kind: ev.kind, text: r.text, reply: r.reply, ai: r.ai, why: r.why, sample: true, cost: costOf(r.text, [], { post: 0.015, link: 0.2 }), reason: "Sample from today's real data to show the wording. The real account posts only when something changes." });
+    const msg = dryRunMessage({ n: i + 1, of: Math.min(3, evs.length), kind: ev.kind, text: r.text, reply: r.reply, ai: r.ai, why: r.why, sample: true, media, mediaCheck, cost: costOf(r.text, [], { post: 0.015, link: 0.2, media: 0, alt: 0.005 }, !!media), reason: "Sample from today's real data to show the wording. The real account posts only when something changes." });
     out.push({ ev, ...r, msg });
     await slack(msg, { env, doFetch });
   }

@@ -1474,6 +1474,18 @@ for new developers except approved public-utility apps. **Verify the current pri
 - **Monthly budget guard:** `X_MONTHLY_BUDGET_USD` (default 10) with estimates `X_COST_POST` (0.015) and `X_COST_LINK_POST` (0.20). At 80% of the budget routine posts (summaries, storm updates, reservoirs, minor rises) stop and Slack is told; Major-flood rises and all-clears always go out. The estimated cost of every post is stored in `x_posts.cost_usd` (dry runs too, so the dry-run Slack shows the estimate):
   `npx wrangler d1 execute sl-water-levels --remote --command "SELECT substr(day,1,7) m, mode, COUNT(*) posts, ROUND(SUM(cost_usd),2) usd FROM x_posts WHERE status IN ('posted','dry') GROUP BY 1,2"`
 
+### Pictures on posts (`X_MEDIA`, 28 Oct 2026)
+
+Posts carry the site's share image (`/api/story/<kind>/<slug>.png?format=square`, 1080x1080, fetched from the live site, CDN-cached 5 min) with alt text
+(plain status, e.g. "Ratnapura, Kalu Ganga: 19.0 ft, Alert, falling, 8:10 pm"). Square because X shows a single 1:1 image whole on phone and web; the 1200x630
+card is smaller in the feed and 9:16 is cropped. Code: `scripts/x-media.mjs` (selection, fetch, upload, alt text), used by `scripts/x-post.mjs`.
+- `X_MEDIA=off|alerts|all` (repository variable, default **alerts**). `alerts`: Alert / Minor / Major rises (gauge picture) and the morning summary (home "right now" picture).
+  `all` adds all-clears (gauge), storm updates and official warnings (river picture), national "rivers rising" and the evening summary (home). A combined post uses the picture of its most important event that wants one.
+- Upload: `lib/xClient.ts uploadMedia` = `POST https://api.x.com/2/media/upload` (falls back to v1.1 `upload.twitter.com/1.1/media/upload.json`), same OAuth 1.0a user keys as the posts; alt text via `POST /2/media/metadata` (v1.1 `media/metadata/create.json` fallback); then `media.media_ids` on `POST /2/tweets`.
+- **Never blocks a post:** if the image cannot be fetched (not a PNG, under 2 KB, over 5 MB, HTTP error), uploaded, or described, the post goes out text-only, Slack says so, and the picture's cost comes off the estimate. A failed alt text still posts the picture.
+- **Cost:** X's public pay-per-use list (docs.x.com pricing, checked 28 Oct 2026) shows no price for the upload itself and $0.005 per "Media Metadata" request. Estimate per post: $0.015 text, $0.020 with picture (0.015 + 0.005), $0.200 with a link, $0.205 with link and picture. `X_COST_MEDIA` (default 0) and `X_COST_MEDIA_ALT` (default 0.005) tune it; the estimate counts toward the monthly budget guard. Verify against the Developer Console after the first live week.
+- **Dry run:** the Slack message shows the image address, the alt text, and whether the image could be fetched ("Image check"). Tests: `scripts/x-media.test.mts` (mocked fetch, no real posts).
+
 ### What the owner must do
 
 1. **Create the X account** (a new profile, e.g. "Sri Lanka Water Levels"). Suggested bio (143 characters):

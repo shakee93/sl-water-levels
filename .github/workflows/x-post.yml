@@ -7,7 +7,10 @@
 #   - Manual: mode "run" = one normal pass; mode "sample" = up to 3 sample posts from today's data to Slack only.
 # One post per run: everything that would post is combined (lib/xAggregate.ts); routine updates within X_MIN_GAP_MIN (45) minutes of
 # the last post wait for the next one; X_LONG_POSTS=1 (X Premium) lifts the 280-character limit.
-# Optional variables: X_LINKS (off|alerts|all, default off), X_REPLIES (on), X_LANGS (en,si,ta), X_EVENING (on),
+# Pictures: X_MEDIA (off|alerts|all, default alerts) attaches the site's square story image (with alt text) to Alert/Minor/Major rises and the
+# morning summary ("all" adds all-clears, storm updates, warnings, the evening summary); X_COST_MEDIA (0) and X_COST_MEDIA_ALT (0.005) feed the
+# cost estimate. A picture that cannot be fetched or uploaded never blocks the post: it goes out text-only.
+# Optional variables: X_LINKS (off|alerts|all, default off), X_MEDIA, X_REPLIES (on), X_LANGS (en,si,ta), X_EVENING (on),
 # X_DAILY_MAX, X_MONTHLY_BUDGET_USD, X_COST_POST, X_COST_LINK_POST, X_AI_POLISH (off = no AI writer), X_AI_TEMPERATURE.
 # Secret OPENAI_API_KEY makes gpt-6-luna write every post in a human voice from the facts (every number checked against
 # the facts, one retry, then the plain template). Without the secret the plain templates are used and Slack says so.
@@ -57,6 +60,9 @@ jobs:
           X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           X_POSTING: ${{ vars.X_POSTING }}
           X_LINKS: ${{ vars.X_LINKS }}
+          X_MEDIA: ${{ vars.X_MEDIA }}
+          X_COST_MEDIA: ${{ vars.X_COST_MEDIA }}
+          X_COST_MEDIA_ALT: ${{ vars.X_COST_MEDIA_ALT }}
           X_REPLIES: ${{ vars.X_REPLIES }}
           X_LANGS: ${{ vars.X_LANGS }}
           X_EVENING: ${{ vars.X_EVENING }}

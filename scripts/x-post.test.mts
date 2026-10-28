@@ -363,7 +363,18 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
     const again = await run({ env: w.env, doFetch: w.doFetch, query, snap: sceneA(), now: NOW + 1_800_000 });
     assert.equal(again.posted, 0, "no duplicate morning post");
     const row = (await query("SELECT status, mode, cost_usd FROM x_posts"))[0];
-    assert.deepEqual([row.status, row.mode], ["dry", "dry"]); assert.equal(row.cost_usd, 0.015);
+    assert.deepEqual([row.status, row.mode], ["dry", "dry"]); assert.equal(row.cost_usd, 0.015, "image unavailable in the test world: text-only cost");
+    assert.ok(w.calls.slack.some((t) => t.includes("Image (would be attached") && t.includes("/api/story/home/now.png?format=square") && t.includes("NOT available")), "dry run names the image");
+  }
+  // X_MEDIA=off: no picture line; live: a failed image fetch still posts the text
+  {
+    const w = world({ X_MEDIA: "off" }); const query = makeDb();
+    await run({ env: w.env, doFetch: w.doFetch, query, snap: sceneA(), now: NOW });
+    assert.ok(!w.calls.slack.some((t) => t.includes("Image (would")));
+    const l = world({ ...KEYS, X_POSTING: "live" }); const q2 = makeDb();
+    const r2 = await run({ env: l.env, doFetch: l.doFetch, query: q2, snap: sceneA(), now: NOW });
+    assert.equal(r2.posted, 1); assert.equal(l.calls.x.length, 1, "text goes out although the image 404s");
+    assert.equal((await q2("SELECT cost_usd FROM x_posts"))[0].cost_usd, 0.015);
   }
   // live requested without keys: stays dry and tells Slack why
   {
@@ -380,7 +391,7 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   }
   // LIVE: posts to X, no link and no reply by default; the Major rise goes out; recorded as posted
   {
-    const w = world({ X_POSTING: "live", ...KEYS }); const query = makeDb();
+    const w = world({ X_POSTING: "live", X_MEDIA: "off", ...KEYS }); const query = makeDb();
     const first = await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null }, NOW - 7 * 3_600_000), now: NOW - 7 * 3_600_000 });
     const r = await run({ env: w.env, doFetch: w.doFetch, query, snap: rising(LATE), now: LATE });
     assert.equal(r.mode, "live");
