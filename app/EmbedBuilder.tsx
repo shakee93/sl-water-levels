@@ -3,8 +3,7 @@
 // The /embed page's builder: pick a widget and what it shows, set the options, see the real widget in a live preview and copy the code.
 // Prefilled from the address (?w=river&id=kalu-ganga&unit=m ...), which is how every river, gauge and town page's "Embed this on your site"
 // button opens it. Labels are English for now (the page text around it follows the site language).
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { DEFAULTS, USES, WIDGETS, cfgQuery, fixedHeight, isWidget, parseCfg, type EmbedCfg, type Widget } from "@/lib/embedConfig";
 import type { Locale } from "@/lib/i18n/config";
@@ -31,7 +30,7 @@ function Seg<T extends string | number>({ label, value, options, onChange }: { l
   return (
     <div>
       <span className={field} id={`seg-${label}`}>{label}</span>
-      <div role="radiogroup" aria-labelledby={`seg-${label}`} className="inline-flex rounded-md border border-slate-300 dark:border-slate-700 overflow-hidden">
+      <div role="radiogroup" aria-labelledby={`seg-${label}`} className="inline-flex max-w-full rounded-md border border-slate-300 dark:border-slate-700 overflow-hidden">
         {options.map((o) => (
           <button
             key={String(o.v)}
@@ -39,7 +38,7 @@ function Seg<T extends string | number>({ label, value, options, onChange }: { l
             role="radio"
             aria-checked={value === o.v}
             onClick={() => onChange(o.v)}
-            className={`min-h-11 sm:min-h-9 px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 ${value === o.v ? "bg-sky-600 text-white" : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+            className={`min-h-11 sm:min-h-9 px-2.5 sm:px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-500 ${value === o.v ? "bg-sky-600 text-white" : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
           >
             {o.l}
           </button>
@@ -58,15 +57,19 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
   );
 }
 
-export function EmbedBuilder({ lists, lang, origin }: { lists: BuilderLists; lang: Locale; origin: string }) {
-  const sp = useSearchParams();
-  const init = useMemo(() => {
+/** Reads the prefilled settings from the address after the page loads (so the page itself stays static), then shows the builder. */
+export function EmbedBuilder(props: { lists: BuilderLists; lang: Locale; origin: string }) {
+  const [init, setInit] = useState<Record<string, string> | null>(null);
+  useEffect(() => {
     const o: Record<string, string> = {};
-    sp.forEach((v, k) => (o[k] = v));
-    return o;
-    // read once: later edits are the visitor's own
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    new URLSearchParams(window.location.search).forEach((v, k) => (o[k] = v));
+    setInit(o);
   }, []);
+  if (!init) return <div className="mt-5 min-h-[40rem] rounded-xl border border-slate-200 dark:border-slate-800" aria-hidden />;
+  return <Builder {...props} init={init} />;
+}
+
+function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Locale; origin: string; init: Record<string, string> }) {
   const [widget, setWidget] = useState<Widget>(isWidget(init.w) ? init.w : "river");
   const [cfg, setCfg] = useState<EmbedCfg>(() => ({ ...parseCfg(init), lang: init.lang ? parseCfg(init).lang : lang }));
   const [id, setId] = useState<string>(init.id ?? "");
@@ -116,8 +119,8 @@ export function EmbedBuilder({ lists, lang, origin }: { lists: BuilderLists; lan
   const toggleRiver = (slug: string) => set("rivers", cfg.rivers.includes(slug) ? cfg.rivers.filter((x) => x !== slug) : [...cfg.rivers, slug]);
 
   return (
-    <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-      <div className="space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+    <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
         <div>
           <span className={field}>1. What to embed</span>
           <div className="grid grid-cols-2 gap-2">
@@ -127,10 +130,10 @@ export function EmbedBuilder({ lists, lang, origin }: { lists: BuilderLists; lan
                 type="button"
                 aria-pressed={widget === w}
                 onClick={() => setWidget(w)}
-                className={`text-left rounded-lg border px-3 py-2 min-h-11 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${widget === w ? "border-sky-600 bg-sky-50 dark:bg-sky-950/40" : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                className={`min-w-0 text-left rounded-lg border px-2.5 sm:px-3 py-2 min-h-11 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${widget === w ? "border-sky-600 bg-sky-50 dark:bg-sky-950/40" : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
               >
-                <span className="block text-sm font-semibold">{NAMES[w].name}</span>
-                <span className="block text-xs text-slate-500 dark:text-slate-400 leading-snug">{NAMES[w].hint}</span>
+                <span className="block text-sm font-semibold break-words">{NAMES[w].name}</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400 leading-snug break-words">{NAMES[w].hint}</span>
               </button>
             ))}
           </div>
@@ -188,7 +191,7 @@ export function EmbedBuilder({ lists, lang, origin }: { lists: BuilderLists; lan
           </fieldset>
         )}
 
-        <div className="flex flex-wrap gap-x-5 gap-y-3">
+        <div className="flex flex-wrap gap-x-4 gap-y-3 min-w-0">
           {widget !== "ticker" && <Seg label="Size" value={cfg.size} options={[{ v: "full", l: "Full" }, { v: "compact", l: "Compact" }]} onChange={(v) => set("size", v)} />}
           <Seg label="Language" value={cfg.lang} options={[{ v: "en", l: "English" }, { v: "si", l: "සිංහල" }, { v: "ta", l: "தமிழ்" }]} onChange={(v) => set("lang", v)} />
           <Seg label="Theme" value={cfg.theme} options={[{ v: "auto", l: "Match page" }, { v: "light", l: "Light" }, { v: "dark", l: "Dark" }]} onChange={(v) => set("theme", v)} />
@@ -206,29 +209,29 @@ export function EmbedBuilder({ lists, lang, origin }: { lists: BuilderLists; lan
 
       <div className="min-w-0 space-y-4">
         <div>
-          <div className="flex items-center justify-between gap-3 mb-1.5">
+          <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 mb-1.5">
             <span className={field.replace("mb-1", "mb-0")}>Live preview (the real widget)</span>
             <Seg label="Preview width" value={wide ? "wide" : "narrow"} options={[{ v: "narrow", l: "Phone" }, { v: "wide", l: "Wide" }]} onChange={(v) => setWide(v === "wide")} />
           </div>
-          <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40 p-3 overflow-x-auto">
-            <div className="mx-auto" style={{ width: wide ? "100%" : 340, maxWidth: "100%" }}>
+          <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100/60 dark:bg-slate-800/40 p-2 sm:p-3 overflow-hidden">
+            <div className="mx-auto min-w-0" style={{ width: wide ? "100%" : 340, maxWidth: "100%" }}>
               <iframe ref={frame} key={rel} src={rel} title="Preview" width="100%" style={{ border: 0, height: h ?? fixed, display: "block" }} />
             </div>
           </div>
         </div>
         <div>
-          <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
+          <div className="flex items-center justify-between gap-x-3 mb-1.5 flex-wrap">
             <label htmlFor="embed-code" className="text-xs font-medium text-slate-600 dark:text-slate-300">Code to paste into your page</label>
             <Toggle label="Include the resize script" on={script} onChange={setScript} />
           </div>
-          <textarea id="embed-code" readOnly value={code} rows={5} onFocus={(e) => e.currentTarget.select()} className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 font-mono text-xs leading-relaxed" />
-          <div className="mt-2 flex items-center gap-3">
+          <textarea id="embed-code" readOnly wrap="off" value={code} rows={3} onFocus={(e) => e.currentTarget.select()} className="block w-full max-w-full overflow-x-auto whitespace-pre rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 font-mono text-xs leading-relaxed" />
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
             <button type="button" onClick={copy} className="inline-flex items-center gap-2 h-11 sm:h-10 px-4 rounded-md bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2">
               {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
               {copied ? "Copied" : "Copy code"}
             </button>
             <span className="sr-only" aria-live="polite">{copied ? "Code copied" : ""}</span>
-            <p className="text-xs text-slate-500 dark:text-slate-400">The script is optional: it makes the box grow to fit. Without it the box keeps the height above.</p>
+            <p className="min-w-0 flex-1 basis-48 text-xs text-slate-500 dark:text-slate-400">The script is optional: it makes the box grow to fit. Without it the box keeps the height above.</p>
           </div>
           <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Free to use: keep the credit link inside the box. Not an official warning service. Defaults ({DEFAULTS.unit}, {DEFAULTS.theme}, {DEFAULTS.size}) are left out of the address.</p>
         </div>

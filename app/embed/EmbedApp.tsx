@@ -85,8 +85,8 @@ function Shell({ p, children, tone }: { p: EmbedPayload; children: React.ReactNo
 function RowView({ r, full, nameLink = true }: { r: EmbedRow; full: boolean; nameLink?: boolean }) {
   return (
     <li className="py-2.5 first:pt-0 last:pb-0">
-      <div className="flex items-start justify-between gap-x-3 gap-y-1.5 flex-wrap min-[420px]:flex-nowrap">
-        <div className="min-w-0 flex-1">
+      <div className="flex items-start justify-between gap-x-3">
+        <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
           <p className="font-semibold leading-snug">
             {nameLink ? (
               <a href={r.href} target="_blank" rel="noopener" className="hover:underline underline-offset-2">{r.name}</a>
@@ -97,8 +97,8 @@ function RowView({ r, full, nameLink = true }: { r: EmbedRow; full: boolean; nam
           </p>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time ? <><span className="whitespace-nowrap">{r.time}</span>{r.age && <> · <span className="whitespace-nowrap">{r.age}</span></>}</> : r.step}</p>
         </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          {r.level && <span className="text-lg font-semibold tabular-nums leading-none">{r.level}</span>}
+        <div className="flex shrink-0 flex-col items-end gap-1.5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:gap-2.5">
+          {r.level && <span className="min-w-[4.5rem] text-right text-lg font-semibold tabular-nums leading-none whitespace-nowrap">{r.level}</span>}
           <TierPill label={r.step} tier={r.tier} />
         </div>
       </div>
@@ -133,8 +133,8 @@ function RiverView({ p }: { p: RiverPayload }) {
         </p>
       )}
       <ul className={`${full ? "mt-1.5" : "mt-2.5"} divide-y divide-slate-200/80 dark:divide-slate-800`}>
-        {p.rows.map((r) => (
-          <RowView key={r.key} r={r} full={full} />
+        {p.rows.map((r, i) => (
+          <RowView key={`${r.key}-${i}`} r={r} full={full} />
         ))}
       </ul>
     </Shell>
@@ -299,8 +299,8 @@ function NowView({ p }: { p: NowPayload }) {
             <a href={g.href} target="_blank" rel="noopener" className="hover:underline underline-offset-2">{g.river}</a>
           </h2>
           <ul className="mt-1 divide-y divide-slate-200/80 dark:divide-slate-800">
-            {g.rows.map((r) => (
-              <li key={r.key} className="flex items-center justify-between gap-3 py-2">
+            {g.rows.map((r, i) => (
+              <li key={`${r.key}-${i}`} className="flex items-center justify-between gap-3 py-2">
                 <span className="min-w-0">
                   <a href={r.href} target="_blank" rel="noopener" className="block font-medium leading-snug hover:underline underline-offset-2">{r.name}</a>
                   {full && (
@@ -334,8 +334,8 @@ function ReservoirsView({ p }: { p: ReservoirsPayload }) {
       <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{p.unavailable ?? p.summary}</p>
       {p.items.length > 0 && (
         <ul className="mt-2.5 divide-y divide-slate-200/80 dark:divide-slate-800">
-          {p.items.map((i) => (
-            <li key={i.key} className="py-2.5 first:pt-0 last:pb-0">
+          {p.items.map((i, n) => (
+            <li key={`${i.key}-${n}`} className="py-2.5 first:pt-0 last:pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <a href={i.href} target="_blank" rel="noopener" className="font-semibold leading-snug hover:underline underline-offset-2">{i.name}</a>
