@@ -66,7 +66,7 @@ export function MarkSpot({ ft, lang, lat, lon, page, target }: { ft: FT; lang: "
   }
 
   if (state === "done") {
-    const href = `${lang === "en" ? "" : `/${lang}`}/flood-map?ll=${pos!.lon.toFixed(4)},${pos!.lat.toFixed(4)},16.5,55`;
+    const href = `${lang === "en" ? "" : `/${lang}`}/lab/flood-3d?ll=${pos!.lon.toFixed(4)},${pos!.lat.toFixed(4)},16.5,55`;
     return (
       <div className="mt-4 border-t border-sky-200 pt-4 text-sm text-slate-800 dark:border-sky-900 dark:text-slate-200" role="status" data-testid="spot-thanks">
         <p className="flex items-start gap-2"><CircleCheck className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {ft("fb.spotThanks")}</p>
