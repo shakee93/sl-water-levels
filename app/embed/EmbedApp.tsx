@@ -7,7 +7,8 @@ import { ArrowDown, ArrowUp, ExternalLink, Minus } from "lucide-react";
 import { PILL, StepWord, TierPill, type PillTier } from "@/app/TierPill";
 import type { EmbedCfg, Widget } from "@/lib/embedConfig";
 import { styleOf } from "@/lib/embedStyle";
-import type { Arrow, CardPayload, Chart, Credit, EmbedPayload, EmbedRow, FChart, ForecastPayload, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
+import { EmbedChart } from "./EmbedChart";
+import type { Arrow, CardPayload, Credit, EmbedPayload, EmbedRow, ForecastPayload, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
 
 const REFRESH_MS = 5 * 60_000;
 const link = "underline underline-offset-2 decoration-slate-400/70 hover:decoration-current";
@@ -207,43 +208,6 @@ function MarksBar({ bar }: { bar: NonNullable<GaugePayload["bar"]> }) {
   );
 }
 
-function LineChart({ chart, title }: { chart: Chart; title: string }) {
-  const W = 300, H = 96;
-  const ys = [...chart.pts.map((p) => p[1]), ...chart.marks.map((m) => m.v)];
-  const lo = Math.min(...ys), hi = Math.max(...ys);
-  const pad = (hi - lo || 1) * 0.12;
-  const y = (v: number) => H - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * H;
-  const x = (t: number) => ((t - chart.from) / (chart.to - chart.from || 1)) * W;
-  const d = chart.pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(" ");
-  const last = chart.pts[chart.pts.length - 1];
-  return (
-    <div className="mt-4">
-      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{title}</p>
-      <div className="relative mt-1.5">
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full h-24 text-sky-500" style={{ color: "var(--e-accent, #0ea5e9)" }} role="img" aria-label={`${title}: ${chart.min} - ${chart.max}`}>
-          {chart.marks.map((m) => (
-            <line key={m.key} x1="0" x2={W} y1={y(m.v)} y2={y(m.v)} stroke={STROKE[m.key]} strokeWidth="1" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" opacity="0.9" />
-          ))}
-          <path d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        </svg>
-        {chart.marks.map((m) => (
-          <span key={m.key} className="absolute left-0 -translate-y-full emb-chip rounded-sm bg-white/85 dark:bg-slate-900/85 px-1 text-[11px] leading-tight text-slate-600 dark:text-slate-300" style={{ top: `${(y(m.v) / H) * 100}%` }}>
-            {m.label}
-          </span>
-        ))}
-        <span className="absolute size-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 -translate-x-1/2 -translate-y-1/2" style={{ background: "var(--e-accent, #0ea5e9)", left: `${(x(last[0]) / W) * 100}%`, top: `${(y(last[1]) / H) * 100}%` }} aria-hidden />
-      </div>
-      <p className="mt-1 flex justify-between text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
-        <span>{chart.fromLabel}</span>
-        <span>
-          {chart.min} – {chart.max}
-        </span>
-        <span>{chart.toLabel}</span>
-      </p>
-    </div>
-  );
-}
-
 function GaugeView({ p }: { p: GaugePayload }) {
   const r = p.row;
   const full = p.cfg.size === "full";
@@ -270,65 +234,13 @@ function GaugeView({ p }: { p: GaugePayload }) {
       )}
       {r.time && <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</p>}
       {p.bar && <MarksBar bar={p.bar} />}
-      {full && p.chart && <LineChart chart={p.chart} title={p.chartTitle} />}
+      {full && p.chart && <EmbedChart chart={p.chart} lang={p.cfg.lang} station={p.row.key} accent={p.cfg.accent} />}
     </Shell>
   );
 }
 
 // ---- forecast: the prediction box and the forecasting chart -------------------------------------------------------------------------------
 
-function ForecastChart({ chart, title }: { chart: FChart; title: string }) {
-  const W = 300, H = 120;
-  const ys = [...chart.observed.map((p) => p[1]), ...chart.forecast.map((p) => p[1]), ...chart.band.flatMap((b) => [b[1], b[2]]), ...chart.marks.map((m) => m.v)];
-  const lo = Math.min(...ys), hi = Math.max(...ys);
-  const pad = (hi - lo || 1) * 0.1;
-  const y = (v: number) => H - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * H;
-  const x = (t: number) => ((t - chart.from) / (chart.to - chart.from || 1)) * W;
-  const line = (pts: [number, number][]) => pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(" ");
-  const first = chart.forecast[0];
-  const bandPath = chart.band.length
-    ? `M${x(first[0]).toFixed(1)} ${y(first[1]).toFixed(1)} ` +
-      chart.band.map((b) => `L${x(b[0]).toFixed(1)} ${y(b[2]).toFixed(1)}`).join(" ") + " " +
-      [...chart.band].reverse().map((b) => `L${x(b[0]).toFixed(1)} ${y(b[1]).toFixed(1)}`).join(" ") + " Z"
-    : "";
-  const nx = x(chart.now);
-  return (
-    <div className="mt-4">
-      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{title}</p>
-      <div className="relative mt-1.5 pl-[3.4rem]">
-        <span className="absolute left-0 top-0 w-[3.2rem] text-right text-[11px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMax}</span>
-        <span className="absolute left-0 bottom-0 w-[3.2rem] text-right text-[11px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMin}</span>
-        <div className="relative">
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full h-32 text-sky-500" style={{ color: "var(--e-accent, #0ea5e9)" }} role="img" aria-label={title}>
-            {bandPath && <path d={bandPath} fill="currentColor" opacity="0.18" />}
-            {chart.marks.map((m) => (
-              <line key={m.key} x1="0" x2={W} y1={y(m.v)} y2={y(m.v)} stroke={STROKE[m.key]} strokeWidth="1" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
-            ))}
-            <line x1={nx} x2={nx} y1="0" y2={H} stroke="currentColor" strokeWidth="1" opacity="0.5" vectorEffect="non-scaling-stroke" />
-            <path d={line(chart.observed)} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-            <path d={line(chart.forecast)} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-          </svg>
-          {chart.marks.map((m) => (
-            <span key={m.key} className="absolute left-0 -translate-y-full emb-chip rounded-sm bg-white/85 dark:bg-slate-900/85 px-1 text-[11px] leading-tight text-slate-600 dark:text-slate-300" style={{ top: `${(y(m.v) / H) * 100}%` }}>
-              {m.label}
-            </span>
-          ))}
-          <span className="absolute size-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 -translate-x-1/2 -translate-y-1/2" style={{ background: "var(--e-accent, #0ea5e9)", left: `${(nx / W) * 100}%`, top: `${(y(chart.forecast[0][1]) / H) * 100}%` }} aria-hidden />
-        </div>
-      </div>
-      <div className="relative mt-1 h-4 pl-[3.4rem] text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
-        <span className="absolute left-[3.4rem] top-0">{chart.axis.from}</span>
-        <span className="absolute top-0 -translate-x-1/2 whitespace-nowrap" style={{ left: `calc(3.4rem + (100% - 3.4rem) * ${(nx / W).toFixed(3)})` }}>{chart.axis.now}</span>
-        <span className="absolute right-0 top-0">{chart.axis.to}</span>
-      </div>
-      <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 bg-sky-500" style={{ background: "var(--e-accent, #0ea5e9)" }} aria-hidden />{chart.legend.observed}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-sky-500" style={{ borderColor: "var(--e-accent, #0ea5e9)" }} aria-hidden />{chart.legend.forecast}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-4 rounded-sm" style={{ background: "color-mix(in srgb, var(--e-accent, #0ea5e9) 20%, transparent)" }} aria-hidden />{chart.legend.band}</span>
-      </p>
-    </div>
-  );
-}
 
 function ForecastView({ p }: { p: ForecastPayload }) {
   const r = p.row;
@@ -366,7 +278,7 @@ function ForecastView({ p }: { p: ForecastPayload }) {
         </div>
       )}
       {p.action && <p className="emb-tile mt-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm font-medium">{p.action}</p>}
-      {full && p.chart && <ForecastChart chart={p.chart} title={p.chartTitle} />}
+      {full && p.chart && <EmbedChart chart={p.chart} lang={p.cfg.lang} station={p.row.key} accent={p.cfg.accent} />}
       {full && p.note && <p className="mt-2.5 text-xs text-slate-500 dark:text-slate-400">{p.note}</p>}
     </Shell>
   );
@@ -551,6 +463,7 @@ function CardView({ p }: { p: CardPayload }) {
           )}
           {full && r.next && p.forecastLabel && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{p.forecastLabel}</p>}
           {full && p.bar && <MarksBar bar={p.bar} />}
+          {full && p.chart && <EmbedChart chart={p.chart} lang={p.cfg.lang} station={p.row.key} accent={p.cfg.accent} compact />}
           {r.time && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</p>}
         </>
       )}

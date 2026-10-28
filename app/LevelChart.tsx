@@ -22,7 +22,7 @@ const AXIS_H = 24;
 const M_TOP = 22;
 const M_RIGHT = 14;
 
-const BLUE = "#0ea5e9";
+const BLUE_DEFAULT = "#0ea5e9";
 const AMBER = "#d97706";
 const ORANGE = "#ea580c";
 const RED = "#dc2626";
@@ -41,7 +41,7 @@ function zoneOf(level: number, m: Marks): Zone {
   if (ok(m.alert) && level >= (m.alert as number)) return "alert";
   return "below";
 }
-const ZONE_COLOR: Record<Zone, string> = { below: BLUE, none: BLUE, alert: AMBER, minor: ORANGE, major: RED };
+const ZONE_COLOR: Record<Zone, string> = { below: BLUE_DEFAULT, none: BLUE_DEFAULT, alert: AMBER, minor: ORANGE, major: RED };
 const ZONE_KEY = { below: "chart.zoneBelow", none: "chart.zoneNone", alert: "tier.alert", minor: "tier.minor", major: "tier.major" } as const;
 
 function subscribe(cb: () => void) {
@@ -85,6 +85,12 @@ export function LevelChart({
   thresholds: thresholdsPub,
   unit,
   forecast: forecastPub,
+  days: daysProp,
+  unitLabel,
+  accent,
+  embed,
+  compact,
+  heightCls,
 }: {
   station: string;
   readings: Reading[];
@@ -92,8 +98,22 @@ export function LevelChart({
   thresholds: Marks;
   unit?: "ft" | "m" | null;
   forecast?: ChartForecast | null;
+  // ---- embed widgets (/embed): the same chart, drawn from values already in the shown unit ----
+  /** Hours of history to draw, as days; defaults to the page's ?days= range. */
+  days?: number;
+  /** Values are already in this unit ("ft" | "m"): no conversion, and the unit is printed. Pass unit = null with it. */
+  unitLabel?: "ft" | "m" | null;
+  /** 6-digit hex (no #) for the forecast line and band. The step colours (zones, marks) are never changed. */
+  accent?: string | null;
+  /** No "my street level" line or editor (nothing is read from or written to the visitor's storage). */
+  embed?: boolean;
+  /** Smaller chart with fewer labels (no band labels, no min/max caption). */
+  compact?: boolean;
+  heightCls?: string;
 }) {
-  const days = useDays();
+  const urlDays = useDays();
+  const days = daysProp ?? urlDays;
+  const BLUE = accent ? `#${accent}` : BLUE_DEFAULT;
   const pu = unit ?? null;
   const readings = useMemo(
     () => (pu === "m" ? readingsPub.map((r) => (r.water_level == null ? r : { ...r, water_level: toShown(r.water_level, pu) })) : readingsPub),
@@ -125,7 +145,7 @@ export function LevelChart({
   const uid = useId().replace(/:/g, "");
   const [wrapRef, { w, h }] = useSize();
   const myRaw = useSyncExternalStore(subscribe, readMyLevelsRaw, () => null);
-  const myPub = parseMyLevel(myRaw, station);
+  const myPub = embed ? null : parseMyLevel(myRaw, station);
   const my = myPub == null ? null : toShown(myPub, pu); // stored in the gauge's own unit
   const narrow = w > 0 && w < 480;
   const [tipOn, setTipOn] = useState(false); // tooltip open: the value pill gets out of its way
@@ -160,7 +180,7 @@ export function LevelChart({
   const y = useMemo(
     () =>
       model
-        ? buildYScale({ dataLo: model.lo, dataHi: model.hi, extra: model.extra, marks: thresholds, targetTicks: narrow || h < 300 ? 4 : 6 })
+        ? buildYScale({ dataLo: model.lo, dataHi: model.hi, extra: model.extra, marks: thresholds, targetTicks: narrow || compact || h < 300 ? 4 : 6 })
         : null,
     [model, thresholds, narrow, h],
   );
@@ -175,11 +195,12 @@ export function LevelChart({
 
   const { rows, actual, last, from, end, lo, hi, hasForecast, fcEnd } = model;
   const [dLo, dHi] = y.domain;
-  const u = pu ? "ft" : "";
-  const withUnit = (v: number) => (pu ? `${v.toFixed(1)} ft` : plain(v));
-  const deltaUnit = (v: number) => (pu ? `${v.toFixed(v !== 0 && Math.abs(v) < 0.1 ? 2 : 1)} ft` : plain(v));
+  const u = unitLabel ?? (pu ? "ft" : "");
+  const dg = unitLabel === "m" ? 2 : 1;
+  const withUnit = (v: number) => (unitLabel ? `${v.toFixed(dg)} ${unitLabel}` : pu ? `${v.toFixed(1)} ft` : plain(v));
+  const deltaUnit = (v: number) => (u ? `${v.toFixed(v !== 0 && Math.abs(v) < 0.1 ? dg + 1 : dg)} ${u}` : plain(v));
   // the official figure for a metre gauge, to match bulletins (null for ft / unknown gauges)
-  const pubText = (v: number) => publishedAs(fromShown(v, pu), pu);
+  const pubText = (v: number) => (unitLabel ? null : publishedAs(fromShown(v, pu), pu));
   const plotW = Math.max(w - AXIS_W - M_RIGHT, 1);
   const plotH = Math.max(h - M_TOP - AXIS_H, 1);
   const yPx = (v: number) => M_TOP + ((dHi - v) / (dHi - dLo)) * plotH;
@@ -218,7 +239,7 @@ export function LevelChart({
   // Dropped when it would sit on a flood-mark label in the top strip at the right edge.
   const labelRowsPx = [marks.alert, marks.minor, marks.major].filter((v): v is number => v != null && v >= dLo && v < dHi).map((v) => yPx(v));
   const hitsLabel = nowX > w - 150 && labelRowsPx.some((r) => r >= M_TOP + 17 && r < M_TOP + 30);
-  const nowText = hitsLabel ? t("chart.now") : `${t("chart.now")} · ${pillText}`;
+  const nowText = hitsLabel || compact ? t("chart.now") : `${t("chart.now")} · ${pillText}`;
 
   // flood-mark label rows, so "Your street" can pick a free side
   const bandLabelRows = [marks.alert, marks.minor, marks.major]
@@ -265,7 +286,7 @@ export function LevelChart({
     <div>
       <div
         ref={wrapRef}
-        className="relative h-80 sm:h-[21rem] w-full text-slate-900 dark:text-slate-100"
+        className={`relative ${heightCls ?? "h-80 sm:h-[21rem]"} w-full text-slate-900 dark:text-slate-100`}
         role="group"
         aria-label={t("chart.aria", { days: t(days === 1 ? "range.day" : "range.days", { n: days }), level: withUnit(last.level) })}
       >
@@ -309,7 +330,7 @@ export function LevelChart({
                 fillOpacity={b.op}
                 stroke="none"
                 ifOverflow="hidden"
-                label={<BandLabel text={`${t(`tier.${b.key}`)} ${withUnit(b.from)}`} cls={bandCls[b.key]} />}
+                label={compact ? undefined : <BandLabel text={`${t(`tier.${b.key}`)} ${withUnit(b.from)}`} cls={bandCls[b.key]} />}
               />
             ))}
             {hasForecast && (
@@ -370,7 +391,7 @@ export function LevelChart({
                   fontSize={11}
                   className={y.markTicks.has(p.payload?.value ?? NaN) ? "fill-slate-800 dark:fill-slate-200 font-semibold" : tickText}
                 >
-                  {pu ? String(Number((p.payload?.value ?? 0).toFixed(1))) : plain(p.payload?.value ?? 0)}
+                  {pu || unitLabel ? String(Number((p.payload?.value ?? 0).toFixed(dg))) : plain(p.payload?.value ?? 0)}
                 </text>
               )}
               allowDataOverflow
@@ -438,7 +459,7 @@ export function LevelChart({
 
       <p className="sr-only">{summary}</p>
 
-      <div className="mt-2 px-1 sm:px-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-slate-600 dark:text-slate-400">
+      <div className={`${compact ? "hidden" : ""} mt-2 px-1 sm:px-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-slate-600 dark:text-slate-400`}>
         <p className="tabular-nums" aria-hidden>
           {t("chart.highest", { v: withUnit(hi) })} <span className="mx-1">·</span> {t("chart.lowest", { v: withUnit(lo) })}
         </p>
@@ -452,7 +473,7 @@ export function LevelChart({
               {fcEnd && fcEnd.ts - last.ts > 6 * HOUR && <span className="text-slate-500 dark:text-slate-400">{" · "}{t("chart.fcLess")}</span>}
             </span>
           )}
-          <MyLevelControl station={station} unit={pu} current={my} t={t} />
+          {!embed && <MyLevelControl station={station} unit={pu} current={my} t={t} />}
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import { basinSlug, stationSlug } from "./slug";
 import { SITE } from "./seo";
 import { FT_IN_M, type Unit } from "./units";
 import { localePath, type Locale } from "./i18n/config";
-import { getI18n } from "./i18n/server";
+import { DICTS, getI18n } from "./i18n/server";
 import { clock, colomboParts, dayTick, formatAge, riverName } from "./i18n/format";
 import { embedT, type EmbedT } from "./i18n/embed";
 import { getNextHourForBasins, timeBox, type NextHour } from "./nextHour";
@@ -33,8 +33,7 @@ import { isTidalStation, liftVerdict, riverRising } from "./verdictLift";
 import { getReleases, releaseAffectingFrom } from "./releases";
 import { officialReleaseAlert } from "./releaseAlert";
 import type { VerdictTone } from "@/app/ShareButton";
-import type { FChart, ForecastPayload } from "./embedTypes";
-import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, CardPayload, GaugePayload, MarkInfo, NowPayload, ReservoirsPayload, ResRow, RiverPayload, TickerPayload, TownPayload } from "./embedTypes";
+import type { Arrow, LChart, ForecastPayload, Credit, EmbedPayload, EmbedRow, CardPayload, GaugePayload, MarkInfo, NowPayload, ReservoirsPayload, ResRow, RiverPayload, TickerPayload, TownPayload } from "./embedTypes";
 
 const MARKS = ["alert", "minor", "major"] as const;
 const TIER_ORDER: Record<string, number> = { major: 5, minor: 4, alert: 3, normal: 2, none: 1, stale: 0 };
@@ -179,46 +178,42 @@ function barOf(s: NationalStation, nh: NextHour | null): GaugePayload["bar"] {
   return { tier: pillOf(s.tier), now: pct(lv), ahead: nextRaw != null && pct(nextRaw) > pct(lv) ? pct(nextRaw) : null, marks: [] as MarkInfo[] };
 }
 
-async function chartOf(s: NationalStation, c: Ctx): Promise<Chart | null> {
-  const hours = c.cfg.hours;
-  if (!hours) return null;
-  let readings = s.trend24h;
-  if (hours > 24) {
+const chartDictFor = (lang: Locale): Record<string, string> =>
+  Object.fromEntries(Object.entries(DICTS[lang]).filter(([k]) => /^(chart|range|date|tier)\./.test(k)));
+
+/** The data for the gauge page's own chart component. `fc`: forecast points (in the gauge's unit), or none. 72 h of readings are sent when the gauge allows it. */
+async function liveChart(
+  c: Ctx,
+  st: { station: string; unit: Unit; trend24h: { ts: number; water_level: number | null }[]; thresholds: Thresholds },
+  o: { end: number; fc?: { ts: number; level: number; low: number | null; high: number | null }[]; titleKey: "w.lastN" | "w.fcTitle"; hours72?: boolean },
+): Promise<LChart | null> {
+  const want = c.cfg.hours === 72 ? 72 : 24;
+  let readings = st.trend24h;
+  if (o.hours72 !== false) {
     try {
-      readings = (await fetchStationData(s.station, 4)).readings;
+      const r = (await fetchStationData(st.station, 4)).readings;
+      if (r.length > readings.length) readings = r;
     } catch {
-      /* keep the 24 h we have */
+      /* the 24 h we have */
     }
   }
-  const end = s.latest?.ts ?? c.now;
-  const from = end - hours * 3_600_000;
-  const pts = readings.filter((r) => r.water_level != null && r.ts >= from).map((r) => [r.ts, conv(r.water_level as number, s.unit, c.cfg.unit).v] as [number, number]);
+  const from = o.end - 72 * 3_600_000;
+  const pts = readings.filter((r) => r.water_level != null && r.ts >= from && r.ts <= o.end).map((r) => [r.ts, conv(r.water_level as number, st.unit, c.cfg.unit).v] as [number, number]);
   if (pts.length < 2) return null;
-  const step = Math.max(1, Math.ceil(pts.length / 120));
+  const step = Math.max(1, Math.ceil(pts.length / 220));
   const thin = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
-  const vs = thin.map((p) => p[1]);
-  const lo = Math.min(...vs), hi = Math.max(...vs);
-  const span = Math.max(hi - lo, Math.abs(hi) * 0.06, 0.2);
-  const th = sanitizeThresholds(s.thresholds);
-  const marks = c.cfg.marks
-    ? MARKS.filter((k) => th[k] != null && th[k]! > 0)
-        .map((k) => ({ key: k, label: c.t(`mark.${k}` as "mark.alert"), v: conv(th[k]!, s.unit, c.cfg.unit).v }))
-        // only marks the line is near: a mark far above it would flatten the line (the bar above the chart shows every mark)
-        .filter((m) => m.v <= hi + span * 1.2 && m.v >= lo - span)
-    : [];
-  const unit = conv(0, s.unit, c.cfg.unit).unit;
-  const d = digits(s.unit, c.cfg.unit);
+  const th = sanitizeThresholds(st.thresholds);
+  const cv = (v: number | null | undefined) => (v != null && v > 0 && c.cfg.marks ? conv(v, st.unit, c.cfg.unit).v : null);
+  const has72 = thin[thin.length - 1][0] - thin[0][0] > 36 * 3_600_000;
   return {
-    pts: thin,
-    from,
-    to: end,
-    unit,
-    marks,
-    hours,
-    fromLabel: c.e("w.hoursAgo", { n: hours }),
-    toLabel: clock(end, c.t),
-    min: `${lo.toFixed(d)}${unit ? ` ${unit}` : ""}`,
-    max: `${hi.toFixed(d)}${unit ? ` ${unit}` : ""}`,
+    readings: thin,
+    forecast: (o.fc ?? []).map((p) => ({ ts: p.ts, level: conv(p.level, st.unit, c.cfg.unit).v, low: p.low == null ? null : conv(p.low, st.unit, c.cfg.unit).v, high: p.high == null ? null : conv(p.high, st.unit, c.cfg.unit).v })),
+    marks: { alert: cv(th.alert), minor: cv(th.minor), major: cv(th.major) },
+    unit: (conv(0, st.unit, c.cfg.unit).unit || "") as "ft" | "m" | "",
+    hours: want === 72 && has72 ? 72 : 24,
+    has72,
+    titles: { 24: c.e(o.titleKey, { n: 24 }), 72: c.e(o.titleKey, { n: 72 }) },
+    dict: chartDictFor(c.lang),
   };
 }
 
@@ -258,7 +253,7 @@ async function buildRiver(slug: string, c: Ctx): Promise<RiverPayload | null> {
   };
 }
 
-async function buildGauge(slug: string, c: Ctx): Promise<GaugePayload | null> {
+async function buildGauge(slug: string, c: Ctx, forCard = false): Promise<GaugePayload | null> {
   const all = await getNational();
   const s = all.find((x) => stationSlug(x.station) === slug);
   if (!s) return null;
@@ -274,7 +269,7 @@ async function buildGauge(slug: string, c: Ctx): Promise<GaugePayload | null> {
     const bottom = Math.min(0, lv);
     bar.marks = present.map((k) => ({ key: k, label: c.t(`mark.${k}` as "mark.alert"), value: fmt(th[k], s.unit, c.cfg.unit)!, pct: Math.max(0, Math.min(100, ((th[k]! - bottom) / (top - bottom)) * 100)) }));
   } else if (bar) bar.marks = [];
-  const chart = await chartOf(s, c);
+  const chart = c.cfg.hours || forCard ? await liveChart(c, s, { end: s.latest?.ts ?? c.now, titleKey: "w.lastN", hours72: !forCard }) : null;
   return {
     ...base(c, "gauge", `/${basinSlug(s.basin)}/${slug}`, c.e("w.openGauge", { gauge: stationDisplayName(s.station) }), false, rnOf([row])),
     kind: "gauge",
@@ -283,13 +278,12 @@ async function buildGauge(slug: string, c: Ctx): Promise<GaugePayload | null> {
     row,
     bar,
     chart,
-    chartTitle: c.e("w.lastN", { n: c.cfg.hours || 24 }),
   };
 }
 
 /** The simple card: the gauge widget's data, drawn verdict-first. */
 async function buildCard(slug: string, c: Ctx): Promise<CardPayload | null> {
-  const g = await buildGauge(slug, c);
+  const g = await buildGauge(slug, c, true);
   return g ? { ...g, widget: "card", kind: "card", forecastLabel: g.row.next ? c.e("w.fcLabel") : null } : null;
 }
 
@@ -529,53 +523,11 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     action = ACTION[nat.tier as VerdictTone]?.[L] ?? null;
   }
 
-  // the forecasting chart: observed readings, the forecast line and its 80% band, the official marks, "now"
-  let chart: FChart | null = null;
-  const hours = c.cfg.hours === 72 ? 72 : 24;
-  if (f && me && model && !stale && f.asOfTs != null) {
-    let readings = me.trend24h;
-    if (hours > 24) {
-      try {
-        readings = (await fetchStationData(station, 4)).readings;
-      } catch {
-        /* the 24 h we have */
-      }
-    }
-    const nowTs = f.asOfTs;
-    const from = nowTs - hours * 3_600_000;
-    const cv = (v: number) => conv(v, unit, want).v;
-    const obs = readings.filter((r) => r.water_level != null && r.ts >= from && r.ts <= nowTs).map((r) => [r.ts, cv(r.water_level as number)] as [number, number]);
-    const step = Math.max(1, Math.ceil(obs.length / 120));
-    const observed = obs.filter((_, i) => i % step === 0 || i === obs.length - 1);
-    const fc: [number, number][] = [[nowTs, cv(f.currentLevel as number)], ...f.horizons.map((h) => [h.ts, cv(h.level)] as [number, number])];
-    const band = f.horizons.map((h) => [h.ts, cv(h.low ?? h.level), cv(h.high ?? h.level)] as [number, number, number]);
-    const to = f.horizons[f.horizons.length - 1].ts;
-    const vals = [...observed.map((p) => p[1]), ...fc.map((p) => p[1]), ...band.flatMap((b) => [b[1], b[2]])];
-    const lo = Math.min(...vals), hi = Math.max(...vals);
-    const th = sanitizeThresholds(nat.thresholds);
-    const all3 = c.cfg.marks ? MARKS.filter((k) => th[k] != null && th[k]! > 0).map((k) => ({ key: k, label: t(`mark.${k}` as "mark.alert"), v: cv(th[k]!) })) : [];
-    // marks the chart reaches, plus the next one above it: how far the river is from the next official step
-    const below = all3.filter((m) => m.v <= hi);
-    const nextAbove = all3.filter((m) => m.v > hi).sort((a, b) => a.v - b.v)[0];
-    const marks = nextAbove ? [...below, nextAbove] : below;
-    const d = digits(unit, want);
-    const u = conv(0, unit, want).unit;
-    const yHi = Math.max(hi, ...marks.map((m) => m.v));
-    const yLo = Math.min(lo, ...marks.map((m) => m.v));
-    chart = {
-      observed,
-      forecast: fc,
-      band,
-      now: nowTs,
-      from,
-      to,
-      unit: u,
-      marks,
-      axis: { from: c.e("w.hoursAgo", { n: hours }), now: `${c.e("w.fcNow")} ${clock(nowTs, t)}`, to: c.e("w.hoursAhead", { n: 24 }) },
-      yMin: `${yLo.toFixed(d)}${u ? ` ${u}` : ""}`,
-      yMax: `${yHi.toFixed(d)}${u ? ` ${u}` : ""}`,
-      legend: { observed: c.e("w.fcObserved"), forecast: c.e("w.fcForecast"), band: c.e("w.fcBand"), now: c.e("w.fcNow") },
-    };
+  // the forecasting chart: the gauge page's chart with the forecast line, its 80% band, the official marks and "now"
+  let chart: LChart | null = null;
+  if (f && me && model && !stale && f.asOfTs != null && c.cfg.hours !== 0) {
+    const fc = f.horizons.map((h) => ({ ts: h.ts, level: h.level, low: h.low ?? null, high: h.high ?? null }));
+    chart = await liveChart(c, { station, unit, trend24h: me.trend24h, thresholds: nat.thresholds }, { end: f.asOfTs, fc, titleKey: "w.fcTitle" });
   }
 
   const pill: PillTier = stale ? "stale" : tone === "watch" ? "normal" : (tone as PillTier);
@@ -592,7 +544,6 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     action,
     note,
     chart,
-    chartTitle: c.e("w.fcTitle", { n: hours }),
     forecastLabel: hasForecast ? c.e("w.fcLabel") : c.e("w.fcNone"),
     noForecast: !hasForecast,
   };

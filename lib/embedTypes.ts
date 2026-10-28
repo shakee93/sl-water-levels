@@ -35,18 +35,20 @@ export type EmbedRow = {
   since: string | null;
 };
 
-export type Chart = {
-  pts: [number, number][];
-  /** ms */
-  from: number;
-  to: number;
-  unit: string;
-  marks: { key: "alert" | "minor" | "major"; label: string; v: number }[];
-  hours: number;
-  fromLabel: string;
-  toLabel: string;
-  min: string;
-  max: string;
+/** What the gauge page's own chart (app/LevelChart.tsx) needs, in the shown unit. Readings cover 72 h when the gauge allows it; the widget draws the last 24 or 72. */
+export type LChart = {
+  readings: [number, number][];
+  /** From "now": the forecast line and its 80% band. Empty when the widget shows no forecast. */
+  forecast: { ts: number; level: number; low: number | null; high: number | null }[];
+  marks: { alert: number | null; minor: number | null; major: number | null };
+  unit: "ft" | "m" | "";
+  /** Hours drawn first (24 or 72). */
+  hours: 24 | 72;
+  /** True when 72 h of readings are present, so the 24 h / 72 h buttons make sense. */
+  has72: boolean;
+  titles: { 24: string; 72: string };
+  /** The few site dictionary entries the chart reads (chart.*, range.*, date.*, tier.*), already in the widget's language. */
+  dict: Record<string, string>;
 };
 
 export type Credit = { live: string; linkText: string; href: string; /** " · RiverNet data", linking to rivernet.lk, when a shown gauge is a RiverNet gauge. */ extra?: { text: string; href: string } };
@@ -69,8 +71,7 @@ export type GaugePayload = Base & {
   river: string;
   row: EmbedRow;
   bar: { tier: PillTier; now: number; ahead: number | null; marks: MarkInfo[] } | null;
-  chart: Chart | null;
-  chartTitle: string;
+  chart: LChart | null;
 };
 /** The simple card: one gauge, verdict first. Same data as the gauge widget. */
 export type CardPayload = Omit<GaugePayload, "kind"> & { kind: "card"; /** "Forecast, not an official warning", shown by the next-hour line. */ forecastLabel: string | null };
@@ -91,22 +92,6 @@ export type TownPayload = Base & {
   time: string | null;
   marks: string | null;
 };
-export type FChart = {
-  /** Observed readings, then the forecast line from "now"; the band is the 80% range. All in the shown unit. */
-  observed: [number, number][];
-  forecast: [number, number][];
-  band: [number, number, number][];
-  now: number;
-  from: number;
-  to: number;
-  unit: string;
-  marks: { key: "alert" | "minor" | "major"; label: string; v: number }[];
-  /** axis words */
-  axis: { from: string; now: string; to: string };
-  yMin: string;
-  yMax: string;
-  legend: { observed: string; forecast: string; band: string; now: string };
-};
 export type ForecastPayload = Base & {
   kind: "forecast";
   title: string;
@@ -118,8 +103,7 @@ export type ForecastPayload = Base & {
   day: { label: string; text: string; ok: boolean } | null;
   action: string | null;
   note: string | null;
-  chart: FChart | null;
-  chartTitle: string;
+  chart: LChart | null;
   /** "Forecast, not an official warning" label, or "No forecast for this gauge". */
   forecastLabel: string;
   noForecast: boolean;
