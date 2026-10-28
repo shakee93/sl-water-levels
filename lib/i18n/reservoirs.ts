@@ -142,6 +142,14 @@ const en = {
   "stat.noRain": "No data",
   "known.below": "{n} m below full",
   "known.atFull": "At full level",
+  "season.above": "Fuller than usual for {when} (long-term average {avg}%)",
+  "season.near": "About normal for {when} (long-term average {avg}%)",
+  "season.below": "Lower than usual for {when} (long-term average {avg}%)",
+  "season.when.early": "early {month}",
+  "season.when.mid": "mid {month}",
+  "season.when.late": "late {month}",
+  "season.last": "Same time last year: {n}% full",
+  "season.source": "Irrigation Department season tables",
   "known.filling": "Filling",
   "known.emptying": "Emptying",
   "known.steady": "Steady",
@@ -305,6 +313,14 @@ const si: RDict = {
   "stat.noRain": "දත්ත නැත",
   "known.below": "පූර්ණ මට්ටමට මීටර් {n}ක් පහළින්", // needs native review
   "known.atFull": "පූර්ණ මට්ටමේ", // needs native review
+  "season.above": "{when} සඳහා සාමාන්‍යයට වඩා වැඩියෙන් පිරී ඇත (දිගුකාලීන සාමාන්‍යය {avg}%)", // needs native review
+  "season.near": "{when} සඳහා සාමාන්‍ය මට්ටමේ (දිගුකාලීන සාමාන්‍යය {avg}%)", // needs native review
+  "season.below": "{when} සඳහා සාමාන්‍යයට වඩා අඩුයි (දිගුකාලීන සාමාන්‍යය {avg}%)", // needs native review
+  "season.when.early": "{month} මුල", // needs native review
+  "season.when.mid": "{month} මැද", // needs native review
+  "season.when.late": "{month} අග", // needs native review
+  "season.last": "පසුගිය වසරේ මේ කාලයේ: {n}% පිරී තිබුණා", // needs native review
+  "season.source": "වාරි දෙපාර්තමේන්තුවේ කන්න වගු", // needs native review
   "known.filling": "පිරෙමින්", // needs native review
   "known.emptying": "හිස් වෙමින්", // needs native review
   "known.steady": "ස්ථාවර", // needs native review
@@ -466,6 +482,14 @@ const ta: RDict = {
   "stat.noRain": "தரவு இல்லை",
   "known.below": "முழு மட்டத்தை விட {n} மீ கீழே", // needs native review
   "known.atFull": "முழு மட்டத்தில்", // needs native review
+  "season.above": "{when} காலத்துக்கு வழக்கத்தை விட அதிகம் (நீண்டகால சராசரி {avg}%)", // needs native review
+  "season.near": "{when} காலத்துக்கு வழக்கமான அளவு (நீண்டகால சராசரி {avg}%)", // needs native review
+  "season.below": "{when} காலத்துக்கு வழக்கத்தை விடக் குறைவு (நீண்டகால சராசரி {avg}%)", // needs native review
+  "season.when.early": "{month} தொடக்கம்", // needs native review
+  "season.when.mid": "{month} நடுப்பகுதி", // needs native review
+  "season.when.late": "{month} இறுதி", // needs native review
+  "season.last": "கடந்த ஆண்டு இதே நேரத்தில்: {n}% நிரம்பியிருந்தது", // needs native review
+  "season.source": "நீர்ப்பாசனத் திணைக்களத்தின் பருவ அட்டவணைகள்", // needs native review
   "known.filling": "நிரம்பி வருகிறது", // needs native review
   "known.emptying": "குறைந்து வருகிறது", // needs native review
   "known.steady": "நிலையானது", // needs native review

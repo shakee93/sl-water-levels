@@ -88,6 +88,12 @@ lib/
   Overwritten daily with no timestamp: we show the reading's date and archive
   every change. `GO=` numbers in REMARKS are gate-setting discharge, not flow:
   show the Spilling (Cusec) column, and gates only as a count of open gates.
+- **Irrigation sheet, season tabs** (same published sheet, gid 155979206 "Maha" and 1831537855 "Yala"; the Irrigation Dept's "Medium Reservoirs Daily
+  Water Level" dashboard reads them plus the clean medium tab gid 698704031, which has NO spill/sluice cusecs, so it cannot replace the formatted
+  tab in `lib/releases.ts`): per medium reservoir, daily effective storage for each season and the long-term average. `lib/seasonStorage.ts` (6 h
+  unstable_cache of a small per-reservoir summary, 1.5 s timeBox, server only) + `lib/seasonCalc.ts` (pure; tests `node scripts/season.test.mts`)
+  -> one line on medium reservoir pages ("About normal for late October (long-term average 85%)", +/-10 points = normal). Context only: never a
+  release or spill input. Health check `season` (warn).
 - **Mahaweli WMS daily PDF** (mahaweli.gov.lk/WMS%20DATA/Menue-WMS%20-%20E.pdf):
   storage + spill/downstream discharge (m3/s and ft3/s) for the CEB and
   Mahaweli reservoirs. WIRED in `lib/releases.ts` (unpdf, column x-positions,

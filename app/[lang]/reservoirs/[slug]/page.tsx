@@ -43,6 +43,7 @@ import { KnownChip, NearSpillChip } from "@/app/reservoirs/KnownChip";
 import { ReservoirPhotos } from "@/app/ReservoirPhotos";
 import { ReservoirRain } from "@/app/ReservoirRain";
 import { photoLd, photosFor } from "@/lib/reservoirPhotoData";
+import { getSeasonFor } from "@/lib/seasonStorage";
 
 
 const nowMs = () => Date.now();
@@ -118,12 +119,15 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const { rv, data } = hit;
   const now = nowMs();
 
-  const [national, stations, history, reported, known] = await Promise.all([
+  // Medium reservoirs only (the season tables list those); the sheet's figure is today's, so use it when it is fresh.
+  const season = rv.sheet?.tab === "Medium" && rv.sheet.fresh ? getSeasonFor(rv.sheet.name, rv.sheet.storagePct) : Promise.resolve(null);
+  const [national, stations, history, reported, known, seasonNow] = await Promise.all([
     getNational().catch(() => [] as NationalStation[]),
     fetchStations().catch(() => []),
     getReservoirHistory(historyKey(rv), now),
     getReportedRelease(rv).catch(() => null),
     getKnownStatus(rv).catch(() => null),
+    season.catch(() => null),
   ]);
   const ourBasin = rv.river ? stations.find((s) => s.basin.trim().toLowerCase() === rv.river!.trim().toLowerCase())?.basin.trim() ?? null : null;
   const siblings = data.items.filter((r) => r.slug !== rv.slug && rv.river && riverMatches(r, rv.river));
@@ -263,6 +267,13 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
   const farLon = downLons.reduce<number | null>((m, x) => (startLon != null && (m == null || Math.abs(x - startLon) > Math.abs(m - startLon)) ? x : m), null);
   const flowsWest = !!ourBasin && startLon != null && farLon != null && farLon < startLon;
 
+  // "Fuller than usual for late October (long-term average 48%)": storage against the long-term average for this part of the season.
+  const seasonMonth = seasonNow ? new Intl.DateTimeFormat(lang === "en" ? "en-GB" : lang, { month: "long", timeZone: "UTC" }).format(Date.UTC(2026, seasonNow.month - 1, 15)) : "";
+  const seasonText = seasonNow
+    ? rt(`season.${seasonNow.band}` as "season.above", { when: rt(`season.when.${seasonNow.part}` as "season.when.late", { month: seasonMonth }), avg: Math.round(seasonNow.avgPct) })
+    : null;
+  const seasonTone = seasonNow?.band === "above" ? "text-sky-800 dark:text-sky-300" : seasonNow?.band === "below" ? "text-amber-800 dark:text-amber-300" : "text-slate-700 dark:text-slate-300";
+
   const sizeWord = size ? t(`release.size.${size}`) : null;
 
   return (
@@ -350,6 +361,12 @@ export default async function ReservoirPage({ params }: { params: Promise<{ lang
                 </span>
               )}
             </div>
+            {seasonText && seasonNow && !storStale && (
+              <p className={`mt-2 text-sm font-medium ${seasonTone}`} title={rt("season.source")}>
+                {seasonText}
+                {seasonNow.lastPct != null && <span className={`mt-0.5 block text-xs font-normal tabular-nums ${muted}`}>{rt("season.last", { n: Math.round(seasonNow.lastPct) })}</span>}
+              </p>
+            )}
             {known && !depthSrc && (known.fsl || known.trend) && (
               <p className={`mt-2 text-sm tabular-nums ${storStale ? gone : "text-slate-700 dark:text-slate-300"}`}>
                 {[

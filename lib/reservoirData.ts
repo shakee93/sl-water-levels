@@ -28,6 +28,8 @@ import { slugify } from "./slug";
 export type Status = "spilling" | "releasing" | "holding" | "nodata";
 
 export type SheetFacts = {
+  /** Name as the sheet spells it (the season tabs are matched on it). */
+  name: string;
   tab: "Major" | "Medium";
   /** Calendar day of the reading, YYYY-MM-DD. */
   day: string;

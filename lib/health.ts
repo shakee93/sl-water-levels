@@ -14,6 +14,7 @@ import { getNational } from "./arcgis";
 import { sanitizeLevel, sanitizeRain } from "./readings";
 import { NO_RAIN_SENSOR, suspectDeadSensors, norm as normGauge, type RainWindowStat } from "./rainSensors";
 import { getReleaseSources, parseSheetTab, type SheetRow } from "./releases";
+import { colomboToday, loadSeason, getSeasonSummary } from "./seasonStorage";
 import { aiConfigured } from "./openai";
 import { NEWSWIRE_UA } from "./newsFeeds";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
@@ -245,6 +246,30 @@ async function checkSheet(deep: boolean): Promise<HealthCheck> {
       };
     },
   );
+}
+
+// ---------------------------------------------------------------- reservoir season tables
+
+async function checkSeason(deep: boolean): Promise<HealthCheck> {
+  return run(
+    "season",
+    "Irrigation reservoir season tables (Maha / Yala)",
+    "The 'fuller or lower than usual for the season' line on medium reservoir pages is hidden; nothing else changes.",
+    async () => {
+      const today = colomboToday();
+      const s = deep ? await loadSeason(today, true) : await getSeasonSummary();
+      const withCur = s.rows.filter((r) => r.curAcft != null).length;
+      const withAvg = s.rows.filter((r) => r.ltaAcft != null).length;
+      const problems: string[] = [];
+      if (s.rows.length < 35) problems.push(`${s.rows.length} reservoirs with a row for today (need 35)`);
+      if (withCur < 30) problems.push(`only ${withCur} have this season's storage filled in`);
+      if (withAvg < 30) problems.push(`only ${withAvg} have a long-term average`);
+      return {
+        ok: problems.length === 0,
+        detail: problems.length ? problems.join("; ") : `${s.rows.length} reservoirs, ${s.kind} season, row for ${today}`,
+      };
+    },
+  ).then((c) => (c.ok ? c : { ...c, detail: /HTTP|fetch|abort|timeout/i.test(c.detail) ? `Season tab unreachable: ${c.detail}` : c.detail }));
 }
 
 // ---------------------------------------------------------------- Mahaweli PDF
@@ -656,9 +681,10 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
 // ---------------------------------------------------------------- entry point
 
 export async function runHealthChecks(deep = false): Promise<HealthReport> {
-  const [gauges, sheet, wms, wmsWeekly, dmc, openai, weather, feeds, pipes, rainSensors, hmis] = await Promise.all([
+  const [gauges, sheet, season, wms, wmsWeekly, dmc, openai, weather, feeds, pipes, rainSensors, hmis] = await Promise.all([
     checkGauges(deep),
     checkSheet(deep),
+    checkSeason(deep),
     checkWms(deep),
     checkWmsWeekly(deep),
     checkDmc(deep),
@@ -669,7 +695,7 @@ export async function runHealthChecks(deep = false): Promise<HealthReport> {
     checkRainSensors(),
     checkHmis(deep),
   ]);
-  const checks = [gauges, sheet, wms, wmsWeekly, dmc, openai, hmis, ...weather, rainSensors, ...feeds, ...pipes];
+  const checks = [gauges, sheet, season, wms, wmsWeekly, dmc, openai, hmis, ...weather, rainSensors, ...feeds, ...pipes];
   return { ok: checks.every((c) => c.ok), checkedAt: new Date().toISOString(), deep, checks };
 }
 
