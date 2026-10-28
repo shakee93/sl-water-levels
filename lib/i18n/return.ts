@@ -154,7 +154,7 @@ const en = {
   "pn.relBody": "{name} has opened its gates. Levels near you may rise over the next hours. Open to check.",
   "pn.relBodyReported": "{name} is reported to have opened its gates (a news report, not official). Levels near you may rise. Open to check.",
   "pn.newsTitle": "News: {headline}",
-  "pn.newsBody": "Reported by {source}. A news report, not an official warning. Open to read.",
+  "pn.newsBody": "Reported by {source}. Open to read.",
   "pn.rainRisk": "Heavy rain is forecast upstream, so it may rise faster than expected.",
   "pn.rainMeasured": "Very heavy rain was just measured upstream, so it may rise fast.",
 } as const;
@@ -305,7 +305,7 @@ const si: Dict = {
   "pn.relBody": "{name} එහි දොරටු විවෘත කර ඇත. ඔබ අසල මට්ටම් ඉදිරි පැය කිහිපයේ ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
   "pn.relBodyReported": "{name} එහි දොරටු විවෘත කළ බව වාර්තා වේ (පුවත් වාර්තාවකි, නිල නොවේ). ඔබ අසල මට්ටම් ඉහළ යා හැක. බැලීමට විවෘත කරන්න.",
   "pn.newsTitle": "පුවත්: {headline}",
-  "pn.newsBody": "{source} වාර්තා කරයි. පුවත් වාර්තාවකි, නිල අනතුරු ඇඟවීමක් නොවේ. බැලීමට විවෘත කරන්න.",
+  "pn.newsBody": "{source} වාර්තා කරයි. බැලීමට විවෘත කරන්න.",
   // draft translation, not yet reviewed by a native speaker
   "pn.rainRisk": "ඉහළ ප්‍රදේශවල තද වැසි අපේක්ෂිතයි, එබැවින් අපේක්ෂාවට වඩා වේගයෙන් ඉහළ යා හැක.",
   "pn.rainMeasured": "ඉහළ ප්‍රදේශවල ඉතා තද වැසි මැනිණි, එබැවින් වේගයෙන් ඉහළ යා හැක.",
@@ -454,7 +454,7 @@ const ta: Dict = {
   "pn.relBody": "{name} தனது மதகுகளைத் திறந்துள்ளது. உங்கள் அருகில் மட்டங்கள் சில மணி நேரத்தில் உயரலாம். பார்க்கத் திறக்கவும்.",
   "pn.relBodyReported": "{name} தனது மதகுகளைத் திறந்ததாகத் தெரிவிக்கப்படுகிறது (செய்தி, அதிகாரப்பூர்வமற்றது). உங்கள் அருகில் மட்டங்கள் உயரலாம். பார்க்கத் திறக்கவும்.",
   "pn.newsTitle": "செய்தி: {headline}",
-  "pn.newsBody": "{source} தெரிவிக்கிறது. இது செய்தி அறிக்கை, அதிகாரப்பூர்வ எச்சரிக்கை அல்ல. பார்க்கத் திறக்கவும்.",
+  "pn.newsBody": "{source} தெரிவிக்கிறது. பார்க்கத் திறக்கவும்.",
   // draft translation, not yet reviewed by a native speaker
   "pn.rainRisk": "மேல்பகுதியில் கனமழை எதிர்பார்க்கப்படுகிறது, எனவே எதிர்பார்த்ததை விட வேகமாக உயரலாம்.",
   "pn.rainMeasured": "மேல்பகுதியில் மிகக் கனமழை அளக்கப்பட்டது, எனவே வேகமாக உயரலாம்.",

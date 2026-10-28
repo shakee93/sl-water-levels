@@ -3,7 +3,7 @@
  *    with the real network always tried first (levels are never served from the cache while online).
  * 2. Web Push: shows the alert for a pinned place and opens its page when tapped.
  * Nothing here collects or sends anything about the visitor. Bump VERSION to drop old caches. */
-const VERSION = "v1";
+const VERSION = "v2";
 const PAGES = "pages-" + VERSION;
 const DATA = "data-" + VERSION;
 const STATIC = "static-" + VERSION;
@@ -116,10 +116,14 @@ self.addEventListener("notificationclick", (e) => {
       for (const c of all) {
         if (c.url === target && "focus" in c) return c.focus();
       }
-      const first = all.find((c) => "navigate" in c && "focus" in c);
+      // navigate() only works on a window this worker controls (and fails silently on some phones and installed apps):
+      // try it on a controlled window, and open the page in a new window whenever it does not work
+      const first = all.find((c) => "navigate" in c && "focus" in c && c.frameType !== "nested");
       if (first) {
-        await first.navigate(target);
-        return first.focus();
+        try {
+          const moved = await first.navigate(target);
+          if (moved) return moved.focus();
+        } catch { /* fall through to a new window */ }
       }
       return self.clients.openWindow(target);
     })(),
