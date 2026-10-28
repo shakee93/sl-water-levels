@@ -367,6 +367,7 @@ export default async function StationPage({
             <TownsOnGauge lang={lang} station={station} />
 
             <EmbedLink lang={lang} widget="gauge" id={stationParam} />
+            <EmbedLink lang={lang} widget="forecast" id={stationParam} />
 
             <Suspense key={`helplink-${station}`} fallback={null}>
               <StationHelpCard lang={lang} basin={basin} station={station} variant="link" />

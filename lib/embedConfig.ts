@@ -3,7 +3,7 @@
 // The credit line and its link are NOT settings: every widget always carries them.
 import { isLocale, type Locale } from "./i18n/config";
 
-export const WIDGETS = ["river", "gauge", "town", "now", "reservoirs", "ticker"] as const;
+export const WIDGETS = ["river", "gauge", "forecast", "town", "now", "reservoirs", "ticker"] as const;
 export type Widget = (typeof WIDGETS)[number];
 export const isWidget = (v: unknown): v is Widget => typeof v === "string" && (WIDGETS as readonly string[]).includes(v);
 
@@ -53,7 +53,7 @@ export function cfgQuery(c: Partial<EmbedCfg>, w: Widget): string {
   if (c.theme && c.theme !== DEFAULTS.theme) q.set("theme", c.theme);
   if (c.size && c.size !== DEFAULTS.size) q.set("size", c.size);
   if (c.unit && c.unit !== DEFAULTS.unit) q.set("unit", c.unit);
-  if (w === "gauge" && c.hours != null && c.hours !== DEFAULTS.hours) q.set("hours", String(c.hours));
+  if ((w === "gauge" || w === "forecast") && c.hours != null && c.hours !== DEFAULTS.hours) q.set("hours", String(c.hours));
   if (c.forecast === false) q.set("forecast", "0");
   if (c.marks === false) q.set("marks", "0");
   if (c.rivers?.length) q.set(w === "reservoirs" ? "basin" : "river", c.rivers.join(","));
@@ -66,6 +66,7 @@ export function cfgQuery(c: Partial<EmbedCfg>, w: Widget): string {
 export const USES: Record<Widget, { unit: boolean; hours: boolean; forecast: boolean; marks: boolean; filter: "none" | "rivers" | "river-or-gauge" }> = {
   river: { unit: true, hours: false, forecast: true, marks: true, filter: "none" },
   gauge: { unit: true, hours: true, forecast: true, marks: true, filter: "none" },
+  forecast: { unit: true, hours: true, forecast: false, marks: true, filter: "none" },
   town: { unit: true, hours: false, forecast: true, marks: true, filter: "none" },
   now: { unit: true, hours: false, forecast: false, marks: false, filter: "rivers" },
   reservoirs: { unit: false, hours: false, forecast: false, marks: false, filter: "rivers" },
@@ -78,6 +79,7 @@ export function fixedHeight(w: Widget, size: "compact" | "full", n = 4): number 
   switch (w) {
     case "river": return (full ? 150 : 108) + n * (full ? 64 : 44);
     case "gauge": return full ? 470 : 250;
+    case "forecast": return full ? 640 : 330;
     case "town": return full ? 400 : 260;
     case "now": return 130 + n * (full ? 70 : 46);
     case "reservoirs": return 130 + n * (full ? 78 : 50);

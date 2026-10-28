@@ -32,7 +32,7 @@ import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/ver
 const HOUR = 3_600_000;
 const mm = (v: number | null) => (v == null ? "—" : v < 10 ? v.toFixed(1) : String(Math.round(v)));
 
-const ACTION: Partial<Record<VerdictTone, T3>> = {
+export const ACTION: Partial<Record<VerdictTone, T3>> = {
   alert: { en: "Move valuables up, charge your phone", si: "ඔබේ භාණ්ඩ ඉහළට ගෙන යන්න, දුරකථනය චාජ් කරන්න", ta: "உடைமைகளை உயரத்தில் வையுங்கள், தொலைபேசியை சார்ஜ் செய்யுங்கள்" },
   minor: { en: "Leave low areas near the river", si: "ගඟ අසල පහත් ප්‍රදේශවලින් ඉවත් වන්න", ta: "ஆற்றருகே தாழ்வான பகுதிகளிலிருந்து வெளியேறுங்கள்" },
   major: { en: "Move to safety. Follow official instructions", si: "ආරක්ෂිත ස්ථානයකට යන්න. නිල උපදෙස් අනුගමනය කරන්න", ta: "பாதுகாப்பான இடத்திற்குச் செல்லுங்கள். அதிகாரப்பூர்வ அறிவுறுத்தல்களைப் பின்பற்றுங்கள்" },
@@ -49,7 +49,7 @@ function hoursPhrase(n: number): T3 {
 // Render time for the live age label (outside the component so render stays pure).
 const renderedAt = () => Date.now();
 
-function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | null; target: number; likely?: boolean } {
+export function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | null; target: number; likely?: boolean } {
   const c = f.crossings
     .filter((x) => x.wording === "likely" || x.wording === "possible")
     .sort((a, b) => (a.etaTs ?? Infinity) - (b.etaTs ?? Infinity))[0];
@@ -111,14 +111,14 @@ function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | nul
   return { fact: null, target: -1 };
 }
 
-const TIDE_RISE: T3 = {
+export const TIDE_RISE: T3 = {
   en: "Rising with the tide (about the same once the tide is allowed for)",
   si: "වඩින මුහුදු රැළි සමඟ ඉහළ යයි (රැළි සලකා බැලූ විට පාහේ එලෙසමයි)",
   ta: "அலையுடன் உயர்கிறது (அலையைக் கணக்கிட்டால் ஏறக்குறைய அதே அளவு)",
 };
 
 /** The calm "small chance" line for a crossing the verdict rule did not lift (lib/verdictLift.ts). */
-function smallChanceFact(c: { threshold: string }, hours: number | null, heavier: boolean): T3 {
+export function smallChanceFact(c: { threshold: string }, hours: number | null, heavier: boolean): T3 {
   const flood = c.threshold !== "alert";
   const lvl = flood
     ? { en: "flood level", si: "ගංවතුර මට්ටමට", ta: "வெள்ள மட்டத்தை" }

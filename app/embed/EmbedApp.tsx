@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ExternalLink, Minus } from "lucide-react";
 import { PILL, TierPill, type PillTier } from "@/app/TierPill";
 import type { EmbedCfg, Widget } from "@/lib/embedConfig";
-import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
+import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, FChart, ForecastPayload, GaugePayload, NowPayload, ReservoirsPayload, RiverPayload, TickerPayload, TownPayload } from "@/lib/embedTypes";
 
 const REFRESH_MS = 5 * 60_000;
 const link = "underline underline-offset-2 decoration-slate-400/70 hover:decoration-current";
@@ -244,6 +244,103 @@ function GaugeView({ p }: { p: GaugePayload }) {
   );
 }
 
+// ---- forecast: the prediction box and the forecasting chart -------------------------------------------------------------------------------
+
+function ForecastChart({ chart, title }: { chart: FChart; title: string }) {
+  const W = 300, H = 120;
+  const ys = [...chart.observed.map((p) => p[1]), ...chart.forecast.map((p) => p[1]), ...chart.band.flatMap((b) => [b[1], b[2]]), ...chart.marks.map((m) => m.v)];
+  const lo = Math.min(...ys), hi = Math.max(...ys);
+  const pad = (hi - lo || 1) * 0.1;
+  const y = (v: number) => H - ((v - (lo - pad)) / (hi - lo + 2 * pad)) * H;
+  const x = (t: number) => ((t - chart.from) / (chart.to - chart.from || 1)) * W;
+  const line = (pts: [number, number][]) => pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join(" ");
+  const first = chart.forecast[0];
+  const bandPath = chart.band.length
+    ? `M${x(first[0]).toFixed(1)} ${y(first[1]).toFixed(1)} ` +
+      chart.band.map((b) => `L${x(b[0]).toFixed(1)} ${y(b[2]).toFixed(1)}`).join(" ") + " " +
+      [...chart.band].reverse().map((b) => `L${x(b[0]).toFixed(1)} ${y(b[1]).toFixed(1)}`).join(" ") + " Z"
+    : "";
+  const nx = x(chart.now);
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{title}</p>
+      <div className="relative mt-1.5 pl-[3.4rem]">
+        <span className="absolute left-0 top-0 w-[3.2rem] text-right text-[10px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMax}</span>
+        <span className="absolute left-0 bottom-0 w-[3.2rem] text-right text-[10px] leading-none text-slate-500 dark:text-slate-400 tabular-nums">{chart.yMin}</span>
+        <div className="relative">
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full h-32 text-sky-500" role="img" aria-label={title}>
+            {bandPath && <path d={bandPath} fill="currentColor" opacity="0.18" />}
+            {chart.marks.map((m) => (
+              <line key={m.key} x1="0" x2={W} y1={y(m.v)} y2={y(m.v)} stroke={STROKE[m.key]} strokeWidth="1" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+            ))}
+            <line x1={nx} x2={nx} y1="0" y2={H} stroke="currentColor" strokeWidth="1" opacity="0.5" vectorEffect="non-scaling-stroke" />
+            <path d={line(chart.observed)} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <path d={line(chart.forecast)} fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          </svg>
+          {chart.marks.map((m) => (
+            <span key={m.key} className="absolute left-0 -translate-y-full rounded-sm bg-white/85 dark:bg-slate-900/85 px-1 text-[10px] leading-tight text-slate-600 dark:text-slate-300" style={{ top: `${(y(m.v) / H) * 100}%` }}>
+              {m.label}
+            </span>
+          ))}
+          <span className="absolute size-2 rounded-full bg-sky-500 ring-2 ring-white dark:ring-slate-900 -translate-x-1/2 -translate-y-1/2" style={{ left: `${(nx / W) * 100}%`, top: `${(y(chart.forecast[0][1]) / H) * 100}%` }} aria-hidden />
+        </div>
+      </div>
+      <div className="relative mt-1 h-4 pl-[3.4rem] text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+        <span className="absolute left-[3.4rem] top-0">{chart.axis.from}</span>
+        <span className="absolute top-0 -translate-x-1/2 whitespace-nowrap" style={{ left: `calc(3.4rem + (100% - 3.4rem) * ${(nx / W).toFixed(3)})` }}>{chart.axis.now}</span>
+        <span className="absolute right-0 top-0">{chart.axis.to}</span>
+      </div>
+      <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-0.5 w-4 bg-sky-500" aria-hidden />{chart.legend.observed}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block w-4 border-t-2 border-dashed border-sky-500" aria-hidden />{chart.legend.forecast}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="inline-block h-2.5 w-4 rounded-sm bg-sky-500/20" aria-hidden />{chart.legend.band}</span>
+      </p>
+    </div>
+  );
+}
+
+function ForecastView({ p }: { p: ForecastPayload }) {
+  const r = p.row;
+  const full = p.cfg.size === "full";
+  return (
+    <Shell p={p} tone={p.tone}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 [overflow-wrap:anywhere]">
+          <h1 className="text-base sm:text-lg font-semibold leading-snug">{p.title}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{p.river}</p>
+        </div>
+        <TierPill label={p.verdict} tier={p.tone} />
+      </div>
+      <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className={`text-3xl font-semibold tabular-nums leading-none ${r.level ? "" : "text-slate-400"}`}>{r.level ?? "—"}</span>
+        <Trend row={r} />
+        {r.time && <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</span>}
+      </p>
+      <p className={`mt-2 inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${p.noForecast ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" : "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200"}`}>{p.forecastLabel}</p>
+      {(p.hour || p.day) && (
+        <div className={`mt-3 grid gap-2 ${p.hour && p.day ? "grid-cols-1 min-[440px]:grid-cols-2" : ""}`}>
+          {p.hour && (
+            <div className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{p.hour.label}</p>
+              <p className="mt-0.5 flex items-start gap-1.5 text-sm font-semibold leading-snug"><span className="mt-0.5 shrink-0"><ArrowIcon a={p.hour.arrow} /></span>{p.hour.title}</p>
+              {p.hour.sub && <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400 tabular-nums">{p.hour.sub}</p>}
+            </div>
+          )}
+          {p.day && (
+            <div className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/50 px-3 py-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{p.day.label}</p>
+              <p className="mt-0.5 text-sm font-semibold leading-snug">{p.day.text}</p>
+            </div>
+          )}
+        </div>
+      )}
+      {p.action && <p className="mt-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm font-medium">{p.action}</p>}
+      {full && p.chart && <ForecastChart chart={p.chart} title={p.chartTitle} />}
+      {full && p.note && <p className="mt-2.5 text-xs text-slate-500 dark:text-slate-400">{p.note}</p>}
+    </Shell>
+  );
+}
+
 // ---- town: the town page's verdict in plain words ---------------------------------------------------------------------------------------
 
 function TownView({ p }: { p: TownPayload }) {
@@ -408,6 +505,7 @@ function View({ p }: { p: EmbedPayload }) {
   switch (p.kind) {
     case "river": return <RiverView p={p} />;
     case "gauge": return <GaugeView p={p} />;
+    case "forecast": return <ForecastView p={p} />;
     case "town": return <TownView p={p} />;
     case "now": return <NowView p={p} />;
     case "reservoirs": return <ReservoirsView p={p} />;

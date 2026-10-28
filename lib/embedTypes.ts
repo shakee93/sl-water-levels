@@ -85,10 +85,43 @@ export type TownPayload = Base & {
   time: string | null;
   marks: string | null;
 };
+export type FChart = {
+  /** Observed readings, then the forecast line from "now"; the band is the 80% range. All in the shown unit. */
+  observed: [number, number][];
+  forecast: [number, number][];
+  band: [number, number, number][];
+  now: number;
+  from: number;
+  to: number;
+  unit: string;
+  marks: { key: "alert" | "minor" | "major"; label: string; v: number }[];
+  /** axis words */
+  axis: { from: string; now: string; to: string };
+  yMin: string;
+  yMax: string;
+  legend: { observed: string; forecast: string; band: string; now: string };
+};
+export type ForecastPayload = Base & {
+  kind: "forecast";
+  title: string;
+  river: string;
+  row: EmbedRow;
+  verdict: string;
+  tone: PillTier;
+  hour: { label: string; title: string; sub: string | null; arrow: Arrow } | null;
+  day: { label: string; text: string; ok: boolean } | null;
+  action: string | null;
+  note: string | null;
+  chart: FChart | null;
+  chartTitle: string;
+  /** "Forecast, not an official warning" label, or "No forecast for this gauge". */
+  forecastLabel: string;
+  noForecast: boolean;
+};
 export type NowGroup = { river: string; href: string; rows: EmbedRow[] };
 export type NowPayload = Base & { kind: "now"; title: string; calm: boolean; summary: string; groups: NowGroup[]; checked: string };
 export type ResRow = { key: string; name: string; river: string | null; href: string; status: string; official: boolean; figure: string | null; source: string; when: string | null; reported: string | null; reportedUrl: string | null };
 export type ReservoirsPayload = Base & { kind: "reservoirs"; title: string; summary: string; items: ResRow[]; officialNote: string };
 export type TickerPayload = Base & { kind: "ticker"; segments: string[]; tier: PillTier; href: string; label: string };
 
-export type EmbedPayload = RiverPayload | GaugePayload | TownPayload | NowPayload | ReservoirsPayload | TickerPayload;
+export type EmbedPayload = RiverPayload | GaugePayload | ForecastPayload | TownPayload | NowPayload | ReservoirsPayload | TickerPayload;

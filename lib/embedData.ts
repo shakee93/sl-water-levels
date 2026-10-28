@@ -19,12 +19,21 @@ import { assessTown } from "./townRisk";
 import { ttFor, type TKey } from "./i18n/town";
 import { formatKm } from "./nearby";
 import { getReservoirs, type RV } from "./reservoirData";
-import { getReleases, type Release } from "./releases";
+import { type Release } from "./releases";
 import { rtFor } from "./i18n/reservoirs";
 import { shortDay } from "./i18n/format";
 import { sanitizeThresholds, type Thresholds } from "./readings";
 import type { PillTier } from "@/app/TierPill";
 import type { EmbedCfg, Widget } from "./embedConfig";
+import { fetchBasinSnapshot } from "./arcgis";
+import { loadForecast } from "./forecast";
+import { ACTION, TIDE_RISE, forecastFact, smallChanceFact } from "@/app/Forecast";
+import { VERDICT, directionFor, STEADY_M_PER_H } from "@/app/verdict";
+import { isTidalStation, liftVerdict, riverRising } from "./verdictLift";
+import { getReleases, releaseAffectingFrom } from "./releases";
+import { officialReleaseAlert } from "./releaseAlert";
+import type { VerdictTone } from "@/app/ShareButton";
+import type { FChart, ForecastPayload } from "./embedTypes";
 import type { Arrow, Chart, Credit, EmbedPayload, EmbedRow, GaugePayload, MarkInfo, NowPayload, ReservoirsPayload, ResRow, RiverPayload, TickerPayload, TownPayload } from "./embedTypes";
 
 const MARKS = ["alert", "minor", "major"] as const;
@@ -444,12 +453,149 @@ async function buildTicker(c: Ctx): Promise<TickerPayload | null> {
   return { ...base(c, "ticker", `/${basinSlug(s.basin)}/${stationSlug(s.station)}`, c.e("w.openGauge", { gauge: row.name }), false, rnOf([row])), kind: "ticker", segments, tier: row.tier, href: row.href, label: segments.join(" · ") };
 }
 
+// ---- forecast: the gauge page's prediction box and forecasting chart ---------------------------------------------------------------------
+// The tone, "Next hour" and "Next 24 hours" use the same rules and wording as app/Forecast.tsx (its forecastFact, smallChanceFact, ACTION,
+// the verdict lift, the release alert); only the unit-aware figures are made here, because the site's reason line quotes feet.
+
+async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | null> {
+  const all = await getNational();
+  const nat = all.find((x) => stationSlug(x.station) === slug);
+  if (!nat) return null;
+  const station = nat.station;
+  const basin = nat.basin;
+  const L = c.lang;
+  const t = c.t;
+  const snap = await fetchBasinSnapshot(basin).catch(() => []);
+  const me = snap.find((x) => x.station === station) ?? null;
+  const f = me && me.latest ? await loadForecast(basin, snap, station).catch(() => null) : null;
+  const row = rowOf(nat, c, null, { withMarks: false });
+  const stale = nat.tier === "stale";
+  const model = !!f && f.method === "model" && f.status !== "unavailable" && f.horizons.length > 0;
+  const hasForecast = !!f && f.method !== "none" && f.status !== "unavailable";
+  const unit = nat.unit;
+  const want = c.cfg.unit;
+  const rel = await getReleases().catch(() => null);
+  const release = rel ? releaseAffectingFrom(rel, station) : null;
+
+  let tone: VerdictTone = nat.tier as VerdictTone;
+  let hour: ForecastPayload["hour"] = null;
+  let day: ForecastPayload["day"] = null;
+  let action: string | null = null;
+  let note: string | null = null;
+  if (f && me && hasForecast && !stale) {
+    const now = f.asOfTs ?? me.latest?.ts ?? 0;
+    const mpu = me.metresPerUnit ?? 1;
+    const h1 = f.horizons.find((h) => h.h === 1);
+    const r = h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : (me.rate3hM ?? null);
+    const rising = riverRising(station, me.trend24h, mpu, me.rate3hM ?? null);
+    const tideOnly = isTidalStation(station) && r != null && r > STEADY_M_PER_H && !rising;
+    const lift = liftVerdict({ tier: nat.tier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
+    const relAlert = nat.tier === "normal" || nat.tier === "watch" ? officialReleaseAlert(release) : null;
+    const alertLvl = me.thresholds.alert;
+    const lvlNow = me.latest?.water_level ?? null;
+    const gapM = alertLvl != null && lvlNow != null ? (alertLvl - lvlNow) * mpu : null;
+    const nearAlert = gapM != null && gapM > 0 && (gapM <= 1 || gapM <= alertLvl! * mpu * 0.2);
+    const releaseLift = rising && nearAlert && !!release?.active && !!release?.confirmed;
+    tone = relAlert ? "alert" : lift.verdict === "alert" && (nat.tier === "normal" || nat.tier === "watch") ? "alert" : (lift.verdict === "watch" || releaseLift) && nat.tier === "normal" ? "watch" : (nat.tier as VerdictTone);
+    const heavier = f.rainRisk != null || f.stormHorizons.length > 0;
+    const { fact } = forecastFact(f, nat.tier, now);
+    const day24 = lift.why === "small" && lift.crossing ? smallChanceFact(lift.crossing, lift.etaHours, heavier) : (fact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
+    day = { label: c.e("w.fcDayLabel"), text: day24[L], ok: day24.en === "No flooding expected today" };
+    const word = r == null ? null : tideOnly ? TIDE_RISE : directionFor(r);
+    if (word) {
+      const lvl = h1 ? fmt(h1.level, f.unit, want) : null;
+      const lo = h1?.low != null ? fmt(h1.low, f.unit, want) : null;
+      const hi = h1?.high != null ? fmt(h1.high, f.unit, want) : null;
+      const time = h1 ? clock(h1.ts, t) : "";
+      hour = {
+        label: c.e("w.fcHourLabel"),
+        title: word[L],
+        sub: lvl && f.unit != null ? (lo && hi && lo !== hi ? c.e("w.fcHourSub", { level: lvl, lo, hi, time }) : c.e("w.fcHourSub1", { level: lvl, time })) : null,
+        arrow: tideOnly || r == null || Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "down" : "up",
+      };
+    }
+    if (tone === "alert" || tone === "minor" || tone === "major") action = (ACTION[tone]?.[L] ?? null);
+    note = c.e("w.fcNote");
+  } else if (!stale && ["alert", "minor", "major"].includes(nat.tier)) {
+    action = ACTION[nat.tier as VerdictTone]?.[L] ?? null;
+  }
+
+  // the forecasting chart: observed readings, the forecast line and its 80% band, the official marks, "now"
+  let chart: FChart | null = null;
+  const hours = c.cfg.hours === 72 ? 72 : 24;
+  if (f && me && model && !stale && f.asOfTs != null) {
+    let readings = me.trend24h;
+    if (hours > 24) {
+      try {
+        readings = (await fetchStationData(station, 4)).readings;
+      } catch {
+        /* the 24 h we have */
+      }
+    }
+    const nowTs = f.asOfTs;
+    const from = nowTs - hours * 3_600_000;
+    const cv = (v: number) => conv(v, unit, want).v;
+    const obs = readings.filter((r) => r.water_level != null && r.ts >= from && r.ts <= nowTs).map((r) => [r.ts, cv(r.water_level as number)] as [number, number]);
+    const step = Math.max(1, Math.ceil(obs.length / 120));
+    const observed = obs.filter((_, i) => i % step === 0 || i === obs.length - 1);
+    const fc: [number, number][] = [[nowTs, cv(f.currentLevel as number)], ...f.horizons.map((h) => [h.ts, cv(h.level)] as [number, number])];
+    const band = f.horizons.map((h) => [h.ts, cv(h.low ?? h.level), cv(h.high ?? h.level)] as [number, number, number]);
+    const to = f.horizons[f.horizons.length - 1].ts;
+    const vals = [...observed.map((p) => p[1]), ...fc.map((p) => p[1]), ...band.flatMap((b) => [b[1], b[2]])];
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const th = sanitizeThresholds(nat.thresholds);
+    const all3 = c.cfg.marks ? MARKS.filter((k) => th[k] != null && th[k]! > 0).map((k) => ({ key: k, label: t(`mark.${k}` as "mark.alert"), v: cv(th[k]!) })) : [];
+    // marks the chart reaches, plus the next one above it: how far the river is from the next official step
+    const below = all3.filter((m) => m.v <= hi);
+    const nextAbove = all3.filter((m) => m.v > hi).sort((a, b) => a.v - b.v)[0];
+    const marks = nextAbove ? [...below, nextAbove] : below;
+    const d = digits(unit, want);
+    const u = conv(0, unit, want).unit;
+    const yHi = Math.max(hi, ...marks.map((m) => m.v));
+    const yLo = Math.min(lo, ...marks.map((m) => m.v));
+    chart = {
+      observed,
+      forecast: fc,
+      band,
+      now: nowTs,
+      from,
+      to,
+      unit: u,
+      marks,
+      axis: { from: c.e("w.hoursAgo", { n: hours }), now: `${c.e("w.fcNow")} ${clock(nowTs, t)}`, to: c.e("w.hoursAhead", { n: 24 }) },
+      yMin: `${yLo.toFixed(d)}${u ? ` ${u}` : ""}`,
+      yMax: `${yHi.toFixed(d)}${u ? ` ${u}` : ""}`,
+      legend: { observed: c.e("w.fcObserved"), forecast: c.e("w.fcForecast"), band: c.e("w.fcBand"), now: c.e("w.fcNow") },
+    };
+  }
+
+  const pill: PillTier = stale ? "stale" : tone === "watch" ? "normal" : (tone as PillTier);
+  return {
+    ...base(c, "forecast", `/${basinSlug(basin)}/${slug}`, c.e("w.openForecast", { gauge: stationDisplayName(station) }), false, rnOf([row])),
+    kind: "forecast",
+    title: stationDisplayName(station),
+    river: riverName(basin, L),
+    row,
+    verdict: stale ? row.step : VERDICT[tone === "watch" ? "normal" : tone][L],
+    tone: pill,
+    hour,
+    day,
+    action,
+    note,
+    chart,
+    chartTitle: c.e("w.fcTitle", { n: hours }),
+    forecastLabel: hasForecast ? c.e("w.fcLabel") : c.e("w.fcNone"),
+    noForecast: !hasForecast,
+  };
+}
+
 /** The payload for one widget, or null when the river / gauge / town does not exist. Throws only when a source is down (callers show "unavailable"). */
 export async function buildEmbed(widget: Widget, id: string | null, cfg: EmbedCfg): Promise<EmbedPayload | null> {
   const c = ctxOf(cfg);
   switch (widget) {
     case "river": return id ? buildRiver(id, c) : null;
     case "gauge": return id ? buildGauge(id, c) : null;
+    case "forecast": return id ? buildForecast(id, c) : null;
     case "town": return id ? buildTown(id, c) : null;
     case "now": return buildNow(c);
     case "reservoirs": return buildReservoirs(c);

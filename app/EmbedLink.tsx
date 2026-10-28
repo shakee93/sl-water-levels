@@ -8,10 +8,11 @@ import type { Widget } from "@/lib/embedConfig";
 export function EmbedLink({ lang, widget, id }: { lang: Locale; widget: Widget; id: string }) {
   const e = embedT(lang);
   const href = `${localePath(lang, "/embed")}?w=${widget}&id=${encodeURIComponent(id)}#builder`;
+  const label = widget === "forecast" ? e("p.buttonForecast") : e("p.button");
   return (
     <Link href={href} className="mt-6 sm:mt-8 mr-4 inline-flex items-center gap-1.5 min-h-11 text-sm text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
       <Code2 className="size-4" aria-hidden />
-      {e("p.button")}
+      {label}
     </Link>
   );
 }

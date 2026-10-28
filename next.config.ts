@@ -62,7 +62,7 @@ const nextConfig: NextConfig = {
     const lang = ["", "/:lang(si|ta)"];
     // The embeddable widgets (/embed/<widget>): the only pages any site may frame, never indexed, cached like the other live pages.
     // (The /embed guide page and every other page keep the default framing policy.)
-    const WIDGET = "/embed/:widget(river|gauge|town|now|reservoirs|ticker)";
+    const WIDGET = "/embed/:widget(river|gauge|forecast|town|now|reservoirs|ticker)";
     const embedHeaders = [
       ...headers,
       { key: "Content-Security-Policy", value: "frame-ancestors *" },

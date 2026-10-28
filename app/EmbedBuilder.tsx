@@ -17,6 +17,7 @@ export type BuilderLists = {
 const NAMES: Record<Widget, { name: string; hint: string }> = {
   river: { name: "River", hint: "All gauges of one river" },
   gauge: { name: "Gauge", hint: "One gauge with marks and chart" },
+  forecast: { name: "Forecast", hint: "Next hour, next 24 hours and the forecast chart for one gauge" },
   town: { name: "Town", hint: "Flood status for a town" },
   now: { name: "Right now", hint: "Gauges at Alert or above" },
   reservoirs: { name: "Reservoirs", hint: "Spilling or releasing now" },
@@ -83,15 +84,15 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
   const uses = USES[widget];
 
   // a sensible id when the widget needs one and none (or one of another kind) is chosen
-  const idOk = widget === "river" ? lists.rivers.some((r) => r.slug === id) : widget === "gauge" ? lists.gauges.some((g) => g.slug === id) : widget === "town" ? lists.towns.some((x) => x.slug === id) : true;
-  const effId = idOk ? id : widget === "river" ? "kalu-ganga" : widget === "gauge" ? "rathnapura" : widget === "town" ? "ratnapura" : "";
+  const idOk = widget === "river" ? lists.rivers.some((r) => r.slug === id) : (widget === "gauge" || widget === "forecast") ? lists.gauges.some((g) => g.slug === id) : widget === "town" ? lists.towns.some((x) => x.slug === id) : true;
+  const effId = idOk ? id : widget === "river" ? "kalu-ganga" : widget === "gauge" ? "rathnapura" : widget === "forecast" ? "nagalagam-street" : widget === "town" ? "ratnapura" : "";
 
-  const path = widget === "river" || widget === "gauge" || widget === "town" ? `/embed/${widget}/${effId}` : `/embed/${widget}`;
+  const path = widget === "river" || widget === "gauge" || widget === "forecast" || widget === "town" ? `/embed/${widget}/${effId}` : `/embed/${widget}`;
   const query = cfgQuery({ ...cfg, gauge: widget === "ticker" && tickerBy === "gauge" ? cfg.gauge : null, rivers: widget === "ticker" && tickerBy === "gauge" ? [] : cfg.rivers }, widget);
   const rel = `${path}${query}`;
   const nGauges = widget === "river" ? lists.rivers.find((r) => r.slug === effId)?.count ?? 4 : widget === "now" ? 4 : 4;
   const fixed = fixedHeight(widget, cfg.size, nGauges);
-  const title = widget === "river" ? `${lists.rivers.find((r) => r.slug === effId)?.name ?? ""} live river levels` : widget === "gauge" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} live river level` : widget === "town" ? `${lists.towns.find((x) => x.slug === effId)?.name ?? ""} flood status` : widget === "now" ? "Sri Lanka rivers right now" : widget === "reservoirs" ? "Reservoirs spilling in Sri Lanka" : "Live river level";
+  const title = widget === "river" ? `${lists.rivers.find((r) => r.slug === effId)?.name ?? ""} live river levels` : widget === "gauge" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} live river level` : widget === "forecast" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} river forecast` : widget === "town" ? `${lists.towns.find((x) => x.slug === effId)?.name ?? ""} flood status` : widget === "now" ? "Sri Lanka rivers right now" : widget === "reservoirs" ? "Reservoirs spilling in Sri Lanka" : "Live river level";
   const code =
     `<iframe src="${origin}${rel}" width="100%" height="${fixed}" style="border:0;max-width:${widget === "ticker" ? "760" : "560"}px" loading="lazy" title="${title.trim()}"></iframe>` +
     (script ? `\n<script src="${origin}/embed.js" async></script>` : "");
@@ -147,7 +148,7 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
             </select>
           </label>
         )}
-        {widget === "gauge" && (
+        {(widget === "gauge" || widget === "forecast") && (
           <label className="block">
             <span className={field}>Gauge</span>
             <select className={select} value={effId} onChange={(e) => setId(e.target.value)}>
@@ -196,7 +197,7 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
           <Seg label="Language" value={cfg.lang} options={[{ v: "en", l: "English" }, { v: "si", l: "සිංහල" }, { v: "ta", l: "தமிழ்" }]} onChange={(v) => set("lang", v)} />
           <Seg label="Theme" value={cfg.theme} options={[{ v: "auto", l: "Match page" }, { v: "light", l: "Light" }, { v: "dark", l: "Dark" }]} onChange={(v) => set("theme", v)} />
           {uses.unit && <Seg label="Units" value={cfg.unit} options={[{ v: "ft", l: "Feet" }, { v: "m", l: "Metres" }]} onChange={(v) => set("unit", v)} />}
-          {uses.hours && cfg.size === "full" && <Seg label="Chart" value={cfg.hours} options={[{ v: 0, l: "None" }, { v: 24, l: "24 h" }, { v: 72, l: "72 h" }]} onChange={(v) => set("hours", v)} />}
+          {uses.hours && cfg.size === "full" && <Seg label={widget === "forecast" ? "Past readings" : "Chart"} value={widget === "forecast" && cfg.hours === 0 ? 24 : cfg.hours} options={widget === "forecast" ? [{ v: 24, l: "24 h" }, { v: 72, l: "72 h" }] : [{ v: 0, l: "None" }, { v: 24, l: "24 h" }, { v: 72, l: "72 h" }]} onChange={(v) => set("hours", v)} />}
         </div>
         {(uses.forecast || uses.marks) && (
           <div className="flex flex-wrap gap-x-5">
