@@ -12,6 +12,8 @@ const OLD_KEEP = "(?!api/|api$|mcp|_next/|sw\\.js|manifest|favicon|icon|apple-ic
 // renders. Vercel-CDN-Cache-Control is read only by Vercel's CDN (not sent to browsers) and wins over the
 // Cache-Control that Next sets on a dynamic render. Pages not listed here are static or ISR.
 const CDN = "public, s-maxage=60, stale-while-revalidate=300";
+// The embed widgets are read by many sites at once: two minutes fresh, ten minutes stale while a new copy renders.
+const EMBED_CDN = "public, s-maxage=120, stale-while-revalidate=600";
 const headers = [
   { key: "Vercel-CDN-Cache-Control", value: CDN },
   { key: "CDN-Cache-Control", value: CDN },
@@ -52,6 +54,9 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
+        // the widgets without a chart are plain HTML with a 1 KB script (pages/api/embed-static/[widget].ts), not React pages
+        { source: "/embed/:widget(now|reservoirs|ticker)", destination: "/api/embed-static/:widget" },
+        { source: "/embed/:widget(river|town)/:slug", destination: "/api/embed-static/:widget?slug=:slug" },
         { source: `/:path(${OLD_KEEP}.*)`, has: [{ type: "host", value: OLD_HOST }, { type: "cookie", key: "sl_has_data" }], destination: "/api/move?to=/:path" },
         // the app installed on an iPhone/iPad Home Screen keeps its own storage, and may never have got the cookie: always hand over
         { source: `/:path(${OLD_KEEP}.*)`, has: [{ type: "host", value: OLD_HOST }, { type: "header", key: "user-agent", value: IOS_HOME_SCREEN_APP }], destination: "/api/move?to=/:path" },
@@ -64,7 +69,8 @@ const nextConfig: NextConfig = {
     // (The /embed guide page and every other page keep the default framing policy.)
     const WIDGET = "/embed/:widget(card|river|gauge|forecast|town|now|reservoirs|ticker)";
     const embedHeaders = [
-      ...headers,
+      { key: "Vercel-CDN-Cache-Control", value: EMBED_CDN },
+      { key: "CDN-Cache-Control", value: EMBED_CDN },
       { key: "Content-Security-Policy", value: "frame-ancestors *" },
       { key: "X-Robots-Tag", value: "noindex, nofollow" },
     ];

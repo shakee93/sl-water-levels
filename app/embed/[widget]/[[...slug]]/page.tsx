@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { buildEmbed } from "@/lib/embedData";
-import { cfgQuery, isWidget, parseCfg } from "@/lib/embedConfig";
+import { dataQuery, isWidget, parseCfg } from "@/lib/embedConfig";
 import { EmbedApp } from "../../EmbedApp";
 
 // One page for every widget: /embed/river/<river>, /embed/gauge/<gauge>, /embed/town/<town>, /embed/now, /embed/reservoirs, /embed/ticker.
@@ -23,7 +23,7 @@ export default async function EmbedPage({ params, searchParams }: { params: Prom
   if (!payload && (needsId || widget === "ticker") && !(await isDown(widget, id, cfg))) notFound();
   // what the client re-reads: the same settings, in the JSON route's shape
   const q = new URLSearchParams({ w: widget, ...(id ? { id } : {}) });
-  const extra = cfgQuery(cfg, widget);
+  const extra = dataQuery(cfg, widget);
   if (extra) new URLSearchParams(extra.slice(1)).forEach((v, k) => q.set(k, v));
   // hours also matters for the gauge default, which cfgQuery leaves out
   return <EmbedApp initial={payload} api={`/api/embed?${q.toString()}`} cfg={cfg} widget={widget} />;

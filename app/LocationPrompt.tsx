@@ -15,7 +15,7 @@ const ghost = `inline-flex items-center justify-center rounded-md text-slate-600
  * "card" is the home-page version; "banner" is the slim strip mounted in the layout for every other page.
  */
 export function LocationPrompt({ variant }: { variant: "card" | "banner" }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   const { t } = useI18n();
   const { shouldAsk, requesting, failed, request, dismiss } = useLocation();
   // The home page shows the card instead of the banner.

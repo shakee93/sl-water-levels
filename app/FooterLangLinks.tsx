@@ -13,7 +13,7 @@ const OPTIONS: { id: Locale; label: string; aria: string }[] = [
 ];
 
 export function FooterLangLinks({ lang, label }: { lang: Locale; label: string }) {
-  const { path } = splitLocale(usePathname());
+  const { path } = splitLocale(usePathname() ?? "/");
   return (
     <nav aria-label={label} className="flex items-center">
       {OPTIONS.map((o, i) => (

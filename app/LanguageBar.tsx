@@ -54,7 +54,7 @@ export function saveLang(lang: Locale) {
 
 export function LangSwitch() {
   const { lang, t } = useI18n();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   const router = useRouter();
   const refs = useRef<(HTMLAnchorElement | null)[]>([]);
   const { path } = splitLocale(pathname);
@@ -120,7 +120,7 @@ export function LangSwitch() {
  */
 export function LangSideEffects() {
   const { lang, t } = useI18n();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   const router = useRouter();
   const [suggest, setSuggest] = useState<Locale | null>(null);
 

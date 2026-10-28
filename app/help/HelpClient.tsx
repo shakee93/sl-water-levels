@@ -21,7 +21,7 @@ function initialDistrict(station: string | null, district: string | null): strin
 
 function Inner() {
   const { t, p } = useI18n();
-  const params = useSearchParams();
+  const params = useSearchParams() ?? new URLSearchParams();
   const fromUrl = initialDistrict(params.get("station"), params.get("district"));
   const { loc, forget } = useLocation();
   // Only when the link names no district: the visitor's own, worked out on this device.

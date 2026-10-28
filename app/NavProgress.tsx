@@ -15,7 +15,7 @@ export function NavProgress() {
   const bar = useRef<HTMLDivElement>(null);
   const state = useRef({ active: false, value: 0, tick: 0, safety: 0, fade: 0 });
   const pathname = usePathname();
-  const search = useSearchParams().toString();
+  const search = (useSearchParams()?.toString() ?? "");
 
   useEffect(() => {
     const el = bar.current;

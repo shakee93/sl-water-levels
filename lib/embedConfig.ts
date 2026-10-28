@@ -110,6 +110,12 @@ export function cfgQuery(c: Partial<EmbedCfg>, w: Widget): string {
   return s ? `?${s}` : "";
 }
 
+/** Only the settings that change the DATA (language, unit, hours, filters, size, marks, layout): what /api/embed is keyed on. Theme and every
+ *  style setting are left out, so all style variants of one widget share one cached data response. */
+export function dataQuery(c: EmbedCfg, w: Widget): string {
+  return cfgQuery({ ...c, theme: DEFAULTS.theme, accent: null, bg: null, text: null, font: DEFAULTS.font, scale: DEFAULTS.scale, radius: DEFAULTS.radius, border: true, shadow: true, pad: "normal", title: true }, w);
+}
+
 /** Which settings a widget uses (the builder only shows these). */
 export const USES: Record<Widget, { unit: boolean; hours: boolean; forecast: boolean; marks: boolean; filter: "none" | "rivers" | "river-or-gauge" }> = {
   card: { unit: true, hours: false, forecast: true, marks: true, filter: "none" },
