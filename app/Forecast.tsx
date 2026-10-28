@@ -99,6 +99,10 @@ export function forecastFact(f: ForecastT, tier: string, now: number): { fact: T
       },
     };
   }
+  // A fast tributary shows its model only to 6 hours (lib/forecastRules.mjs): no "no flooding expected today" from a 12 / 24 h model step.
+  if (f.method === "model" && f.status !== "unavailable" && f.horizonLimitH != null) {
+    return { target: -1, fact: noEstimateBeyond(f.horizonLimitH) };
+  }
   if (f.method === "model" && f.status === "ok" && (tier === "normal" || tier === "watch")) {
     return {
       target: -1,
@@ -113,6 +117,13 @@ export function forecastFact(f: ForecastT, tier: string, now: number): { fact: T
 
 /** A gauge whose readings are unusable (lib/forecastRules.mjs NO_FORECAST_GAUGES): the card shows the level and the step and says so. si / ta: DRAFT translations. */
 export const NO_FORECAST_FACT: T3 = { en: "No forecast for this gauge", si: "මෙම මානය සඳහා පුරෝකථනයක් නැත", ta: "இந்த அளவிக்கு முன்னறிவிப்பு இல்லை" };
+
+/** "Next 24 hours" for a fast river whose model is only shown to `h` hours. si / ta: DRAFT translations. */
+export const noEstimateBeyond = (h: number): T3 => ({
+  en: `No estimate beyond ${h} hours for this fast river`,
+  si: `මෙම වේගවත් ගඟ සඳහා පැය ${h}ට පසු ඇස්තමේන්තුවක් නැත`,
+  ta: `இந்த வேகமான ஆற்றுக்கு ${h} மணி நேரத்துக்கு மேல் மதிப்பீடு இல்லை`,
+});
 
 export const TIDE_RISE: T3 = {
   en: "Rising with the tide (about the same once the tide is allowed for)",

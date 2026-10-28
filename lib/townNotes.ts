@@ -3,7 +3,7 @@
 // Pure and dependency-free (node tests import it). Levels are in the gauge's own unit; `unit` null = unknown, so nothing is said.
 //   1. markGap      "0.8 ft below the alert level" / "1.2 ft above the alert level, 3.3 ft below the minor flood level"
 //                   (26 Oct feedback: Badalgama and Pannala visitors asked "will it reach minor flood?")
-//   2. dayOutlook   the concrete "Next 24 hours" line when the step is Alert or above: "Peak about 22 ft" / "Back below 21.3 ft by ..."
+//   2. dayOutlook   (fast tributaries: none, see shortOnly) the concrete "Next 24 hours" line when the step is Alert or above: "Peak about 22 ft" / "Back below 21.3 ft by ..."
 //                   built only from the forecast central levels the page already has; nothing is invented.
 import type { Thresholds } from "./readings";
 
@@ -43,9 +43,16 @@ export type Day =
   | { kind: "easing"; level: number };
 
 /** Concrete 24 h outlook from the forecast's central levels (hours ahead). null = not enough to say anything. */
-export function dayOutlook(o: { level: number | null; horizons: { h: number; level: number }[] | undefined; alertMark: number | null; unit: Unit }): Day | null {
+export function dayOutlook(o: {
+  level: number | null;
+  horizons: { h: number; level: number }[] | undefined;
+  alertMark: number | null;
+  unit: Unit;
+  /** A fast tributary (lib/forecastRules.mjs): its model is shown only to 6 h, so no "Peak about" / "Still rising" / "Little change" day line is made from it. */
+  shortOnly?: boolean;
+}): Day | null {
   const { level, unit } = o;
-  if (level == null || unit == null) return null;
+  if (level == null || unit == null || o.shortOnly) return null;
   const hs = (o.horizons ?? []).filter((x) => x.h >= 1 && x.h <= 24 && Number.isFinite(x.level)).sort((a, b) => a.h - b.h);
   if (hs.length < 3) return null;
   const flat = FLAT_FT / FT_PER_UNIT(unit);

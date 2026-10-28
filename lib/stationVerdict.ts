@@ -36,7 +36,8 @@ async function liftForecast(s: NationalStation): Promise<StationVerdict> {
   });
   const v: Tier = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
   // th / h whenever the forecast says a crossing is likely (or close), even when the tier stays the same: the home page lists them
-  const strong = lift?.crossing && (lift.why === "likely" || lift.why === "close");
+  // Minor / Major are never "likely" (lib/forecastRules.mjs caps their chance at 30% / 10%): only an Alert crossing is listed as "Likely to reach".
+  const strong = lift?.crossing && lift.crossing.threshold === "alert" && (lift.why === "likely" || lift.why === "close");
   return strong ? { v, th: lift.crossing!.threshold, h: lift.etaHours } : { v };
 }
 

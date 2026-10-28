@@ -10,6 +10,7 @@ import {
 } from "../lib/forecastRules.mjs";
 import { liftVerdict, chanceWords } from "../lib/verdictLift.ts";
 import { assessTown } from "../lib/townRisk.ts";
+import { dayOutlook } from "../lib/townNotes.ts";
 import { groupOf, FAST_TRIBUTARIES as SB_FAST } from "../lib/forecastScoreboard.mjs";
 
 // ---- 1. caps
@@ -68,6 +69,11 @@ for (const g of ["Holombuwa", "Deraniyagala", "Kithulgala", "Norwood", "Thawalam
 assert.equal(FAST_MAX_H, 6);
 assert.equal(maxForecastHours("Hanwella"), null);
 assert.equal(maxForecastHours("Nagalagam Street"), null);
+// town pages on a fast tributary never get a model-made day line ("Peak about", "Still rising", "Little change", "Easing")
+const hz = [1, 3, 6, 12, 24].map((h, i) => ({ h, level: 20 + i }));
+assert.equal(dayOutlook({ level: 20, horizons: hz, alertMark: 21.3, unit: "ft" })?.kind, "rising", "a main-stem gauge still gets one");
+assert.equal(dayOutlook({ level: 20, horizons: hz, alertMark: 21.3, unit: "ft", shortOnly: true }), null);
+assert.equal(dayOutlook({ level: 20, horizons: hz.map((x) => ({ ...x, level: 20 })), alertMark: 21.3, unit: "ft", shortOnly: true }), null);
 
 // ---- 4. one steady threshold
 assert.equal(STEADY_M_PER_H, 0.006);

@@ -41,7 +41,7 @@ import stormModelJson from "./model/storm-model.json";
 import stormV4Json from "./model/storm-model-v4.json";
 import type { GsmapFile, GsmapGauge } from "./gsmap";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
-import { hasNoForecast, shownChance, shownWording } from "./forecastRules.mjs";
+import { hasNoForecast, maxForecastHours, shownChance, shownWording } from "./forecastRules.mjs";
 import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { isStormHour4, rainTotals, stormFeatures, stormFeatures4, tier4Bin, v4Rain } from "./model/stormModel.mjs";
@@ -149,8 +149,10 @@ export type Forecast = {
   rawCrossings?: Forecast["crossings"];
   /** True for a gauge that shows no forecast because its data is unusable (lib/forecastRules.mjs NO_FORECAST_GAUGES): level and official step only. */
   noForecast?: boolean;
-  /** Longest horizon (hours) this gauge's forecast is allowed to show (fast tributaries: 6); null/absent = no limit. */
+  /** Longest horizon (hours) this gauge's forecast is allowed to show (fast tributaries: 6); null/absent = no limit. `horizons`, `crossings` and the headline obey it. */
   horizonLimitH?: number | null;
+  /** Every fitted horizon before the limit above (same shape as `horizons`), for the forecast log only; absent when nothing was cut. */
+  rawHorizons?: Forecast["horizons"];
   /** GloFAS flag. null = no GloFAS for this basin or the feed failed. */
   outlook: "normal" | "elevated" | null;
   headline: string;
@@ -501,10 +503,41 @@ function fromModel(
   // Every horizon from the 11-month v3 fit: no longer "experimental" (that label was about the 8-day rain fit).
   const experimentalNow = experimental && hs.some((x) => !v2h.has(x.h));
   const capP = (p: number) => r5(experimentalNow ? Math.min(MAX_PROB_EXPERIMENTAL, p) : p);
-  // One pass per mark: the model's own chance and wording (`raw`, logged), then the chance and wording a page may show (lib/forecastRules.mjs:
-  // minor capped at 30%, major at 10%, neither ever "likely"). Alert is untouched. ETAs follow the wording that is shown.
+  // Fast tributaries (lib/forecastRules.mjs SHORT_FORECAST_GAUGES): only the horizons up to FAST_MAX_H are shown, and every chance, ETA,
+  // headline and tile below is worked out from those alone. The audit: 12 h skill -6%, real crossings got 1-2 h notice. The full set
+  // goes to the log (`rawHorizons`, `rawCrossings`).
+  const limitH = maxForecastHours(station) as number | null;
+  const hsV = limitH != null ? hs.filter((x) => x.h <= limitH) : hs;
+  if (!hsV.length) return emptyResult(station, me.unit, "No forecast: the model has no usable short horizons.", [], trend, L0, anchor);
+  // One pass per mark: the model's own chance and wording (`raw`, logged, all horizons), then the chance and wording a page may show
+  // (lib/forecastRules.mjs: minor capped at 30%, major at 10%, neither ever "likely"; limited horizons). Alert is untouched. ETAs follow the wording shown.
   const crossings: Forecast["crossings"] = [];
   const rawCrossings: Forecast["crossings"] = [];
+  type Assessed = { wording: Wording; p: number; etaFor: (w: Wording) => number | null };
+  const assess = (X: H[], T: number): Assessed => {
+    const P = X.map((x) => 1 - mixCdf(T, x.mix));
+    const persists = (cut: number) => P.some((p, i) => i + 1 < P.length && p >= cut && P[i + 1] >= cut);
+    const maxP = Math.max(...P);
+    let wording: Wording = "unlikely";
+    if (maxP >= LIKELY && persists(LIKELY)) wording = "likely";
+    else if (maxP >= POSSIBLE && persists(POSSIBLE)) wording = "possible";
+    if (degraded && wording === "likely") wording = "possible";
+    // interpolate P hourly between fitted horizons (P at h=0 is 0: it is below T now); the cut is the chance the stated wording needs
+    const etaFor = (w: Wording): number | null => {
+      if (w === "unlikely" || w === "already" || hardDegraded) return null;
+      const cut = w === "likely" ? LIKELY : POSSIBLE;
+      for (let k = 1; k <= 24; k++) {
+        let j = X.findIndex((x) => x.h >= k);
+        if (j < 0) j = X.length - 1;
+        const a = j === 0 ? { h: 0, p: 0 } : { h: X[j - 1].h, p: P[j - 1] };
+        const b = { h: X[j].h, p: P[j] };
+        const pk = b.h === a.h ? b.p : a.p + ((b.p - a.p) * (k - a.h)) / (b.h - a.h);
+        if (pk >= cut) return anchor + k * HOUR_MS;
+      }
+      return null;
+    };
+    return { wording, p: capP(maxP), etaFor };
+  };
   for (const name of SEVERITY) {
     const T = th[name];
     if (T == null || T <= 0) continue;
@@ -514,36 +547,16 @@ function fromModel(
       rawCrossings.push(already);
       continue;
     }
-    const P = hs.map((x) => 1 - mixCdf(T, x.mix));
-    const persists = (cut: number) => P.some((p, i) => i + 1 < P.length && p >= cut && P[i + 1] >= cut);
-    const maxP = Math.max(...P);
-    let rawWording: Wording = "unlikely";
-    if (maxP >= LIKELY && persists(LIKELY)) rawWording = "likely";
-    else if (maxP >= POSSIBLE && persists(POSSIBLE)) rawWording = "possible";
-    if (degraded && rawWording === "likely") rawWording = "possible";
-    const rawP = capP(maxP);
-    const shownP = r5(shownChance(name, rawP));
-    const wording = shownWording(name, rawWording, shownP) as Wording;
-    // interpolate P hourly between fitted horizons (P at h=0 is 0: it is below T now); the cut is the chance the stated wording needs
-    const etaFor = (w: Wording): number | null => {
-      if (w === "unlikely" || w === "already" || hardDegraded) return null;
-      const cut = w === "likely" ? LIKELY : POSSIBLE;
-      for (let k = 1; k <= 24; k++) {
-        let j = hs.findIndex((x) => x.h >= k);
-        if (j < 0) j = hs.length - 1;
-        const a = j === 0 ? { h: 0, p: 0 } : { h: hs[j - 1].h, p: P[j - 1] };
-        const b = { h: hs[j].h, p: P[j] };
-        const pk = b.h === a.h ? b.p : a.p + ((b.p - a.p) * (k - a.h)) / (b.h - a.h);
-        if (pk >= cut) return anchor + k * HOUR_MS;
-      }
-      return null;
-    };
-    rawCrossings.push({ threshold: name, level: T, probability: rawP, etaTs: etaFor(rawWording), wording: rawWording });
-    crossings.push({ threshold: name, level: T, probability: shownP, etaTs: etaFor(wording), wording });
+    const raw = assess(hs, T);
+    const seen = hsV === hs ? raw : assess(hsV, T);
+    const shownP = r5(shownChance(name, seen.p));
+    const wording = shownWording(name, seen.wording, shownP) as Wording;
+    rawCrossings.push({ threshold: name, level: T, probability: raw.p, etaTs: raw.etaFor(raw.wording), wording: raw.wording });
+    crossings.push({ threshold: name, level: T, probability: shownP, etaTs: seen.etaFor(wording), wording });
   }
 
   // ---- direction, outlook
-  const h3 = hs.find((x) => x.h === 3) ?? hs[0];
+  const h3 = hsV.find((x) => x.h === 3) ?? hsV[0];
   const d3 = h3.level - L0;
   const steady = (STEADY_3H_M / mpu) * (h3.h / 3);
   const direction: Forecast["direction"] = d3 > steady ? "rising" : d3 < -steady ? "falling" : "steady";
@@ -567,12 +580,12 @@ function fromModel(
       `Experimental: fitted to ${Math.round(trainSpanDays)} days of gauge data, less than one monsoon season (${MIN_TRAIN_DAYS} days), with no major flood in it. Probabilities are capped at ${Math.round(MAX_PROB_EXPERIMENTAL * 100)}% and ranges are widened.`,
     );
   }
-  if (Math.max(...hs.map((x) => x.high)) > coef.levelMax) {
+  if (Math.max(...hsV.map((x) => x.high)) > coef.levelMax) {
     notes.push(`Part of the range is above the highest level this model has seen (${formatLevel(coef.levelMax, unit)}); treat it as a rough guide.`);
   }
-  const noSkill = hs.filter((x) => x.persistence && !v2h.has(x.h)).map((x) => `${x.h} h`);
+  const noSkill = hsV.filter((x) => x.persistence && !v2h.has(x.h)).map((x) => `${x.h} h`);
   if (noSkill.length) notes.push(`In testing the model was no better than 'level stays the same' at ${noSkill.join(", ")}, so those hours blend that with the earlier outlook and carry a wide range.`);
-  const persV3 = hs.filter((x) => x.persistence && v2h.has(x.h)).map((x) => `${x.h} h`);
+  const persV3 = hsV.filter((x) => x.persistence && v2h.has(x.h)).map((x) => `${x.h} h`);
   if (persV3.length) notes.push(`At ${persV3.join(", ")} nothing we tested beat 'level stays the same' for this gauge, so that is the line, with a range taken from how much the gauge has really changed over that time.`);
   if (w) {
     const n = w.next24hMm;
@@ -589,22 +602,23 @@ function fromModel(
     .filter((c) => c.wording === "likely" || c.wording === "possible")
     .sort((a, b) => nextRank(b) - nextRank(a) || SEVERITY.indexOf(b.threshold) - SEVERITY.indexOf(a.threshold))[0];
   const reach = (c: NonNullable<typeof upcoming>) =>
-    `${c.wording === "likely" ? "likely to reach" : "could reach"} ${nameOf[c.threshold]}${c.etaTs ? ` ${whenPhrase(c.etaTs, now)}` : " within the next 24 hours"} (about ${Math.round(c.probability * 100)}% chance)`;
+    `${c.wording === "likely" ? "likely to reach" : "could reach"} ${nameOf[c.threshold]}${c.etaTs ? ` ${whenPhrase(c.etaTs, now)}` : ` within the next ${spanTxt}`} (about ${Math.round(c.probability * 100)}% chance)`;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  const hLast = hs[hs.length - 1];
+  const hLast = hsV[hsV.length - 1];
+  const spanTxt = hLast.h >= 24 ? "24 hours" : `${hLast.h} hours`;
   const fmtL = (v: number) => formatLevel(v, unit);
   let headline: string;
   if (above && upcoming) headline = `Above ${nameOf[above.threshold]} now and ${reach(upcoming)}.`;
   else if (above) {
     const stay = 1 - mixCdf(above.level, hLast.mix);
-    headline = stay >= LIKELY ? `Above ${nameOf[above.threshold]} now and expected to stay there for the next 24 hours.` : `Above ${nameOf[above.threshold]} now but expected to ease below it within 24 hours.`;
+    headline = stay >= LIKELY ? `Above ${nameOf[above.threshold]} now and expected to stay there for the next ${spanTxt}.` : `Above ${nameOf[above.threshold]} now but expected to ease below it within ${spanTxt}.`;
   } else if (upcoming) headline = cap(reach(upcoming)) + ".";
   else if (lowestName) {
     // A crossing that is "unlikely" by the persistence rule can still carry real probability (>= 20% at one horizon): hedge the wording.
     const lowP = crossings.find((c) => c.threshold === lowestName)?.probability ?? 0;
-    headline = `${degraded || lowP >= POSSIBLE ? "Probably staying" : "Expected to stay"} below ${nameOf[lowestName]} for the next 24 hours.`;
+    headline = `${degraded || lowP >= POSSIBLE ? "Probably staying" : "Expected to stay"} below ${nameOf[lowestName]} for the next ${spanTxt}.`;
   }
-  else headline = `Expected to be about ${fmtL(hLast.level)} in 24 hours.`;
+  else headline = `Expected to be about ${fmtL(hLast.level)} in ${spanTxt}.`;
 
   // ---- basis
   const basis: string[] = [];
@@ -614,10 +628,10 @@ function fromModel(
     const past = w.past24hMm;
     basis.push(`Forecast model estimate of catchment rain (Open-Meteo, area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm modelled for the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
   }
-  if (v2h.size) basis.push(`The ${[...v2h].sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings, including the November 2025 Ditwah floods); where this was tested against 'level stays the same' it missed by less.`);
-  if (stormM.size) basis.push(`The ${[...stormM].sort((a, b) => a - b).join(", ")} hour steps read the rain the satellite measured over ${station}'s catchment (JAXA GSMaP, corrected for how it reads here), with rain beside the gauge and rain on the channels upstream timed separately (about ${STORM4.stations[station]?.lags.near ?? "?"} h from beside the gauge${STORM4.stations[station]?.lags.up ? `, about ${STORM4.stations[station].lags.up} h from upstream` : ""}). Tested storm by storm it was closer than the version that reads the weather model's rain.`);
-  if (stormH.size) basis.push(`Heavy rain upstream is part of the ${[...stormH].sort((a, b) => a - b).join(", ")} hour steps: rain that has fallen or is forecast over the catchment above ${station} raises the level, and the top of the range allows for the heavier forecast rain. Tested storm by storm (leaving each storm out, Ditwah included) it was closer than the river's own trend alone.`);
-  const old = hs.filter((x) => !v2h.has(x.h));
+  if (v2h.size) basis.push(`The ${[...v2h].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings, including the November 2025 Ditwah floods); where this was tested against 'level stays the same' it missed by less.`);
+  if (stormM.size) basis.push(`The ${[...stormM].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b).join(", ")} hour steps read the rain the satellite measured over ${station}'s catchment (JAXA GSMaP, corrected for how it reads here), with rain beside the gauge and rain on the channels upstream timed separately (about ${STORM4.stations[station]?.lags.near ?? "?"} h from beside the gauge${STORM4.stations[station]?.lags.up ? `, about ${STORM4.stations[station].lags.up} h from upstream` : ""}). Tested storm by storm it was closer than the version that reads the weather model's rain.`);
+  if (stormH.size) basis.push(`Heavy rain upstream is part of the ${[...stormH].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b).join(", ")} hour steps: rain that has fallen or is forecast over the catchment above ${station} raises the level, and the top of the range allows for the heavier forecast rain. Tested storm by storm (leaving each storm out, Ditwah included) it was closer than the river's own trend alone.`);
+  const old = hsV.filter((x) => !v2h.has(x.h));
   if (old.length) {
     const skilled = old.filter((x) => !x.persistence).map((x) => `${x.h} h`);
     const m6 = coef.horizons["6"];
@@ -629,13 +643,15 @@ function fromModel(
     station, unit, currentLevel: L0, asOfTs: anchor,
     method: "model", status: degraded ? "degraded" : "ok", direction, experimental: experimentalNow,
     basis,
-    horizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })),
+    horizons: hsV.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })),
+    horizonLimitH: limitH,
+    ...(hsV !== hs ? { rawHorizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })) } : {}),
     crossings, rawCrossings, outlook, headline, notes,
     signals: signalsOf(trend, w?.past6hMm ?? null),
     rain: w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null,
     rainRisk: w ? rainRiskOf({ det: w.next24hMm.det, p90: w.next24hMm.p90 }) : null,
-    stormHorizons: [...stormH].sort((a, b) => a - b),
-    stormHorizonsMeasured: [...stormM].sort((a, b) => a - b),
+    stormHorizons: [...stormH].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b),
+    stormHorizonsMeasured: [...stormM].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b),
   };
 }
 

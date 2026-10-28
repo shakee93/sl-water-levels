@@ -87,8 +87,9 @@ export async function GET(request: Request) {
           measured: mAt ? { mm1h: mAt.mm1h, mm3h: mAt.mm3h, mm24h: mAt.mm24h } : null,
           satellite: g ? { mm6h: g.mm6h, mm24h: g.mm24h } : null,
           outlook: f.outlook,
-          horizons: f.horizons,
-          ...(withShadow ? { shadows: shadowVariants(f, s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level }))) } : {}),
+          // the log keeps every fitted horizon, also the 12 / 24 h steps a fast tributary no longer shows (lib/forecastRules.mjs)
+          horizons: f.rawHorizons ?? f.horizons,
+          ...(withShadow ? { shadows: shadowVariants({ ...f, horizons: f.rawHorizons ?? f.horizons }, s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level }))) } : {}),
           // the LOG keeps what the model said: uncapped chances and wording (the site shows the capped ones, lib/forecastRules.mjs)
           crossings: f.rawCrossings ?? f.crossings,
           observations: s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level, rain: r.rain_fall })),

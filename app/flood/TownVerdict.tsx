@@ -12,6 +12,7 @@ import { riverName, clock, dayTick } from "@/lib/i18n/format";
 import { markGap, dayOutlook } from "@/lib/townNotes";
 import type { TownPeople } from "@/lib/townPeople";
 import { isTidalStation } from "@/lib/verdictLift";
+import { isShortForecastGauge } from "@/lib/forecastRules.mjs";
 import { formatLevel, type Unit } from "@/lib/units";
 import type { Thresholds } from "@/lib/readings";
 import { useMyLevel } from "./useMyLevel";
@@ -143,7 +144,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
   let dayKey = r.day.key as TKey;
   let dayVars: Record<string, string | number> = r.day.vars;
   if (r.day.key === "n24.stay" && gg && !isTidalStation(gg.station) && input.forecast && input.forecast.status !== "unavailable") {
-    const o = dayOutlook({ level: gg.level, horizons: input.forecast.horizons, alertMark: gg.thresholds.alert, unit: gg.unit });
+    const o = dayOutlook({ level: gg.level, horizons: input.forecast.horizons, alertMark: gg.thresholds.alert, unit: gg.unit, shortOnly: isShortForecastGauge(gg.station) });
     if (o) {
       const lv = (v: number) => formatLevel(v, gg.unit);
       if (o.kind === "peak") { dayKey = "n24.peak"; dayVars = { level: lv(o.level), time: timeAt(o.h) }; }
