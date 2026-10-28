@@ -37,7 +37,7 @@ assert.equal(hanwellaMToNagFt(2, T), 2.6);
 assert.equal(hanwellaMToNagFt(12, T), 7.4);
 assert.ok(Math.abs(nagFtToHanwellaM(hanwellaMToNagFt(8, T), T) - 8) < 1e-6);
 // flood survey
-const sv = { kind: "past_wet", survey: true, event: "ditwah_2025", streetLevel: "chest", streetFt: 4.2, inside: "yes", insideLevel: "knee", steps: 2, peakDay: "2025-12-01", peakPart: "night", lat: 6.955, lon: 79.922, src: "pin", consent: true, hp: "", ms: 9000, test: true };
+const sv = { kind: "past_wet", survey: true, event: "ditwah_2025", streetLevel: "chest", streetFt: 4.2, inside: "yes", insideLevel: "knee", steps: 2, peakDay: "2025-12-01", peakPart: "night", floodMonth: "2025-12", lat: 6.955, lon: 79.922, src: "pin", consent: true, hp: "", ms: 9000, test: true };
 const v1 = validateReport(sv);
 assert.equal(v1.ok, true);
 assert.equal(v1.report.depth, "above_waist"); // chest maps onto the old scale
@@ -54,6 +54,11 @@ assert.equal(validateReport({ ...sv, peakPart: "noon" }).reason, "invalid");
 assert.equal(validateReport({ ...sv, inside: "no", insideLevel: "knee" }).report.survey.insideLevel, null);
 assert.equal(validateReport({ ...sv, name: "A B", phone: "077" }).report.name, undefined);
 assert.equal(validateReport({ ...sv, event: undefined }).reason, "invalid");
+assert.equal(validateReport({ ...sv, floodMonth: undefined }).reason, "invalid"); // the flood month is required
+assert.equal(validateReport({ ...sv, floodMonth: "2024-06" }).reason, "invalid"); // Ditwah was Nov-Dec 2025
+assert.equal(validateReport({ ...sv, floodMonth: "2025-11", peakDay: "2025-12-01" }).reason, "invalid"); // deepest day outside the month
+assert.equal(validateReport({ ...sv, event: "other", floodMonth: "2099-01", peakDay: undefined }).reason, "invalid"); // future
+assert.equal(validateReport({ ...sv, event: "other", floodMonth: "2018-05", peakDay: undefined }).report.survey.floodMonth, "2018-05");
 console.log("flood3d tests passed");
 
 import { makeT } from "../app/[lang]/lab/flood-3d/strings.ts";

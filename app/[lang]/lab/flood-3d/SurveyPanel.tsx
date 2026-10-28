@@ -5,9 +5,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Share2 } from "lucide-react";
 import type { CellInfo, RepPos } from "./ReportPanel";
+import { EVENT_MONTHS, colomboMonth } from "@/lib/flood3dReports";
 
 const EVENTS: [string, string][] = [["ditwah_2025", "Cyclone Ditwah, Nov–Dec 2025"], ["may_2016", "May 2016"], ["jun_2024", "June 2024"], ["other", "Another flood"]];
-const DAYS: Record<string, [string, string]> = { ditwah_2025: ["2025-11-25", "2025-12-10"], may_2016: ["2016-05-10", "2016-05-31"], jun_2024: ["2024-06-01", "2024-06-30"] };
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// the month a named flood starts in (Ditwah peaked on 1 Dec 2025 at Nagalagam, but many places flooded from late November)
+const FIRST_MONTH: Record<string, string> = { ditwah_2025: "2025-11", may_2016: "2016-05", jun_2024: "2024-06" };
+const lastDay = (ym: string) => new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)).toISOString().slice(0, 10);
 const LEVELS: [string, string, string][] = [["ankle", "Ankle", "about 10 cm / 4 in"], ["knee", "Knee", "about 45 cm / 1.5 ft"], ["waist", "Waist", "about 1 m / 3 ft"], ["chest", "Chest", "about 1.3 m / 4 ft"], ["head", "Above my head", "1.7 m / 5.5 ft or more"]];
 const PARTS: [string, string][] = [["night", "Night"], ["morning", "Morning"], ["afternoon", "Afternoon"], ["evening", "Evening"]];
 
@@ -30,6 +34,8 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
   const [insideFt, setInsideFt] = useState("");
   const [steps, setSteps] = useState("");
   const [day, setDay] = useState("");
+  const [fYear, setFYear] = useState("");
+  const [fMon, setFMon] = useState("");
   const [part, setPart] = useState<string | null>(null);
   const [hp, setHp] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error" | "limit">("idle");
@@ -57,7 +63,7 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
           test: new URLSearchParams(location.search).has("f3dtest"), survey: true, kind: wet ? "past_wet" : "past_dry", event,
           streetLevel: wet ? street : undefined, streetFt: wet ? num(streetFt) : undefined, inside: wet ? inside ?? undefined : undefined,
           insideLevel: wet && inside === "yes" ? insideLevel ?? undefined : undefined, insideFt: wet && inside === "yes" ? num(insideFt) : undefined,
-          steps: wet ? num(steps) : undefined, peakDay: wet && day ? day : undefined, peakPart: wet ? part ?? undefined : undefined,
+          steps: wet ? num(steps) : undefined, floodMonth, peakDay: wet && day && day.startsWith(floodMonth) ? day : undefined, peakPart: wet ? part ?? undefined : undefined,
           lat: pos.lat, lon: pos.lon, acc: pos.acc ?? undefined, src: pos.src, cellFt: cell.cellFt ?? undefined, lang, consent: true, hp, ms: performance.now() - opened,
         }),
       });
@@ -79,8 +85,14 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
     } catch { /* cancelled, or no clipboard: the address is on the page */ setShareMsg(url); }
   }
 
-  const [dmin, dmax] = (event && DAYS[event]) || ["2016-04-01", todayIso()];
-  const nextOk = step === 0 ? true : step === 1 ? event != null && wet != null : step === 2 ? street != null : true;
+  const floodMonth = fYear && fMon ? `${fYear}-${fMon}` : "";
+  const nowMonth = colomboMonth();
+  const monthOk = !!floodMonth && floodMonth <= nowMonth && (!event || !EVENT_MONTHS[event] || EVENT_MONTHS[event].includes(floodMonth));
+  const dmin = floodMonth ? `${floodMonth}-01` : "2010-01-01";
+  const dmax = floodMonth ? (lastDay(floodMonth) < todayIso() ? lastDay(floodMonth) : todayIso()) : todayIso();
+  const pickEvent = (k: string) => { setEvent(k); const m = FIRST_MONTH[k]; if (m) { setFYear(m.slice(0, 4)); setFMon(m.slice(5, 7)); } else { setFYear(""); setFMon(""); } setDay(""); };
+  const years = Array.from({ length: +nowMonth.slice(0, 4) - 2009 }, (_, i) => String(+nowMonth.slice(0, 4) - i));
+  const nextOk = step === 0 ? true : step === 1 ? event != null && monthOk && wet != null : step === 2 ? street != null : true;
   const consent = <p className="text-xs text-slate-600 dark:text-slate-400">{tr("Your exact spot is kept private and used only to improve the flood map. The public only ever sees counts for an area.")}</p>;
 
   return (
@@ -114,7 +126,17 @@ export function SurveyPanel({ onSheet, pos, cell, onClose, onLocate, geoMsg, tr,
           )}
           {step === 1 && (
             <div className="space-y-2">
-              <div className="space-y-1"><p className="text-xs font-medium">{tr("Which flood?")}</p><div className="flex flex-wrap gap-2">{EVENTS.map(([k, l]) => <button key={k} type="button" aria-pressed={event === k} className={chip(event === k)} onClick={() => setEvent(k)}>{tr(l)}</button>)}</div></div>
+              <div className="space-y-1"><p className="text-xs font-medium">{tr("Which flood?")}</p><div className="flex flex-wrap gap-2">{EVENTS.map(([k, l]) => <button key={k} type="button" aria-pressed={event === k} className={chip(event === k)} onClick={() => pickEvent(k)}>{tr(l)}</button>)}</div></div>
+              {event && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium">{tr("Month and year of this flood")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <select value={fMon} onChange={(e) => { setFMon(e.target.value); setDay(""); }} className={`${field} w-36`} aria-label={tr("Month")}><option value="">{tr("Month")}</option>{MONTHS.map((m, i) => <option key={m} value={String(i + 1).padStart(2, "0")}>{tr(m)}</option>)}</select>
+                    <select value={fYear} onChange={(e) => { setFYear(e.target.value); setDay(""); }} className={`${field} w-24`} aria-label={tr("Year")}><option value="">{tr("Year")}</option>{years.map((y) => <option key={y} value={y}>{y}</option>)}</select>
+                  </div>
+                  {floodMonth && !monthOk && <p className="text-xs text-red-700 dark:text-red-300">{event && EVENT_MONTHS[event] ? tr("That month does not match this flood. Pick the month it happened in, or choose \"Another flood\".") : tr("Pick a month that has already happened.")}</p>}
+                </div>
+              )}
               <div className="space-y-1"><p className="text-xs font-medium">{tr("Did water reach here?")}</p><div className="flex flex-wrap gap-2">{([[true, "Yes"], [false, "No, it stayed dry"]] as const).map(([k, l]) => <button key={String(k)} type="button" aria-pressed={wet === k} className={chip(wet === k)} onClick={() => setWet(k)}>{tr(l)}</button>)}</div></div>
             </div>
           )}

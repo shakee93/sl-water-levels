@@ -11,6 +11,10 @@ export type Kind = (typeof KINDS)[number];
 export const SURVEY_LEVELS = ["ankle", "knee", "waist", "chest", "head"] as const;
 export const PEAK_PARTS = ["night", "morning", "afternoon", "evening"] as const;
 export const SURVEY_INSIDE = ["no", "yes"] as const;
+/** Months a named flood can be in; "other" may be any month from 2010 to now. Stops answers about an old flood being filed under the wrong one. */
+export const EVENT_MONTHS: Record<string, string[]> = { ditwah_2025: ["2025-11", "2025-12"], may_2016: ["2016-05"], jun_2024: ["2024-06"] };
+/** Current month in Colombo, "YYYY-MM". */
+export const colomboMonth = (ms = Date.now()) => new Date(ms + 5.5 * 3_600_000).toISOString().slice(0, 7);
 /** Rough metres for each body level (ankle 10 cm ... above head 1.7 m); a number in feet from the visitor replaces it. Used by the owner export. */
 export const LEVEL_M: Record<(typeof SURVEY_LEVELS)[number], number> = { ankle: 0.1, knee: 0.45, waist: 0.95, chest: 1.3, head: 1.7 };
 /** The old report scale has no chest / head: they count as "above_waist" there, so existing readers of `depth` keep working. */
@@ -18,6 +22,8 @@ export const LEVEL_TO_DEPTH: Record<(typeof SURVEY_LEVELS)[number], (typeof DEPT
 export type Survey = {
   streetLevel: string | null; streetFt: number | null; inside: "no" | "yes" | null; insideLevel: string | null; insideFt: number | null;
   steps: number | null; peakDay: string | null; peakPart: string | null;
+  /** Month of the flood, "YYYY-MM" (required): answers are grouped and checked by it. */
+  floodMonth: string;
 };
 
 /** Corridor plus margin (same as the map's covered area); anything else is not a report about this map. */
@@ -75,9 +81,15 @@ export function validateReport(body: unknown): Verdict {
     if (streetFt === undefined || insideFt === undefined || steps === undefined) return { ok: false, reason: "invalid" };
     const day = body.peakDay == null || body.peakDay === "" ? null : typeof body.peakDay === "string" && /^20\d\d-[01]\d-[0-3]\d$/.test(body.peakDay) && !Number.isNaN(Date.parse(body.peakDay)) && body.peakDay >= "2016-04-01" && Date.parse(body.peakDay) <= Date.now() + 86_400_000 ? body.peakDay : undefined;
     if (day === undefined) return { ok: false, reason: "invalid" };
+    // the month of the flood is required and must fit the named flood; a "deepest day" must fall in that month
+    const fm = typeof body.floodMonth === "string" && /^20\d\d-(0[1-9]|1[0-2])$/.test(body.floodMonth) ? body.floodMonth : null;
+    if (!fm || fm < "2010-01" || fm > colomboMonth()) return { ok: false, reason: "invalid" };
+    const allowed = EVENT_MONTHS[event as string];
+    if (allowed && !allowed.includes(fm)) return { ok: false, reason: "invalid" };
+    if (day && !day.startsWith(fm)) return { ok: false, reason: "invalid" };
     survey = {
       streetLevel: wet ? (body.streetLevel as string) : null, streetFt: streetFt == null ? null : Math.round(streetFt * 10) / 10, inside, insideLevel,
-      insideFt: insideFt == null ? null : Math.round(insideFt * 10) / 10, steps: steps == null ? null : Math.round(steps), peakDay: day, peakPart,
+      insideFt: insideFt == null ? null : Math.round(insideFt * 10) / 10, steps: steps == null ? null : Math.round(steps), peakDay: day, peakPart, floodMonth: fm,
     };
     depthOut = wet ? LEVEL_TO_DEPTH[body.streetLevel as (typeof SURVEY_LEVELS)[number]] : null;
   }

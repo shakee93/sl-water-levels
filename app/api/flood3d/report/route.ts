@@ -1,4 +1,4 @@
-// POST /api/flood3d/report  {kind, depth?, event?, survey?: true + streetLevel/streetFt/inside/insideLevel/insideFt/steps/peakDay/peakPart (see lib/flood3dReports.ts), lat, lon, acc?, src, mapRight?, cellFt?, lang?, consent: true, hp, ms}
+// POST /api/flood3d/report  {kind, depth?, event?, survey?: true + streetLevel/streetFt/inside/insideLevel/insideFt/steps/peakDay/peakPart/floodMonth (see lib/flood3dReports.ts), lat, lon, acc?, src, mapRight?, cellFt?, lang?, consent: true, hp, ms}
 // GET  /api/flood3d/report  public area counts only ("23 reports around Kelaniya"), never a position.
 // Reports from the unlisted /lab/flood-3d test map go to Cloudflare D1 (flood3d_reports, d1/0012_flood3d_reports.sql, created here on
 // first use). The precise position and GPS accuracy stay private; the live Nagalagam / Hanwella (and 10-minute) levels are stamped
@@ -35,6 +35,7 @@ const SURVEY_COLS = [
   "ALTER TABLE flood3d_reports ADD COLUMN steps_above_road INTEGER",
   "ALTER TABLE flood3d_reports ADD COLUMN peak_day TEXT",
   "ALTER TABLE flood3d_reports ADD COLUMN peak_part TEXT",
+  "ALTER TABLE flood3d_reports ADD COLUMN flood_month TEXT", // d1/0015
 ];
 const reply = (status: number, body: Record<string, unknown>) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 const missingTable = (e: unknown) => /no such table/i.test(String(e instanceof Error ? e.message : e));
@@ -88,8 +89,8 @@ export async function POST(req: NextRequest) {
     ]);
     if (Number(p[0]?.n ?? 0) >= MAX_PER_PERSON_DAY || Number(i10[0]?.n ?? 0) >= 5) return false;
     await d1Query(
-      "INSERT INTO flood3d_reports (created_ms, day, kind, depth, event, lat, lon, lat3, lon3, acc_m, src, map_right, cell_ft, nag_ft, han_ft, han_fast_ft, person_day, ip_hash, lang, status, survey, street_level, street_ft, inside, inside_level, inside_ft, steps_above_road, peak_day, peak_part) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [now, day, r.kind, r.depth, r.event, r.lat, r.lon, round3(r.lat), round3(r.lon), r.acc, r.src, r.mapRight, r.cellFt, live?.nagalagam?.levelFt ?? null, live?.hanwella?.levelFt ?? null, live?.hanwella?.fastFt ?? null, person, hash, r.lang, r.test ? "test" : "new", sv ? 1 : 0, sv?.streetLevel ?? null, sv?.streetFt ?? null, sv?.inside ?? null, sv?.insideLevel ?? null, sv?.insideFt ?? null, sv?.steps ?? null, sv?.peakDay ?? null, sv?.peakPart ?? null],
+      "INSERT INTO flood3d_reports (created_ms, day, kind, depth, event, lat, lon, lat3, lon3, acc_m, src, map_right, cell_ft, nag_ft, han_ft, han_fast_ft, person_day, ip_hash, lang, status, survey, street_level, street_ft, inside, inside_level, inside_ft, steps_above_road, peak_day, peak_part, flood_month) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [now, day, r.kind, r.depth, r.event, r.lat, r.lon, round3(r.lat), round3(r.lon), r.acc, r.src, r.mapRight, r.cellFt, live?.nagalagam?.levelFt ?? null, live?.hanwella?.levelFt ?? null, live?.hanwella?.fastFt ?? null, person, hash, r.lang, r.test ? "test" : "new", sv ? 1 : 0, sv?.streetLevel ?? null, sv?.streetFt ?? null, sv?.inside ?? null, sv?.insideLevel ?? null, sv?.insideFt ?? null, sv?.steps ?? null, sv?.peakDay ?? null, sv?.peakPart ?? null, sv?.floodMonth ?? null],
     );
     return true;
   };
