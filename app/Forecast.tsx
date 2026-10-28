@@ -29,6 +29,8 @@ import { fallSummary, heavyRainAround, nearRain24hClipped, riseSummary, townsNea
 import { CALL, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
 import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
 import { fallingOutlook, nextHourRateM } from "@/lib/forecastRules.mjs";
+import { getHold } from "@/lib/verdictHoldData";
+import { heldTone, NO_HOLD } from "@/lib/verdictHold";
 
 const HOUR = 3_600_000;
 const mm = (v: number | null) => (v == null ? "—" : v < 10 ? v.toFixed(1) : String(Math.round(v)));
@@ -161,6 +163,13 @@ export function dayFact(o: {
   return fact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" };
 }
 
+/** Why a calm gauge still says "keep an eye on it" (the headline hold, lib/verdictHold.ts). si / ta: DRAFT translations. */
+export const HELD_NOTE: T3 = {
+  en: "It was close to the alert level in the last few hours, so this stays on watch for a while",
+  si: "පසුගිය පැය කිහිපය තුළ එය අනතුරු ඇඟවීමේ මට්ටමට ආසන්න විය, එබැවින් මෙය ටික වේලාවක් අවධානයෙන් තබා ගන්න",
+  ta: "கடந்த சில மணி நேரத்தில் இது எச்சரிக்கை மட்டத்திற்கு அருகில் இருந்தது, எனவே சிறிது நேரம் கவனத்தில் வைத்திருங்கள்",
+};
+
 export const TIDE_RISE: T3 = {
   en: "Rising with the tide (about the same once the tide is allowed for)",
   si: "වඩින මුහුදු රැළි සමඟ ඉහළ යයි (රැළි සලකා බැලූ විට පාහේ එලෙසමයි)",
@@ -262,7 +271,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   // A confirmed release of 5,000+ cusecs by the Irrigation Department's own figures, directly above this gauge, is at least Alert
   // (lib/releaseAlert.ts; 26 Oct 2026: Moragaswewa read Normal at 14.9 ft while Deduru Oya spilled 10,400 cusecs through 8 gates).
   const releaseAlert = !stale && (realTier === "normal" || realTier === "watch") ? officialReleaseAlert(release) : null;
-  const tone: VerdictTone = stale
+  const toneNow: VerdictTone = stale
     ? "stale"
     : releaseAlert
       ? "alert"
@@ -272,6 +281,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         (lift?.verdict === "watch" || releaseLift) && realTier === "normal"
         ? "watch"
         : realTier;
+  // Headline hold (lib/verdictHold.ts, owner decision 28 Oct 2026): a gauge that was at "watch" or above in the last 3 h (Nagalagam Street: its headline
+  // flipped with the tide) keeps the calm "watch" tone a while. Never touches the official step: only a plain "normal" can be held, never raised past watch.
+  const hold = me && !stale && toneNow === "normal" ? await getHold(me) : NO_HOLD;
+  const tone: VerdictTone = heldTone(toneNow, hold);
   // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
   const fact: T3 | null = stale ? null : dayFact({ f, tier: realTier, now, lift, rate3hM: me?.rate3hM ?? null, mpu, tidal });
 
@@ -303,6 +316,8 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         ? t("needs.nearNote", { amount: formatDelta(alertLvl - lvlNow, unit) }) + (rising ? `, ${t("trend.rising").toLowerCase()}` : "")
         : fact && lift?.verdict === "watch"
           ? fact[lang]
+          : hold.held
+            ? HELD_NOTE[lang]
           : releaseLift
             ? ({ en: "A reservoir release upstream is confirmed", si: "ඉහළ ජලාශයකින් ජලය මුදාහැරීම තහවුරුයි", ta: "மேலே உள்ள நீர்த்தேக்கத்திலிருந்து நீர் திறப்பு உறுதி" } as T3)[lang]
             : null;

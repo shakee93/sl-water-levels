@@ -126,6 +126,8 @@ export type GaugeIn = {
   ts: number | null;
   /** Change in metres per hour (3 h window); null = unknown. */
   rate3hM: number | null;
+  /** The gauge's calm "watch" headline is being held (lib/verdictHold.ts): it was at watch or above in the last 3 h. Missing = no hold. Only lifts a plain Normal to watch, never a step. */
+  holdWatch?: boolean;
   /** River really rising, de-tided for tidal gauges (riverRising in lib/verdictLift.ts). Missing = from rate3hM, never true for a tidal gauge. */
   rising?: boolean | null;
   km: number;
@@ -311,6 +313,12 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
         smallChanceWatch = true;
         forecastReason.warn = !small;
       }
+    }
+    // headline hold (lib/verdictHold.ts): a gauge that was at watch or above in the last 3 h keeps the calm "keep an eye on it" tone; never a step
+    if (river === "normal" && gauge.holdWatch) {
+      river = "watch";
+      smallChanceWatch = true;
+      forecastReason ??= { kind: "forecast", key: "r.held", vars: { gauge: gauge.name }, warn: false };
     }
     // confirmed release upstream, river rising and already near/at alert
     // (26 Oct 2026: a release or rising canals no longer make "Get ready" before the gauge's alert level; they stay reasons/notes)

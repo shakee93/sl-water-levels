@@ -14,6 +14,7 @@ import {
 } from "../lib/forecastRules.mjs";
 import { liftVerdict, chanceWords, RISING_M_PER_H as LIFT_RISING } from "../lib/verdictLift.ts";
 import { assessTown } from "../lib/townRisk.ts";
+import { holdWatch, heldTone, HOLD_GAUGES, NO_HOLD } from "../lib/verdictHold.ts";
 import { dayOutlook } from "../lib/townNotes.ts";
 import { groupOf, FAST_TRIBUTARIES as SB_FAST } from "../lib/forecastScoreboard.mjs";
 
@@ -125,5 +126,47 @@ assert.equal(assessTown({ ...town, primary: { ...hanwella, station: "Nagalagam S
 // and the day-outlook helper itself never says 'flat' for a falling-rate river through the town path (flat needs a non-falling rate)
 const flatH = [4, 8, 12].map((h) => ({ h, level: 25 }));
 assert.equal(dayOutlook({ level: 25, horizons: flatH, alertMark: 21.3, unit: "ft" })?.kind, "flat");
+
+// ---- 5. headline hold (Nagalagam Street)
+const HR = 3_600_000;
+assert.ok(HOLD_GAUGES["Nagalagam Street"] && HOLD_GAUGES["Nagalagam Street"].hours === 3, "on by default for Nagalagam Street, 3 h");
+const T = 1_000 * HR;
+const hb = { station: "Nagalagam Street", tier: "normal", level: 3.3, watchFrom: 3.4, mpu: 0.3048, now: T, pastTiers: [], logged: [] };
+assert.equal(holdWatch(hb).held, false, "nothing recent: no hold");
+// the reading was near alert 2 h ago (tier watch), now reads Normal: held until 3 h after that reading
+const h2 = holdWatch({ ...hb, pastTiers: [{ ts: T - 2 * HR, tier: "watch" }, { ts: T - HR, tier: "normal" }] });
+assert.ok(h2.held && h2.why === "reading" && h2.until === T + HR);
+assert.equal(holdWatch({ ...hb, pastTiers: [{ ts: T - 4 * HR, tier: "alert" }] }).held, false, "older than 3 h: released");
+assert.equal(holdWatch({ ...hb, pastTiers: [{ ts: T - 2 * HR, tier: "alert" }] }).held, true, "an alert reading 2 h ago also holds");
+// the forecast-driven watch (stored verdict) holds too
+const hf = holdWatch({ ...hb, logged: [{ ts: T - 2 * HR, verdict: "watch" }] });
+assert.ok(hf.held && hf.why === "forecast");
+assert.equal(holdWatch({ ...hb, logged: [{ ts: T - 2 * HR, verdict: "normal" }] }).held, false);
+// not for other gauges, not for a gauge that is already at watch or above (its own tier speaks), never when the river has really gone
+assert.equal(holdWatch({ ...hb, station: "Hanwella", pastTiers: [{ ts: T - HR, tier: "watch" }] }).held, false);
+for (const tier of ["watch", "alert", "minor", "major", "stale", "none"]) assert.equal(holdWatch({ ...hb, tier, pastTiers: [{ ts: T - HR, tier: "watch" }] }).held, false, tier);
+assert.equal(holdWatch({ ...hb, level: 2.0, pastTiers: [{ ts: T - HR, tier: "watch" }] }).why, "cleared", "1.4 ft below where watch starts: the river has gone");
+assert.equal(holdWatch({ ...hb, level: 2.5, pastTiers: [{ ts: T - HR, tier: "watch" }] }).held, true, "0.9 ft below: still held (tide swings are +-0.7 ft)");
+// the official step is never touched: only a plain normal becomes watch; alert / minor / major / stale pass through even when 'held'
+const held = { held: true, until: T, why: "reading" as const };
+assert.equal(heldTone("normal", held), "watch");
+for (const tone of ["watch", "alert", "minor", "major", "stale", "none"]) assert.equal(heldTone(tone, held), tone);
+assert.equal(heldTone("normal", NO_HOLD), "normal");
+// a flip-flopping gauge: raw verdicts hour by hour (normal, watch, normal, normal, normal, normal, normal) -> shown tone
+const raw = ["normal", "watch", "normal", "normal", "normal", "normal", "normal"];
+const shown = raw.map((v, i) => {
+  const logged = raw.slice(0, i).map((x, j) => ({ ts: T + j * HR, verdict: x })).concat(v === "watch" ? [] : []);
+  const r = holdWatch({ ...hb, now: T + i * HR, tier: "normal", logged });
+  return heldTone(v, r);
+});
+assert.deepEqual(shown, ["normal", "watch", "watch", "watch", "watch", "normal", "normal"], "watch at hour 1 holds until 3 h later (hours 2-4, i.e. 3 h after it), then normal");
+// town page: the hold lifts a plain normal river to watch, and never changes an official step
+const hg = { station: "Nagalagam Street", name: "Nagalagam Street", basin: "Kelani Ganga", tier: "normal", level: 3.3, unit: "ft", ts: 1, rate3hM: 0, km: 0.5 };
+const tw = { drainage: "riverbank", primary: hg, secondary: null, forecast: null, rain: rain0, release: null, warning: null, now: 1 };
+assert.equal(assessTown(tw).tone, "normal");
+assert.equal(assessTown({ ...tw, primary: { ...hg, holdWatch: true } }).tone, "watch");
+assert.equal(assessTown({ ...tw, primary: { ...hg, holdWatch: true } }).reasons.some((r) => r.key === "r.held"), true);
+assert.equal(assessTown({ ...tw, primary: { ...hg, tier: "alert", level: 4.2, holdWatch: true } }).tone, "alert", "an official alert reading is Alert, held or not");
+assert.equal(assessTown({ ...tw, primary: { ...hg, tier: "watch", holdWatch: true } }).tone, "watch");
 
 console.log("forecast-rules tests passed");

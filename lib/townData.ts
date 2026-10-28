@@ -1,6 +1,7 @@
 // Server-side loader for a town's flood estimate: gathers the live inputs for lib/townRisk.ts.
 // Everything fails soft; a missing source is passed as null and the estimate says what it lacks.
 import { riverRising } from "./verdictLift";
+import { getHold } from "./verdictHoldData";
 import { fetchBasinSnapshot, getNational, type NationalStation } from "./arcgis";
 import { stationDisplayName } from "./displayName";
 import { loadForecast, measuredAt, type Forecast } from "./forecast";
@@ -45,7 +46,7 @@ export type TownData = {
   office: { district: string; tel: string } | null;
 };
 
-const gaugeIn = (s: NationalStation | undefined, place: Place): GaugeIn | null =>
+const gaugeIn = (s: NationalStation | undefined, place: Place, holdWatch = false): GaugeIn | null =>
   s
     ? {
         station: s.station,
@@ -57,6 +58,7 @@ const gaugeIn = (s: NationalStation | undefined, place: Place): GaugeIn | null =
         ts: s.latest?.ts ?? null,
         rate3hM: s.rate3hM,
         rising: riverRising(s.station, s.trend24h, s.metresPerUnit, s.rate3hM),
+        ...(holdWatch ? { holdWatch: true } : {}),
         km: distanceKm({ lat: place.lat, lon: place.lon }, { lat: s.latitude, lon: s.longitude }),
       }
     : null;
@@ -97,14 +99,18 @@ function streetRiverIn(byName: Map<string, NationalStation>, now: number): TownR
   return { triggered: t.triggered, gauge: t.station ?? "", level: t.levelFt != null ? `${t.levelFt.toFixed(1)} ft` : "" };
 }
 
+/** Headline hold for a gauge (lib/verdictHold.ts); false for every gauge that is not in HOLD_GAUGES, and when the lookup fails. */
+const holdOf = (s: NationalStation | undefined): Promise<boolean> => (s ? getHold(s).then((h) => h.held).catch(() => false) : Promise.resolve(false));
+
 export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?: number } = {}): Promise<TownData> {
   // Only the page passes a budget. Push/glance callers wait for the real answer: a verdict made without
   // rain or bulletins must never drive a notification.
   const box = <T,>(p: Promise<T>, fallback: T): Promise<T> => (opts.budgetMs ? soft(p, opts.budgetMs, fallback) : p);
   const national = await getNational().catch(() => [] as NationalStation[]);
   const byName = new Map(national.map((s) => [s.station, s]));
-  const primary = gaugeIn(byName.get(place.stations[0]), place);
-  const secondary = gaugeIn(place.stations[1] ? byName.get(place.stations[1]) : undefined, place);
+  const [held0, held1] = await Promise.all([holdOf(byName.get(place.stations[0])), holdOf(place.stations[1] ? byName.get(place.stations[1]) : undefined)]);
+  const primary = gaugeIn(byName.get(place.stations[0]), place, held0);
+  const secondary = gaugeIn(place.stations[1] ? byName.get(place.stations[1]) : undefined, place, held1);
   const eff = usableGauge(primary) ? primary : usableGauge(secondary) ? secondary : null;
   const effStation = eff ? byName.get(eff.station)! : null;
 
@@ -220,8 +226,8 @@ export async function loadTownStates(places: Place[]): Promise<Map<string, TownS
   // the Irrigation Department's own release figures (cached, fails soft): a big confirmed release above the gauge makes the town Alert here too
   const rel = await getReleases().catch(() => null);
   for (const p of places) {
-    const primary = gaugeIn(byName.get(p.stations[0]), p);
-    const secondary = gaugeIn(p.stations[1] ? byName.get(p.stations[1]) : undefined, p);
+    const primary = gaugeIn(byName.get(p.stations[0]), p, await holdOf(byName.get(p.stations[0])));
+    const secondary = gaugeIn(p.stations[1] ? byName.get(p.stations[1]) : undefined, p, p.stations[1] ? await holdOf(byName.get(p.stations[1])) : false);
     const eff = usableGauge(primary) ? primary : usableGauge(secondary) ? secondary : null;
     const ra = rel && eff ? releaseAffectingFrom(rel, eff.station) : null;
     const r = assessTown({

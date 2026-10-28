@@ -6,6 +6,8 @@ import { unstable_cache } from "next/cache";
 import { fetchBasinSnapshot, getNational, type NationalStation } from "./arcgis";
 import { loadForecast } from "./forecast";
 import { liftVerdict, riverRising } from "./verdictLift";
+import { getHold } from "./verdictHoldData";
+import { heldTone } from "./verdictHold";
 import { getReleases, releaseAffectingFrom, type ReleasesResult } from "./releases";
 import { officialReleaseAlert } from "./releaseAlert";
 
@@ -34,7 +36,9 @@ async function liftForecast(s: NationalStation): Promise<StationVerdict> {
     rising: riverRising(s.station, s.trend24h, s.metresPerUnit, s.rate3hM),
     now: f.asOfTs ?? s.latest.ts,
   });
-  const v: Tier = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
+  const lifted: Tier = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
+  // headline hold (lib/verdictHold.ts): a gauge that was at watch or above in the last 3 h keeps "watch"; never the official step
+  const v: Tier = lifted === "normal" ? heldTone(lifted, await getHold(s)) : lifted;
   // th / h whenever the forecast says a crossing is likely (or close), even when the tier stays the same: the home page lists them
   // Minor / Major are never "likely" (lib/forecastRules.mjs caps their chance at 30% / 10%): only an Alert crossing is listed as "Likely to reach".
   const strong = lift?.crossing && lift.crossing.threshold === "alert" && (lift.why === "likely" || lift.why === "close");

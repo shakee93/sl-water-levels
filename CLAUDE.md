@@ -254,6 +254,13 @@ These cost real debugging time. Future-you should not relearn them.
   threshold values and the rationale. Future tuning should update
   both the constants and the comments.
 
+- **Forecast display rules** (owner decisions 28 Oct 2026, `lib/forecastRules.mjs`, audit in the private `research/forecast-audit-workflow-2026-10-28.md`):
+  shown chance of Minor <= 30% and Major <= 10%, never "likely" for them (the model's own figures stay in `Forecast.rawCrossings` / `rawHorizons` for the
+  log); no forecast on `NO_FORECAST_GAUGES` (Ampara, Katharagama, Weraganthota); fast tributaries (`SHORT_FORECAST_GAUGES`) show the model only to 6 h;
+  a river falling over the last 3 h says "Falling" for the next 24 h (`dayFact` in `app/Forecast.tsx`, shared with the embed); ONE steady threshold
+  (`STEADY_M_PER_H`, a test fails on a private 0.006); Nagalagam Street's calm "watch" headline is held 3 h (`lib/verdictHold.ts`, evidence from the readings
+  and the D1 forecast log, never the official step). Official steps still alone drive verdicts and push.
+
 ## Don't-do list
 
 - Don't add a hardcoded unit suffix. Use `detectUnit()` from
