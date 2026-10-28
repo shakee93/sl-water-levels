@@ -256,7 +256,7 @@ export async function sample(o = {}) {
  * today's data: rain in the last 24 h, reservoirs spilling, the two rivers highest above their marks, and "Rivers right now".
  * Published oldest-first so "Rivers right now" ends up first on the profile grid. Live only through the same gate as the
  * normal run (IG_MODE=live + both secrets); otherwise each goes to Slack as a dry run. Each is claimed in ig_posts under
- * seed:<kind>:<day>, so a second run the same day posts nothing again. `preview` builds and prints them, touching nothing.
+ * seed:<kind>:<day>:<mode>, so a second run the same day posts nothing again (a dry run does not block the live one). `preview` builds and prints them, touching nothing.
  */
 export function seedItems(snap) {
   const us = snap.stations.filter((s) => tierLevel(s.status) != null && s.unit === "ft" && s.observedAt && typeof s.level === "number");
@@ -305,7 +305,7 @@ export async function seed(o = {}) {
     const url = imageUrl(site, item);
     out.push({ item, caption: c.text, url });
     if (preview) continue;
-    const dedupe = `${item.kind}:${day}`;
+    const dedupe = `${item.kind}:${day}:${g.mode}`; // a dry run must not use up the live posts
     if (!(await claim({ ts: now, day, kind: item.kind, format: "feed", situation: "seed", dedupe, mode: g.mode, caption: c.text, url }, query))) {
       log(`already posted today: ${dedupe}`);
       continue;
