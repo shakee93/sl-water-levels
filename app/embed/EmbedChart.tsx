@@ -24,8 +24,7 @@ export function EmbedChart({ chart, lang, station, accent, compact, noRange }: {
   const k = compact ? "compact" : "full";
   return (
     <div className="mt-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{chart.titles[compact ? 24 : hours]}</p>
+      <div className="flex items-center justify-end gap-2">
         {chart.has72 && !compact && !noRange && (
           <div role="radiogroup" aria-label="Range" className="inline-flex overflow-hidden rounded-md border border-slate-200 dark:border-slate-700 text-xs">
             {([24, 72] as const).map((h) => (

@@ -70,12 +70,6 @@ export default async function EmbedGuide({ params }: { params: Promise<{ lang: s
           {lang !== "en" && <p className="mt-1 text-xs text-slate-500">{t("common.machineTranslated")}</p>}
         </header>
 
-        <h2 className={sec}>{e("e.exampleH")}</h2>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{e("e.exampleNote")}</p>
-        <div className="mt-3 max-w-xl min-w-0">
-          <iframe src={`/embed/river/kalu-ganga${lang !== "en" ? `?lang=${lang}` : ""}`} title="Kalu Ganga live river levels" width="100%" height="560" loading="lazy" style={{ border: 0, width: "100%", display: "block" }} />
-        </div>
-
         <h2 id="builder" className={sec}>{e("e.howH")}</h2>
         <ol className="mt-2 list-decimal pl-5 space-y-1 text-sm">
           <li className={li}>{e("e.how1")}</li>

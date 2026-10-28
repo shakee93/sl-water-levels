@@ -7,7 +7,6 @@ type Row = Record<string, string>;
 const en = {
   // widget
   "w.poweredBy": "Powered by",
-  "w.riverNetData": "RiverNet data",
   "w.river": "{river} river levels",
   "w.live": "Live from",
   "w.openRiver": "Full {river} page on waterlevels.lk",
@@ -44,7 +43,7 @@ const en = {
   "w.updated": "Updated every few minutes",
   "w.hoursAgo": "{n} h ago",
   "w.hoursAhead": "+{n} h",
-  "w.fcLabel": "Forecast, not an official warning",
+  "w.fcWord": "Forecast",
   "w.fcNone": "No forecast for this gauge",
   "w.fcTitle": "Last {n} hours and the forecast for the next 24",
   "w.fcObserved": "Observed",
@@ -55,7 +54,6 @@ const en = {
   "w.fcHourSub1": "about {level} by {time}",
   "w.fcHourLabel": "Next hour",
   "w.fcDayLabel": "Next 24 hours",
-  "w.fcNote": "Experimental forecast from the river gauges and rain. Not an official warning.",
   "w.openForecast": "Full {gauge} page and forecast on waterlevels.lk",
   "w.nowAll": "All {n} gauges that are reporting are at Normal.",
   "w.nowSome": "{n} gauges at Alert or above, on {m} rivers.",
@@ -163,7 +161,7 @@ const en = {
 const si: typeof en = {
   ...en,
   "w.poweredBy": "බලගන්වන්නේ",
-  "w.riverNetData": "RiverNet දත්ත",
+  "w.fcWord": "අනාවැකිය",
   "w.river": "{river} ගඟේ මට්ටම්",
   "w.live": "සජීවීව",
   "w.openRiver": "waterlevels.lk හි {river} සම්පූර්ණ පිටුව",
@@ -223,7 +221,7 @@ const si: typeof en = {
 const ta: typeof en = {
   ...en,
   "w.poweredBy": "இயக்குவது",
-  "w.riverNetData": "RiverNet தரவு",
+  "w.fcWord": "முன்னறிவிப்பு",
   "w.river": "{river} ஆற்று நீர்மட்டங்கள்",
   "w.live": "நேரடி",
   "w.openRiver": "waterlevels.lk இல் {river} முழுப் பக்கம்",

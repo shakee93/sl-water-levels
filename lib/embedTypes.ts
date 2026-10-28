@@ -74,7 +74,7 @@ export type GaugePayload = Base & {
   chart: LChart | null;
 };
 /** The simple card: one gauge, verdict first. Same data as the gauge widget. */
-export type CardPayload = Omit<GaugePayload, "kind"> & { kind: "card"; /** "Forecast, not an official warning", shown by the next-hour line. */ forecastLabel: string | null };
+export type CardPayload = Omit<GaugePayload, "kind"> & { kind: "card" };
 export type TownPayload = Base & {
   kind: "town";
   title: string;

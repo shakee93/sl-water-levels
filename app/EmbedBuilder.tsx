@@ -4,7 +4,7 @@
 // Prefilled from the address (?w=river&id=kalu-ganga&unit=m ...), which is how every river, gauge and town page's "Embed this on your site"
 // button opens it. Labels are English for now (the page text around it follows the site language).
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, ChevronDown, Copy } from "lucide-react";
 import { DEFAULTS, FONTS, USES, WIDGETS, cfgQuery, fixedHeight, isWidget, parseCfg, type EmbedCfg, type Widget } from "@/lib/embedConfig";
 import { FONT_LABEL, styleOf } from "@/lib/embedStyle";
 import type { Locale } from "@/lib/i18n/config";
@@ -119,6 +119,7 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
   const [id, setId] = useState<string>(init.id ?? "");
   const [tickerBy, setTickerBy] = useState<"river" | "gauge">(init.gauge ? "gauge" : "river");
   const [wide, setWide] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(init.style === "1");
   const [pageBg, setPageBg] = useState("f1f5f9");
   const [script, setScript] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -255,8 +256,13 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
         {uses.unit && cfg.unit === "m" && <p className="text-xs text-slate-500 dark:text-slate-400">Levels and the official marks are shown in metres, as in the Department&apos;s bulletins (Nagalagam Street is converted).</p>}
 
         <div className="space-y-4 border-t border-slate-200 dark:border-slate-800 pt-4">
+          <button type="button" aria-expanded={styleOpen} aria-controls="embed-style" onClick={() => setStyleOpen((o) => !o)} className="flex w-full min-h-11 items-center justify-between gap-3 rounded-md text-left text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500">
+            Customise style
+            <ChevronDown className={`size-4 shrink-0 transition-transform ${styleOpen ? "rotate-180" : ""}`} aria-hidden />
+          </button>
+          <div id="embed-style" hidden={!styleOpen} className="space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <span className={field.replace("mb-1", "mb-0")}>Style</span>
+            <span className={field.replace("mb-1", "mb-0")}>Presets</span>
             <button type="button" onClick={() => setCfg((c) => ({ ...c, ...DEFAULT_STYLE }))} className="min-h-11 sm:min-h-9 px-2 text-xs font-medium text-sky-700 dark:text-sky-300 hover:underline">Reset to default</button>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -297,7 +303,8 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
             <Toggle label="Shadow" on={cfg.shadow} onChange={(v) => set("shadow", v)} />
             {(widget === "river" || widget === "now" || widget === "reservoirs") && <Toggle label="Widget title" on={cfg.title} onChange={(v) => set("title", v)} />}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">The step colours (Normal, Alert, Minor flood, Major flood) are fixed so they mean the same on every site. The credit line always stays visible.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">The step colours (Normal, Alert, Minor flood, Major flood) are fixed so they mean the same on every site. The Powered by link always stays visible.</p>
+          </div>
         </div>
       </div>
 

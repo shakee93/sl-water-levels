@@ -470,7 +470,7 @@ export function LevelChart({
                 <line x1="0" y1="3" x2="18" y2="3" stroke={BLUE} strokeWidth="2" strokeDasharray="5 3" />
               </svg>
               {t("chart.forecast")}
-              {fcEnd && fcEnd.ts - last.ts > 6 * HOUR && <span className="text-slate-500 dark:text-slate-400">{" · "}{t("chart.fcLess")}</span>}
+              {fcEnd && !embed && fcEnd.ts - last.ts > 6 * HOUR && <span className="text-slate-500 dark:text-slate-400">{" · "}{t("chart.fcLess")}</span>}
             </span>
           )}
           {!embed && <MyLevelControl station={station} unit={pu} current={my} t={t} />}

@@ -63,7 +63,7 @@ function ForecastView({ p }: { p: ForecastPayload }) {
         <Trend row={r} />
         {r.time && <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</span>}
       </p>
-      <p className={`mt-2 inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${p.noForecast ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" : "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200"}`}>{p.forecastLabel}</p>
+      {p.noForecast && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{p.forecastLabel}</p>}
       {(p.hour || p.day) && (
         <div className={`mt-3 grid gap-2 ${p.hour && p.day ? "grid-cols-1 min-[440px]:grid-cols-2" : ""}`}>
           {p.hour && (
@@ -118,7 +118,6 @@ function CardView({ p }: { p: CardPayload }) {
               {r.cross && <span className="font-semibold">· {r.cross}</span>}
             </p>
           )}
-          {full && r.next && p.forecastLabel && <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{p.forecastLabel}</p>}
           {full && p.bar && <MarksBar bar={p.bar} />}
           {full && p.chart && <EmbedChart chart={p.chart} lang={p.cfg.lang} station={p.row.key} accent={p.cfg.accent} compact />}
           {r.time && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 tabular-nums">{r.time}{r.age ? ` · ${r.age}` : ""}</p>}

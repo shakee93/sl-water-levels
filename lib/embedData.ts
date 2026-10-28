@@ -148,7 +148,6 @@ function credit(c: Ctx, path: string, _resv = false, rn: { any: boolean; all: bo
     live: c.e("w.poweredBy"),
     linkText: "waterlevels.lk",
     href: SITE + localePath(c.lang, path),
-    ...(rn.any ? { extra: { text: c.e("w.riverNetData"), href: "https://rivernet.lk" } } : {}),
   };
 }
 const rnOf = (rows: { rivernet: boolean }[]) => ({ any: rows.some((r) => r.rivernet), all: rows.length > 0 && rows.every((r) => r.rivernet) });
@@ -180,7 +179,11 @@ function barOf(s: NationalStation, nh: NextHour | null): GaugePayload["bar"] {
 }
 
 const chartDictFor = (lang: Locale): Record<string, string> =>
-  Object.fromEntries(Object.entries(DICTS[lang]).filter(([k]) => /^(chart|range|date|tier)\./.test(k)));
+  ({
+    ...Object.fromEntries(Object.entries(DICTS[lang]).filter(([k]) => /^(chart|range|date|tier)\./.test(k))),
+    // the embed says just "Forecast" (the site's own pages keep "Forecast (experimental)")
+    "chart.forecast": embedT(lang)("w.fcWord"),
+  });
 
 /** The data for the gauge page's own chart component. `fc`: forecast points (in the gauge's unit), or none. 72 h of readings are sent when the gauge allows it. */
 async function liveChart(
@@ -285,7 +288,7 @@ async function buildGauge(slug: string, c: Ctx, forCard = false): Promise<GaugeP
 /** The simple card: the gauge widget's data, drawn verdict-first. */
 async function buildCard(slug: string, c: Ctx): Promise<CardPayload | null> {
   const g = await buildGauge(slug, c, true);
-  return g ? { ...g, widget: "card", kind: "card", forecastLabel: g.row.next ? c.e("w.fcLabel") : null } : null;
+  return g ? { ...g, widget: "card", kind: "card" } : null;
 }
 
 const HOUR_ARROW: Record<string, Arrow> = { "dir.rising": "up", "dir.slow": "up", "dir.falling": "down", "dir.steady": "steady", "dir.tide": "steady" };
@@ -513,12 +516,11 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
       hour = {
         label: c.e("w.fcHourLabel"),
         title: word[L],
-        sub: lvl && f.unit != null ? (lo && hi && lo !== hi ? c.e("w.fcHourSub", { level: lvl, lo, hi, time }) : c.e("w.fcHourSub1", { level: lvl, time })) : null,
+        sub: lvl && f.unit != null ? (c.e("w.fcHourSub1", { level: lvl, time })) : null,
         arrow: tideOnly || r == null || Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "down" : "up",
       };
     }
     if (tone === "alert" || tone === "minor" || tone === "major") action = (ACTION[tone]?.[L] ?? null);
-    note = c.e("w.fcNote");
   } else if (!stale && ["alert", "minor", "major"].includes(nat.tier)) {
     action = ACTION[nat.tier as VerdictTone]?.[L] ?? null;
   }
@@ -544,7 +546,7 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     action,
     note,
     chart,
-    forecastLabel: hasForecast ? c.e("w.fcLabel") : c.e("w.fcNone"),
+    forecastLabel: hasForecast ? "" : c.e("w.fcNone"),
     noForecast: !hasForecast,
   };
 }
