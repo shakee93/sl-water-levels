@@ -62,6 +62,8 @@ import type { Tier } from "./status";
 import { isTidalStation, liftVerdict } from "./verdictLift.ts";
 import type { Unit } from "./units";
 // @ts-ignore node strip-types needs explicit extensions
+import { hasNoForecast } from "./forecastRules.mjs";
+// @ts-ignore node strip-types needs explicit extensions
 import { officialReleaseAlert } from "./releaseAlert.ts";
 
 /** Owner decision 26 Oct 2026: "Get ready" is the gauge's official alert level. Releases and rising canals no longer lift a town to it early. */
@@ -515,6 +517,9 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
       day = { key: "n24.stay", vars: {} };
     } else if (tone === "watch") {
       day = { key: "n24.watch", vars: {} };
+    } else if (tone === "normal" && gauge && hasNoForecast(gauge.station)) {
+      // Ampara, Katharagama, Weraganthota: unusable readings, so no "no flooding expected" either (lib/forecastRules.mjs)
+      day = { key: "n24.noGauge", vars: {} };
     } else if (tone === "normal") {
       // no rain feed: say so rather than promise a dry day
       day = rain ? { key: "n24.none", vars: {} } : { key: "n24.riverOnly", vars: {} };

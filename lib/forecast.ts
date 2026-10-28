@@ -41,7 +41,7 @@ import stormModelJson from "./model/storm-model.json";
 import stormV4Json from "./model/storm-model-v4.json";
 import type { GsmapFile, GsmapGauge } from "./gsmap";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
-import { shownChance, shownWording } from "./forecastRules.mjs";
+import { hasNoForecast, shownChance, shownWording } from "./forecastRules.mjs";
 import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { isStormHour4, rainTotals, stormFeatures, stormFeatures4, tier4Bin, v4Rain } from "./model/stormModel.mjs";
@@ -147,6 +147,10 @@ export type Forecast = {
    * (/api/forecasts), so calibration can be refitted; never shown. Absent on trend-only and empty forecasts.
    */
   rawCrossings?: Forecast["crossings"];
+  /** True for a gauge that shows no forecast because its data is unusable (lib/forecastRules.mjs NO_FORECAST_GAUGES): level and official step only. */
+  noForecast?: boolean;
+  /** Longest horizon (hours) this gauge's forecast is allowed to show (fast tributaries: 6); null/absent = no limit. */
+  horizonLimitH?: number | null;
   /** GloFAS flag. null = no GloFAS for this basin or the feed failed. */
   outlook: "normal" | "elevated" | null;
   headline: string;
@@ -198,6 +202,8 @@ export type ForecastInput = {
 // Forecast and StationCard (the chart) both ask for the same forecast in one render: compute it once.
 export const loadForecast = cache(async function loadForecast(basin: string, snapshot: BasinStation[], station: string): Promise<Forecast> {
   const key = normaliseBasin(basin);
+  // a gauge that shows no forecast needs no weather fetch
+  if (hasNoForecast(station)) return makeForecast({ basin, snapshot, station, weather: null, glofas: null, gsmap: null });
   const covered = COEFFS[station] && normaliseBasin(COEFFS[station].basin) === key;
   // Rain is fetched for every gauge that has a grid (trend-only gauges show it too); GloFAS only matters to fitted models.
   const [weather, glofas, gsmap] = hasCatchment(key, station)
@@ -265,6 +271,13 @@ export function makeForecast(input: ForecastInput): Forecast {
   }
   const L0 = me.latest.water_level;
   const anchor = me.latest.ts;
+  // Ampara (stuck 0.00), Katharagama and Weraganthota (negative datum values): the level and the official step are shown, never a forecast.
+  if (hasNoForecast(station)) {
+    return {
+      ...emptyResult(station, unit, "No forecast for this gauge.", ["No forecast for this gauge: its readings are not reliable enough to predict from (data quality). The level and the official step are shown as reported."], trend, L0, anchor),
+      noForecast: true,
+    };
+  }
   if (isStale(me.latest, now)) {
     const hrs = Math.round((ageMinutes(me.latest, now) ?? 0) / 60);
     return emptyResult(station, unit, `No forecast: the latest reading is ${hrs} hours old.`, [`Latest reading is ${hrs}h old (limit ${STALE_MINUTES / 60}h), too stale to forecast.`], trend, L0, anchor);

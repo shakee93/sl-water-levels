@@ -111,6 +111,9 @@ export function forecastFact(f: ForecastT, tier: string, now: number): { fact: T
   return { fact: null, target: -1 };
 }
 
+/** A gauge whose readings are unusable (lib/forecastRules.mjs NO_FORECAST_GAUGES): the card shows the level and the step and says so. si / ta: DRAFT translations. */
+export const NO_FORECAST_FACT: T3 = { en: "No forecast for this gauge", si: "මෙම මානය සඳහා පුරෝකථනයක් නැත", ta: "இந்த அளவிக்கு முன்னறிவிப்பு இல்லை" };
+
 export const TIDE_RISE: T3 = {
   en: "Rising with the tide (about the same once the tide is allowed for)",
   si: "වඩින මුහුදු රැළි සමඟ ඉහළ යයි (රැළි සලකා බැලූ විට පාහේ එලෙසමයි)",
@@ -172,7 +175,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const tidal = isTidalStation(selectedStation);
   const rising = !stale && riverRising(selectedStation, me?.trend24h, mpu, me?.rate3hM ?? null);
   const tideOnly = tidal && !stale && r != null && r > STEADY_M_PER_H && !rising;
-  const direction: T3 | null = stale
+  const noFc = !!f.noForecast && !stale;
+  const direction: T3 | null = noFc
+    ? null
+    : stale
     ? latest && me?.ageMin != null
       ? (() => {
           const h = Math.max(1, Math.round(me.ageMin / 60));
@@ -225,6 +231,8 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const heavier = f.rainRisk != null || f.stormHorizons.length > 0;
   const fact: T3 | null = stale
     ? null
+    : noFc
+    ? NO_FORECAST_FACT
     : lift?.why === "small" && lift.crossing
       ? smallChanceFact(lift.crossing, lift.etaHours, heavier)
       : (forecastLine ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
@@ -370,7 +378,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         tide={tideOnly}
         factKind={!stale && fact && fact.en === "No flooding expected today" ? "ok" : "soon"}
         labels={
-          stale
+          stale || noFc
             ? undefined
             : {
                 direction: { en: "Next hour:", si: "ඊළඟ පැය:", ta: "அடுத்த மணி நேரம்:" },

@@ -9,6 +9,7 @@ import {
   STEADY_M_PER_H, isFalling3h,
 } from "../lib/forecastRules.mjs";
 import { liftVerdict, chanceWords } from "../lib/verdictLift.ts";
+import { assessTown } from "../lib/townRisk.ts";
 import { groupOf, FAST_TRIBUTARIES as SB_FAST } from "../lib/forecastScoreboard.mjs";
 
 // ---- 1. caps
@@ -50,6 +51,13 @@ assert.equal(groupOf("Ampara"), "none");
 assert.equal(groupOf("Hanwella"), "main");
 assert.equal(groupOf("Holombuwa"), "fast");
 assert.equal(groupOf("Padiyathalawa"), "other");
+
+// a town on one of them does not promise "No flooding expected today" either
+const g0 = { station: "Ampara", name: "Ampara", basin: "Gal Oya", tier: "normal", level: 0, unit: "ft", ts: 1, rate3hM: 0, km: 1 };
+const rain0 = { past6hMm: 0, past24hMm: 0, next6hMm: 0, next24hMm: 0, next24hP90Mm: null, next6hP90Mm: null };
+const t0 = { drainage: "riverbank", primary: g0, secondary: null, forecast: null, rain: rain0, release: null, warning: null, now: 1 };
+assert.equal(assessTown(t0).day.key, "n24.noGauge");
+assert.equal(assessTown({ ...t0, primary: { ...g0, station: "Hanwella", name: "Hanwella" } }).day.key, "n24.none", "other gauges unchanged");
 
 // ---- 3. fast tributaries
 assert.deepEqual(SB_FAST, FAST_TRIBUTARIES, "scoreboard and display share one list");

@@ -71,6 +71,7 @@ const en = {
   "n24.rainPossible": "Heavy rain possible, up to {mm} mm",
   "n24.stay": "Risk stays high",
   "n24.none": "No flooding expected today",
+  "n24.noGauge": "No forecast for this gauge",
   "n24.watch": "Check again in a few hours",
   "n24.riverOnly": "River looks calm; rain data is not available right now",
   "n24.unknown": "No estimate yet",
@@ -330,6 +331,7 @@ const si: D = {
   "n24.rainPossible": "දැඩි වැසි සිදු විය හැක, මි.මී. {mm} දක්වා",
   "n24.stay": "අවදානම ඉහළ මට්ටමක පවතී",
   "n24.none": "අද ගංවතුර අපේක්ෂා නොකෙරේ",
+  "n24.noGauge": "මෙම මානය සඳහා පුරෝකථනයක් නැත", // DRAFT
   "n24.watch": "පැය කිහිපයකින් නැවත පරීක්ෂා කරන්න",
   "n24.riverOnly": "ගඟ සන්සුන්ය; වැසි දත්ත දැනට නොමැත",
   "n24.unknown": "තවම ඇස්තමේන්තුවක් නැත",
@@ -587,6 +589,7 @@ const ta: D = {
   "n24.rainPossible": "கனமழை வாய்ப்பு, {mm} மி.மீ வரை",
   "n24.stay": "ஆபத்து அதிகமாகவே இருக்கும்",
   "n24.none": "இன்று வெள்ளம் எதிர்பார்க்கப்படவில்லை",
+  "n24.noGauge": "இந்த அளவிக்கு முன்னறிவிப்பு இல்லை", // DRAFT
   "n24.watch": "சில மணி நேரத்தில் மீண்டும் பாருங்கள்",
   "n24.riverOnly": "ஆறு அமைதியாக உள்ளது; மழைத் தரவு இப்போது இல்லை",
   "n24.unknown": "இன்னும் மதிப்பீடு இல்லை",
