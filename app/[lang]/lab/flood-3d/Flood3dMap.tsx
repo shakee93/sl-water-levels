@@ -68,6 +68,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const cv = useRef<{ out: HTMLCanvasElement; img: ImageData; lut: Uint8ClampedArray } | null>(null);
   const up = useRef<{ W2: number; H2: number; L2: Float32Array; hw2: Uint8Array; fl: Uint8Array; cls2: Uint8Array; band2: Uint8Array } | null>(null);
   const shown = useRef(3); // level currently drawn (animated)
+  const shownBoost = useRef(0); // Hanwella boost upstream currently drawn (animated with the level)
   const raf = useRef(0);
   const roadsRef = useRef(true);
   const addLocalRef = useRef<(() => void) | null>(null);
@@ -158,6 +159,13 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const rpI = rp ? Math.max(0, Math.min(rp.hours - 1, Math.round(rpIdx))) : 0;
   const level = embed && ditwah ? DITWAH_PEAK_FT : replayOn && rp ? rp.nag[rpI] / 100 : driver === "live" ? liveNag?.ft ?? 3.7 : driver === "nag" ? whatNag : hanwellaMToNagFt(whatHan * 0.3048, table);
   const lagH = live?.hanwellaLagH ?? 18;
+  // Upstream follows Hanwella. Nagalagam rises 12-18 h after Hanwella, so on a rising river the towns from Kaduwela to Ruwanwella were shown late.
+  // Hanwella's reading, converted to Nagalagam-equivalent ft (the same table as the Hanwella option), raises the water there when it is higher than
+  // Nagalagam; it never lowers it (the upstream picture was fitted on Nagalagam at the satellite times: 30 Nov Hanwella 10.8 m -> 7.4 ft = Nagalagam 7.4,
+  // 3 Dec 5.2 m -> 4.1 ft < Nagalagam 4.6, so the falling limb keeps Nagalagam as fitted). West of Kaduwela nothing changes.
+  const liveHanFt = live?.hanwella ? (live.hanwella.fastFt ?? live.hanwella.levelFt) : null;
+  const upLevel = embed && ditwah ? null : replayOn && rp ? (rp.han?.[rpI] != null ? hanwellaMToNagFt(rp.han[rpI] / 10, table) : null) : driver === "live" && liveHanFt != null ? hanwellaMToNagFt(liveHanFt * 0.3048, table) : null;
+  const upBoost = upLevel != null ? Math.max(0, upLevel - level) : 0;
   const isLive = driver === "live" && !replayOn && !(embed && ditwah);
   const nearShot = replayOn && rp ? rp.shots.find((x) => Math.abs(x.h - rpI) <= 6) ?? null : null;
 
@@ -201,7 +209,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   }, []);
 
   // ---- render the water canvas for a level
-  const draw = useCallback((lv: number) => {
+  const draw = useCallback((lv: number, boost = 0) => {
     const u = up.current, c = cv.current, m = meta.current;
     if (!u || !c || !m) return;
     const { W2, H2, L2, hw2, fl, cls2, band2 } = u;
@@ -213,6 +221,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     const tableFor = (hwx10: number) => { let t = tables.get(hwx10); if (!t) { t = new Uint8Array(420); for (let k = 0; k < 420; k++) { const ch = chanceClass(pWet(k / 10 + 2, hwx10 / 10, gs!), m.chance_calibration).cls; t[k] = ch === "low" ? 1 : ch === "medium" ? 2 : ch === "high" ? 3 : 0; } tables.set(hwx10, t); } return t; };
     const kBand = lv >= 7 ? 2 : lv >= 5 ? 1 : lv >= 4 ? 0 : -1; // plain elevation bands: alert 0-1 m, minor 0-2 m, major 0-3 m
     const lut = c.lut;
+    // per-column share of the Hanwella boost: 0 west of 79.98 E (Kaduwela), 1 from 80.08 E (Hanwella) eastwards
+    const colW = new Float32Array(W2);
+    for (let x = 0; x < W2; x++) { const lon = m.png.west + ((x + 0.5) / W2) * (m.png.east - m.png.west); colW[x] = Math.min(1, Math.max(0, (lon - 79.98) / 0.1)); }
     for (let y = 0, i = 0; y < H2; y++) {
       for (let x = 0; x < W2; x++, i++) {
         const f = fl[i];
@@ -232,7 +243,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
         } else if (plain) {
           if (band2[i] <= kBand) { r = 99; g = 102; b = 241; a = 120; }
         } else {
-          const d = lv - L2[i];
+          const d = lv + colW[x] * boost - L2[i];
           if (d >= 0) {
             const k = Math.min(256, (d * 32) | 0) * 4;
             r = lut[k]; g = lut[k + 1]; b = lut[k + 2]; a = lut[k + 3];
@@ -261,16 +272,17 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   useEffect(() => {
     if (!ready) return;
     cancelAnimationFrame(raf.current);
+    const fromB = shownBoost.current, toB = upBoost;
     const from = shown.current, to = level, t0 = performance.now(), dur = Math.abs(to - from) < 0.03 ? 0 : replayRef.current ? 220 : 1400;
     const step = (t: number) => {
       const k = dur ? Math.min(1, (t - t0) / dur) : 1, e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      shown.current = from + (to - from) * e;
-      draw(shown.current); paintRoads(shown.current);
+      shown.current = from + (to - from) * e; shownBoost.current = fromB + (toB - fromB) * e;
+      draw(shown.current, shownBoost.current); paintRoads(shown.current);
       if (k < 1) raf.current = requestAnimationFrame(step);
     };
     raf.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf.current);
-  }, [ready, level, draw, paintRoads]);
+  }, [ready, level, upBoost, draw, paintRoads]);
 
   // ---- layer toggles
   useEffect(() => { roadsRef.current = roadsOn; });
