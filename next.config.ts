@@ -82,6 +82,8 @@ const nextConfig: NextConfig = {
       { source: `${l}/reservoirs/:slug`, headers },
       { source: `${l}/news`, headers },
     ])).concat([
+      // /api/embed would otherwise match the /<river>/<gauge> rule above (60 s): the widgets' data gets the longer embed window
+      { source: "/api/embed", headers: [{ key: "Vercel-CDN-Cache-Control", value: EMBED_CDN }, { key: "CDN-Cache-Control", value: EMBED_CDN }] },
       // sitemap renders on request (app/sitemap.ts): one copy an hour from the CDN
       { source: "/sitemap.xml", headers: [{ key: "Vercel-CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }, { key: "CDN-Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" }] },
     ]);
