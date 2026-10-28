@@ -471,7 +471,8 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
   const row = rowOf(nat, c, null, { withMarks: false });
   const stale = nat.tier === "stale";
   const model = !!f && f.method === "model" && f.status !== "unavailable" && f.horizons.length > 0;
-  const hasForecast = !!f && f.method !== "none" && f.status !== "unavailable";
+  // RiverNet gauges are 1-minute extras with no fitted model: no forecast is claimed for them
+  const hasForecast = !!f && f.method !== "none" && f.status !== "unavailable" && nat.source !== "rivernet";
   const unit = nat.unit;
   const want = c.cfg.unit;
   const rel = await getReleases().catch(() => null);
