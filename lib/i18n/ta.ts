@@ -309,6 +309,7 @@ export const ta: Dict = {
   "share.telegram": "Telegram",
   "share.close": "மூடு",
   "share.preparing": "படம் உருவாகிறது…",
+  "share.toApps": "பகிர்…",
   "share.imageFailed": "படத்தை உருவாக்க முடியவில்லை. இணைப்பைப் பகிரலாம்.",
   "share.imageAlt": "பகிரும் படத்தின் முன்னோட்டம்",
   "share.downloaded": "படம் சேமிக்கப்பட்டது",

@@ -5,7 +5,7 @@
 // the picture (Story or Square), WhatsApp, Facebook, X, Telegram, Copy link, Download image. The picture comes from /api/story (our own
 // server, CDN-cached 5 minutes); nothing personal is ever added to it.
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, MessageCircle, Send, Share2, X as XIcon } from "lucide-react";
+import { Check, Copy, Download, Loader2, MessageCircle, Send, Share2, X as XIcon } from "lucide-react";
 import { useI18n } from "./LocaleProvider";
 import { trackEvent } from "@/lib/umami";
 import { storyPath, timeBucket, type StoryFormat, type StoryKind } from "@/lib/story/url";
@@ -14,8 +14,10 @@ const ring =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-slate-900";
 const iconBtn =
   "inline-flex items-center justify-center gap-1.5 h-11 sm:h-9 min-w-11 px-3 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors";
-const action =
-  "flex min-h-12 items-center gap-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 px-3 text-sm font-medium text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800";
+const actionBase = "flex min-h-12 items-center gap-2.5 rounded-lg border px-3 text-sm font-medium";
+const action = `${actionBase} border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800`;
+// the one main button of the sheet (its own colours, never mixed with action's, so dark mode cannot grey it out)
+const primary = `${actionBase} col-span-2 justify-center border-sky-600 bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-60`;
 
 export type StoryRef = { kind: StoryKind; slug: string };
 
@@ -29,6 +31,9 @@ function canShareFiles(): boolean {
   }
 }
 
+/** A phone or tablet: only there does the button go straight to the system share sheet (on a computer the sheet below is clearer). */
+const isTouch = () => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches === true;
+
 export function ShareControl({ href, name, text, story, iconOnlyOnMobile = true }: { href: string; name: string; text: string; story: StoryRef; iconOnlyOnMobile?: boolean }) {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
@@ -37,39 +42,41 @@ export function ShareControl({ href, name, text, story, iconOnlyOnMobile = true 
   const [imgState, setImgState] = useState<"loading" | "ok" | "failed">("loading");
   const closeRef = useRef<HTMLButtonElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const prefetched = useRef<Promise<Blob> | null>(null);
+  // the sheet's own "Share to apps" button: the picture shown is fetched as a file first, so the tap can share it at once
+  const [sheetFile, setSheetFile] = useState<{ format: string; file: File } | null>(null);
+  const [nativeOk, setNativeOk] = useState(false);
 
   const pageUrl = () => window.location.origin + href;
   const imgPath = (f: StoryFormat) => storyPath(story.kind, story.slug, { format: f, lang, t: timeBucket() });
   const fullText = () => `${text} ${t("share.liveWord")} ${pageUrl()}`;
 
-  // the picture is fetched when the finger goes down, so it is usually there by the time the tap completes (share() needs the tap's permission)
-  function warm() {
-    if (prefetched.current || !canShareFiles()) return;
-    prefetched.current = fetch(imgPath("story")).then((r) => {
-      if (!r.ok) throw new Error("image");
-      return r.blob();
-    });
-    prefetched.current.catch(() => (prefetched.current = null));
-  }
-
-  async function onShare() {
-    if (canShareFiles()) {
-      try {
-        const blob = await (prefetched.current ?? (warm(), prefetched.current!));
-        const file = new File([blob], `waterlevels-${story.slug}.png`, { type: "image/png" });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], text: `${text} ${t("share.liveWord")}`, url: pageUrl() });
-          trackEvent("story_share", { kind: story.kind, format: "story", method: "share" });
-          return;
-        }
-      } catch (e) {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        prefetched.current = null;
-      }
-    }
+  function onShare() {
     setImgState("loading");
     setOpen(true);
+  }
+
+  useEffect(() => {
+    if (open) setNativeOk(canShareFiles() && isTouch());
+  }, [open]);
+
+  function onImgLoad() {
+    setImgState("ok");
+    if (!nativeOk) return;
+    const f = format;
+    fetch(imgPath(f))
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error("image"))))
+      .then((b) => setSheetFile({ format: f, file: new File([b], `waterlevels-${story.slug}-${f}.png`, { type: "image/png" }) }))
+      .catch(() => {});
+  }
+
+  async function shareFromSheet() {
+    if (!sheetFile || sheetFile.format !== format) return;
+    try {
+      await navigator.share({ files: [sheetFile.file], text: `${text} ${t("share.liveWord")}`, url: pageUrl() });
+      trackEvent("story_share", { kind: story.kind, format, method: "share" });
+    } catch {
+      /* cancelled or refused: the other buttons are still there */
+    }
   }
 
   useEffect(() => {
@@ -98,7 +105,7 @@ export function ShareControl({ href, name, text, story, iconOnlyOnMobile = true 
   }
 
   const u = () => encodeURIComponent(pageUrl());
-  const links: { key: string; label: string; href: string; icon: React.ReactNode }[] = open
+  const links: { key: string; label: string; href: string; icon: React.ReactNode }[] = open && !nativeOk
     ? [
         { key: "whatsapp", label: t("verdict.whatsapp"), href: `https://wa.me/?text=${encodeURIComponent(fullText())}`, icon: <MessageCircle className="size-5" aria-hidden /> },
         { key: "facebook", label: t("share.facebook"), href: `https://www.facebook.com/sharer/sharer.php?u=${u()}`, icon: <span className="grid size-5 place-items-center rounded-full bg-[#1877f2] text-[13px] font-bold leading-none text-white" aria-hidden>f</span> },
@@ -109,7 +116,7 @@ export function ShareControl({ href, name, text, story, iconOnlyOnMobile = true 
 
   return (
     <>
-      <button ref={trigger} type="button" onPointerDown={warm} onClick={onShare} aria-haspopup="dialog" aria-expanded={open} data-share-button className={`${iconBtn} ${ring}`}>
+      <button ref={trigger} type="button" onClick={onShare} aria-haspopup="dialog" aria-expanded={open} data-share-button className={`${iconBtn} ${ring}`}>
         <Share2 className="size-5" aria-hidden />
         <span className={iconOnlyOnMobile ? "hidden sm:inline" : ""}>{t("verdict.share")}</span>
         {iconOnlyOnMobile && <span className="sm:hidden sr-only">{t("verdict.share")}</span>}
@@ -139,12 +146,17 @@ export function ShareControl({ href, name, text, story, iconOnlyOnMobile = true 
                 {imgState === "loading" && <p className="absolute inset-0 grid place-items-center text-xs text-slate-500 dark:text-slate-400" role="status">{t("share.preparing")}</p>}
                 {imgState === "failed" && <p className="absolute inset-0 grid place-items-center p-3 text-center text-xs text-slate-600 dark:text-slate-300">{t("share.imageFailed")}</p>}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img key={format} src={imgPath(format)} alt={t("share.imageAlt")} width={format === "story" ? 1080 : 1080} height={format === "story" ? 1920 : 1080} onLoad={() => setImgState("ok")} onError={() => setImgState("failed")} className={`h-full w-full rounded-md object-contain ${imgState === "ok" ? "" : "opacity-0"}`} />
+                <img key={format} src={imgPath(format)} alt={t("share.imageAlt")} width={format === "story" ? 1080 : 1080} height={format === "story" ? 1920 : 1080} onLoad={onImgLoad} onError={() => setImgState("failed")} className={`h-full w-full rounded-md object-contain ${imgState === "ok" ? "" : "opacity-0"}`} />
               </div>
             </div>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <a href={imgPath(format)} download={`waterlevels-${story.slug}-${format}.png`} onClick={() => trackEvent("story_share", { kind: story.kind, format, method: "download" })} className={`${action} col-span-2 justify-center bg-sky-600 text-white border-sky-600 hover:bg-sky-700 dark:bg-sky-600 ${ring}`} style={{ color: "#fff" }}>
+              {nativeOk && (
+                <button type="button" onClick={shareFromSheet} disabled={sheetFile?.format !== format} className={`${primary} ${ring}`}>
+                  {sheetFile?.format === format ? <Share2 className="size-5" aria-hidden /> : <Loader2 className="size-5 animate-spin" aria-hidden />} {t("share.toApps")}
+                </button>
+              )}
+              <a href={imgPath(format)} download={`waterlevels-${story.slug}-${format}.png`} onClick={() => trackEvent("story_share", { kind: story.kind, format, method: "download" })} className={`${nativeOk ? `${action} col-span-2 justify-center` : primary} ${ring}`} style={nativeOk ? undefined : { color: "#fff" }}>
                 <Download className="size-5" aria-hidden /> {t("share.download")}
               </a>
               {links.map((l) => (

@@ -315,6 +315,7 @@ export const en = {
   "share.telegram": "Telegram",
   "share.close": "Close",
   "share.preparing": "Making the image…",
+  "share.toApps": "Share…",
   "share.imageFailed": "The image could not be made. You can still share the link.",
   "share.imageAlt": "Preview of the picture to share",
   "share.downloaded": "Image saved",

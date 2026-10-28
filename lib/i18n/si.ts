@@ -309,6 +309,7 @@ export const si: Dict = {
   "share.telegram": "Telegram",
   "share.close": "වසන්න",
   "share.preparing": "රූපය සකසමින්…",
+  "share.toApps": "බෙදාගන්න…",
   "share.imageFailed": "රූපය සෑදිය නොහැකි විය. සබැඳිය තවමත් බෙදාගත හැක.",
   "share.imageAlt": "බෙදාගන්නා රූපයේ පෙරදසුන",
   "share.downloaded": "රූපය සුරැකිණි",
