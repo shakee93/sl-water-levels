@@ -12,14 +12,17 @@ import { getForecastRainAll, measuredAtGauge } from "@/lib/stationRain";
 import { liftVerdict, riverRising } from "@/lib/verdictLift";
 import { getReleases, releaseAffectingFrom, type ReleasesResult } from "@/lib/releases";
 import { officialReleaseAlert } from "@/lib/releaseAlert";
+import { shadowVariants } from "@/lib/shadowForecast";
 
 // Computed per request (no ISR): as an ISR route a failed background regeneration kept serving
 // one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
 // data calls are cached in lib/arcgis.ts; the CDN still absorbs repeat hits for 60 s.
 export const maxDuration = 60;
 
-export async function GET() {
+export async function GET(request: Request) {
   await connection();
+  // Candidate forecasts (lib/shadowForecast.ts) are logged only: returned when asked for (?shadow=1, the hourly store job), never shown anywhere.
+  const withShadow = new URL(request.url).searchParams.get("shadow") === "1";
   const national = await getNational();
   const basins = [...new Set(national.map((s) => s.basin))];
   // Rain logged with each run (d1/0009_forecast_rain.sql): the 6 h figures and p90 from the cached weather fetch, the satellite file, the gauge itself.
@@ -85,6 +88,7 @@ export async function GET() {
           satellite: g ? { mm6h: g.mm6h, mm24h: g.mm24h } : null,
           outlook: f.outlook,
           horizons: f.horizons,
+          ...(withShadow ? { shadows: shadowVariants(f, s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level }))) } : {}),
           crossings: f.crossings,
           observations: s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level, rain: r.rain_fall })),
         });

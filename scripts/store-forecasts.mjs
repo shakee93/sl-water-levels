@@ -8,6 +8,7 @@
 // reading insert nothing. Observations are keyed by (station, ts).
 
 import { readFile, writeFile } from "node:fs/promises";
+import { splitSql } from "../lib/d1Sql.mjs";
 
 const [input, output] = process.argv.slice(2);
 if (!input || !output) {
@@ -32,8 +33,10 @@ if (newestIssued && Date.now() - newestIssued > 3 * 3600_000) {
   console.error(`stale forecasts: newest issuedAt ${new Date(newestIssued).toISOString()}`);
   process.exit(1);
 }
-const sql = [];
+// Shadow forecasts (lib/shadowForecast.ts, d1/0016): the table is created on first use, so no separate migration step.
+const sql = splitSql(await readFile(new URL("../d1/0016_forecast_shadow.sql", import.meta.url), "utf8")).map((x) => x + ";");
 let points = 0;
+let shadowPoints = 0;
 let obs = 0;
 
 for (const r of data.runs ?? []) {
@@ -56,6 +59,14 @@ for (const r of data.runs ?? []) {
     );
     points++;
   }
+  for (const v of r.shadows ?? []) {
+    for (const h of v.horizons ?? []) {
+      sql.push(
+        `INSERT OR IGNORE INTO forecast_shadow_points (station, issued_at, variant, horizon_h, target_ts, level, low, high) VALUES (${[r.station, r.issuedAt, v.variant, h.h, h.ts, h.level, h.low, h.high].map(q).join(", ")});`,
+      );
+      shadowPoints++;
+    }
+  }
   for (const c of r.crossings ?? []) {
     sql.push(
       `INSERT OR IGNORE INTO forecast_crossings (run_id, threshold, level, probability, eta_ts, wording) SELECT ${runId}, ${q(c.threshold)}, ${q(c.level)}, ${q(c.probability)}, ${q(c.etaTs)}, ${q(c.wording)} WHERE ${runId} IS NOT NULL;`,
@@ -70,4 +81,4 @@ for (const r of data.runs ?? []) {
 }
 
 await writeFile(output, sql.join("\n") + "\n");
-console.log(`${data.runs?.length ?? 0} runs, ${points} points, ${obs} observations -> ${output}; errors: ${data.errors?.length ?? 0}`);
+console.log(`${data.runs?.length ?? 0} runs, ${points} points, ${obs} observations, ${shadowPoints} shadow points -> ${output}; errors: ${data.errors?.length ?? 0}`);
