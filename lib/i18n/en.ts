@@ -109,6 +109,8 @@ export const en = {
   "common.loading": "Loading",
   "common.updated": "Updated {time}",
   "common.readingAt": "Reading at {time}",
+  "level.info": "{level} is the height of the river at the {gauge} gauge, read on the gauge's own measuring scale. It is not how deep the water is on the streets. What matters is how close it is to the flood marks below: alert, minor flood and major flood.",
+  "level.infoAria": "What does this number mean?",
   "common.noReading": "No reading",
   "common.officialWarning": "Official warning:",
   "common.englishNote": "(English)",

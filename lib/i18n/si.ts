@@ -104,6 +104,8 @@ export const si: Dict = {
   "common.loading": "පූරණය වෙමින්",
   "common.updated": "යාවත්කාලීන කළේ {time}",
   "common.readingAt": "{time} කියවීම",
+  "level.info": "{level} යනු {gauge} මානයේ ගඟේ උස, මානයේම මිනුම් පරිමාණයෙන් කියවූ අගයයි. එය වීදිවල ජලය කොතරම් ගැඹුරුද යන්න නොවේ. වැදගත් වන්නේ එය පහත ගංවතුර සලකුණුවලට (අනතුරු ඇඟවීම, සුළු ගංවතුර, බරපතල ගංවතුර) කොතරම් ළඟද යන්නයි.",
+  "level.infoAria": "මෙම අංකයේ තේරුම කුමක්ද?",
   "common.noReading": "කියවීමක් නැත",
   "common.officialWarning": "නිල අනතුරු ඇඟවීම:",
   "common.englishNote": "(ඉංග්‍රීසියෙන්)",

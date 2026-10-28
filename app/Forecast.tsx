@@ -396,6 +396,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         office={dc ? { label: t("common.callDmcOffice", { district: dc.district }), tel: dc.tel } : null}
         footer={footer}
         level={levelText}
+        levelInfo={levelText ? t("level.info", { level: levelText, gauge: name }) : null}
         gauge={
           !stale && level != null && me
             ? { tone, level, next24: f.horizons.find((h) => h.h === 24)?.level ?? null, unit, thresholds: me.thresholds }

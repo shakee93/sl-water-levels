@@ -238,6 +238,32 @@ function Tile({ data, label, text, Icon, chip, className }: { data: string; labe
   );
 }
 
+/** (i) beside the big level: tap or click opens a short plain explanation under the number; outside tap or Escape closes it. */
+function LevelInfo({ text, label }: { text: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", away); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  return (
+    <span ref={box} className="relative inline-flex">
+      <button type="button" aria-label={label} aria-expanded={open} onClick={() => setOpen((o) => !o)} className={`inline-flex size-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 ${ring}`}>
+        <Info className="size-5" aria-hidden />
+      </button>
+      {open && (
+        <span role="note" className="absolute right-0 top-full z-20 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 text-left text-sm font-normal leading-snug text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function VerdictCard({
   tone,
   verdict,
@@ -252,6 +278,7 @@ export function VerdictCard({
   office,
   footer,
   level,
+  levelInfo,
   gauge,
   share,
   note,
@@ -277,6 +304,8 @@ export function VerdictCard({
   footer: React.ReactNode;
   /** Current level with unit, shown large beside the verdict. */
   level?: string | null;
+  /** What the big number is, in plain words (an (i) button beside it opens it): most visitors do not know a gauge reading. */
+  levelInfo?: string | null;
   /** Horizontal gauge data; omitted when the gauge has no flood levels or no reading. */
   gauge?: React.ComponentProps<typeof LevelGauge> | null;
   share: { href: string; name: string; text: string };
@@ -309,9 +338,12 @@ export function VerdictCard({
             {verdict[lang]}
           </h2>
           {level && (
-            <p className="shrink-0 text-right leading-tight">
-              <span className="block text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900 dark:text-slate-50">{level}</span>
-            </p>
+            <div className="relative shrink-0 text-right leading-tight">
+              <p className="flex items-center justify-end gap-1.5">
+                <span className="text-2xl sm:text-3xl font-semibold tabular-nums text-slate-900 dark:text-slate-50">{level}</span>
+                {levelInfo && <LevelInfo text={levelInfo} label={t("level.infoAria")} />}
+              </p>
+            </div>
           )}
         </div>
 
