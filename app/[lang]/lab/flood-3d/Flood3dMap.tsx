@@ -1058,8 +1058,9 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en" }: { t
             className={`absolute inset-x-0 bottom-0 z-10 flex flex-col rounded-t-2xl md:inset-x-auto md:bottom-11 md:right-3 md:top-16 md:w-80 md:rounded-xl h-[var(--sh)] md:h-auto ${GLASS}`}
             style={{ ["--sh" as string]: `${sheetPx ?? sheetHeights()[snap]}px`, paddingBottom: "env(safe-area-inset-bottom, 0px)", transition: dragRef.current ? "none" : "height .2s ease" }}
           >
-            <div className="flex shrink-0 items-center justify-between px-3 pt-1.5">
-              <button type="button" aria-label={tr("Options")} onPointerDown={onSheetDown} onPointerMove={onSheetMove} onPointerUp={onSheetUp} className="mx-auto flex h-5 w-16 touch-none items-center justify-center md:hidden"><span className="h-1 w-9 rounded-full bg-slate-300 dark:bg-slate-600" /></button>
+            <div className="flex shrink-0 items-center justify-between md:px-3 md:pt-1.5">
+              {/* phones: the whole top strip (full width, 44 px tall) is the grab area; drag to resize, tap to step through the sizes */}
+              <button type="button" aria-label={tr("Options")} onPointerDown={onSheetDown} onPointerMove={onSheetMove} onPointerUp={onSheetUp} onPointerCancel={onSheetUp} className="flex h-11 w-full cursor-grab touch-none select-none flex-col items-center justify-center gap-1 rounded-t-2xl md:hidden"><span className="h-1.5 w-12 rounded-full bg-slate-400 dark:bg-slate-500" /><span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{tr("Options")}</span></button>
               <p className="hidden text-xs font-semibold md:block">{tr("Options")}</p>
               <button type="button" onClick={() => setPanelOpen(false)} aria-label={tr("Hide")} title={tr("Hide")} className="hidden size-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 md:flex"><PanelRightClose className="size-4" /></button>
             </div>
