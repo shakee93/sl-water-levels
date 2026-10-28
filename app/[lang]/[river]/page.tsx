@@ -26,6 +26,7 @@ import { FloodHistoryCard } from "@/app/history/FloodHistoryCard";
 import { RiverFloodMap } from "@/app/flood/OfficialFloodMap";
 import { AnswerLine, JsonLd } from "@/app/Answer";
 import { NextHourFaq } from "@/app/NextHour";
+import { EmbedLink } from "@/app/EmbedLink";
 import { riverAnswer, riverFaq } from "@/lib/answers";
 import { breadcrumbLd, webPageLd } from "@/lib/seo";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
@@ -306,6 +307,7 @@ export default async function BasinPage({
 
         <Suspense key={`news-${basin}`} fallback={null}><InTheNews lang={lang} basin={basin} /></Suspense>
 
+        <EmbedLink lang={lang} widget="river" id={river} />
         <Link
           href={p("/help")}
           className="mt-8 inline-flex items-center gap-1 min-h-11 text-sm text-slate-500 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition"

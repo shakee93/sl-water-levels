@@ -47,6 +47,7 @@ import { RiverMap } from "@/app/RiverMap";
 import { RiverReservoirs } from "@/app/reservoirs/RiverReservoirs";
 import { TownFloodMap } from "@/app/flood/OfficialFloodMap";
 import { Flood3dInline } from "@/app/flood/Flood3dInline";
+import { EmbedLink } from "@/app/EmbedLink";
 import { FLOOD3D_TOWNS } from "@/lib/flood3dCoverage";
 
 // Town pages are rendered per request and CDN-cached for 60 s (proxy.ts), never at build time: a build that had
@@ -221,6 +222,7 @@ export default async function TownPage({ params }: Params) {
         <TownFloodMap lang={lang} town={place.name} lat={place.lat} lon={place.lon} basin={g?.basin ?? null} />
 
         <p className="mt-8 text-center">
+          <EmbedLink lang={lang} widget="town" id={place.slug} />
           <Link
             href={p(g ? `/help?station=${encodeURIComponent(g.station)}` : "/help")}
             className="inline-flex items-center gap-1.5 min-h-11 px-2 text-sm text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"

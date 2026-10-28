@@ -24,6 +24,7 @@ import {
 } from "@/lib/arcgis";
 import { basinPath, resolveStation, stationPath, stationSlug } from "@/lib/slug";
 import { detectUnit, formatLevel } from "@/lib/units";
+import { EmbedLink } from "@/app/EmbedLink";
 import { StationPicker } from "@/app/StationPicker";
 import { StationFinder } from "@/app/StationFinder";
 import { StationCard } from "@/app/StationCard";
@@ -364,6 +365,8 @@ export default async function StationPage({
             <Suspense key={`news-${station}`} fallback={null}><InTheNews lang={lang} basin={basin} /></Suspense>
 
             <TownsOnGauge lang={lang} station={station} />
+
+            <EmbedLink lang={lang} widget="gauge" id={stationParam} />
 
             <Suspense key={`helplink-${station}`} fallback={null}>
               <StationHelpCard lang={lang} basin={basin} station={station} variant="link" />
