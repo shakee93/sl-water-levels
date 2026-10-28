@@ -154,7 +154,7 @@ assert.equal(run(parsePrefs({ news: true }), fresh, items, T0, noAreas).messages
 const m = pushText("en", "news", [], { headline: shortHeadline("Spill gates of Laxapana opened"), source: "Newswire" });
 assert.match(m.title, /^News: /);
 assert.match(m.body, /Newswire/);
-assert.match(m.body, /not an official warning/);
+assert.equal(m.body, "Reported by Newswire. Open to read."); // owner, 28 Oct: no "not an official warning" line on news alerts
 for (const lang of ["si", "ta"]) {
   const t = pushText(lang, "news", [], { headline: "X", source: "Newswire" });
   assert.ok(t.title.includes("X") && t.body.includes("Newswire") && !/\{/.test(t.title + t.body), lang);
