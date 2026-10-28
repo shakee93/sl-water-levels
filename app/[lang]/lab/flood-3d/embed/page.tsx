@@ -9,7 +9,7 @@ import Flood3dMap from "../Flood3dMap";
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  return { title: { absolute: "Flood map test (embed)" }, robots: { index: false, follow: false, nocache: true } };
+  return { title: { absolute: "Flood map (embed)" }, robots: { index: false, follow: false, nocache: true } };
 }
 
 const HIDE_CHROME = "body:has([data-f3d-embed-root]){padding-bottom:0!important;min-height:0!important;overflow:hidden}body:has([data-f3d-embed-root])>*:not(:has([data-f3d-embed-root])):not(script):not(style){display:none!important}body:has([data-f3d-embed-root])>div:has([data-f3d-embed-root]){min-height:0!important}";

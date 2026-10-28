@@ -819,7 +819,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   const header = (
     <div className="space-y-2">
       <div className="flex flex-nowrap items-center gap-x-2 overflow-x-auto whitespace-nowrap sm:gap-x-3 [&>*]:shrink-0">
-        <h1 className="shrink-0 text-sm font-semibold md:text-base tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map (test)")}</h1>
+        <h1 className="shrink-0 text-sm font-semibold md:text-base tracking-tight text-slate-900 dark:text-slate-100">{tr("Kelani flood map")}</h1>
         <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200" data-testid="flood3d-now" aria-live="polite">
           <span aria-hidden className="size-2 rounded-full" style={{ background: stepColor }} />
           {replayOn && rp ? (
@@ -838,12 +838,12 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
           <span className="hidden text-xs text-slate-600 dark:text-slate-300 sm:inline">{tr("Hanwella {ft} ft", { ft: f1(han.fastFt ?? han.levelFt) })}{han.fastFt != null ? ` ${tr("(10-min sensor)")}` : ""}</span>
         )}
         <button type="button" aria-expanded={infoOpen} onClick={() => setInfoOpen((v) => !v)} className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
-          <Info className="size-3.5" aria-hidden /> {tr("Test map")}
+          <Info className="size-3.5" aria-hidden /> {tr("Not official")}
         </button>
       </div>
       {infoOpen && (
         <p role="note" className="max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
-          <strong>{tr("Test map.")}</strong> {tr("Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.")} {tr("In an emergency call 117.")}
+          {tr("Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.")} {tr("In an emergency call 117.")}
         </p>
       )}
     </div>
@@ -1031,7 +1031,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
             <span className="text-[10px] text-slate-500 dark:text-slate-400">{tr("deep")}</span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
-            <p>{tr("Test map · river flooding only · not official")}</p>
+            <p>{tr("River flooding only · not official")}</p>
             <a href={fullHref()} target="_top" onClick={(e) => { e.currentTarget.href = fullHref(); }} className="inline-flex min-h-8 items-center gap-1 font-medium text-sky-700 underline underline-offset-2 dark:text-sky-300"><ExternalLink className="size-3.5" aria-hidden />{tr("Open the full flood map")}</a>
           </div>
         </div>

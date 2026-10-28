@@ -11,7 +11,7 @@ import acc from "@/public/flood3d/accuracy.json";
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   if (!isLocale(lang)) return {};
-  return { title: { absolute: "Flood map test (3D)" }, description: "Test map of low ground near the Kelani river.", robots: { index: false, follow: false, nocache: true } };
+  return { title: { absolute: "Flood map (3D)" }, description: "Map of low ground near the Kelani river.", robots: { index: false, follow: false, nocache: true } };
 }
 
 type Row = { fit_on: string; test_on: string; area: string; method: string; csi: number; hit: number; far: number };

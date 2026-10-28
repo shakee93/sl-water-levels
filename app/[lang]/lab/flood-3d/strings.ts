@@ -4,7 +4,6 @@
 export type Lang = "en" | "si" | "ta";
 
 const SI: Record<string, string> = {
-  "Test map.": "පරීක්ෂණ සිතියම.",
   "Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.": "මෙම ගං මට්ටමේදී ගංවතුර ඇතිවිය හැකි පහත් බිම් පිළිබඳ නිදර්ශනයකි (මීටර් 30 චන්ද්‍රිකා උස දත්ත). නිල ගංවතුර සිතියමක් නොවේ.",
   "In an emergency call 117.": "හදිසි අවස්ථාවකදී 117 අමතන්න.",
   "Where the Kelani could flood: Kelaniya first": "කැලණි ගඟෙන් ගංවතුර ඇතිවිය හැකි ස්ථාන: මුලින්ම කැලණිය",
@@ -152,7 +151,7 @@ const SI: Record<string, string> = {
   "Map data": "සිතියම් දත්ත",
   "Data: Copernicus GLO-30 elevation (ESA, free licence); Copernicus Emergency Management Service EMSR851 flood extents, contains modified Copernicus EMS information; map and roads © OpenStreetMap contributors (ODbL) via OpenFreeMap; terrain tiles Mapzen/AWS; rain: GSMaP (JAXA) and HMIS ground gauges; river levels Irrigation Department (ArcGIS) and HMIS via waterlevels.lk.": "දත්ත: Copernicus GLO-30 උස (ESA, නිදහස් බලපත්‍රය); Copernicus EMS EMSR851 ගංවතුර ප්‍රදේශ (වෙනස් කළ Copernicus EMS තොරතුරු අඩංගුයි); සිතියම සහ මාර්ග © OpenStreetMap දායකයින් (ODbL), OpenFreeMap හරහා; භූමි ටයිල් Mapzen/AWS; වැසි: GSMaP (JAXA) සහ HMIS බිම් මානක; ගං මට්ටම් වාරිමාර්ග දෙපාර්තමේන්තුව (ArcGIS) සහ HMIS, waterlevels.lk හරහා.",
   "Kelaniya": "කැලණිය",
-  "Kelani flood map (test)": "කැලණි ගංවතුර සිතියම (පරීක්ෂණ)",
+  "Kelani flood map": "කැලණි ගංවතුර සිතියම",
   "Live readings unavailable": "සජීවී කියවීම් නොමැත",
   "may be a few minutes old": "මිනිත්තු කිහිපයක් පරණ විය හැක",
   "Your browser cannot share its location.": "ඔබේ බ්‍රවුසරයට ස්ථානය බෙදාගත නොහැක.",
@@ -182,7 +181,7 @@ const SI: Record<string, string> = {
   "River now: normal, {ft} ft. This map shows river flooding only; rain and canal water on streets is not shown.": "ගඟ දැන්: සාමාන්‍යයි, අඩි {ft}. මෙම සිතියම පෙන්වන්නේ ගං ජලයෙන් වන ගංවතුර පමණි; වැසි සහ ඇළ ජලය වීදිවල පෙන්වන්නේ නැත.",
   "River now: {ft} ft, above normal. This map shows river flooding only; rain and canal water on streets is not shown.": "ගඟ දැන්: අඩි {ft}, සාමාන්‍යයට වඩා ඉහළයි. මෙම සිතියම පෙන්වන්නේ ගං ජලයෙන් වන ගංවතුර පමණි; වැසි සහ ඇළ ජලය වීදිවල පෙන්වන්නේ නැත.",
   "You're outside the covered area (Kelani corridor), about {km} km from Kelaniya.": "ඔබ ආවරණය වන ප්‍රදේශයෙන් (කැලණි ගං ඝාණ්ඩය) පිටත සිටී, කැලණියේ සිට කි.මී. {km} ක් පමණ.",
-  "Test map": "පරීක්ෂණ සිතියම",
+  "Not official": "නිල නොවේ",
   "Layers": "ස්ථර",
   "Legend": "සමුද්දේශය",
   "Live": "සජීවී",
@@ -212,7 +211,7 @@ const SI: Record<string, string> = {
   "Fills first (dark floods first)": "මුලින් පිරෙන තැන් (අඳුරු = මුලින්ම)",
   "floods first": "මුලින්ම",
   "floods last": "අන්තිමට",
-  "Test map · river flooding only · not official": "පරීක්ෂණ සිතියම · ගං ගංවතුර පමණි · නිල නොවේ",
+  "River flooding only · not official": "ගං ගංවතුර පමණි · නිල නොවේ",
   "Open the full flood map": "සම්පූර්ණ ගංවතුර සිතියම විවෘත කරන්න",
   "Ditwah peak ({ft} ft)": "ඩිට්වා උච්ච මට්ටම ({ft} අඩි)",
   "Cyclone Ditwah peak, 1 Dec 2025": "ඩිට්වා සුළි කුණාටුවේ උච්චය, 2025 දෙසැ. 1",
@@ -221,7 +220,6 @@ const SI: Record<string, string> = {
 };
 
 const TA: Record<string, string> = {
-  "Test map.": "சோதனை வரைபடம்.",
   "Illustration of low ground likely to flood at this river level, from 30 m satellite elevation. Not an official flood map.": "இந்த ஆற்று மட்டத்தில் வெள்ளம் வரக்கூடிய தாழ்நிலங்களின் விளக்கப்படம் (30 மீ செயற்கைக்கோள் உயரத் தரவு). அதிகாரப்பூர்வ வெள்ள வரைபடம் அல்ல.",
   "In an emergency call 117.": "அவசரநிலையில் 117 ஐ அழைக்கவும்.",
   "Where the Kelani could flood: Kelaniya first": "கெலனி ஆற்றால் எங்கு வெள்ளம் வரலாம்: முதலில் கெலனியா",
@@ -369,7 +367,7 @@ const TA: Record<string, string> = {
   "Map data": "வரைபடத் தரவு",
   "Data: Copernicus GLO-30 elevation (ESA, free licence); Copernicus Emergency Management Service EMSR851 flood extents, contains modified Copernicus EMS information; map and roads © OpenStreetMap contributors (ODbL) via OpenFreeMap; terrain tiles Mapzen/AWS; rain: GSMaP (JAXA) and HMIS ground gauges; river levels Irrigation Department (ArcGIS) and HMIS via waterlevels.lk.": "தரவு: Copernicus GLO-30 உயரம் (ESA, இலவச உரிமம்); Copernicus EMS EMSR851 வெள்ளப் பரப்புகள் (மாற்றப்பட்ட Copernicus EMS தகவல் உள்ளது); வரைபடம், சாலைகள் © OpenStreetMap பங்களிப்பாளர்கள் (ODbL), OpenFreeMap வழியாக; நிலப்பரப்பு Mapzen/AWS; மழை: GSMaP (JAXA), HMIS தரை நிலையங்கள்; ஆற்று மட்டங்கள் நீர்ப்பாசனத் திணைக்களம் (ArcGIS), HMIS, waterlevels.lk வழியாக.",
   "Kelaniya": "கெலனியா",
-  "Kelani flood map (test)": "கெலனி வெள்ள வரைபடம் (சோதனை)",
+  "Kelani flood map": "கெலனி வெள்ள வரைபடம்",
   "Live readings unavailable": "நேரடி அளவீடுகள் இல்லை",
   "may be a few minutes old": "சில நிமிடங்கள் பழையதாக இருக்கலாம்",
   "Your browser cannot share its location.": "உங்கள் உலாவியால் இருப்பிடத்தைப் பகிர முடியாது.",
@@ -399,7 +397,7 @@ const TA: Record<string, string> = {
   "River now: normal, {ft} ft. This map shows river flooding only; rain and canal water on streets is not shown.": "ஆறு இப்போது: இயல்பு, {ft} அடி. இந்த வரைபடம் ஆற்று வெள்ளத்தை மட்டுமே காட்டுகிறது; மழை மற்றும் கால்வாய் நீர் தெருக்களில் காட்டப்படாது.",
   "River now: {ft} ft, above normal. This map shows river flooding only; rain and canal water on streets is not shown.": "ஆறு இப்போது: {ft} அடி, இயல்பை விட அதிகம். இந்த வரைபடம் ஆற்று வெள்ளத்தை மட்டுமே காட்டுகிறது; மழை மற்றும் கால்வாய் நீர் தெருக்களில் காட்டப்படாது.",
   "You're outside the covered area (Kelani corridor), about {km} km from Kelaniya.": "நீங்கள் உள்ளடக்கப்பட்ட பகுதிக்கு (கெலனி ஆற்றுத் தாழ்வாரம்) வெளியே உள்ளீர்கள், கெலனியாவிலிருந்து சுமார் {km} கி.மீ.",
-  "Test map": "சோதனை வரைபடம்",
+  "Not official": "அதிகாரப்பூர்வமற்றது",
   "Layers": "அடுக்குகள்",
   "Legend": "குறிப்பு விளக்கம்",
   "Live": "நேரடி",
@@ -429,7 +427,7 @@ const TA: Record<string, string> = {
   "Fills first (dark floods first)": "முதலில் நிரம்பும் இடங்கள் (அடர் = முதலில்)",
   "floods first": "முதலில்",
   "floods last": "கடைசியில்",
-  "Test map · river flooding only · not official": "சோதனை வரைபடம் · ஆற்று வெள்ளம் மட்டும் · அதிகாரப்பூர்வமற்றது",
+  "River flooding only · not official": "ஆற்று வெள்ளம் மட்டும் · அதிகாரப்பூர்வமற்றது",
   "Open the full flood map": "முழு வெள்ள வரைபடத்தைத் திற",
   "Ditwah peak ({ft} ft)": "டிட்வா உச்சம் ({ft} அடி)",
   "Cyclone Ditwah peak, 1 Dec 2025": "டிட்வா புயல் உச்சம், 2025 டிச. 1",
