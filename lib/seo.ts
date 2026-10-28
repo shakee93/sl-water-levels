@@ -20,6 +20,9 @@ export const X_HANDLE: string | null = (() => {
   const h = (process.env.X_HANDLE ?? "").trim().replace(/^@/, "");
   return /^[A-Za-z0-9_]{1,15}$/.test(h) ? h : null;
 })();
+/** The site's Instagram account (created 28 Oct 2026; posting is switched by the IG_MODE repo variable, the link is always shown). */
+export const IG_HANDLE = "waterlevels.lk";
+export const IG_URL = `https://www.instagram.com/${IG_HANDLE}/`;
 export const REPO = "https://github.com/shakee93/sl-water-levels";
 export const DATA_BRANCH = `${REPO}/tree/data`;
 
@@ -51,7 +54,7 @@ export const publisherLd = () => ({
 export const websiteLd = (lang: Locale, description: string) => ({
   "@type": "WebSite",
   "@id": WEBSITE_ID,
-  ...(X_HANDLE ? { sameAs: [`https://x.com/${X_HANDLE}`] } : {}),
+  sameAs: [...(X_HANDLE ? [`https://x.com/${X_HANDLE}`] : []), IG_URL],
   // Google's site name (the line above the result title) comes from this. It showed "Vercel" for our vercel.app address
   // (26 Oct 2026): Google asks for the home page URL exactly, with its trailing slash, and an alternateName helps it pick ours.
   name: SITE_NAME,

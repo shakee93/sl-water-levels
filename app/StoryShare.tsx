@@ -31,6 +31,9 @@ function canShareFiles(): boolean {
   }
 }
 
+const NUDGE_AFTER_MS = 15_000;
+const NUDGE_SHOW_MS = 6_000;
+
 /** A phone or tablet: only there does the button go straight to the system share sheet (on a computer the sheet below is clearer). */
 const isTouch = () => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches === true;
 
@@ -45,12 +48,52 @@ export function ShareControl({ href, name, text, story, iconOnlyOnMobile = true 
   // the sheet's own "Share to apps" button: the picture shown is fetched as a file first, so the tap can share it at once
   const [sheetFile, setSheetFile] = useState<{ format: string; file: File } | null>(null);
   const [nativeOk, setNativeOk] = useState(false);
+  const [nudge, setNudge] = useState(false);
+
+  // A hand pointing inside the Share button (in place of its icon) once a visit: after NUDGE_AFTER_MS of the page being looked at (tab visible),
+  // shown only while the button is on screen, for NUDGE_SHOW_MS. Only the page's first Share button; never after a share.
+  useEffect(() => {
+    const btn = trigger.current;
+    if (!btn || document.querySelector("[data-share-button]") !== btn) return;
+    try {
+      if (sessionStorage.getItem("sl_share_nudge")) return;
+    } catch {
+      /* storage blocked: still nudge once for this page */
+    }
+    let seen = 0, last = Date.now(), inView = false, shown = false;
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    const io = new IntersectionObserver(([e]) => (inView = e.isIntersecting), { threshold: 1 });
+    io.observe(btn);
+    const tick = setInterval(() => {
+      const now = Date.now();
+      if (document.visibilityState === "visible") seen += now - last;
+      last = now;
+      if (shown || seen < NUDGE_AFTER_MS || !inView) return;
+      shown = true;
+      clearInterval(tick);
+      io.disconnect();
+      try {
+        sessionStorage.setItem("sl_share_nudge", "1");
+      } catch {}
+      setNudge(true);
+      hideTimer = setTimeout(() => setNudge(false), NUDGE_SHOW_MS);
+    }, 1000);
+    return () => {
+      clearInterval(tick);
+      io.disconnect();
+      clearTimeout(hideTimer);
+    };
+  }, []);
 
   const pageUrl = () => window.location.origin + href;
   const imgPath = (f: StoryFormat) => storyPath(story.kind, story.slug, { format: f, lang, t: timeBucket() });
   const fullText = () => `${text} ${t("share.liveWord")} ${pageUrl()}`;
 
   function onShare() {
+    setNudge(false);
+    try {
+      sessionStorage.setItem("sl_share_nudge", "1");
+    } catch {}
     setImgState("loading");
     setOpen(true);
   }
@@ -117,7 +160,7 @@ export function ShareControl({ href, name, text, story, iconOnlyOnMobile = true 
   return (
     <>
       <button ref={trigger} type="button" onClick={onShare} aria-haspopup="dialog" aria-expanded={open} data-share-button className={`${iconBtn} ${ring}`}>
-        <Share2 className="size-5" aria-hidden />
+        {nudge ? <span aria-hidden className="share-nudge text-base leading-none">👉</span> : <Share2 className="size-5" aria-hidden />}
         <span className={iconOnlyOnMobile ? "hidden sm:inline" : ""}>{t("verdict.share")}</span>
         {iconOnlyOnMobile && <span className="sm:hidden sr-only">{t("verdict.share")}</span>}
       </button>

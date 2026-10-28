@@ -9,7 +9,7 @@ import { FooterLangLinks } from "./FooterLangLinks";
 import { navGroups } from "@/lib/navGroups";
 
 import { MADE_BY, STRIP } from "@/lib/i18n/footer";
-import { X_HANDLE } from "@/lib/seo";
+import { IG_HANDLE, IG_URL, X_HANDLE } from "@/lib/seo";
 
 // Phones (below sm) get a one-line strip instead of the big footer: apps do not have footers, and the links live in the
 // More sheet. Both are plain server HTML switched by CSS, so crawlers still get the full footer's internal links.
@@ -102,10 +102,15 @@ async function FullFooter({ lang }: { lang: Locale }) {
                     {X_HANDLE && (
                       <li>
                         <a href={`https://x.com/${X_HANDLE}`} target="_blank" rel="noreferrer me" className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
-                          @{X_HANDLE}
+                          X @{X_HANDLE}
                         </a>
                       </li>
                     )}
+                    <li>
+                      <a href={IG_URL} target="_blank" rel="noreferrer me" className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
+                        Instagram @{IG_HANDLE}
+                      </a>
+                    </li>
                     <li>
                       <a href="https://github.com/shakee93/sl-water-levels" target="_blank" rel="noreferrer" className="inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 transition">
                         {t("footer.source")}
@@ -143,6 +148,11 @@ async function FullFooter({ lang }: { lang: Locale }) {
                 </a>
               </>
             )}
+            <span aria-hidden> · </span>
+            Instagram:{" "}
+            <a href={IG_URL} target="_blank" rel="noreferrer me" className="font-medium text-slate-600 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-300 transition">
+              @{IG_HANDLE}
+            </a>
           </p>
           <FooterLangLinks lang={lang} label={t("lang.label")} />
         </div>

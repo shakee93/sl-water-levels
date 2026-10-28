@@ -175,3 +175,8 @@ html.dark { background-color: #020617; }
   .basins-panel { transform-origin: top right; animation: basins-in 120ms ease-out; }
   @keyframes basins-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
 }
+
+/* Share nudge (app/StoryShare.tsx): a hand inside the Share button points at it for a few seconds, once a visit */
+@keyframes share-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
+.share-nudge { display: inline-block; animation: share-nudge 0.7s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .share-nudge { animation: none; } }

@@ -16,11 +16,17 @@ const BOTS = [
   "PerplexityBot", "Perplexity-User", "MistralAI-User", "cohere-ai", "YouBot", "Meta-ExternalAgent", "Meta-ExternalFetcher", "FacebookBot", "Amazonbot", "CCBot", "Diffbot",
 ];
 
+// Crawl budget (28 Oct 2026): keep crawlers on the pages people search for. Skipped: news-site embeds (noindex anyway),
+// the lab, the MCP endpoint and internal API routes. Still open: the public data feeds that llms.txt points answer engines
+// to, and the share pictures (link previews on X and others read them). Longest match wins, so these Allows beat /api/.
+const DISALLOW = ["/api/", "/embed/", "/lab/", "/si/lab/", "/ta/lab/", "/mcp"];
+const ALLOW = ["/", "/api/levels", "/api/reservoirs", "/api/canals", "/api/rain-map", "/api/health", "/api/story/"];
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      { userAgent: BOTS, allow: "/" },
-      { userAgent: "*", allow: "/" },
+      { userAgent: BOTS, allow: ALLOW, disallow: DISALLOW },
+      { userAgent: "*", allow: ALLOW, disallow: DISALLOW },
     ],
     sitemap: `${SITE}/sitemap.xml`,
     host: SITE,
