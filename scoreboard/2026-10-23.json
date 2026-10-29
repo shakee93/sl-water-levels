@@ -1,0 +1,396 @@
+{
+ "day": "2026-10-23",
+ "generatedAt": "2026-10-29T06:43:35.097Z",
+ "complete": true,
+ "modelVersions": {
+  "2026-10-22T18:23:49.444Z": 369
+ },
+ "runHealth": {
+  "runs": 369,
+  "gauges": 40,
+  "hoursWithRuns": 13,
+  "missingHours": [
+   2,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   13,
+   14,
+   15
+  ],
+  "medianGaugesPerHour": 36,
+  "minGaugesPerHour": 1
+ },
+ "difficulty": {
+  "persistenceMae6hFt": 0.5,
+  "medianGaugeRangeFt": 1.38
+ },
+ "headline": {
+  "liveSkillPct": -0.8,
+  "shadowSkillPct": {}
+ },
+ "groups": {
+  "main": {
+   "h1": {
+    "n": 28,
+    "mae": 0.08,
+    "persistenceMae": 0.16,
+    "skillPct": 52,
+    "bias": -0.01,
+    "inBandPct": 100,
+    "bandFt": 0.8,
+    "shadow": {}
+   },
+   "h3": {
+    "n": 29,
+    "mae": 0.22,
+    "persistenceMae": 0.43,
+    "skillPct": 48.2,
+    "bias": 0.03,
+    "inBandPct": 93.1,
+    "bandFt": 1.68,
+    "shadow": {}
+   },
+   "h6": {
+    "n": 28,
+    "mae": 0.56,
+    "persistenceMae": 0.82,
+    "skillPct": 32.1,
+    "bias": 0.31,
+    "inBandPct": 89.3,
+    "bandFt": 2.81,
+    "shadow": {}
+   },
+   "h12": {
+    "n": 28,
+    "mae": 0.94,
+    "persistenceMae": 0.86,
+    "skillPct": -9.9,
+    "bias": 0.89,
+    "inBandPct": 100,
+    "bandFt": 6.41,
+    "shadow": {}
+   },
+   "h24": {
+    "n": 29,
+    "mae": 2.46,
+    "persistenceMae": 1.43,
+    "skillPct": -72.5,
+    "bias": 2.46,
+    "inBandPct": 86.2,
+    "bandFt": 9.12,
+    "shadow": {}
+   }
+  },
+  "fast": {
+   "h1": {
+    "n": 83,
+    "mae": 0.11,
+    "persistenceMae": 0.1,
+    "skillPct": -12.2,
+    "bias": 0,
+    "inBandPct": 97.6,
+    "bandFt": 0.87,
+    "shadow": {}
+   },
+   "h3": {
+    "n": 83,
+    "mae": 0.27,
+    "persistenceMae": 0.26,
+    "skillPct": -3.7,
+    "bias": 0.06,
+    "inBandPct": 97.6,
+    "bandFt": 1.94,
+    "shadow": {}
+   },
+   "h6": {
+    "n": 79,
+    "mae": 0.51,
+    "persistenceMae": 0.38,
+    "skillPct": -35.3,
+    "bias": 0.42,
+    "inBandPct": 100,
+    "bandFt": 3.24,
+    "shadow": {}
+   },
+   "h12": {
+    "n": 82,
+    "mae": 0.94,
+    "persistenceMae": 0.5,
+    "skillPct": -86.6,
+    "bias": 0.92,
+    "inBandPct": 100,
+    "bandFt": 4.41,
+    "shadow": {}
+   },
+   "h24": {
+    "n": 84,
+    "mae": 0.76,
+    "persistenceMae": 0.51,
+    "skillPct": -50.2,
+    "bias": 0.64,
+    "inBandPct": 100,
+    "bandFt": 5.81,
+    "shadow": {}
+   }
+  },
+  "other": {
+   "h1": {
+    "n": 157,
+    "mae": 0.13,
+    "persistenceMae": 0.15,
+    "skillPct": 11.4,
+    "bias": 0.01,
+    "inBandPct": 96.8,
+    "bandFt": 0.78,
+    "shadow": {}
+   },
+   "h3": {
+    "n": 154,
+    "mae": 0.24,
+    "persistenceMae": 0.28,
+    "skillPct": 12.8,
+    "bias": 0.17,
+    "inBandPct": 92.9,
+    "bandFt": 1.33,
+    "shadow": {}
+   },
+   "h6": {
+    "n": 155,
+    "mae": 0.51,
+    "persistenceMae": 0.51,
+    "skillPct": -0.1,
+    "bias": 0.46,
+    "inBandPct": 87.1,
+    "bandFt": 2.38,
+    "shadow": {}
+   },
+   "h12": {
+    "n": 158,
+    "mae": 1.02,
+    "persistenceMae": 0.92,
+    "skillPct": -11,
+    "bias": 0.97,
+    "inBandPct": 88.6,
+    "bandFt": 4.22,
+    "shadow": {}
+   },
+   "h24": {
+    "n": 152,
+    "mae": 1.88,
+    "persistenceMae": 1.69,
+    "skillPct": -11.6,
+    "bias": 1.82,
+    "inBandPct": 86.2,
+    "bandFt": 7.3,
+    "shadow": {}
+   }
+  },
+  "all": {
+   "h1": {
+    "n": 268,
+    "mae": 0.12,
+    "persistenceMae": 0.13,
+    "skillPct": 11.1,
+    "bias": 0,
+    "inBandPct": 97.4,
+    "bandFt": 0.81,
+    "shadow": {}
+   },
+   "h3": {
+    "n": 266,
+    "mae": 0.25,
+    "persistenceMae": 0.29,
+    "skillPct": 13.8,
+    "bias": 0.12,
+    "inBandPct": 94.4,
+    "bandFt": 1.56,
+    "shadow": {}
+   },
+   "h6": {
+    "n": 262,
+    "mae": 0.51,
+    "persistenceMae": 0.5,
+    "skillPct": -2.5,
+    "bias": 0.43,
+    "inBandPct": 91.2,
+    "bandFt": 2.69,
+    "shadow": {}
+   },
+   "h12": {
+    "n": 268,
+    "mae": 0.99,
+    "persistenceMae": 0.79,
+    "skillPct": -25.6,
+    "bias": 0.94,
+    "inBandPct": 93.3,
+    "bandFt": 4.5,
+    "shadow": {}
+   },
+   "h24": {
+    "n": 265,
+    "mae": 1.59,
+    "persistenceMae": 1.28,
+    "skillPct": -23.8,
+    "bias": 1.52,
+    "inBandPct": 90.6,
+    "bandFt": 7.03,
+    "shadow": {}
+   }
+  }
+ },
+ "calibration": {
+  "alert": {
+   "n": 224,
+   "occurred": 0,
+   "brier": 0.022,
+   "meanStated": 0.08,
+   "statedAtLeast40": {
+    "n": 9,
+    "cameTrue": 0
+   },
+   "bins": [
+    {
+     "from": 0,
+     "to": 0.1,
+     "n": 151,
+     "observedPct": 0
+    },
+    {
+     "from": 0.1,
+     "to": 0.3,
+     "n": 47,
+     "observedPct": 0
+    },
+    {
+     "from": 0.3,
+     "to": 0.5,
+     "n": 22,
+     "observedPct": 0
+    },
+    {
+     "from": 0.5,
+     "to": 0.7,
+     "n": 4,
+     "observedPct": 0
+    },
+    {
+     "from": 0.7,
+     "to": 0.9,
+     "n": 0,
+     "observedPct": null
+    },
+    {
+     "from": 0.9,
+     "to": 1,
+     "n": 0,
+     "observedPct": null
+    }
+   ]
+  },
+  "minor": {
+   "n": 228,
+   "occurred": 0,
+   "brier": 0.007,
+   "meanStated": 0.03,
+   "statedAtLeast40": {
+    "n": 3,
+    "cameTrue": 0
+   },
+   "bins": [
+    {
+     "from": 0,
+     "to": 0.1,
+     "n": 199,
+     "observedPct": 0
+    },
+    {
+     "from": 0.1,
+     "to": 0.3,
+     "n": 22,
+     "observedPct": 0
+    },
+    {
+     "from": 0.3,
+     "to": 0.5,
+     "n": 7,
+     "observedPct": 0
+    },
+    {
+     "from": 0.5,
+     "to": 0.7,
+     "n": 0,
+     "observedPct": null
+    },
+    {
+     "from": 0.7,
+     "to": 0.9,
+     "n": 0,
+     "observedPct": null
+    },
+    {
+     "from": 0.9,
+     "to": 1,
+     "n": 0,
+     "observedPct": null
+    }
+   ]
+  },
+  "major": {
+   "n": 228,
+   "occurred": 0,
+   "brier": 0.002,
+   "meanStated": 0.01,
+   "statedAtLeast40": {
+    "n": 0,
+    "cameTrue": 0
+   },
+   "bins": [
+    {
+     "from": 0,
+     "to": 0.1,
+     "n": 219,
+     "observedPct": 0
+    },
+    {
+     "from": 0.1,
+     "to": 0.3,
+     "n": 6,
+     "observedPct": 0
+    },
+    {
+     "from": 0.3,
+     "to": 0.5,
+     "n": 3,
+     "observedPct": 0
+    },
+    {
+     "from": 0.5,
+     "to": 0.7,
+     "n": 0,
+     "observedPct": null
+    },
+    {
+     "from": 0.7,
+     "to": 0.9,
+     "n": 0,
+     "observedPct": null
+    },
+    {
+     "from": 0.9,
+     "to": 1,
+     "n": 0,
+     "observedPct": null
+    }
+   ]
+  }
+ },
+ "verdict": {
+  "code": "not_comparable",
+  "line": "2026-10-23: not comparable, only 1 earlier scored day(s); skill -0.8% (1-12 h), 6 h no-change error 0.5 ft."
+ }
+}
