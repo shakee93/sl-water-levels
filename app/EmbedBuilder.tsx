@@ -8,6 +8,7 @@ import { Check, ChevronDown, Copy } from "lucide-react";
 import { DEFAULTS, FONTS, USES, WIDGETS, cfgQuery, fixedHeight, isWidget, parseCfg, type EmbedCfg, type Widget } from "@/lib/embedConfig";
 import { FONT_LABEL, styleOf } from "@/lib/embedStyle";
 import type { Locale } from "@/lib/i18n/config";
+import { basinSlug } from "@/lib/slug";
 
 export type BuilderLists = {
   rivers: { slug: string; name: string; count: number }[];
@@ -140,8 +141,15 @@ function Builder({ lists, lang, origin, init }: { lists: BuilderLists; lang: Loc
   const nGauges = widget === "river" ? lists.rivers.find((r) => r.slug === effId)?.count ?? 4 : widget === "now" ? 4 : 4;
   const fixedH = fixedHeight(widget, cfg.size, nGauges, cfg.layout === "cards");
   const title = widget === "river" ? `${lists.rivers.find((r) => r.slug === effId)?.name ?? ""} live river levels` : widget === "gauge" || widget === "card" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} live river level` : widget === "forecast" ? `${lists.gauges.find((g) => g.slug === effId)?.name ?? ""} river forecast` : widget === "town" ? `${lists.towns.find((x) => x.slug === effId)?.name ?? ""} flood status` : widget === "now" ? "Sri Lanka rivers right now" : widget === "reservoirs" ? "Reservoirs spilling in Sri Lanka" : "Live river level";
+  // A plain, visible source line under the box, linking to the matching page in the box's language. A link inside the iframe counts for
+  // our own page only, so this branded credit is what lets a news site that pastes the code link to us (kept branded, never keyword text).
+  const gaugeOf = lists.gauges.find((g) => g.slug === effId);
+  const page = widget === "river" ? `/${effId}` : (widget === "gauge" || widget === "card" || widget === "forecast") && gaugeOf ? `/${basinSlug(gaugeOf.river)}/${gaugeOf.slug}`
+    : widget === "town" ? `/flood/${effId}` : widget === "reservoirs" ? "/reservoirs" : widget === "now" ? "/rivers" : "";
+  const credit = `<p style="font:12px/1.4 system-ui,sans-serif;margin:4px 0 0">Live data: <a href="${origin}${cfg.lang === "en" ? "" : `/${cfg.lang}`}${page}">Sri Lanka Water Levels</a></p>`;
   const code =
     `<iframe src="${origin}${rel}" width="100%" height="${fixedH}" style="border:0;max-width:${widget === "ticker" ? "760" : "560"}px" loading="lazy" title="${title.trim()}"></iframe>` +
+    `\n${credit}` +
     (script ? `\n<script src="${origin}/embed.js" async></script>` : "");
 
   // the preview is the real widget, and it sizes itself the same way the optional script would
