@@ -89,7 +89,12 @@ export async function GET(request: Request) {
           outlook: f.outlook,
           // the log keeps every fitted horizon, also the 12 / 24 h steps a fast tributary no longer shows (lib/forecastRules.mjs)
           horizons: f.rawHorizons ?? f.horizons,
-          ...(withShadow ? { shadows: shadowVariants({ ...f, horizons: f.rawHorizons ?? f.horizons }, s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level }))) } : {}),
+          ...(withShadow ? { shadows: shadowVariants(
+            { ...f, station: s.station, horizons: f.rawHorizons ?? f.horizons },
+            s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level })),
+            // rain gate of recession-v2 (lib/recessionV2.mjs): the same inputs the run logs; unknown (no weather answer) = no correction
+            fr || f.rain ? { storm: f.stormHorizons.length > 0 || f.rainRisk != null, next6hMm: fr?.next6h ?? null, next24hP90Mm: f.rain?.next24hMm.p90 ?? null } : null,
+          ) } : {}),
           // the LOG keeps what the model said: uncapped chances and wording (the site shows the capped ones, lib/forecastRules.mjs)
           crossings: f.rawCrossings ?? f.crossings,
           observations: s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level, rain: r.rain_fall })),

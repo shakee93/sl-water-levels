@@ -135,7 +135,8 @@ assert.deepEqual(recessionCorrectionFt("ft", 12, asOf, [{ ts: asOf, level: 12 }]
 const live = { unit: "m", currentLevel: 3.6, asOfTs: asOf, method: "model", horizons: [1, 3, 6, 12, 24].map((h) => ({ h, ts: asOf + h * HOUR, level: 3.5, low: 3.2, high: 3.8 })) };
 const mObs = [{ ts: asOf - 3 * HOUR, level: 3.6 + 0.3 * FT }, { ts: asOf - 24 * HOUR, level: 3.6 + 2 * FT }, { ts: asOf, level: 3.6 }]; // 0.1 ft/h
 const sv = shadowVariants(live, mObs);
-assert.deepEqual(sv.map((v) => v.variant), ["copy", RECESSION_VARIANT]);
+assert.deepEqual(sv.map((v) => v.variant), ["copy", RECESSION_VARIANT, "recession-v2", "recession-v2-slow"]);
+assert.deepEqual(sv[2].horizons, live.horizons, "recession-v2 without a station / rain inputs is a plain copy");
 assert.deepEqual(sv[0].horizons, live.horizons, "the no-op copy equals live");
 const rec = sv[1].horizons;
 assert.deepEqual(rec.slice(0, 3), live.horizons.slice(0, 3), "1-6 h untouched");

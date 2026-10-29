@@ -1,0 +1,1721 @@
+{
+ "version": "recession-v2",
+ "units": "ft",
+ "about": "Recession-law parameters, fitted on all hourly history (lk_irrigation feed + our archive, 23 Nov 2025 to 29 Oct 2026) by the study in DOCS.md (Shadow recession-v2). Levels in feet. law: exp|expr|rate. B = fixed base level (ft). w = per-horizon shrink. hOn = horizons the law may change. fitWithoutDitwah = the same fit without 23 Nov to 11 Dec 2025 (Ditwah held out). guard: law/no-change MAE ratio on Ditwah and the last 60 days when fitted without them; off = law was worse than no change, gauge disabled.",
+ "trigger_ft_per_h": -0.1,
+ "gauges": {
+  "Horowpothana": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Yan Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 4.841,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 29,
+   "cv": 0.5224,
+   "guard": {
+    "ditwahRatio": 0.656,
+    "holdoutRatio": 0.535,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 4.56,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Padiyathalawa": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "global",
+   "group": "basin:Maduru Oya",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 27,
+   "cv": 0.8321,
+   "guard": {
+    "ditwahRatio": 1.063,
+    "holdoutRatio": 0.893,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "exp",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "tau": 18,
+     "B": 2.297,
+     "w": {
+      "3": 0.85,
+      "6": 0.7,
+      "12": 0.7,
+      "24": 0.7
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Pitabeddara": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "global",
+   "group": "fast",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 60,
+   "cv": 0.6557,
+   "guard": {
+    "ditwahRatio": 0.972,
+    "holdoutRatio": 1.027,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "exp",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "tau": 9,
+     "B": 1.819,
+     "w": {
+      "3": 0.85,
+      "6": 0.7,
+      "12": 0.7,
+      "24": 0.7
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Thaldena": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "own",
+   "group": "basin:Mahaweli Ganga",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 46,
+   "cv": 0.6558,
+   "guard": {
+    "ditwahRatio": 1.006,
+    "holdoutRatio": 0.609,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "c": 0.75,
+     "B": 1.083,
+     "w": {
+      "3": 0.5,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Wellawaya": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Kirindi Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 2.727,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 43,
+   "cv": 0.7596,
+   "guard": {
+    "ditwahRatio": 0.848,
+    "holdoutRatio": 0.914,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "group",
+    "params": {
+     "q": 0.5,
+     "c": 0.35,
+     "B": 2.872,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.2
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12
+    ]
+   }
+  },
+  "Norwood": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "global",
+   "group": "fast",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 44,
+   "cv": 0.641,
+   "guard": {
+    "ditwahRatio": 1.079,
+    "holdoutRatio": 0.752,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "rate",
+    "scope": "global",
+    "params": {
+     "q": 0.5,
+     "rho": 0.99,
+     "B": 1.841,
+     "w": {
+      "3": 0.7,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Katharagama": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Menik Ganga",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": -0.512,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 23,
+   "cv": 0.6408,
+   "guard": {
+    "ditwahRatio": 0.498,
+    "holdoutRatio": null,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": -0.459,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Kithulgala": {
+   "law": "persist",
+   "scope": null,
+   "group": "fast",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 12,
+   "cv": 0.9944,
+   "guard": {
+    "ditwahRatio": 1,
+    "holdoutRatio": 1,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "persist",
+    "scope": null,
+    "params": {},
+    "hOn": []
+   }
+  },
+  "Panadugama": {
+   "law": "expr",
+   "scope": "global",
+   "group": "fast",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 7.524,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 56,
+   "cv": 0.6219,
+   "guard": {
+    "ditwahRatio": 0.892,
+    "holdoutRatio": 0.862,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.2,
+     "c": 0.35,
+     "B": 6.627,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Badalgama": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Maha Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 6.627,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 27,
+   "cv": 0.527,
+   "guard": {
+    "ditwahRatio": 0.576,
+    "holdoutRatio": 0.595,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 6.463,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Thalgahagoda": {
+   "law": "persist",
+   "scope": null,
+   "group": "basin:Nilwala Ganga",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 70,
+   "cv": 0.9628,
+   "guard": {
+    "ditwahRatio": 1.001,
+    "holdoutRatio": 0.981,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 1.024,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     12,
+     24
+    ]
+   }
+  },
+  "Urawa": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "global",
+   "group": "fast",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 47,
+   "cv": 0.623,
+   "guard": {
+    "ditwahRatio": 0.609,
+    "holdoutRatio": 1.005,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "exp",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "tau": 12,
+     "B": 0.558,
+     "w": {
+      "3": 1,
+      "6": 1,
+      "12": 0.85,
+      "24": 0.7
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Nagalagam Street": {
+   "law": "persist",
+   "scope": null,
+   "group": "kelani-main",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 14,
+   "cv": 0.9744,
+   "guard": {
+    "ditwahRatio": 1,
+    "holdoutRatio": 1,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "persist",
+    "scope": null,
+    "params": {},
+    "hOn": []
+   }
+  },
+  "Moragaswewa": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Deduru Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 0.161,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 35,
+   "cv": 0.5822,
+   "guard": {
+    "ditwahRatio": 0.622,
+    "holdoutRatio": 0.524,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 0.197,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Baddegama": {
+   "law": "rate",
+   "scope": "own",
+   "group": "basin:Gin Ganga",
+   "params": {
+    "q": 0.1,
+    "rho": 0.98,
+    "B": 3.269,
+    "w": {
+     "3": 0.85,
+     "6": 0.85,
+     "12": 0.85,
+     "24": 0.85
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 82,
+   "cv": 0.5279,
+   "guard": {
+    "ditwahRatio": 0.698,
+    "holdoutRatio": 0.563,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "rate",
+    "scope": "own",
+    "params": {
+     "q": 0.1,
+     "rho": 0.98,
+     "B": 3.171,
+     "w": {
+      "3": 0.85,
+      "6": 0.85,
+      "12": 0.85,
+      "24": 0.85
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Glencourse": {
+   "law": "expr",
+   "scope": "group",
+   "group": "kelani-main",
+   "params": {
+    "q": 0.5,
+    "c": 0.35,
+    "B": 30.858,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 51,
+   "cv": 0.7842,
+   "guard": {
+    "ditwahRatio": 0.507,
+    "holdoutRatio": 0.92,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "group",
+    "params": {
+     "q": 0.5,
+     "c": 0.35,
+     "B": 29.322,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Yaka Wewa": {
+   "law": "rate",
+   "scope": "global",
+   "group": "basin:Ma Oya",
+   "params": {
+    "q": 0.5,
+    "rho": 0.99,
+    "B": 2.544,
+    "w": {
+     "3": 0.7,
+     "6": 0.5,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 27,
+   "cv": 0.6977,
+   "guard": {
+    "ditwahRatio": 0.769,
+    "holdoutRatio": 0.729,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "rate",
+    "scope": "global",
+    "params": {
+     "q": 0.5,
+     "rho": 0.99,
+     "B": 2.47,
+     "w": {
+      "3": 0.7,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Hanwella": {
+   "law": "expr",
+   "scope": "global",
+   "group": "kelani-main",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 2.141,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 64,
+   "cv": 0.6032,
+   "guard": {
+    "ditwahRatio": 0.379,
+    "holdoutRatio": 0.815,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 1.665,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Kalawellawa (Millakanda)": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Kalu Ganga",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 6.234,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 41,
+   "cv": 0.7366,
+   "guard": {
+    "ditwahRatio": 0.624,
+    "holdoutRatio": 0.858,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "group",
+    "params": {
+     "q": 0.35,
+     "c": 0.5,
+     "B": 5.722,
+     "w": {
+      "3": 0.5,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Rathnapura": {
+   "law": "expr",
+   "scope": "own",
+   "group": "basin:Kalu Ganga",
+   "params": {
+    "q": 0.35,
+    "c": 0.5,
+    "B": 2.92,
+    "w": {
+     "3": 0.5,
+     "6": 0.5,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 62,
+   "cv": 0.5709,
+   "guard": {
+    "ditwahRatio": 0.564,
+    "holdoutRatio": 0.796,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.35,
+     "c": 0.75,
+     "B": 2.493,
+     "w": {
+      "3": 0.7,
+      "6": 0.7,
+      "12": 0.7,
+      "24": 0.7
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Giriulla": {
+   "law": "expr",
+   "scope": "own",
+   "group": "basin:Maha Oya",
+   "params": {
+    "q": 0.5,
+    "c": 0.5,
+    "B": 3.675,
+    "w": {
+     "3": 0.5,
+     "6": 0.5,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 32,
+   "cv": 0.5523,
+   "guard": {
+    "ditwahRatio": 0.501,
+    "holdoutRatio": 0.769,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "c": 0.5,
+     "B": 3.374,
+     "w": {
+      "3": 0.5,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.7
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Moraketiya": {
+   "law": "expr",
+   "scope": "own",
+   "group": "basin:Walawe Ganga",
+   "params": {
+    "q": 0.5,
+    "c": 0.25,
+    "B": 2.872,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 32,
+   "cv": 0.5713,
+   "guard": {
+    "ditwahRatio": 0.595,
+    "holdoutRatio": 0.595,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 2.69,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Ellagawa": {
+   "law": "expr",
+   "scope": "own",
+   "group": "basin:Kalu Ganga",
+   "params": {
+    "q": 0.35,
+    "c": 0.5,
+    "B": 14.239,
+    "w": {
+     "3": 0.5,
+     "6": 0.5,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 66,
+   "cv": 0.5266,
+   "guard": {
+    "ditwahRatio": 0.642,
+    "holdoutRatio": 0.844,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.2,
+     "c": 0.5,
+     "B": 13.058,
+     "w": {
+      "3": 0.5,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Dunamale": {
+   "law": "expr",
+   "scope": "own",
+   "group": "basin:Aththanagalu Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 2.387,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 46,
+   "cv": 0.5747,
+   "guard": {
+    "ditwahRatio": 0.366,
+    "holdoutRatio": 0.874,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 2.067,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Deraniyagala": {
+   "law": "expr",
+   "scope": "global",
+   "group": "fast",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 1.2,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 62,
+   "cv": 0.815,
+   "guard": {
+    "ditwahRatio": 0.733,
+    "holdoutRatio": 0.832,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "c": 2,
+     "B": 1.323,
+     "w": {
+      "3": 0.85,
+      "6": 0.7,
+      "12": 0.5,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Manampitiya": {
+   "law": "exp",
+   "scope": "own",
+   "group": "basin:Mahaweli Ganga",
+   "params": {
+    "q": 0.5,
+    "tau": 9,
+    "B": 0.755,
+    "w": {
+     "3": 0.2,
+     "6": 0.2,
+     "12": 0.2,
+     "24": 0.2
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 71,
+   "cv": 0.8354,
+   "guard": {
+    "ditwahRatio": 0.946,
+    "holdoutRatio": 0.9,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "rate",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "rho": 0.98,
+     "B": 1.148,
+     "w": {
+      "3": 0.7,
+      "6": 0.5,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Thanamalwila": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Kirindi Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 1.444,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 38,
+   "cv": 0.7347,
+   "guard": {
+    "ditwahRatio": 0.616,
+    "holdoutRatio": 0.797,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "group",
+    "params": {
+     "q": 0.5,
+     "c": 0.35,
+     "B": 1.793,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.2
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Thawalama": {
+   "law": "exp",
+   "scope": "own",
+   "group": "fast",
+   "params": {
+    "q": 0.5,
+    "tau": 18,
+    "B": 4.968,
+    "w": {
+     "3": 1,
+     "6": 0.85,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 81,
+   "cv": 0.798,
+   "guard": {
+    "ditwahRatio": 0.713,
+    "holdoutRatio": 0.87,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 4.055,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Putupaula": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "own",
+   "group": "basin:Kalu Ganga",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 32,
+   "cv": 0.889,
+   "guard": {
+    "ditwahRatio": 0.697,
+    "holdoutRatio": 1.04,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "group",
+    "params": {
+     "q": 0.35,
+     "c": 0.5,
+     "B": 1.741,
+     "w": {
+      "3": 0.5,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Galgamuwa": {
+   "law": "exp",
+   "scope": "global",
+   "group": "basin:Mee Oya",
+   "params": {
+    "q": 0.1,
+    "tau": 36,
+    "B": 0.033,
+    "w": {
+     "3": 0.85,
+     "6": 0.7,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    24
+   ],
+   "nLimbs": 14,
+   "cv": 0.5924,
+   "guard": {
+    "ditwahRatio": 0.625,
+    "holdoutRatio": null,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 0.558,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     24
+    ]
+   }
+  },
+  "Holombuwa": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "own",
+   "group": "fast",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 54,
+   "cv": 0.732,
+   "guard": {
+    "ditwahRatio": 1.014,
+    "holdoutRatio": 0.719,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "exp",
+    "scope": "group",
+    "params": {
+     "q": 0.35,
+     "tau": 24,
+     "B": 1.247,
+     "w": {
+      "3": 1,
+      "6": 0.85,
+      "12": 0.7,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Peradeniya": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "own",
+   "group": "fast",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 15,
+   "cv": 0.9494,
+   "guard": {
+    "ditwahRatio": 1.08,
+    "holdoutRatio": 0.977,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "rate",
+    "scope": "group",
+    "params": {
+     "q": 0.35,
+     "rho": 0.99,
+     "B": 4.708,
+     "w": {
+      "3": 0.5,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12
+    ]
+   }
+  },
+  "Nawalapitiya": {
+   "law": "persist",
+   "disabledByGuard": true,
+   "scope": "own",
+   "group": "fast",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 46,
+   "cv": 0.7748,
+   "guard": {
+    "ditwahRatio": 1,
+    "holdoutRatio": 0.796,
+    "off": true
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "own",
+    "params": {
+     "q": 0.35,
+     "c": 2,
+     "B": 2.428,
+     "w": {
+      "3": 1,
+      "6": 0.7,
+      "12": 0.7,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Thanthirimale": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Malwathu Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 3.74,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 17,
+   "cv": 0.3408,
+   "guard": {
+    "ditwahRatio": 0.566,
+    "holdoutRatio": null,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 3.856,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     24
+    ]
+   }
+  },
+  "Magura": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Kalu Ganga",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 3.728,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 51,
+   "cv": 0.6784,
+   "guard": {
+    "ditwahRatio": 0.762,
+    "holdoutRatio": 0.811,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 3.215,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Nakkala": {
+   "law": "expr",
+   "scope": "own",
+   "group": "basin:Kumbukkan Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.75,
+    "B": 2.395,
+    "w": {
+     "3": 0.5,
+     "6": 0.5,
+     "12": 0.5,
+     "24": 0.5
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 27,
+   "cv": 0.737,
+   "guard": {
+    "ditwahRatio": 0.944,
+    "holdoutRatio": 0.645,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "rate",
+    "scope": "global",
+    "params": {
+     "q": 0.5,
+     "rho": 0.99,
+     "B": 2.822,
+     "w": {
+      "3": 0.7,
+      "6": 0.5,
+      "12": 0.5,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Weraganthota": {
+   "law": "persist",
+   "scope": null,
+   "group": "basin:Mahaweli Ganga",
+   "params": {},
+   "hOn": [],
+   "nLimbs": 45,
+   "cv": 1.0213,
+   "guard": {
+    "ditwahRatio": 1,
+    "holdoutRatio": 1,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "persist",
+    "scope": null,
+    "params": {},
+    "hOn": []
+   }
+  },
+  "Siyambalanduwa": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Heda Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 1.347,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 27,
+   "cv": 0.6124,
+   "guard": {
+    "ditwahRatio": 0.757,
+    "holdoutRatio": 0.682,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "expr",
+    "scope": "global",
+    "params": {
+     "q": 0.35,
+     "c": 0.35,
+     "B": 1.378,
+     "w": {
+      "3": 0.35,
+      "6": 0.35,
+      "12": 0.35,
+      "24": 0.35
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  },
+  "Kuda Oya": {
+   "law": "expr",
+   "scope": "global",
+   "group": "basin:Kirindi Oya",
+   "params": {
+    "q": 0.35,
+    "c": 0.35,
+    "B": 3.761,
+    "w": {
+     "3": 0.35,
+     "6": 0.35,
+     "12": 0.35,
+     "24": 0.35
+    }
+   },
+   "hOn": [
+    3,
+    6,
+    12,
+    24
+   ],
+   "nLimbs": 25,
+   "cv": 0.6623,
+   "guard": {
+    "ditwahRatio": 0.572,
+    "holdoutRatio": 0.528,
+    "off": false
+   },
+   "fitWithoutDitwah": {
+    "law": "exp",
+    "scope": "own",
+    "params": {
+     "q": 0.5,
+     "tau": 12,
+     "B": 4.003,
+     "w": {
+      "3": 0.85,
+      "6": 0.85,
+      "12": 0.7,
+      "24": 0.5
+     }
+    },
+    "hOn": [
+     3,
+     6,
+     12,
+     24
+    ]
+   }
+  }
+ }
+}

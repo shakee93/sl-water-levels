@@ -1,0 +1,18 @@
+export type RV2Horizon = { h: number; ts: number; level: number; low: number | null; high: number | null };
+export type RV2Forecast = { station: string; unit: "ft" | "m" | null; currentLevel: number | null; asOfTs: number | null; method: string; horizons: RV2Horizon[] };
+export type RV2Rain = { storm: boolean | null; next6hMm: number | null; next24hP90Mm: number | null };
+export type RV2Params = { gauges: Record<string, any>; [k: string]: any };
+export const VARIANT: string;
+export const VARIANT_SLOW: string;
+export const FT: number;
+export const TRIGGER_FT_PER_H: number;
+export const TRIGGER_SLOW_FT_PER_H: number;
+export const R1_MAX_FT_PER_H: number;
+export const RAIN6_MAX_MM: number;
+export const RAIN24P90_MAX_MM: number;
+export const HORIZONS: number[];
+export const BETA: number;
+export const WIDEN: number;
+export function lawLevelFt(g: any, L: number, r3: number, h: number): number;
+export function ratesFt(unit: "ft" | "m" | null, currentLevel: number | null, asOfTs: number | null, observations: { ts: number; level: number | null }[]): { r3: number; r1: number | null } | null;
+export function recessionV2(f: RV2Forecast, observations: { ts: number; level: number | null }[], rain: RV2Rain | null | undefined, params: RV2Params, opt?: { trigger?: number; beta?: number; widen?: number }): { horizons: RV2Horizon[]; applied: boolean; reason: string };
