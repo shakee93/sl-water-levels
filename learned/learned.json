@@ -1,33 +1,33 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-28T22:54:11.643Z",
-  "asOf": "2026-10-29",
+  "updatedAt": "2026-10-29T18:50:49.807Z",
+  "asOf": "2026-10-30",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 120,
-    "feedback": 105,
+    "total": 129,
+    "feedback": 112,
     "street": 12,
-    "flood3d": 3,
-    "newTonight": 4,
-    "trusted": 3,
+    "flood3d": 5,
+    "newTonight": 9,
+    "trusted": 5,
     "flagged": 0
   },
   "streetLevel": {
     "Nagalagam Street": {
       "ft": 3,
-      "n": 6,
-      "days": 4,
+      "n": 8,
+      "days": 5,
       "defaultFt": 5,
       "clamped": true,
-      "dryBelowN": 3
+      "dryBelowN": 4
     }
   },
   "groundRain": {
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 52,
-      "stepDays": 3,
+      "steps": 82,
+      "stepDays": 4,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -35,10 +35,10 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 52,
-      "stepDays": 3,
-      "events": 4,
-      "eventDays": 3,
+      "steps": 82,
+      "stepDays": 4,
+      "events": 6,
+      "eventDays": 4,
       "metrics": {
         "mm1h": {
           "current": {
@@ -52,14 +52,40 @@
           "backtest": {
             "atProposedPossible": null,
             "atCurrentPossible": {
-              "events": 3,
+              "events": 5,
               "hits": 0,
               "episodes": 0,
               "unmatched": 0
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
-              "events": 3,
+              "events": 5,
+              "hits": 0,
+              "episodes": 0,
+              "unmatched": 0
+            }
+          }
+        },
+        "mm3h": {
+          "current": {
+            "possible": 50,
+            "likely": 75
+          },
+          "proposed": {
+            "possible": null,
+            "likely": null
+          },
+          "backtest": {
+            "atProposedPossible": null,
+            "atCurrentPossible": {
+              "events": 4,
+              "hits": 0,
+              "episodes": 0,
+              "unmatched": 0
+            },
+            "atProposedLikely": null,
+            "atCurrentLikely": {
+              "events": 4,
               "hits": 0,
               "episodes": 0,
               "unmatched": 0
@@ -78,14 +104,14 @@
           "backtest": {
             "atProposedPossible": null,
             "atCurrentPossible": {
-              "events": 3,
+              "events": 5,
               "hits": 0,
               "episodes": 0,
               "unmatched": 0
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
-              "events": 3,
+              "events": 5,
               "hits": 0,
               "episodes": 0,
               "unmatched": 0
@@ -97,8 +123,8 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 52,
-      "stepDays": 3,
+      "steps": 82,
+      "stepDays": 4,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -106,8 +132,8 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 52,
-      "stepDays": 3,
+      "steps": 82,
+      "stepDays": 4,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -115,8 +141,8 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 52,
-      "stepDays": 3,
+      "steps": 82,
+      "stepDays": 4,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -124,8 +150,8 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 52,
-      "stepDays": 3,
+      "steps": 82,
+      "stepDays": 4,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -135,36 +161,36 @@
     "window": {
       "from": "2026-10-22",
       "to": "2026-10-29",
-      "points": 7066
+      "points": 8751
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 2396,
-          "maeBase": 0.15,
-          "maeFit": 0.14,
+          "n": 2962,
+          "maeBase": 0.13,
+          "maeFit": 0.13,
           "gainPct": 1,
-          "maePooled": 0.15,
+          "maePooled": 0.13,
           "pooledGainPct": -2
         },
         "3": {
-          "n": 2375,
-          "maeBase": 0.34,
-          "maeFit": 0.34,
+          "n": 2934,
+          "maeBase": 0.31,
+          "maeFit": 0.31,
           "gainPct": 1,
-          "maePooled": 0.34,
+          "maePooled": 0.31,
           "pooledGainPct": 0
         },
         "6": {
-          "n": 2289,
-          "maeBase": 0.65,
-          "maeFit": 0.65,
+          "n": 2849,
+          "maeBase": 0.59,
+          "maeFit": 0.59,
           "gainPct": 0,
-          "maePooled": 0.65,
+          "maePooled": 0.6,
           "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 5,
+      "gaugesPassingOwnTest": 6,
       "useful": false,
       "wired": false
     },
@@ -173,20 +199,20 @@
         "1": {
           "rowsWithReports": 19,
           "testN": 19,
-          "testDays": 3,
-          "maeBase": 0.18,
-          "maeFit": 0.17,
-          "gainPct": 0,
-          "beta": 0
+          "testDays": 4,
+          "maeBase": 0.07,
+          "maeFit": 0.07,
+          "gainPct": 1,
+          "beta": 0.01
         },
         "3": {
           "rowsWithReports": 19,
           "testN": 19,
-          "testDays": 3,
-          "maeBase": 0.56,
-          "maeFit": 0.56,
-          "gainPct": 0,
-          "beta": 0
+          "testDays": 4,
+          "maeBase": 0.17,
+          "maeFit": 0.18,
+          "gainPct": -4,
+          "beta": 0.01
         }
       },
       "reports": 8,
@@ -220,17 +246,17 @@
       "due": false
     },
     "Kelani floodplain (elsewhere)": {
-      "trusted": 1,
-      "newTrusted": 1,
-      "newPeople": 1,
+      "trusted": 2,
+      "newTrusted": 2,
+      "newPeople": 2,
       "needNew": 10,
       "needPeople": 3,
       "due": false
     },
     "Kelaniya": {
-      "trusted": 2,
-      "newTrusted": 2,
-      "newPeople": 2,
+      "trusted": 3,
+      "newTrusted": 3,
+      "newPeople": 3,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -306,16 +332,16 @@
     {
       "kind": "map",
       "name": "Kelani floodplain (elsewhere)",
-      "have": 1,
+      "have": 2,
       "need": 10,
-      "missing": 9
+      "missing": 8
     },
     {
       "kind": "map",
       "name": "Kelaniya",
-      "have": 2,
+      "have": 3,
       "need": 10,
-      "missing": 8
+      "missing": 7
     },
     {
       "kind": "streetLevel",

@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-28T22:54:11.643Z",
-  "asOf": "2026-10-29",
+  "updatedAt": "2026-10-29T18:50:49.807Z",
+  "asOf": "2026-10-30",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,9 +13,9 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 105,
-    "people": 100,
-    "streetReports": 12,
+    "answers": 107,
+    "people": 103,
+    "streetReports": 11,
     "days": 4
   },
   "stations": {
@@ -55,17 +55,17 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 36,
-        "days": 3,
-        "yes": 21,
+        "n": 38,
+        "days": 4,
+        "yes": 23,
         "worse": 7,
         "better": 1,
         "unsure": 7
       },
       "seen": {
-        "n": 4,
+        "n": 5,
         "higher": 0,
-        "same": 3,
+        "same": 4,
         "lower": 1
       },
       "rising": {
@@ -78,12 +78,12 @@
         "meanErrFt": 0.52
       },
       "falling": {
-        "n": 9,
-        "days": 2,
-        "yes": 6,
+        "n": 11,
+        "days": 3,
+        "yes": 8,
         "worse": 2,
         "better": 1,
-        "errN": 9,
+        "errN": 11,
         "meanErrFt": -0.03
       }
     },
@@ -117,63 +117,44 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 20,
-        "days": 3,
+        "n": 21,
+        "days": 4,
         "yes": 9,
-        "worse": 5,
+        "worse": 6,
         "better": 2,
         "unsure": 4
       },
       "seen": {
-        "n": 1,
-        "higher": 1,
-        "same": 0,
+        "n": 4,
+        "higher": 3,
+        "same": 1,
         "lower": 0
       },
       "rising": {
         "n": 9,
-        "days": 3,
-        "yes": 6,
-        "worse": 1,
+        "days": 4,
+        "yes": 5,
+        "worse": 2,
         "better": 2,
         "errN": 9,
-        "meanErrFt": 0.02
+        "meanErrFt": 0.09
       },
       "falling": {
-        "n": 4,
+        "n": 5,
         "days": 2,
         "yes": 2,
-        "worse": 2,
+        "worse": 3,
         "better": 0,
-        "errN": 4,
-        "meanErrFt": -0.15
+        "errN": 5,
+        "meanErrFt": -0.11
       },
       "streetLevel": {
         "ft": 3,
-        "n": 6,
-        "days": 4,
+        "n": 8,
+        "days": 5,
         "defaultFt": 5,
         "clamped": true,
-        "dryBelowN": 3
-      }
-    },
-    "Deraniyagala": {
-      "answers": {
-        "n": 1,
-        "days": 1,
-        "yes": 0,
-        "worse": 1,
-        "better": 0,
-        "unsure": 0
-      },
-      "rising": {
-        "n": 1,
-        "days": 1,
-        "yes": 0,
-        "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -2
+        "dryBelowN": 4
       }
     },
     "Norwood": {
@@ -430,6 +411,16 @@
         "same": 0,
         "lower": 0
       }
+    },
+    "Kithulgala": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "unsure": 0
+      }
     }
   },
   "zones": {},
@@ -456,11 +447,11 @@
       "dry": 1
     },
     "gampaha": {
-      "reports": 4,
+      "reports": 3,
       "days": 2,
       "deep": 0,
       "little": 0,
-      "dry": 4
+      "dry": 3
     },
     "attanagalla": {
       "reports": 1,
@@ -515,35 +506,35 @@
     "window": {
       "from": "2026-10-22",
       "to": "2026-10-29",
-      "points": 7066
+      "points": 8751
     },
     "horizons": {
       "1": {
-        "n": 2396,
-        "maeBase": 0.15,
-        "maeFit": 0.14,
+        "n": 2962,
+        "maeBase": 0.13,
+        "maeFit": 0.13,
         "gainPct": 1,
-        "maePooled": 0.15,
+        "maePooled": 0.13,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 2375,
-        "maeBase": 0.34,
-        "maeFit": 0.34,
+        "n": 2934,
+        "maeBase": 0.31,
+        "maeFit": 0.31,
         "gainPct": 1,
-        "maePooled": 0.34,
+        "maePooled": 0.31,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 2289,
-        "maeBase": 0.65,
-        "maeFit": 0.65,
+        "n": 2849,
+        "maeBase": 0.59,
+        "maeFit": 0.59,
         "gainPct": 0,
-        "maePooled": 0.65,
+        "maePooled": 0.6,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 5,
+    "gaugesPassingOwnTest": 6,
     "useful": false,
     "wired": false
   }
