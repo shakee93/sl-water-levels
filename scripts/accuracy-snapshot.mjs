@@ -108,7 +108,12 @@ function build(rs) {
 // fewer is simply missing. Notes, places and distances are private (scripts/feedback-digest.mjs). The table may not exist yet.
 let feedback = null;
 try {
-  feedback = publicFeedback(feedbackRows(d1(feedbackSql(now - 30 * DAY))));
+  {
+    // person key lets the aggregate count one visitor once (30 min); older tables lack the column until the route adds it
+    let raw;
+    try { raw = d1(feedbackSql(now - 30 * DAY, "basic")); } catch (e) { if (!/no such column/i.test(`${e?.message ?? e} ${e?.stdout ?? ""}`)) throw e; raw = d1(feedbackSql(now - 30 * DAY, false)); }
+    feedback = publicFeedback(feedbackRows(raw));
+  }
 } catch (e) {
   console.log(`feedback: skipped (${String(e.message).split("\n")[0].slice(0, 80)})`);
 }

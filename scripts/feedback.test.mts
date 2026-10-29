@@ -6,7 +6,7 @@ import {
   validateAnswer, validateDetails, validateWater, cleanNote, cleanLocation, roundCoord, distKm, noteTags, isUrgent, deviceOf, colomboDay, fbCookieName,
   NOTE_MAX, MIN_FILL_MS, LIMIT_PER_IP_PER_TARGET_DAY, LIMIT_PER_IP_PER_DAY, LIMIT_PER_IP_PER_10_MIN,
 } from "../lib/feedback.ts";
-import { tally, obsVsVerdict, byDistance, againstForecast, publicFeedback, digestText, K_MIN } from "../lib/feedbackLearn.mjs";
+import { tally, obsVsVerdict, byDistance, againstForecast, publicFeedback, digestText, K_MIN, oncePerPerson, oncePerPersonAcross, tooMildLines } from "../lib/feedbackLearn.mjs";
 import { fbFor } from "../lib/i18n/feedback.ts";
 
 const isTown = (s) => s === "hanwella" || s === "wellampitiya";
@@ -154,6 +154,44 @@ assert.ok(!JSON.stringify(pub).includes("bridge"), "notes never reach the public
 const dg = digestText({ day: "2026-10-27", rows, urgentCount: 1 });
 assert.ok(/water at the bridge/.test(dg) && /6 answers/.test(dg) && /Hanwella 2 of 6/.test(dg) && /roads or in homes/.test(dg));
 assert.ok(/no answers/.test(digestText({ day: "d", rows: [] })));
+
+// ---- one visitor counts once within 30 minutes (29 Oct 2026: Colombo 08:33 and Dematagoda 08:34, same answers)
+{
+  const M = 60_000, t0 = 1_800_000_000_000;
+  const a = { id: 1, created_ms: t0, day: "d", person_day: "A", station: "Nagalagam Street", answer: "worse" };
+  const b = { id: 2, created_ms: t0 + M, day: "d", person_day: "A", station: "Dematagoda", answer: "worse" };
+  const c = { id: 3, created_ms: t0 + 31 * M, day: "d", person_day: "A", station: "Hanwella", answer: "worse" };
+  const o = { id: 4, created_ms: t0 + 2 * M, day: "d", person_day: "B", station: "Hanwella", answer: "yes" };
+  const n1 = { id: 5, created_ms: t0, answer: "yes" }, n2 = { id: 6, created_ms: t0 + M, answer: "yes" };
+  assert.deepEqual(oncePerPerson([b, o, a, c]).map((r) => r.id), [1, 4, 3], "second answer a minute later dropped; 31 min later counts again");
+  assert.equal(oncePerPerson([n1, n2]).length, 2, "rows without a person key all count");
+  assert.equal(oncePerPerson([{ ...a, person_day: null, ip_hash: "h" }, { ...b, person_day: null, ip_hash: "h" }]).length, 1, "ip hash + day is the fallback key");
+  assert.equal(tally(oncePerPerson([a, b, o])).worse, 1);
+  // across forms: a feedback answer and a map report in the same second are one person
+  const [fb, , f3] = oncePerPersonAcross([[a], [], [{ id: 9, created_ms: t0, person_day: "A" }, { id: 10, created_ms: t0, person_day: "C" }]]);
+  assert.equal(fb.length, 1);
+  assert.deepEqual(f3.map((r) => r.id), [10], "the earlier list wins a tie");
+  // the digest and the public aggregate count the person once; the raw array is untouched
+  const raw = [a, b, c, o];
+  assert.ok(/3 answers/.test(digestText({ day: "d", rows: raw })));
+  assert.equal(raw.length, 4);
+  assert.equal(publicFeedback(raw.map((r) => ({ ...r, station: "X" }))).overall.n, 3);
+}
+
+// ---- "worse" while we showed Normal or Watch: its own digest line, once per person, place and rain included
+{
+  const base = { created_ms: 1_800_000_000_000, day: "d", answer: "worse", page: "station", station: "Hanwella", shown_tier: "normal", shown_level: 8.4, notified: 0 };
+  const lines = tooMildLines([
+    { ...base, person_day: "A", water_at: "road", place_pick: "kolonnawa", rain_3h_mm: 12.34, rain_24h_mm: 40 },
+    { ...base, created_ms: base.created_ms + 60_000, person_day: "A", station: "Other" },
+    { ...base, person_day: "B", shown_tier: "alert" },
+    { ...base, person_day: "C", notified: 1 },
+    { ...base, person_day: "D", answer: "yes" },
+  ]);
+  assert.equal(lines.length, 1);
+  assert.ok(/Someone at Kolonnawa says it is worse than shown: water on the road; we showed Normal at Hanwella 8.4 ft; rain at their spot 12.3 mm in 3 h, 40 mm in 24 h; /.test(lines[0]), lines[0]);
+  assert.ok(/water on the road/.test(digestText({ day: "d", rows: [{ ...base, person_day: "A", water_at: "road" }] })));
+}
 
 // ---- languages: every key in every language, same placeholders
 for (const lang of ["en", "si", "ta"]) {

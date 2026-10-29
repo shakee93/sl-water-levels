@@ -182,3 +182,50 @@ console.log("forecast-rules tests passed");
   assert.equal(nextHourRateM({ h1ChangeM: -0.01, rate3hM: -0.02, source: "arcgis", method: "model" }), -0.01, "no last-hour input: unchanged");
   console.log("rise override tests passed");
 }
+
+// "Normal now, rising" (29 Oct 2026): the town risk exposes the same de-tided "rising" flag as the gauge page; the wording never changes the tone.
+{
+  const { NORMAL_RISING, BELOW_ALERT_LEVEL } = await import("../app/verdict.ts");
+  assert.equal(NORMAL_RISING.en, "Normal now, rising");
+  assert.equal(BELOW_ALERT_LEVEL("1.5 ft").en, "1.5 ft below the alert level");
+  for (const l of ["si", "ta"]) assert.ok(NORMAL_RISING[l] && BELOW_ALERT_LEVEL("1.5 ft")[l].includes("1.5 ft"));
+  const base = { ...t0, primary: { ...g0, station: "Hanwella", name: "Hanwella", rate3hM: 0.1 } };
+  const rise = assessTown(base), still = assessTown({ ...base, primary: { ...base.primary, rate3hM: 0 } });
+  assert.equal(rise.rising, true);
+  assert.equal(still.rising, false);
+  assert.equal(rise.tone, still.tone, "rising changes words only, never the tone");
+  const { headlineRising } = await import("../app/verdict.ts");
+  assert.equal(headlineRising({ rising: true, nextHourM: 0.1 }), true);
+  assert.equal(headlineRising({ rising: true, nextHourM: 0 }), false, "rising over 3 h but Next hour steady: plain Normal");
+  assert.equal(headlineRising({ rising: true, nextHourM: STEADY_M_PER_H }), false);
+  assert.equal(headlineRising({ rising: true, nextHourM: -0.05 }), false);
+  assert.equal(headlineRising({ rising: true, nextHourM: null }), false);
+  assert.equal(headlineRising({ rising: true, nextHourM: 0.1, tideOnly: true }), false);
+  assert.equal(headlineRising({ rising: false, nextHourM: 0.1 }), false);
+  // town card: 3 h rising but the next hour steady -> the tile says steady, so no "rising" headline (TownVerdict reads hourKey)
+  const steadyNext = assessTown({ ...base, primary: { ...base.primary, rate3hM: 0.1 }, forecast: null });
+  assert.ok(["dir.rising", "dir.slow", "dir.steady"].includes(steadyNext.hourKey));
+  console.log("normal-rising tests passed");
+}
+
+// "Will it reach Minor flood?" one-liner (29 Oct 2026): built from the shown (capped) crossings, never repeating the Next 24 hours text.
+{
+  const { minorFact, noEstimateBeyond } = await import("../app/verdict.ts");
+  const F = (minor, extra = {}) => ({ method: "model", status: "ok", noForecast: false, horizonLimitH: null, crossings: minor ? [{ threshold: "alert", wording: "unlikely", probability: 0.1 }, { threshold: "minor", ...minor }] : [], ...extra });
+  const calm = { en: "Falling now", si: "", ta: "" };
+  assert.equal(minorFact({ f: F({ wording: "possible", probability: 0.3 }), tier: "normal", fact: calm }).en, "Minor flood possible in the next 24 hours (up to 3 in 10)");
+  assert.equal(minorFact({ f: F({ wording: "possible", probability: 0.2 }), tier: "alert", fact: calm }).en, "Minor flood possible in the next 24 hours (up to 2 in 10)");
+  assert.equal(minorFact({ f: F({ wording: "unlikely", probability: 0.1 }), tier: "normal", fact: calm }).en, "Minor flood not expected in the next 24 hours");
+  assert.equal(minorFact({ f: F({ wording: "unlikely", probability: 0.1 }), tier: "normal", fact: { en: "No flooding expected today", si: "", ta: "" } }), null, "the 24 h line already says it");
+  assert.equal(minorFact({ f: F({ wording: "possible", probability: 0.3 }), tier: "normal", fact: { en: "Could reach flood level in ~4 hours", si: "", ta: "" } }), null, "the 24 h line already names the flood level");
+  assert.equal(minorFact({ f: F({ wording: "already", probability: 1 }), tier: "alert", fact: calm }).en, "Already at Minor flood level");
+  assert.equal(minorFact({ f: F({ wording: "already", probability: 1 }), tier: "minor", fact: calm }), null, "the step already says Minor flood");
+  assert.equal(minorFact({ f: F(null, { noForecast: true }), tier: "normal", fact: calm }), null);
+  assert.equal(minorFact({ f: F({ wording: "unlikely", probability: 0 }, { method: "trend" }), tier: "normal", fact: calm }), null, "no model forecast, no claim");
+  assert.equal(minorFact({ f: F(null), tier: "normal", fact: calm }), null, "no minor mark published");
+  const fast = F({ wording: "unlikely", probability: 0 }, { horizonLimitH: 6 });
+  assert.equal(minorFact({ f: fast, tier: "normal", fact: calm }).en, "No estimate beyond 6 hours for this fast river");
+  assert.equal(minorFact({ f: fast, tier: "normal", fact: noEstimateBeyond(6) }), null, "not said twice");
+  for (const l of ["si", "ta"]) assert.ok(minorFact({ f: F({ wording: "possible", probability: 0.3 }), tier: "normal", fact: calm })[l].includes("3"));
+  console.log("minor-line tests passed");
+}

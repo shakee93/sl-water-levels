@@ -27,7 +27,7 @@ import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareBut
 import Link from "next/link";
 import { PLACES } from "@/lib/places";
 import { fallSummary, heavyRainAround, nearRain24hClipped, riseSummary, townsNear } from "@/lib/levelNotes";
-import { CALL, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
+import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, headlineRising, minorFact, noEstimateBeyond, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
 import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
 import { fallingOutlook, nextHourRateM } from "@/lib/forecastRules.mjs";
 import { getHold } from "@/lib/verdictHoldData";
@@ -121,13 +121,6 @@ export function forecastFact(f: ForecastT, tier: string, now: number): { fact: T
 
 /** A gauge whose readings are unusable (lib/forecastRules.mjs NO_FORECAST_GAUGES): the card shows the level and the step and says so. si / ta: DRAFT translations. */
 export const NO_FORECAST_FACT: T3 = { en: "No forecast for this gauge", si: "මෙම මානය සඳහා පුරෝකථනයක් නැත", ta: "இந்த அளவிக்கு முன்னறிவிப்பு இல்லை" };
-
-/** "Next 24 hours" for a fast river whose model is only shown to `h` hours. si / ta: DRAFT translations. */
-export const noEstimateBeyond = (h: number): T3 => ({
-  en: `No estimate beyond ${h} hours for this fast river`,
-  si: `මෙම වේගවත් ගඟ සඳහා පැය ${h}ට පසු ඇස්තමේන්තුවක් නැත`,
-  ta: `இந்த வேகமான ஆற்றுக்கு ${h} மணி நேரத்துக்கு மேல் மதிப்பீடு இல்லை`,
-});
 
 /** "Falling now" / "Falling; expected to keep dropping": the day line for a river that fell over the last 3 h (lib/forecastRules.mjs fallingOutlook). si / ta: DRAFT translations. */
 export const FALLING_DAY: Record<"now" | "keeps", T3> = {
@@ -289,6 +282,8 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   // "Next 24 hours" always has an answer when the gauge is live, even if it's "no estimate".
   const fact: T3 | null = stale ? null : dayFact({ f, tier: realTier, now, lift, rate3hM: me?.rate3hM ?? null, mpu, tidal });
 
+  const minorLine: T3 | null = stale ? null : minorFact({ f, tier: realTier, fact });
+
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const dc = elevated ? contactsForDistrict(district) : null;
   const name = stationDisplayName(selectedStation);
@@ -322,6 +317,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
           : releaseLift
             ? ({ en: "A reservoir release upstream is confirmed", si: "ඉහළ ජලාශයකින් ජලය මුදාහැරීම තහවුරුයි", ta: "மேலே உள்ள நீர்த்தேக்கத்திலிருந்து நீர் திறப்பு உறுதி" } as T3)[lang]
             : null;
+  // Normal (or Watch shown as Normal) while the river is rising: the headline says so, with the distance to Alert under it. Words only: tone, colour and step are unchanged.
+  const normalRising = !stale && headlineRising({ rising, nextHourM: r, tideOnly }) && (tone === "normal" || tone === "watch") && (realTier === "normal" || realTier === "watch");
+  const aboveAlertNote: string | null =
+    normalRising && !nearNote && unit != null && alertLvl != null && alertLvl > 0 && lvlNow != null && alertLvl > lvlNow ? BELOW_ALERT_LEVEL(formatDelta(alertLvl - lvlNow, unit))[lang] : null;
   const shareText = stale
     ? t("share.stale", { name, river: rn, last: level != null ? t("share.staleLast", { level: formatLevel(level, unit) }) : "" })
     : // at Alert or above the share line names the official step ("Kalu Ganga at Ratnapura is at Alert, 19.0 ft, river falling")
@@ -436,9 +435,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
 
       <VerdictCard
         tone={tone}
-        verdict={VERDICT[tone]}
+        verdict={normalRising ? NORMAL_RISING : VERDICT[tone]}
         direction={direction}
         fact={fact}
+        factExtra={minorLine}
         tide={tideOnly}
         factKind={!stale && fact && fact.en === "No flooding expected today" ? "ok" : "soon"}
         labels={
@@ -477,7 +477,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
             : null
         }
         share={{ href: p(stationPath(basin, selectedStation)), name: `${name} (${rn})`, text: shareText, story: { kind: "gauge", slug: stationSlug(selectedStation) } }}
-        note={nearNote}
+        note={nearNote ?? aboveAlertNote}
         moreNotes={moreNotes}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>

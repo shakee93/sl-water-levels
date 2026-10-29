@@ -19,6 +19,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PLACES } from "../lib/places.ts";
+import { oncePerPersonAcross } from "../lib/feedbackLearn.mjs";
 import { FAR, checkWorse, stationInfo } from "../lib/feedbackCheck.mjs";
 import { HORIZONS, buildParams, colomboDay, feedbackWetness, learnedLines, nearest } from "../lib/learnedParams.mjs";
 
@@ -114,7 +115,10 @@ const placeOf = (slug) => PLACES.find((p) => p.slug === slug);
 /** One person per day across both forms: the shared person_day code; rows from before it existed fall back to their own form's hash (not linkable across forms). */
 const personKey = (row) => (row.person_day ? `p|${row.person_day}` : `${row.ip_hash}|${row.day}`);
 const answers = [], streetEvidence = [], checks = {}, checkOf = new Map(); // checkOf: forecast_feedback.id -> verdict of its "worse" cross-check
-for (const f of ev.feedback) {
+// One person within 30 minutes counts once, across both forms (29 Oct 2026: two answers a minute apart; an answer and a map report in the same second).
+// A counting rule only: the raw rows stay as they are in D1 and in the observations file.
+const [fbCounted, reportsCounted] = extra.counted ?? oncePerPersonAcross([ev.feedback, ev.reports]);
+for (const f of fbCounted) {
   const key = personKey(f);
   let err1h = null;
   if (f.shown_next_ft != null && f.station && series[f.station]) {
@@ -139,7 +143,7 @@ for (const f of ev.feedback) {
 const rainEvidence = [], reports = [];
 const rainByZone = {};
 for (const r of ev.rainLog) if (r.mm24h_clipped != null) (rainByZone[r.zone] ??= []).push({ ts: r.data_end_ms, v: r.mm24h_clipped });
-for (const r of ev.reports) {
+for (const r of reportsCounted) {
   reports.push({ town: r.town, answer: r.answer, day: r.day });
   const place = placeOf(r.town), wet = r.answer === "deep" || r.answer === "little";
   const gauge = place?.stations.find((s) => series[s]?.length);

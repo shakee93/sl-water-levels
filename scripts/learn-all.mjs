@@ -26,6 +26,7 @@ import { AREAS, corridorOnly } from "../lib/flood3dReports.ts";
 import { pickRain } from "../lib/groundRain.ts";
 import { nearestGauge, distKm } from "../lib/feedbackCheck.mjs";
 import { FAR } from "../lib/feedbackCheck.mjs";
+import { oncePerPersonAcross } from "../lib/feedbackLearn.mjs";
 import { colomboDay, feedbackWetness, nearest, dedupe, learnedLines } from "../lib/learnedParams.mjs";
 import {
   OBS_VERSION, assertPublicSafe, coverageGaps, diffLearned, fitGroundRain, floodStreetEvidence, gaugeAt, mapRefitStatus, neighbourFlags,
@@ -64,7 +65,9 @@ const contradicted = neighbourFlags(f3);
 const f3Strength = new Map(f3.map((r) => [r.id, reportStrength(r, { contradicted: contradicted.has(r.id) })]));
 const areaOf = (lat, lon) => AREAS.find((a) => lat >= a.south && lat <= a.north && lon >= a.west && lon <= a.east)?.name ?? "Kelani floodplain (elsewhere)";
 
-const base = await buildFromEvidence(ev, { extra: { streetEvidence: floodStreetEvidence(f3, contradicted) } });
+// One person within 30 minutes counts once over all three forms (a counting rule: the rows themselves, and the observations file, keep every answer)
+const [fbCounted, reportsCounted, f3Counted] = oncePerPersonAcross([ev.feedback, ev.reports, f3]);
+const base = await buildFromEvidence(ev, { extra: { streetEvidence: floodStreetEvidence(f3Counted, contradicted), counted: [fbCounted, reportsCounted] } });
 const { params, checkOf, series, stationList, backtestRows } = base;
 
 // ---------------------------------------------------------------------------------------------------------------- places and rain at the spot
@@ -185,14 +188,14 @@ assertPublicSafe(rows);
 // ---------------------------------------------------------------------------------------------------------------- 2b ground-rain proposals
 const person = (r) => (r.person_day ? `p|${r.person_day}` : `${r.ip_hash}|${r.day}`);
 const events = [];
-for (const r of ev.reports) { const z = place(r.town)?.rainZone; if ((r.answer === "deep" || r.answer === "little") && z) events.push({ zone: z, ms: r.created_ms, day: r.day, key: person(r) }); }
-for (const f of ev.feedback) {
+for (const r of reportsCounted) { const z = place(r.town)?.rainZone; if ((r.answer === "deep" || r.answer === "little") && z) events.push({ zone: z, ms: r.created_ms, day: r.day, key: person(r) }); }
+for (const f of fbCounted) {
   if (!(f.water_at === "road" || f.water_at === "yard" || f.water_at === "inside") || checkOf.get(f.id) === FAR) continue;
   const pl = place(f.page === "town" ? f.town : f.place_pick) ?? place(f.town);
   const z = f.lat_r != null ? zoneNear({ lat: f.lat_r, lon: f.lon_r }, 8) : pl?.rainZone;
   if (z) events.push({ zone: z, ms: f.created_ms, day: f.day, key: person(f) });
 }
-for (const r of f3) {
+for (const r of f3Counted) {
   if (r.kind !== "water_now" || !(f3Strength.get(r.id)?.strength > 0)) continue;
   const z = zoneNear(r, 6);
   if (z) events.push({ zone: z, ms: r.created_ms, day: r.day, key: `p|${r.person_day}` });
@@ -200,7 +203,7 @@ for (const r of f3) {
 const groundRain = fitGroundRain(ev.groundLog, events);
 
 // ---------------------------------------------------------------------------------------------------------------- 2c forecast
-const worse = dedupe(ev.feedback.filter((f) => f.answer === "worse" && f.shown_dir === "rising" && f.station && checkOf.get(f.id) !== FAR).sort((a, b) => a.created_ms - b.created_ms), (f) => `${person(f)}|${f.station}`)
+const worse = dedupe(fbCounted.filter((f) => f.answer === "worse" && f.shown_dir === "rising" && f.station && checkOf.get(f.id) !== FAR).sort((a, b) => a.created_ms - b.created_ms), (f) => `${person(f)}|${f.station}`)
   .map((f) => ({ station: f.station, ms: f.created_ms }));
 const worseFeature = worseFeatureTest(backtestRows, worse);
 const forecast = {

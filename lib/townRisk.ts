@@ -228,6 +228,8 @@ export type TownRisk = {
   /** The satellite low-spot rain level (null when below 60 mm, data missing, or the rule does not apply). Never part of `tone`. */
   lowSpot: { level: "possible" | "likely"; /** clipped 24 h rain, mm */ mm: number } | null;
   trend: "up" | "down" | "steady" | "unknown";
+  /** The river is really rising (tide taken out for tidal gauges, same rule as the gauge page). Display only: wording, never the tone. */
+  rising: boolean;
   reasons: Reason[];
   /** Next-hour line: key into the dictionary. */
   hourKey: "dir.tide" | "dir.rising" | "dir.slow" | "dir.falling" | "dir.steady" | "dir.unknown";
@@ -559,6 +561,7 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     rainRaised,
     lowSpot,
     trend,
+    rising: liftRising,
     reasons,
     why,
     hourKey: gauge ? hourKey : "dir.unknown",

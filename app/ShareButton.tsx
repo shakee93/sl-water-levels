@@ -149,7 +149,7 @@ const TREND = {
 } as const;
 
 /** One "Next hour" / "Next 24 hours" tile: small label, an icon chip beside a short bold headline, and an optional muted sub-line. */
-function Tile({ data, label, text, Icon, chip, className }: { data: string; label: string | null; text: string; Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }> | null; chip: string; className: string }) {
+function Tile({ data, label, text, extra, Icon, chip, className }: { data: string; label: string | null; text: string; extra?: string | null; Icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }> | null; chip: string; className: string }) {
   const { title, sub } = splitTile(text);
   return (
     <div {...{ [data]: "" }} className={`rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 ${className}`}>
@@ -163,6 +163,7 @@ function Tile({ data, label, text, Icon, chip, className }: { data: string; labe
         <div className="min-w-0">
           <p className="text-base sm:text-lg font-semibold leading-snug text-slate-900 dark:text-slate-50">{title}</p>
           {sub && <p className="mt-0.5 text-xs sm:text-sm leading-snug text-slate-500 dark:text-slate-400">{sub}</p>}
+          {extra && <p data-minor-line className="mt-1 text-xs sm:text-sm leading-snug text-slate-600 dark:text-slate-300">{extra}</p>}
         </div>
       </div>
     </div>
@@ -200,6 +201,7 @@ export function VerdictCard({
   verdict,
   direction,
   fact,
+  factExtra,
   labels,
   factKind,
   tide,
@@ -220,6 +222,8 @@ export function VerdictCard({
   verdict: T3;
   direction: T3 | null;
   fact: T3 | null;
+  /** One more plain line under the Next 24 hours text ("Minor flood not expected in the next 24 hours"). Words only. */
+  factExtra?: T3 | null;
   /** Optional muted labels shown before direction and fact ("Next hour:", "Next 24 hours:"). */
   labels?: { direction: T3 | null; fact: T3 | null };
   /** "ok" gives the Next 24 hours tile a green check (calm day); otherwise a clock. */
@@ -320,6 +324,7 @@ export function VerdictCard({
                 data="data-fact"
                 label={labels?.fact ? labels.fact[lang].replace(/:$/, "") : null}
                 text={fact[lang]}
+                extra={factExtra?.[lang] ?? null}
                 Icon={factKind === "ok" ? CircleCheck : Clock}
                 chip={factKind === "ok" ? TREND.down.chip : tone === "alert" || tone === "minor" || tone === "major" ? TREND.up.chip : TREND.steady.chip}
                 className={look.tile}

@@ -29,7 +29,7 @@ import { fetchBasinSnapshot } from "./arcgis";
 import { loadForecast } from "./forecast";
 import { ACTION, TIDE_RISE, dayFact } from "@/app/Forecast";
 import { nextHourRateM } from "@/lib/forecastRules.mjs";
-import { VERDICT, directionFor, STEADY_M_PER_H } from "@/app/verdict";
+import { VERDICT, BELOW_ALERT_LEVEL, NORMAL_RISING, headlineRising, directionFor, STEADY_M_PER_H } from "@/app/verdict";
 import { isTidalStation, liftVerdict, riverRising } from "./verdictLift";
 import { getReleases, releaseAffectingFrom } from "./releases";
 import { officialReleaseAlert } from "./releaseAlert";
@@ -491,6 +491,7 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
   let day: ForecastPayload["day"] = null;
   let action: string | null = null;
   let note: string | null = null;
+  let normalRising = false;
   if (f && me && hasForecast && !stale) {
     const now = f.asOfTs ?? me.latest?.ts ?? 0;
     const mpu = me.metresPerUnit ?? 1;
@@ -523,6 +524,9 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
       };
     }
     if (tone === "alert" || tone === "minor" || tone === "major") action = (ACTION[tone]?.[L] ?? null);
+    // Normal (or Watch shown as Normal) while the river rises: said in the headline, with the distance to Alert in the note (words only, same rule as the gauge page)
+    normalRising = headlineRising({ rising, nextHourM: r, tideOnly }) && (tone === "normal" || tone === "watch") && (nat.tier === "normal" || nat.tier === "watch");
+    if (normalRising && unit != null && alertLvl != null && alertLvl > 0 && lvlNow != null && alertLvl > lvlNow) note = BELOW_ALERT_LEVEL(fmtDelta(alertLvl - lvlNow, unit, want))[L];
   } else if (!stale && ["alert", "minor", "major"].includes(nat.tier)) {
     action = ACTION[nat.tier as VerdictTone]?.[L] ?? null;
   }
@@ -541,7 +545,7 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     title: stationDisplayName(station),
     river: riverName(basin, L),
     row,
-    verdict: stale ? row.step : VERDICT[tone === "watch" ? "normal" : tone][L],
+    verdict: stale ? row.step : normalRising ? NORMAL_RISING[L] : VERDICT[tone === "watch" ? "normal" : tone][L],
     tone: pill,
     hour,
     day,

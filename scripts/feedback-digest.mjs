@@ -11,7 +11,7 @@
 //        --rows <file> read the day's rows from a JSON file instead of D1 (offline test; implies --dry-run)
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { digestText, feedbackRows, feedbackSql } from "../lib/feedbackLearn.mjs";
+import { digestText, feedbackRows, feedbackSql, oncePerPerson } from "../lib/feedbackLearn.mjs";
 import { learnedLines } from "../lib/learnedParams.mjs";
 import { whatWeLearnedLines } from "../lib/learnAll.mjs";
 
@@ -29,6 +29,12 @@ const yesterday = new Date(now + COLOMBO - 864e5).toISOString().slice(0, 10);
 function d1(sql) {
   const raw = execFileSync("npx", ["-y", "wrangler@4", "d1", "execute", "sl-water-levels", "--remote", "--json", "--command", sql], { encoding: "utf8", maxBuffer: 64 << 20 });
   return JSON.parse(raw.slice(raw.indexOf("[")))[0].results;
+}
+/** Rows for one day; older tables miss some columns until the routes add them, so retry with fewer. */
+function dayRows(day) {
+  for (const people of [true, "basic", false]) {
+    try { return feedbackRows(d1(feedbackSql(0, people).replace("ORDER BY", `AND f.day = '${day}' ORDER BY`))); } catch (e) { if (people === false || !/no such column/i.test(`${e?.message ?? e} ${e?.stdout ?? ""}`)) throw e; }
+  }
 }
 /** What the learning job (scripts/feedback-learn.mjs) has learned so far: read from the data branch, no D1 reads; "" when unavailable. */
 async function learnedText() {
@@ -66,25 +72,27 @@ async function slack(text) {
 
 if (FILE) {
   const rows = feedbackRows(JSON.parse(readFileSync(FILE, "utf8")));
-  await slack(digestText({ day: yesterday, rows: rows.filter((r) => r.day === yesterday || !r.day), urgentCount: rows.filter((r) => r.answer === "worse" && r.river_obs === "flooding").length, site: SITE }) + (await learnedText()) + (await whatWeLearnedText()));
+  await slack(digestText({ day: yesterday, rows: rows.filter((r) => r.day === yesterday || !r.day), urgentCount: oncePerPerson(rows).filter((r) => r.answer === "worse" && r.river_obs === "flooding").length, site: SITE }) + (await learnedText()) + (await whatWeLearnedText()));
   process.exit(0);
 }
 
 try {
   // 1. urgent catch-up
-  const urgent = d1("SELECT id, page, station, town, dist_km, note FROM forecast_feedback WHERE notified = 2 ORDER BY id LIMIT 20");
+  let urgent;
+  try { urgent = d1("SELECT id, page, station, town, dist_km, note, place_pick, rain_3h_mm, rain_24h_mm FROM forecast_feedback WHERE notified = 2 ORDER BY id LIMIT 20"); }
+  catch (e) { if (!/no such column/i.test(String(e?.message ?? e))) throw e; urgent = d1("SELECT id, page, station, town, dist_km, note FROM forecast_feedback WHERE notified = 2 ORDER BY id LIMIT 20"); }
   for (const u of urgent) {
     const name = u.page === "town" ? `${u.town}${u.station ? ` (gauge ${u.station})` : ""}` : u.station;
     const link = `${SITE}${u.page === "town" ? `/flood/${u.town}` : "/"}`;
-    const text = `*Feedback: our verdict looks too mild.* Someone at ${name} says it is worse than shown and water is on roads or in homes${u.dist_km != null ? ` (about ${u.dist_km} km from the gauge)` : ""}.${u.note ? ` They wrote: ${u.note}` : ""} ${link}`;
+    const text = `*Feedback: our verdict looks too mild.* Someone at ${name} says it is worse than shown and water is on roads or in homes${u.dist_km != null ? ` (about ${u.dist_km} km from the gauge)` : ""}.${u.place_pick ? ` Place they picked: ${u.place_pick}.` : ""}${u.rain_3h_mm != null || u.rain_24h_mm != null ? ` Rain at their spot: ${u.rain_3h_mm ?? "?"} mm in 3 h, ${u.rain_24h_mm ?? "?"} mm in 24 h.` : ""}${u.note ? ` They wrote: ${u.note}` : ""} ${link}`;
     if ((await slack(text)) && !DRY) d1(`UPDATE forecast_feedback SET notified = 1 WHERE id = ${Number(u.id)}`);
   }
   // 2. daily digest
   if (hour >= 8) {
     const sent = d1(`SELECT day FROM feedback_digest WHERE day = '${today}'`);
     if (!sent.length) {
-      const rows = feedbackRows(d1(feedbackSql(0).replace("ORDER BY", `AND f.day = '${yesterday}' ORDER BY`)));
-      const urgentCount = rows.filter((r) => r.answer === "worse" && r.river_obs === "flooding").length;
+      const rows = dayRows(yesterday);
+      const urgentCount = oncePerPerson(rows).filter((r) => r.answer === "worse" && r.river_obs === "flooding").length;
       {
         const ok = rows.length === 0 ? true : await slack(digestText({ day: yesterday, rows, urgentCount, site: SITE }) + (await learnedText()) + (await whatWeLearnedText()));
         if (ok && !DRY) d1(`INSERT OR IGNORE INTO feedback_digest (day, sent_ms) VALUES ('${today}', ${now})`);

@@ -4,7 +4,7 @@ import { CloudRain, Info, TriangleAlert, Waves, Ruler, Droplets, Landmark, Circl
 import { VerdictCard, type T3, type VerdictTone } from "../ShareButton";
 import { TimeAgo } from "../TimeAgo";
 import { useI18n } from "../LocaleProvider";
-import { CALL, hourReason, withReason } from "../verdict";
+import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, hourReason, withReason } from "../verdict";
 import { assessTown, type ReasonKind, type TownRisk, type TownRiskInput } from "@/lib/townRisk";
 import { ttFor, type TKey } from "@/lib/i18n/town";
 import { formatKm } from "@/lib/nearby";
@@ -13,7 +13,7 @@ import { markGap, dayOutlook } from "@/lib/townNotes";
 import type { TownPeople } from "@/lib/townPeople";
 import { isTidalStation } from "@/lib/verdictLift";
 import { isShortForecastGauge } from "@/lib/forecastRules.mjs";
-import { formatLevel, type Unit } from "@/lib/units";
+import { formatDelta, formatLevel, type Unit } from "@/lib/units";
 import type { Thresholds } from "@/lib/readings";
 import { useMyLevel } from "./useMyLevel";
 
@@ -165,12 +165,18 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
     if (parts.length) peopleNote = tt("people.line", { n: a.n, town: townName, parts: parts.join(", ") });
   }
   const waterNote = people?.water ? tt("people.water", { n: people.water.n, h: people.water.hours }) : null;
-  const moreNotes: React.ReactNode[] = [whyNote, gapNote, peopleNote, waterNote].filter((x) => x != null);
+  // 5. Normal (or Watch shown as Normal) while the river is rising: the headline says so (words only; tone, colour and step unchanged), with the distance to Alert
+  // under it unless the "below the alert level" gap note already says it
+  const normalRising = !stale && !!g && r.rising && (r.hourKey === "dir.rising" || r.hourKey === "dir.slow") && (tone === "normal" || tone === "watch");
+  const alertMark = gg?.thresholds.alert;
+  const aboveAlertNote: string | null =
+    normalRising && gg && gg.level != null && gg.unit != null && alertMark != null && alertMark > 0 && alertMark > gg.level && gap?.below?.mark !== "alert" ? BELOW_ALERT_LEVEL(formatDelta(alertMark - gg.level, gg.unit))[lang] : null;
+  const moreNotes: React.ReactNode[] = [whyNote, gapNote, aboveAlertNote, peopleNote, waterNote].filter((x) => x != null);
   return (
     <>
       <VerdictCard
         tone={tone}
-        verdict={verdict}
+        verdict={normalRising ? NORMAL_RISING : verdict}
         direction={
           g
             ? withReason(
