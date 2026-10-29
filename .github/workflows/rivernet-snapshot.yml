@@ -4,9 +4,8 @@
 
 name: RiverNet snapshot
 
+# Started every 2 h (even UTC hours, :25) by the Cloudflare scheduler (workers/scheduler), not GitHub's cron, which skipped most runs.
 on:
-  schedule:
-    - cron: "23 */2 * * *"
   workflow_dispatch:
 
 permissions:
