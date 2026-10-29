@@ -77,13 +77,16 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
   const [noteDropped, setNoteDropped] = useState(false);
   const [answer, setAnswer] = useState<FbAnswer | null>(null);
   const [water, setWater] = useState<"open" | "sending" | "sent">("open");
-  // "Where are you?" after "worse": a phone position (rounded here) or a town from the list; optional, the answer is kept either way
-  const [where, setWhere] = useState<"open" | "busy" | "off" | "sending" | "sent" | "skipped">("open");
+  // "Where are you?" BEFORE a "worse" answer is sent (owner, 29 Oct 2026: most "worse" answers came without a place and could not be checked):
+  // a phone position (rounded here), one of the nearest towns or a town from the search. No place, no "worse" answer.
+  const [askWhere, setAskWhere] = useState(false);
+  const [where, setWhere] = useState<"open" | "busy" | "off" | "sending" | "sent">("open");
   const [placeQ, setPlaceQ] = useState("");
-  const [places, setPlaces] = useState<{ slug: string; name: string; district: string; keys: string[] }[] | null>(null);
+  const [places, setPlaces] = useState<{ slug: string; name: string; district: string; lat: number; lon: number; keys: string[] }[] | null>(null);
 
-  async function send(a: FbAnswer) {
-    if (phase === "sending") return;
+  /** Saves the answer; returns its token (null when it failed). */
+  async function send(a: FbAnswer): Promise<string | null> {
+    if (phase === "sending") return null;
     setPhase("sending");
     setAnswer(a);
     try {
@@ -99,10 +102,13 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
         trackEvent("feedback_answer", { page, answer: a, tone, target });
         listeners.forEach((l) => l());
         setPhase("done");
-      } else setPhase(res.status === 429 ? "limit" : "error");
+        return j?.token ?? null;
+      }
+      setPhase(res.status === 429 ? "limit" : "error");
     } catch {
       setPhase("error");
     }
+    return null;
   }
 
   /** "Where is the water now?" after "No, it's worse": one tap, saved on the answer's own row; failing is harmless. */
@@ -118,12 +124,13 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
     setWater("sent");
   }
 
-  /** Saves "where are you" on the answer's own row; the server rounds it again and works out the distance to the gauge. Failing is harmless. */
+  /** Sends the "worse" answer, then its place on the answer's own row (the server rounds it again and works out the distance to the gauge). */
   async function sendWhere(p: { lat: number; lon: number } | { place: string }) {
-    if (!token) return;
     setWhere("sending");
+    const tk = await send("worse");
+    if (!tk) return setWhere("open");
     try {
-      await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "where", token, ...p, hp }) });
+      await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ op: "where", token: tk, ...p, hp }) });
       trackEvent("feedback_where", { page, how: "place" in p ? "place" : "gps", target });
     } catch {
       /* the answer itself is already saved */
@@ -145,8 +152,14 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
   /** The place list is loaded only when the person opens the search, so it is not part of every page's first load. */
   function loadPlaces() {
     if (places) return;
-    void import("@/lib/places").then((m) => setPlaces(m.PLACES.map((x) => ({ slug: x.slug, name: x.name, district: x.district, keys: [x.name, ...x.aliases].map((k) => k.toLowerCase()) }))));
+    void import("@/lib/places").then((m) => setPlaces(m.PLACES.map((x) => ({ slug: x.slug, name: x.name, district: x.district, lat: x.lat, lon: x.lon, keys: [x.name, ...x.aliases].map((k) => k.toLowerCase()) }))));
   }
+  // one tap: the three towns nearest this page's place (its own town first on a town page)
+  const nearHits = useMemo(() => {
+    if (!places || !spot) return [];
+    const d = (x: { lat: number; lon: number }) => (x.lat - spot.lat) ** 2 + ((x.lon - spot.lon) * Math.cos((spot.lat * Math.PI) / 180)) ** 2;
+    return places.slice().sort((a, b) => (a.slug === town ? -1 : b.slug === town ? 1 : d(a) - d(b))).slice(0, 3);
+  }, [places, spot, town]);
   const placeHits = useMemo(() => {
     const q = placeQ.trim().toLowerCase();
     if (!places || q.length < 2) return [];
@@ -233,43 +246,6 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
             </div>
           )}
 
-          {token && answer === "worse" && where !== "sent" && where !== "skipped" && (
-            <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800" role="group" aria-label={ft("fb.whereQ")}>
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{ft("fb.whereQ")}</p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{where === "off" ? ft("fb.whereOff") : ft("fb.whereWhy")}</p>
-              <button type="button" onClick={shareMyLocation} disabled={where === "busy" || where === "sending"} className={`mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-left text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 ${ring}`}>
-                <MapPin className="size-4 shrink-0" aria-hidden /> {where === "busy" ? ft("fb.whereBusy") : ft("fb.whereBtn")}
-              </button>
-              <div className="mt-3">
-                <label htmlFor={`fb-place-${cookie}`} className="mb-1.5 block text-xs text-slate-500 dark:text-slate-400">{ft("fb.wherePick")}</label>
-                <input
-                  id={`fb-place-${cookie}`}
-                  type="search"
-                  value={placeQ}
-                  onFocus={loadPlaces}
-                  onChange={(e) => { setPlaceQ(e.target.value); loadPlaces(); }}
-                  placeholder={ft("fb.wherePh")}
-                  autoComplete="off"
-                  className={`w-full rounded-md border border-slate-300 bg-white p-2.5 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 ${ring}`}
-                />
-                {placeHits.length > 0 && (
-                  <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {placeHits.map((x) => (
-                      <li key={x.slug}>
-                        <button type="button" disabled={where === "sending"} onClick={() => sendWhere({ place: x.slug })} className={`${chip(false)} w-full justify-start rounded-xl py-2 text-left disabled:opacity-60`}>
-                          {x.name}<span className="text-xs text-slate-500 dark:text-slate-400">, {x.district}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {places && placeQ.trim().length >= 2 && placeHits.length === 0 && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{ft("fb.whereNone")}</p>}
-              </div>
-              <button type="button" onClick={() => setWhere("skipped")} className={`mt-2 min-h-11 rounded-md px-4 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${ring}`}>
-                {ft("fb.whereSkip")}
-              </button>
-            </div>
-          )}
           {answer === "worse" && where === "sent" && <p className="mt-3 flex items-start gap-2 text-slate-600 dark:text-slate-400"><MapPin className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden /> {ft("fb.whereDone")}</p>}
 
           {token && detail === "open" && (
@@ -347,6 +323,56 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
       ) : (
         <>
           <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">{ft("fb.intro")}</p>
+          {askWhere ? (
+            <div className="mt-3" role="group" aria-label={ft("fb.whereQ")}>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{ft("fb.worse")}: {ft("fb.whereQ")}</p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{where === "off" ? ft("fb.whereOff") : ft("fb.whereWhy")}</p>
+              <button type="button" onClick={shareMyLocation} disabled={where === "busy" || where === "sending"} className={`mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-left text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 ${ring}`}>
+                <MapPin className="size-4 shrink-0" aria-hidden /> {where === "busy" ? ft("fb.whereBusy") : ft("fb.whereBtn")}
+              </button>
+              {nearHits.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">{ft("fb.whereNear")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {nearHits.map((x) => (
+                      <button key={x.slug} type="button" disabled={where === "sending"} onClick={() => sendWhere({ place: x.slug })} className={`${chip(false)} disabled:opacity-60`}>
+                        {x.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="mt-3">
+                <label htmlFor={`fb-place-${cookie}`} className="mb-1.5 block text-xs text-slate-500 dark:text-slate-400">{ft("fb.wherePick")}</label>
+                <input
+                  id={`fb-place-${cookie}`}
+                  type="search"
+                  value={placeQ}
+                  onFocus={loadPlaces}
+                  onChange={(e) => { setPlaceQ(e.target.value); loadPlaces(); }}
+                  placeholder={ft("fb.wherePh")}
+                  autoComplete="off"
+                  className={`w-full rounded-md border border-slate-300 bg-white p-2.5 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 ${ring}`}
+                />
+                {placeHits.length > 0 && (
+                  <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {placeHits.map((x) => (
+                      <li key={x.slug}>
+                        <button type="button" disabled={where === "sending"} onClick={() => sendWhere({ place: x.slug })} className={`${chip(false)} w-full justify-start rounded-xl py-2 text-left disabled:opacity-60`}>
+                          {x.name}<span className="text-xs text-slate-500 dark:text-slate-400">, {x.district}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {places && placeQ.trim().length >= 2 && placeHits.length === 0 && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{ft("fb.whereNone")}</p>}
+              </div>
+              <button type="button" onClick={() => { setAskWhere(false); setWhere("open"); }} disabled={where === "sending"} className={`mt-2 min-h-11 rounded-md px-4 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 ${ring}`}>
+                {ft("fb.whereBack")}
+              </button>
+            </div>
+          ) : (
+          <>
           {/* honeypot: people never see or fill this */}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={hp} onChange={(e) => setHp(e.target.value)} className="absolute left-[-9999px] h-0 w-0 opacity-0" />
           <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -355,13 +381,15 @@ export function AccuracyFeedback({ page, station, town, name, tone, spot }: { pa
                 key={id}
                 type="button"
                 disabled={phase === "sending"}
-                onClick={() => send(id)}
+                onClick={() => (id === "worse" ? (setAskWhere(true), loadPlaces()) : void send(id))}
                 className={`inline-flex min-h-11 items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-left text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 ${ring}`}
               >
                 <Icon className="size-4 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden /> {ft(key)}
               </button>
             ))}
           </div>
+          </>
+          )}
           <p className="mt-2 min-h-5 text-sm" role="status">
             {phase === "sending" && <span className="text-slate-500 dark:text-slate-400">{ft("fb.sending")}</span>}
             {phase === "error" && <span className="text-amber-700 dark:text-amber-300">{ft("fb.error")}</span>}
