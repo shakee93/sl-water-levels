@@ -256,6 +256,8 @@ These cost real debugging time. Future-you should not relearn them.
   threshold values and the rationale. Future tuning should update
   both the constants and the comments.
 
+- **Forecast KPIs** (29 Oct 2026, DOCS.md "Forecast KPIs"): ten owner-approved targets scored nightly (`lib/forecastKpi.mjs`, `scripts/forecast-kpi.mjs` -> `kpi/latest.json` on `data`, versions in `lib/model/versions.json`, public `/forecast-accuracy`). The archive carries the readings (`forecasts/YYYY/*.readings.json`); a new forecast version needs a `versions.json` entry (+ si/ta strings) when it goes live.
+
 - **Forecast display rules** (owner decisions 28 Oct 2026, `lib/forecastRules.mjs`, audit in the private `research/forecast-audit-workflow-2026-10-28.md`):
   shown chance of Minor <= 30% and Major <= 10%, never "likely" for them (the model's own figures stay in `Forecast.rawCrossings` / `rawHorizons` for the
   log); no forecast on `NO_FORECAST_GAUGES` (Ampara, Katharagama, Weraganthota); fast tributaries (`SHORT_FORECAST_GAUGES`) show the model only to 6 h;

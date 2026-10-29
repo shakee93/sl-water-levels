@@ -1,0 +1,35 @@
+{
+  "_note": "Forecast versions, oldest first. `from` = when it went live (ISO, UTC; the time the deploy was finished, as in scripts/accuracy-snapshot.mjs). `what` = one plain sentence for /forecast-accuracy (si/ta in lib/i18n/forecastKpi.ts, keyed by id). Optional `modelVersion` = a regex the run's stored model_version must match (every run so far carries the same coefficient date, so none is set). A run belongs to the latest version whose `from` is not after its issue time. Add an entry when a candidate is promoted (DOCS.md \"Forecast KPIs\").",
+  "versions": [
+    {
+      "id": "launch",
+      "name": "First forecast",
+      "from": "2026-10-22T00:00:00Z",
+      "what": "The first forecasts: a rain-based model for the next hours, and a simple trend line for gauges without a model."
+    },
+    {
+      "id": "gauge-only",
+      "name": "Gauge-only model",
+      "from": "2026-10-24T11:32:32Z",
+      "what": "The next 1, 3 and 6 hours now come from the river's own recent movement (fitted on 11 months of readings) instead of extending the trend."
+    },
+    {
+      "id": "storm-v3",
+      "name": "Storm model v3",
+      "from": "2026-10-26T05:13:20Z",
+      "what": "Heavy rain over the catchment now lifts the 12 and 24 hour forecasts, and the stated range widens when a storm is under way."
+    },
+    {
+      "id": "storm-v4",
+      "name": "Storm model v4",
+      "from": "2026-10-26T08:53:54Z",
+      "what": "In storms the forecast reads the rain the satellite actually measured, timing rain beside the gauge and rain upstream separately."
+    },
+    {
+      "id": "glitch-filter",
+      "name": "Sensor-glitch filter",
+      "from": "2026-10-29T06:37:17Z",
+      "what": "One-reading spikes and frozen sensors are cleaned out of the readings the forecast learns from, so a faulty gauge no longer distorts it."
+    }
+  ]
+}

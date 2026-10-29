@@ -1215,6 +1215,32 @@ re-validating every number against the same bounds (`streetLevelOf`, `rainPossib
 **Known limits.** One person who answers on the site and in the street report counts twice (the two tables use different salts). A gauge
 level learned from rain-caused street water (Nagalagam Street, ~3 ft) is a level at which water WAS seen, not proof the river caused it.
 
+## Forecast KPIs (29 Oct 2026)
+
+Ten targets the owner approved, scored every night over a rolling 30 days and per day, for the live forecast and each shadow candidate, and per forecast version. Public page: `/forecast-accuracy` (en/si/ta), plain language, "Forecasts met N of 10 targets". MEASURES ONLY: nothing here changes a forecast, a verdict, an alert or a push.
+
+*Where.* `lib/forecastKpi.mjs` (pure maths, tests `node --experimental-strip-types --no-warnings scripts/forecast-kpi.test.mts`), `scripts/forecast-kpi.mjs <archiveDir>` (writes `kpi/latest.json`, `kpi/days/YYYY-MM-DD.json`, `kpi/history.csv` on the `data` branch; run by `forecast-scoreboard.yml` after the scoreboard step, started by the Cloudflare scheduler at 20:10 UTC), `lib/model/versions.json` (forecast versions), `lib/forecastKpiData.ts` + `app/[lang]/forecast-accuracy/page.tsx` (page, cached 1 h, fails soft), `lib/i18n/forecastKpi.ts` (strings; si/ta are DRAFTS).
+*Archive format.* `scripts/forecast-archive.mjs` now also writes `forecasts/YYYY/YYYY-MM-DD.readings.json` (every gauge's readings from 36 h before the day to 25 h after it, whole seconds, own unit; 30-60 KB) and `rain_risk` on each run line. The KPI script cleans the readings with `lib/readingQc.mjs` (`cleanSeries`) and finds crossings, rates and outcomes from them; a day without a readings file falls back to the stored `y` and has no crossings. D1 keeps readings 7 days, so older days cannot gain the file. One-off backfill: `gh workflow run forecast-scoreboard.yml -f days=7` (re-archives, re-scores and recomputes KPIs for the seven days before today); or `-f from=2026-10-23 -f to=2026-10-28`.
+
+| # | Plain name | Target |
+|---|---|---|
+| 1 | Floods warned in time | >= 80% of real step crossings had a shown chance >= 20% in EVERY fitted-model run for the lead time: 6 h (alert) / 12 h (minor, major) on big rivers, 2 h on fast rivers |
+| 2 | Warnings that did not happen | of alarmed gauge-step-days, "possible" (20-50%) <= 60% and "likely" (>= 50%) <= 25% did not reach the step within 24 h |
+| 3 | Honest chances | shown chance vs observed frequency per bin within +-10 points, bins with >= 10 cases |
+| 4 | Better than "no change" | skill >= 30% at 1-6 h, >= 20% at 12 h, >= 10% at 24 h; no phase (rising / slow rise / calm / slow fall / falling by the 3 h rate) below 0 |
+| 5 | Bias at 12 h | within +-0.25 ft in every phase |
+| 6 | 80% range coverage | 75-85% at every horizon |
+| 7 | Fast rises called | >= 95% of next-reading rises >= 10 cm had "Next hour" = Rising |
+| 8 | "Rising" right | >= 75% of Rising calls followed by a rise >= 1 cm |
+| 9 | Inputs | forecast runs in 24 of 24 hours a day (also reported: median gauges per hour, share of runs flagged by the glitch filter) |
+| 10 | People agree | yes / (yes + worse + better) >= 70% |
+
+Definitions that matter: levels in feet, readings cleaned first, a run issued from a flagged reading (spike, stuck repeat, or a latest reading that jumped like a glitch) is dropped from everything except KPI 9; fitted-model runs only (`method = model`); gauges with no forecast and, beyond 6 h, the short-forecast gauges are not scored. A crossing EVENT is the first clean reading at or above the step after one below it (a second crossing of the same gauge and step within 6 h counts as the same event); events count once however many runs saw them, and a gap of more than 3 h between runs breaks the "every run" stretch. KPI 7 and 8 leave out the four tidal gauges (the site judges those against a tide-corrected level). "Next hour" direction = `nextHourRateM` (model 1 h change, else the 3 h rate) above `STEADY_M_PER_H`. Shown chances use `shownChance` (minor <= 30%, major <= 10%). A target is judged only with enough cases (`TARGETS[..].min` in `lib/forecastKpi.mjs`); otherwise it shows "Too early to say" and is left out of "met N of M". Storm days (any run that day with `storm = 1` or a heavy-rain warning showing) are reported as a separate set and are also inside the total. "People agree": with `CLOUDFLARE_API_TOKEN` the answers come from D1 `forecast_feedback` (per day and per version); without it the 30-day aggregate in `accuracy/latest.json` is used.
+
+*Versions.* `lib/model/versions.json`: `{id, name, from, what, modelVersion?}`. Every stored run carries the same `model_version` (the coefficient fit date), so a run belongs to the latest version whose `from` is not after its issue time. Seeded: launch (22 Oct), gauge-only model (24 Oct), storm v3 and v4 (26 Oct), sensor-glitch filter (29 Oct, 8877014). The KPI script writes the ten KPIs for each version too. Version names and sentences for si/ta are keyed by id in `lib/i18n/forecastKpi.ts`.
+
+*The improvement cycle.* One change at a time: (1) write the candidate as a shadow variant (`lib/shadowForecast.ts`, logged beside the live forecast, never shown); (2) it is scored every night next to live on KPIs 4-8 (`kpi/latest.json` `variants`); (3) before promoting, replay the archive and the Ditwah gate (leave-one-storm-out, Ditwah included) and require no KPI to get worse; (4) at least 7 days live in shadow with a better KPI 4-8 and nothing worse; (5) promote it, and add a `versions.json` entry (id, deploy time in UTC, one plain sentence) plus its si/ta strings in the same commit, so the page and the per-version table start counting from the deploy.
+
 ## Learning pipeline (nightly observations -> models, 27 Oct 2026)
 
 Owner: "we need to use all that data to improve our forecasting." One job, `scripts/learn-all.mjs` (maths in `lib/learnAll.mjs` + `lib/learnedParams.mjs`; tests

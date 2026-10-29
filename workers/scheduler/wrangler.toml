@@ -18,6 +18,7 @@ crons = [
   "30 7,19 * * *", # gauge snapshot, 13:00 and 01:00 Colombo
   "0 1 1 * *",     # monthly prediction export, 06:30 Colombo on the 1st
   "50 18 * * *",   # nightly learning pipeline (learn-all.yml), 00:20 Colombo
+  "10 20 * * *",   # nightly forecast archive + scoreboard + KPIs (forecast-scoreboard.yml), 01:40 Colombo
 ]
 
 [vars]

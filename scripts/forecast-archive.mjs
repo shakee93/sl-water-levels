@@ -10,7 +10,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { selectRows } from "../lib/d1Sql.mjs";
-import { HOUR, addDays, buildArchiveLines, colomboDay, dayEnd, dayStart, daysBetween } from "../lib/forecastScoreboard.mjs";
+import { HOUR, addDays, buildArchiveLines, buildReadings, colomboDay, dayEnd, dayStart, daysBetween } from "../lib/forecastScoreboard.mjs";
 
 const args = process.argv.slice(2);
 const out = args[0];
@@ -24,12 +24,12 @@ const days = opt("--day") ? [opt("--day")] : opt("--from") ? daysBetween(opt("--
 
 async function archiveDay(day) {
   const a = dayStart(day), b = dayEnd(day);
-  const runs = await selectRows(
-    "SELECT id, station, basin, issued_at, method, status, model_version, unit, current_level, tier, verdict, storm FROM forecast_runs WHERE issued_at >= ? AND issued_at < ?",
-    [a, b],
-  ).catch(async () =>
-    // a database from before d1/0009 has no `storm` column
-    (await selectRows("SELECT id, station, basin, issued_at, method, status, model_version, unit, current_level, tier, verdict, NULL AS storm FROM forecast_runs WHERE issued_at >= ? AND issued_at < ?", [a, b])),
+  const cols = "id, station, basin, issued_at, method, status, model_version, unit, current_level, tier, verdict";
+  const where = "FROM forecast_runs WHERE issued_at >= ? AND issued_at < ?";
+  // older databases lack `storm` (d1/0009) or `rain_risk_kind`; try the full row first, then fall back
+  const runs = await selectRows(`SELECT ${cols}, storm, rain_risk_kind ${where}`, [a, b]).catch(() =>
+    selectRows(`SELECT ${cols}, storm, NULL AS rain_risk_kind ${where}`, [a, b]).catch(() =>
+      selectRows(`SELECT ${cols}, NULL AS storm, NULL AS rain_risk_kind ${where}`, [a, b])),
   );
   if (!runs.length) { console.log(`${day}: no runs, nothing archived`); return; }
   const ids = new Set(runs.map((r) => r.id));
@@ -43,13 +43,15 @@ async function archiveDay(day) {
   const shadows = await selectRows("SELECT station, issued_at, variant, horizon_h, target_ts, level, low, high FROM forecast_shadow_points WHERE issued_at >= ? AND issued_at < ?", [a, b]).catch(() => []); // table appears with the first stored shadow run
   const obs = {};
   for (const st of new Set(runs.map((r) => r.station))) {
-    obs[st] = await selectRows("SELECT ts, level FROM observations WHERE station = ? AND ts BETWEEN ? AND ?", [st, a - HOUR, b + 25 * HOUR]);
+    obs[st] = await selectRows("SELECT ts, level FROM observations WHERE station = ? AND ts BETWEEN ? AND ?", [st, a - 36 * HOUR, b + 25 * HOUR]);
     obs[st].sort((x, y) => x.ts - y.ts);
   }
   const lines = buildArchiveLines({ runs, points, crossings, shadows, obs });
+  const readings = buildReadings({ day, runs, obs }); // for scripts/forecast-kpi.mjs (real crossings, rates and outcomes)
   const file = path.join(out, "forecasts", day.slice(0, 4), `${day}.jsonl`);
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+  writeFileSync(path.join(path.dirname(file), `${day}.readings.json`), JSON.stringify(readings) + "\n");
   console.log(`${day}: ${lines.length} runs, ${points.length} points, ${shadows.length} shadow points -> ${file}`);
 }
 

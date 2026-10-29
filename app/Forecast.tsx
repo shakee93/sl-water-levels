@@ -19,6 +19,7 @@ import { formatDelta, formatLevel, publishedAs, shownNumber } from "@/lib/units"
 import { stationDisplayName } from "@/lib/displayName";
 import { stationPath, stationSlug } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
+import { fkT } from "@/lib/i18n/forecastKpi";
 import { clock, riverName, shortStamp } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
 import type { TFn } from "@/lib/i18n/translate";
@@ -570,6 +571,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
               <ul className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
                 <li className="font-medium">{t("fc.how")}</li>
                 {f.basis.map((n, i) => <li key={i}>· {n}</li>)}
+                <li>· <Link href={p("/forecast-accuracy")} className="underline underline-offset-2 hover:no-underline">{fkT(lang)("link")}</Link></li>
               </ul>
             )}
 

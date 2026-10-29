@@ -6,14 +6,17 @@
 #   2. scripts/forecast-scoreboard.mjs  archive -> scoreboard/YYYY-MM-DD.json + scoreboard/summary.csv (per group x horizon: n, MAE,
 #      persistence MAE, skill, bias, in-band, calibration, runs per hour, difficulty, a better/worse/not-comparable line), live and shadow.
 # Reads D1 with small queries (runs of one day, children by id range, observations per gauge by key range); needs only CLOUDFLARE_API_TOKEN.
-# Manual run: `from`/`to` (YYYY-MM-DD) re-archive and re-score a range, e.g. the 23-27 Oct backfill (D1 keeps readings for 7 days).
+#   3. scripts/forecast-kpi.mjs  archive -> kpi/latest.json (rolling 30 days: the ten forecast targets, live, each shadow variant, each version), kpi/days/YYYY-MM-DD.json,
+#      kpi/history.csv. Read by the public /forecast-accuracy page. Definitions: lib/forecastKpi.mjs, DOCS.md "Forecast KPIs".
+# Manual run: `from`/`to` (YYYY-MM-DD) re-archive and re-score a range, e.g. the 23-27 Oct backfill (D1 keeps readings for 7 days);
+# `days` = 7 re-archives the seven Colombo days before today (what the 29 Oct KPI backfill needs: archive lines now carry the gauge readings in
+# forecasts/YYYY/YYYY-MM-DD.readings.json and the heavy-rain flag, and older day files do not have them).
+# Started by the Cloudflare scheduler (workers/scheduler/index.mjs, cron "10 20 * * *"): GitHub's own cron skipped runs, so there is no schedule here.
 # No Slack message is sent on success; a failed run tells Slack like the other snapshot jobs.
 
 name: Forecast scoreboard
 
 on:
-  schedule:
-    - cron: "10 20 * * *" # 01:40 Asia/Colombo
   workflow_dispatch:
     inputs:
       from:
@@ -21,6 +24,9 @@ on:
         required: false
       to:
         description: "Last day (YYYY-MM-DD); empty = same as from"
+        required: false
+      days:
+        description: "Instead of from/to: re-archive the N Colombo days before today (7 = the whole week D1 still holds)"
         required: false
 
 permissions:
@@ -48,31 +54,41 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Work out the days
+        id: range
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+          DAYS: ${{ inputs.days }}
+        run: |
+          range=""
+          if [ -n "$DAYS" ]; then
+            today=$(TZ=Asia/Colombo date +%F)
+            range="--from $(date -d "$today - $DAYS days" +%F) --to $(date -d "$today - 1 day" +%F)"
+          elif [ -n "$FROM" ]; then
+            range="--from $FROM --to ${TO:-$FROM}"
+          fi
+          echo "range=$range" >> "$GITHUB_OUTPUT"
+          echo "Days: ${range:-default (the two days before today)}"
       - name: Archive the stored forecasts
-        env:
-          FROM: ${{ inputs.from }}
-          TO: ${{ inputs.to }}
-        run: |
-          range=""
-          [ -n "$FROM" ] && range="--from $FROM --to ${TO:-$FROM}"
-          node scripts/forecast-archive.mjs archive $range
+        run: node scripts/forecast-archive.mjs archive ${{ steps.range.outputs.range }}
       - name: Score them
-        env:
-          FROM: ${{ inputs.from }}
-          TO: ${{ inputs.to }}
         run: |
-          range=""
-          [ -n "$FROM" ] && range="--from $FROM --to ${TO:-$FROM}"
-          node scripts/forecast-scoreboard.mjs archive $range | tee scoreboard.txt
+          node scripts/forecast-scoreboard.mjs archive ${{ steps.range.outputs.range }} | tee scoreboard.txt
           { echo '### Forecast scoreboard'; echo '```'; cat scoreboard.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Forecast KPIs
+        # rolling 30 days up to yesterday, recomputed from the whole archive every night (so a re-archived day is picked up)
+        run: |
+          node scripts/forecast-kpi.mjs archive | tee kpi.txt
+          { echo '### Forecast KPIs'; echo '```'; cat kpi.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Commit and push
         working-directory: archive
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add forecasts scoreboard
+          git add forecasts scoreboard kpi
           if git diff --cached --quiet; then echo "No change."; exit 0; fi
-          git commit -m "Forecast archive and scoreboard $(date -u '+%F %H:%M') UTC"
+          git commit -m "Forecast archive, scoreboard and KPIs $(date -u '+%F %H:%M') UTC"
           git pull --rebase origin data || true
           git push origin data
 

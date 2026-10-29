@@ -2,7 +2,7 @@
 // Labels are the same strings the pages use for their breadcrumb / H1 (naming rule: one name per section).
 // Basins (rivers) are listed separately by both, from live station data. Home, Towns, Reservoirs and News are also
 // phone tabs, but are repeated in the sheet so that it alone is a complete index.
-import { House, List, Map as MapIcon, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, LifeBuoy, Info, FlaskConical, Code2, type LucideIcon } from "lucide-react";
+import { House, List, Map as MapIcon, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, Target, LifeBuoy, Info, FlaskConical, Code2, type LucideIcon } from "lucide-react";
 import type { Locale } from "./i18n/config";
 import { seoFor } from "./i18n/seo";
 import { rtFor } from "./i18n/return";
@@ -10,6 +10,7 @@ import { rtFor as resFor } from "./i18n/reservoirs";
 import { nwFor } from "./i18n/news";
 import { rmFor } from "./i18n/rainMap";
 import { statusT } from "./i18n/status";
+import { fkT } from "./i18n/forecastKpi";
 import { DATA_NAV, NAV_GROUPS, RESEARCH } from "./i18n/footer";
 import { ccFor } from "./i18n/colombo";
 import { embedT } from "./i18n/embed";
@@ -40,6 +41,7 @@ export function navGroups(lang: Locale, t: (k: "footer.home" | "crumb.allBasins"
         { href: "/news", label: nwFor(lang)("nav"), icon: Newspaper, event: "news_nav_click" },
         { href: "/history", label: t("nav.history"), icon: History, event: "history_nav_click" },
         { href: "/data", label: DATA_NAV[lang], icon: Database, event: "data_nav_click" },
+        { href: "/forecast-accuracy", label: fkT(lang)("nav"), icon: Target, event: "forecast_accuracy_nav_click" },
         { href: "/status", label: statusT(lang)("footer"), icon: Activity, event: "status_nav_click" },
       ],
     },
