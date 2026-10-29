@@ -1,0 +1,511 @@
+{
+ "day": "2026-10-23",
+ "complete": true,
+ "storm": false,
+ "hasReadings": true,
+ "summary": {
+  "met": 0,
+  "assessable": 7,
+  "total": 10,
+  "notJudged": 3
+ },
+ "kpis": [
+  {
+   "id": 1,
+   "key": "warned",
+   "value": null,
+   "unit": "%",
+   "target": 80,
+   "met": null,
+   "n": 0,
+   "parts": [
+    {
+     "key": "caught",
+     "value": null,
+     "target": 80,
+     "n": 0,
+     "met": null
+    }
+   ],
+   "detail": {
+    "events": 0,
+    "caught": 0,
+    "medianLeadH": null,
+    "medianLeadWhenCaughtH": null,
+    "byStep": {
+     "alert": {
+      "n": 0,
+      "caught": 0
+     },
+     "minor": {
+      "n": 0,
+      "caught": 0
+     },
+     "major": {
+      "n": 0,
+      "caught": 0
+     }
+    },
+    "leadNeeded": {
+     "bigAlertH": 6,
+     "bigOtherH": 12,
+     "fastH": 2
+    },
+    "list": []
+   },
+   "targetText": "at least 80% warned in time"
+  },
+  {
+   "id": 2,
+   "key": "falseAlarms",
+   "value": 100,
+   "unit": "%",
+   "target": 60,
+   "met": null,
+   "n": 9,
+   "parts": [
+    {
+     "key": "possible",
+     "value": 100,
+     "target": 60,
+     "n": 8,
+     "met": null
+    },
+    {
+     "key": "likely",
+     "value": 100,
+     "target": 25,
+     "n": 1,
+     "met": null
+    }
+   ],
+   "detail": {
+    "falseAlarms": 9,
+    "gaugeDays": 29,
+    "falseAlarmsPerGaugeDay": 0.31,
+    "possible": {
+     "n": 8,
+     "didNot": 8
+    },
+    "likely": {
+     "n": 1,
+     "didNot": 1
+    }
+   },
+   "targetText": "at most 60% of \"possible\" and 25% of \"likely\" warnings fail to happen"
+  },
+  {
+   "id": 3,
+   "key": "honest",
+   "value": 25,
+   "unit": "%",
+   "target": 10,
+   "met": false,
+   "n": 671,
+   "parts": [
+    {
+     "key": "0-10",
+     "value": 0,
+     "shown": 0.4,
+     "target": 10,
+     "n": 566,
+     "met": true
+    },
+    {
+     "key": "10-20",
+     "value": 0,
+     "shown": 11.8,
+     "target": 10,
+     "n": 55,
+     "met": false
+    },
+    {
+     "key": "20-30",
+     "value": 0,
+     "shown": 21.5,
+     "target": 10,
+     "n": 20,
+     "met": false
+    },
+    {
+     "key": "30-50",
+     "value": 0,
+     "shown": 33.5,
+     "target": 10,
+     "n": 26,
+     "met": false
+    },
+    {
+     "key": "50-70",
+     "value": 0,
+     "shown": 52.5,
+     "target": 10,
+     "n": 4,
+     "met": null
+    },
+    {
+     "key": "70-90",
+     "value": null,
+     "shown": null,
+     "target": 10,
+     "n": 0,
+     "met": null
+    },
+    {
+     "key": "90-100",
+     "value": null,
+     "shown": null,
+     "target": 10,
+     "n": 0,
+     "met": null
+    }
+   ],
+   "detail": {
+    "bins": [
+     {
+      "from": 0,
+      "to": 0.1,
+      "n": 566,
+      "shownPct": 0.4,
+      "observedPct": 0,
+      "met": true
+     },
+     {
+      "from": 0.1,
+      "to": 0.2,
+      "n": 55,
+      "shownPct": 11.8,
+      "observedPct": 0,
+      "met": false
+     },
+     {
+      "from": 0.2,
+      "to": 0.3,
+      "n": 20,
+      "shownPct": 21.5,
+      "observedPct": 0,
+      "met": false
+     },
+     {
+      "from": 0.3,
+      "to": 0.5,
+      "n": 26,
+      "shownPct": 33.5,
+      "observedPct": 0,
+      "met": false
+     },
+     {
+      "from": 0.5,
+      "to": 0.7,
+      "n": 4,
+      "shownPct": 52.5,
+      "observedPct": 0,
+      "met": null
+     },
+     {
+      "from": 0.7,
+      "to": 0.9,
+      "n": 0,
+      "shownPct": null,
+      "observedPct": null,
+      "met": null
+     },
+     {
+      "from": 0.9,
+      "to": 1,
+      "n": 0,
+      "shownPct": null,
+      "observedPct": null,
+      "met": null
+     }
+    ],
+    "groupsJudged": 4,
+    "groupsOk": 1
+   },
+   "targetText": "within 10 points in every group with 10+ cases"
+  },
+  {
+   "id": 4,
+   "key": "skill",
+   "value": -2.3,
+   "unit": "%",
+   "target": 30,
+   "met": false,
+   "n": 1126,
+   "parts": [
+    {
+     "key": "h1",
+     "value": 12.6,
+     "target": 30,
+     "n": 264,
+     "met": false
+    },
+    {
+     "key": "h3",
+     "value": 13.9,
+     "target": 30,
+     "n": 264,
+     "met": false
+    },
+    {
+     "key": "h6",
+     "value": -2.3,
+     "target": 30,
+     "n": 259,
+     "met": false
+    },
+    {
+     "key": "h12",
+     "value": -12,
+     "target": 20,
+     "n": 173,
+     "met": false
+    },
+    {
+     "key": "h24",
+     "value": -22.7,
+     "target": 10,
+     "n": 166,
+     "met": false
+    },
+    {
+     "key": "worstPhase",
+     "value": -22.2,
+     "target": 0,
+     "n": 1111,
+     "met": false
+    }
+   ],
+   "detail": {
+    "phases": {
+     "rising": {
+      "n": 93,
+      "skill": 1.8,
+      "horizons": 5
+     },
+     "slow rise": {
+      "n": 130,
+      "skill": -14.4,
+      "horizons": 5
+     },
+     "calm": {
+      "n": 153,
+      "skill": -22.2,
+      "horizons": 5
+     },
+     "slow fall": {
+      "n": 402,
+      "skill": 0.6,
+      "horizons": 5
+     },
+     "falling": {
+      "n": 333,
+      "skill": 3.5,
+      "horizons": 5
+     }
+    }
+   },
+   "targetText": "beats \"no change\" by 30% at 1-6 h, 20% at 12 h, 10% at 24 h, and in every kind of river movement"
+  },
+  {
+   "id": 5,
+   "key": "bias",
+   "value": 0.97,
+   "unit": "ft",
+   "target": 0.25,
+   "met": false,
+   "n": 173,
+   "parts": [
+    {
+     "key": "rising",
+     "value": 1.13,
+     "target": 0.25,
+     "n": 13,
+     "met": false
+    },
+    {
+     "key": "slow rise",
+     "value": 1.35,
+     "target": 0.25,
+     "n": 22,
+     "met": false
+    },
+    {
+     "key": "calm",
+     "value": 0.4,
+     "target": 0.25,
+     "n": 22,
+     "met": false
+    },
+    {
+     "key": "slow fall",
+     "value": 0.53,
+     "target": 0.25,
+     "n": 55,
+     "met": false
+    },
+    {
+     "key": "falling",
+     "value": 1.43,
+     "target": 0.25,
+     "n": 59,
+     "met": false
+    }
+   ],
+   "detail": {},
+   "targetText": "12 h forecast within 0.25 ft of reality on average, in every kind of river movement"
+  },
+  {
+   "id": 6,
+   "key": "coverage",
+   "value": 92.5,
+   "unit": "%",
+   "target": "75-85",
+   "met": false,
+   "n": 1126,
+   "parts": [
+    {
+     "key": "h1",
+     "value": 98.1,
+     "target": "75-85",
+     "n": 264,
+     "met": false
+    },
+    {
+     "key": "h3",
+     "value": 94.3,
+     "target": "75-85",
+     "n": 264,
+     "met": false
+    },
+    {
+     "key": "h6",
+     "value": 91.1,
+     "target": "75-85",
+     "n": 259,
+     "met": false
+    },
+    {
+     "key": "h12",
+     "value": 90.8,
+     "target": "75-85",
+     "n": 173,
+     "met": false
+    },
+    {
+     "key": "h24",
+     "value": 84.9,
+     "target": "75-85",
+     "n": 166,
+     "met": true
+    }
+   ],
+   "detail": {},
+   "targetText": "the stated 80% range holds the real level 75-85% of the time at every horizon"
+  },
+  {
+   "id": 7,
+   "key": "fastRises",
+   "value": 33.3,
+   "unit": "%",
+   "target": 95,
+   "met": false,
+   "n": 6,
+   "parts": [
+    {
+     "key": "called",
+     "value": 33.3,
+     "target": 95,
+     "n": 6,
+     "met": false
+    }
+   ],
+   "detail": {},
+   "targetText": "at least 95% of rises of 10 cm or more in an hour were called Rising"
+  },
+  {
+   "id": 8,
+   "key": "risingRight",
+   "value": 34.4,
+   "unit": "%",
+   "target": 75,
+   "met": false,
+   "n": 61,
+   "parts": [
+    {
+     "key": "right",
+     "value": 34.4,
+     "target": 75,
+     "n": 61,
+     "met": false
+    }
+   ],
+   "detail": {},
+   "targetText": "at least 75% of Rising calls were followed by a rise"
+  },
+  {
+   "id": 9,
+   "key": "inputs",
+   "value": 13,
+   "unit": "hours",
+   "target": 24,
+   "met": false,
+   "n": 1,
+   "parts": [
+    {
+     "key": "hours",
+     "value": 13,
+     "target": 24,
+     "n": 1,
+     "met": false,
+     "worst": 13
+    },
+    {
+     "key": "gaugesPerHour",
+     "value": 36,
+     "target": null,
+     "n": 13,
+     "met": null
+    },
+    {
+     "key": "flaggedShare",
+     "value": 1.4,
+     "target": null,
+     "n": 369,
+     "met": null
+    }
+   ],
+   "detail": {
+    "runs": 369,
+    "flaggedRuns": 5
+   },
+   "targetText": "forecasts in all 24 hours of every day"
+  },
+  {
+   "id": 10,
+   "key": "people",
+   "value": null,
+   "unit": "%",
+   "target": 70,
+   "met": null,
+   "n": 0,
+   "parts": [
+    {
+     "key": "agree",
+     "value": null,
+     "target": 70,
+     "n": 0,
+     "met": null
+    }
+   ],
+   "detail": {
+    "yes": 0,
+    "worse": 0,
+    "better": 0,
+    "source": "answers"
+   },
+   "targetText": "at least 70% of people say the forecast matches what they see"
+  }
+ ],
+ "variants": {}
+}

@@ -1,6 +1,6 @@
 {
  "day": "2026-10-27",
- "generatedAt": "2026-10-28T23:59:47.784Z",
+ "generatedAt": "2026-10-29T06:59:26.623Z",
  "complete": true,
  "modelVersions": {
   "2026-10-22T18:23:49.444Z": 985
@@ -378,7 +378,9 @@
   }
  },
  "verdict": {
-  "code": "not_comparable",
-  "line": "2026-10-27: not comparable, only 0 earlier scored day(s); skill 24% (1-12 h), 6 h no-change error 0.8 ft."
+  "code": "better",
+  "medianSkillPct": -0.8,
+  "difficultyRatio": 1.31,
+  "line": "2026-10-27: better (skill 24% vs -0.8% median of 5 days; 6 h no-change error 0.8 ft vs 0.61 ft)."
  }
 }
