@@ -1,7 +1,7 @@
 {
  "day": "2026-10-28",
- "generatedAt": "2026-10-29T06:59:26.623Z",
- "complete": false,
+ "generatedAt": "2026-10-29T20:11:21.352Z",
+ "complete": true,
  "modelVersions": {
   "2026-10-22T18:23:49.444Z": 1203
  },
@@ -14,7 +14,7 @@
   "minGaugesPerHour": 40
  },
  "difficulty": {
-  "persistenceMae6hFt": 0.61,
+  "persistenceMae6hFt": 0.6,
   "medianGaugeRangeFt": 1.12
  },
  "headline": {
@@ -159,14 +159,37 @@
     }
    },
    "h24": {
-    "n": 36,
-    "mae": 1.24,
-    "persistenceMae": 1.52,
-    "skillPct": 18.9,
-    "bias": 1.24,
-    "inBandPct": 58.3,
-    "bandFt": 3.99,
-    "shadow": {}
+    "n": 72,
+    "mae": 1.44,
+    "persistenceMae": 1.65,
+    "skillPct": 12.7,
+    "bias": 1.44,
+    "inBandPct": 55.6,
+    "bandFt": 3.64,
+    "shadow": {
+     "copy": {
+      "n": 24,
+      "mae": 1.63,
+      "persistenceMae": 1.74,
+      "skillPct": 6.5,
+      "bias": 1.63,
+      "inBandPct": 45.8,
+      "bandFt": 2.97,
+      "liveMaeSameRows": 1.63,
+      "maeVsLivePct": 0
+     },
+     "recession-v1": {
+      "n": 24,
+      "mae": 1.45,
+      "persistenceMae": 1.74,
+      "skillPct": 17,
+      "bias": 1.34,
+      "inBandPct": 45.8,
+      "bandFt": 2.97,
+      "liveMaeSameRows": 1.63,
+      "maeVsLivePct": -11
+     }
+    }
    }
   },
   "fast": {
@@ -303,14 +326,37 @@
     }
    },
    "h24": {
-    "n": 101,
-    "mae": 0.59,
-    "persistenceMae": 0.59,
-    "skillPct": 0.8,
-    "bias": 0.36,
-    "inBandPct": 70.3,
-    "bandFt": 2.69,
-    "shadow": {}
+    "n": 206,
+    "mae": 0.89,
+    "persistenceMae": 0.9,
+    "skillPct": 0.9,
+    "bias": 0.68,
+    "inBandPct": 59.2,
+    "bandFt": 2.59,
+    "shadow": {
+     "copy": {
+      "n": 70,
+      "mae": 1.22,
+      "persistenceMae": 1.22,
+      "skillPct": 0.1,
+      "bias": 0.96,
+      "inBandPct": 48.6,
+      "bandFt": 2.25,
+      "liveMaeSameRows": 1.22,
+      "maeVsLivePct": 0
+     },
+     "recession-v1": {
+      "n": 70,
+      "mae": 1.12,
+      "persistenceMae": 1.22,
+      "skillPct": 8.3,
+      "bias": 0.74,
+      "inBandPct": 52.9,
+      "bandFt": 2.25,
+      "liveMaeSameRows": 1.22,
+      "maeVsLivePct": -8.2
+     }
+    }
    }
   },
   "other": {
@@ -381,7 +427,7 @@
     }
    },
    "h6": {
-    "n": 383,
+    "n": 384,
     "mae": 0.5,
     "persistenceMae": 0.56,
     "skillPct": 11.3,
@@ -390,23 +436,23 @@
     "bandFt": 1.36,
     "shadow": {
      "copy": {
-      "n": 124,
+      "n": 125,
       "mae": 0.41,
       "persistenceMae": 0.47,
       "skillPct": 12.9,
       "bias": 0.3,
-      "inBandPct": 80.6,
+      "inBandPct": 80.8,
       "bandFt": 1.28,
       "liveMaeSameRows": 0.41,
       "maeVsLivePct": 0
      },
      "recession-v1": {
-      "n": 124,
+      "n": 125,
       "mae": 0.41,
       "persistenceMae": 0.47,
       "skillPct": 12.9,
       "bias": 0.3,
-      "inBandPct": 80.6,
+      "inBandPct": 80.8,
       "bandFt": 1.28,
       "liveMaeSameRows": 0.41,
       "maeVsLivePct": 0
@@ -414,13 +460,13 @@
     }
    },
    "h12": {
-    "n": 382,
-    "mae": 0.83,
+    "n": 383,
+    "mae": 0.82,
     "persistenceMae": 0.9,
     "skillPct": 8.1,
     "bias": 0.58,
     "inBandPct": 78.3,
-    "bandFt": 2.45,
+    "bandFt": 2.44,
     "shadow": {
      "copy": {
       "n": 129,
@@ -447,14 +493,37 @@
     }
    },
    "h24": {
-    "n": 188,
-    "mae": 1.62,
-    "persistenceMae": 1.64,
-    "skillPct": 1.4,
-    "bias": 1.39,
-    "inBandPct": 76.6,
-    "bandFt": 4.07,
-    "shadow": {}
+    "n": 384,
+    "mae": 1.53,
+    "persistenceMae": 1.56,
+    "skillPct": 1.6,
+    "bias": 1.36,
+    "inBandPct": 74.7,
+    "bandFt": 3.88,
+    "shadow": {
+     "copy": {
+      "n": 130,
+      "mae": 1.44,
+      "persistenceMae": 1.51,
+      "skillPct": 4.5,
+      "bias": 1.28,
+      "inBandPct": 69.2,
+      "bandFt": 3.52,
+      "liveMaeSameRows": 1.44,
+      "maeVsLivePct": 0
+     },
+     "recession-v1": {
+      "n": 130,
+      "mae": 1.2,
+      "persistenceMae": 1.51,
+      "skillPct": 20.6,
+      "bias": 0.98,
+      "inBandPct": 69.2,
+      "bandFt": 3.52,
+      "liveMaeSameRows": 1.44,
+      "maeVsLivePct": -16.7
+     }
+    }
    }
   },
   "all": {
@@ -525,32 +594,32 @@
     }
    },
    "h6": {
-    "n": 663,
+    "n": 664,
     "mae": 0.52,
-    "persistenceMae": 0.61,
+    "persistenceMae": 0.6,
     "skillPct": 13.7,
     "bias": 0.19,
     "inBandPct": 77.7,
     "bandFt": 1.48,
     "shadow": {
      "copy": {
-      "n": 218,
+      "n": 219,
       "mae": 0.52,
-      "persistenceMae": 0.62,
+      "persistenceMae": 0.61,
       "skillPct": 15.8,
       "bias": 0.3,
-      "inBandPct": 79.8,
+      "inBandPct": 79.9,
       "bandFt": 1.38,
       "liveMaeSameRows": 0.52,
       "maeVsLivePct": 0
      },
      "recession-v1": {
-      "n": 218,
+      "n": 219,
       "mae": 0.52,
-      "persistenceMae": 0.62,
+      "persistenceMae": 0.61,
       "skillPct": 15.8,
       "bias": 0.3,
-      "inBandPct": 79.8,
+      "inBandPct": 79.9,
       "bandFt": 1.38,
       "liveMaeSameRows": 0.52,
       "maeVsLivePct": 0
@@ -558,7 +627,7 @@
     }
    },
    "h12": {
-    "n": 661,
+    "n": 662,
     "mae": 0.79,
     "persistenceMae": 0.88,
     "skillPct": 10,
@@ -591,44 +660,67 @@
     }
    },
    "h24": {
-    "n": 325,
-    "mae": 1.26,
-    "persistenceMae": 1.3,
-    "skillPct": 3.6,
-    "bias": 1.05,
-    "inBandPct": 72.6,
-    "bandFt": 3.63,
-    "shadow": {}
+    "n": 662,
+    "mae": 1.32,
+    "persistenceMae": 1.36,
+    "skillPct": 2.9,
+    "bias": 1.16,
+    "inBandPct": 67.8,
+    "bandFt": 3.45,
+    "shadow": {
+     "copy": {
+      "n": 224,
+      "mae": 1.39,
+      "persistenceMae": 1.44,
+      "skillPct": 3.6,
+      "bias": 1.22,
+      "inBandPct": 60.3,
+      "bandFt": 3.07,
+      "liveMaeSameRows": 1.39,
+      "maeVsLivePct": 0
+     },
+     "recession-v1": {
+      "n": 224,
+      "mae": 1.2,
+      "persistenceMae": 1.44,
+      "skillPct": 16.9,
+      "bias": 0.94,
+      "inBandPct": 61.6,
+      "bandFt": 3.07,
+      "liveMaeSameRows": 1.39,
+      "maeVsLivePct": -13.7
+     }
+    }
    }
   }
  },
  "calibration": {
   "alert": {
-   "n": 231,
+   "n": 443,
    "occurred": 11,
-   "brier": 0.05,
+   "brier": 0.029,
    "meanStated": 0.01,
    "statedAtLeast40": {
-    "n": 3,
+    "n": 6,
     "cameTrue": 0
    },
    "bins": [
     {
      "from": 0,
      "to": 0.1,
-     "n": 222,
-     "observedPct": 5
+     "n": 424,
+     "observedPct": 2.6
     },
     {
      "from": 0.1,
      "to": 0.3,
-     "n": 6,
+     "n": 10,
      "observedPct": 0
     },
     {
      "from": 0.3,
      "to": 0.5,
-     "n": 2,
+     "n": 8,
      "observedPct": 0
     },
     {
@@ -652,25 +744,25 @@
    ]
   },
   "minor": {
-   "n": 271,
-   "occurred": 6,
-   "brier": 0.024,
-   "meanStated": 0.05,
+   "n": 517,
+   "occurred": 9,
+   "brier": 0.015,
+   "meanStated": 0.04,
    "statedAtLeast40": {
-    "n": 16,
-    "cameTrue": 5
+    "n": 22,
+    "cameTrue": 8
    },
    "bins": [
     {
      "from": 0,
      "to": 0.1,
-     "n": 237,
+     "n": 466,
      "observedPct": 0
     },
     {
      "from": 0.1,
      "to": 0.3,
-     "n": 12,
+     "n": 23,
      "observedPct": 0
     },
     {
@@ -682,27 +774,27 @@
     {
      "from": 0.5,
      "to": 0.7,
-     "n": 12,
-     "observedPct": 25
+     "n": 15,
+     "observedPct": 20
     },
     {
      "from": 0.7,
      "to": 0.9,
-     "n": 1,
-     "observedPct": 0
+     "n": 3,
+     "observedPct": 66.7
     },
     {
      "from": 0.9,
      "to": 1,
-     "n": 0,
-     "observedPct": null
+     "n": 1,
+     "observedPct": 100
     }
    ]
   },
   "major": {
-   "n": 301,
+   "n": 571,
    "occurred": 0,
-   "brier": 0.002,
+   "brier": 0.001,
    "meanStated": 0.01,
    "statedAtLeast40": {
     "n": 0,
@@ -712,13 +804,13 @@
     {
      "from": 0,
      "to": 0.1,
-     "n": 287,
+     "n": 553,
      "observedPct": 0
     },
     {
      "from": 0.1,
      "to": 0.3,
-     "n": 14,
+     "n": 18,
      "observedPct": 0
     },
     {
@@ -751,7 +843,7 @@
  "verdict": {
   "code": "better",
   "medianSkillPct": 5.1,
-  "difficultyRatio": 0.87,
-  "line": "2026-10-28: better (skill 13.3% vs 5.1% median of 6 days; 6 h no-change error 0.61 ft vs 0.71 ft)."
+  "difficultyRatio": 0.85,
+  "line": "2026-10-28: better (skill 13.3% vs 5.1% median of 6 days; 6 h no-change error 0.6 ft vs 0.71 ft)."
  }
 }
