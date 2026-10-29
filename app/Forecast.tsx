@@ -224,7 +224,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   // RiverNet / HMIS-only gauges have no model: the tile reads the measured 3 h rate, like the sentence at the top of the page (lib/forecastRules.mjs)
   const r = stale
     ? null
-    : nextHourRateM({ h1ChangeM: h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null, rate3hM: me?.rate3hM ?? null, source: me?.source, method: f.method });
+    : nextHourRateM({ h1ChangeM: h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null, rate3hM: me?.rate3hM ?? null, source: me?.source, method: f.method, rate1hM: me?.rate1hM ?? null, tidal: isTidalStation(selectedStation) });
   // "Rising" means the river is rising: on a tidal gauge (Nagalagam Street...) the twice-daily tide moves the level by
   // 0.6-0.8 ft, so it is judged against the level one tide cycle ago (lib/verdictLift.ts), and a tide-only rise is said so.
   const tidal = isTidalStation(selectedStation);

@@ -170,3 +170,15 @@ assert.equal(assessTown({ ...tw, primary: { ...hg, tier: "alert", level: 4.2, ho
 assert.equal(assessTown({ ...tw, primary: { ...hg, tier: "watch", holdWatch: true } }).tone, "watch");
 
 console.log("forecast-rules tests passed");
+
+// Last-hour rise override (KPI 7, 29 Oct 2026): a river that just rose 3 cm+ is called rising even if the model says steady/falling; tidal gauges keep their rule.
+{
+  const { RISE_OVERRIDE_M } = await import("../lib/forecastRules.mjs");
+  assert.equal(RISE_OVERRIDE_M, 0.03);
+  assert.equal(nextHourRateM({ h1ChangeM: -0.01, rate3hM: -0.02, source: "arcgis", method: "model", rate1hM: 0.05 }), 0.05, "just rose 5 cm: rising");
+  assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: 0, source: "arcgis", method: "model", rate1hM: 0.02 }), 0, "2 cm is below the override");
+  assert.equal(nextHourRateM({ h1ChangeM: -0.01, rate3hM: -0.02, source: "arcgis", method: "model", rate1hM: 0.05, tidal: true }), -0.01, "tidal gauge: no override");
+  assert.equal(nextHourRateM({ h1ChangeM: 0.08, rate3hM: 0, source: "arcgis", method: "model", rate1hM: 0.04 }), 0.08, "model already rising: its own figure");
+  assert.equal(nextHourRateM({ h1ChangeM: -0.01, rate3hM: -0.02, source: "arcgis", method: "model" }), -0.01, "no last-hour input: unchanged");
+  console.log("rise override tests passed");
+}

@@ -30,6 +30,12 @@
       "name": "Sensor-glitch filter",
       "from": "2026-10-29T06:37:17Z",
       "what": "One-reading spikes and frozen sensors are cleaned out of the readings the forecast learns from, so a faulty gauge no longer distorts it."
+    },
+    {
+      "id": "rise-override",
+      "name": "Rising when the river just rose",
+      "from": "2026-10-29T10:00:00Z",
+      "what": "When a river has just risen 3 cm or more in the last hour, the \"Next hour\" line says Rising even if the forecast had expected it to hold, so fast rises are not missed."
     }
   ]
 }

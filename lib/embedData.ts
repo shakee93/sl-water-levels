@@ -495,7 +495,7 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     const now = f.asOfTs ?? me.latest?.ts ?? 0;
     const mpu = me.metresPerUnit ?? 1;
     const h1 = f.horizons.find((h) => h.h === 1);
-    const r = nextHourRateM({ h1ChangeM: h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null, rate3hM: me.rate3hM ?? null, source: me.source, method: f.method });
+    const r = nextHourRateM({ h1ChangeM: h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null, rate3hM: me.rate3hM ?? null, source: me.source, method: f.method, rate1hM: me.rate1hM ?? null, tidal: isTidalStation(me.station) });
     const rising = riverRising(station, me.trend24h, mpu, me.rate3hM ?? null);
     const tideOnly = isTidalStation(station) && r != null && r > STEADY_M_PER_H && !rising;
     const lift = liftVerdict({ tier: nat.tier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
