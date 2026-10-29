@@ -26,6 +26,10 @@
 //  5. GloFAS is an outlook flag ("elevated") only. It never produces or adjusts a level.
 //  6. Horizons whose out-of-sample error was no better than "level stays put" (24h so
 //     far) ship as persistence with the observed change distribution as the band.
+//  7. SENSOR GLITCHES (29 Oct 2026, lib/readingQc.mjs). Forecast INPUTS only: one- or two-reading spikes and stuck repeats are dropped from every
+//     gauge's trend24h in `qcSnapshot` (levels set to null, rain kept). The displayed level, official step, verdicts and push are never touched. The
+//     latest reading is never removed; if it jumps like a glitch (`latestLooksOdd`) the forecast only adds a note and widens the range 20%: status, wording ("likely"), headline stay
+//     as they were, because a real flash rise is exactly when a warning must not be weakened.
 
 import { cache } from "react";
 import type { BasinStation } from "./arcgis";
@@ -42,6 +46,7 @@ import stormV4Json from "./model/storm-model-v4.json";
 import type { GsmapFile, GsmapGauge } from "./gsmap";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
 import { STEADY_M_PER_H, fallingOutlook, hasNoForecast, maxForecastHours, shownChance, shownWording } from "./forecastRules.mjs";
+import { cleanReadings } from "./readingQc.mjs";
 import { isTidalStation } from "./verdictLift";
 import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
@@ -261,8 +266,32 @@ function signalsOf(t: TrendResult | null, catchment6h: number | null = null): Fo
   };
 }
 
-export function makeForecast(input: ForecastInput): Forecast {
-  const { basin, snapshot, station } = input;
+/**
+ * Sensor-glitch filter (lib/readingQc.mjs) for the forecast INPUTS only: every gauge's trend24h goes through it here, once, so the
+ * models, the trend forecast and the rain helpers all read the cleaned series. Glitched LEVELS become null (rain is kept); `latest`,
+ * the displayed level and the official step are never touched. `odd` = the gauge's own latest reading jumped like a glitch (flag only).
+ */
+export function qcSnapshot(snapshot: BasinStation[], station: string): { snapshot: BasinStation[]; ownOdd: boolean; ownStuckH: number | null } {
+  let ownOdd = false;
+  let ownStuckH: number | null = null;
+  const out = snapshot.map((s) => {
+    const c = cleanReadings(s.trend24h, { unit: s.unit });
+    if (s.station === station) {
+      ownOdd = c.odd;
+      const last = s.trend24h.length ? s.trend24h[s.trend24h.length - 1].ts : null;
+      const run = c.flags.filter((f: { kind: string }) => f.kind === "stuck") as { ts: number; hours: number }[];
+      if (run.length && last != null && run[run.length - 1].ts === last) ownStuckH = run[run.length - 1].hours;
+    }
+    return c.flags.length ? { ...s, trend24h: c.readings } : s;
+  });
+  return { snapshot: out, ownOdd, ownStuckH };
+}
+
+export function makeForecast(raw: ForecastInput): Forecast {
+  const { station } = raw;
+  const qc = qcSnapshot(raw.snapshot, station);
+  const input: ForecastInput = { ...raw, snapshot: qc.snapshot };
+  const { basin, snapshot } = input;
   const now = input.now ?? Date.now();
   const me = snapshot.find((s) => s.station === station);
   const w0 = input.weather && input.weather.ok ? input.weather.data : null;
@@ -290,9 +319,15 @@ export function makeForecast(input: ForecastInput): Forecast {
   // and a second way to switch the storm model on. Own readings only, so it works when the weather fetch failed.
   const measured = measuredAt(snapshot, basin, station, now);
   const coef = COEFFS[station];
-  const f = !coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)
+  const f0 = !coef || normaliseBasin(coef.basin) !== normaliseBasin(basin)
     ? fromTrend(station, me, trend, L0, anchor, input.weather, gaugeSteps(snapshot, station, anchor, now, null, !!measured, v4InputOf(input)))
-    : fromModel(input, me, coef, trend, L0, anchor, now, !!measured);
+    : fromModel(input, me, coef, trend, L0, anchor, now, !!measured, qc.ownOdd);
+  // Own latest reading looks like a glitch (a jump of more than JUMP_FT from a settled river): named, never silent. Note only (the model path also
+  // widens its range 20% inside fromModel); status, wording and headline are unchanged so a real flash rise keeps its warning.
+  const notes = [...f0.notes];
+  if (qc.ownOdd) notes.unshift(`The latest reading at ${station} jumped sharply from a steady level and may be a sensor glitch. The forecast is less certain than usual; the level and the official step are shown as reported.`);
+  if (qc.ownStuckH != null) notes.unshift(`The reading at ${station} has not changed for ${Math.round(qc.ownStuckH)} hours, so the sensor may be stuck. The repeats were ignored and the forecast is less reliable.`);
+  const f = qc.ownOdd || qc.ownStuckH != null ? { ...f0, notes } : f0;
   return measured ? { ...f, rainRisk: withMeasured(f.rainRisk, measured) } : f;
 }
 
@@ -379,7 +414,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
 
 function fromModel(
   input: ForecastInput, me: BasinStation, coef: StationCoef, trend: TrendResult,
-  L0: number, anchor: number, now: number, measuredHeavy = false,
+  L0: number, anchor: number, now: number, measuredHeavy = false, ownOdd = false,
 ): Forecast {
   const { snapshot, station } = input;
   const mpu = me.metresPerUnit;
@@ -444,8 +479,9 @@ function fromModel(
   if (weatherMissing) infl *= 1.5;
   if (mainLeaderMissing) infl *= 1.5;
   if (otherLeadersMissing.length) infl *= 1.2;
+  if (ownOdd) infl *= 1.2;
   if (ensembleMissing) infl *= 1.15;
-  const degraded = weatherMissing || mainLeaderMissing || otherLeadersMissing.length > 0;
+  const degraded = weatherMissing || mainLeaderMissing || otherLeadersMissing.length > 0; // (ownOdd widens the range below but never degrades: it must not weaken a warning)
   const hardDegraded = weatherMissing || mainLeaderMissing; // suppresses ETA
   const rising = (evals.p50[0]?.features[0] ?? 0) > 0; // own 3h change
 

@@ -217,6 +217,8 @@ These cost real debugging time. Future-you should not relearn them.
   (Hanwella "16:03:56.630Z" = the ArcGIS reading of 10:33:56.630 UTC): real UTC = parsed - 5.5 h (`fixHmisLevelTime`). The rain
   endpoint's `latest_record_time` is real UTC (no shift). Getting either wrong puts readings 5.5 h in the future or past. HMIS
   levels are metres; the site shows feet (`lib/units.ts`).
+- **Sensor glitches are cleaned for FORECAST INPUTS only** (`lib/readingQc.mjs`, applied once in `makeForecast`): 1-2 reading spikes (> 2 ft from both agreeing
+  neighbours) and values stuck 12 h+ (gauge was moving before, or 36 h+) are nulled in `trend24h` before any model reads it; the newest reading is never removed (`latestLooksOdd` only adds a note and widens 20%, never weakens wording). Displayed levels, official steps, verdicts and push read the data as reported. Test: `node --experimental-strip-types --no-warnings scripts/reading-qc.test.mts`.
 - **`gauges_2_view.rain_fall` is often null** at downstream/urban gauges
   (Nagalagam Street, Calidonia). Null means "not measured here," not zero.
 - **`hydrostations.basin` has trailing whitespace** (`"Kelani Ganga     "`).

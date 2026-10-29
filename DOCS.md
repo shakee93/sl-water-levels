@@ -286,6 +286,13 @@ Rules enforced in code (see the header of `lib/forecast.ts`): forecasts are "exp
 capped at 90% until the archive spans a monsoon season (150 days); "likely" needs >= 50%, "possible"
 20-50%; an arrival time needs two adjacent horizons to agree; a stale gauge gives no forecast, and a stale
 leader or failed rain fetch is named on the page, widens the band and drops the arrival time.
+**Sensor-glitch filter for forecast inputs (added 2026-10-29; `lib/readingQc.mjs`, `qcSnapshot` in `lib/forecast.ts`, `node --experimental-strip-types --no-warnings scripts/reading-qc.test.mts`).**
+Scoring the forecasts of 28 Oct showed gauge glitches feeding the models: Ellagawa read 21.78 ft for one hour between about 34.3 ft, one-reading spikes at Hanwella, Wellawaya and Katharagama, a two-reading
+spike at Pitabeddara, and stuck sensors (Ampara 35 h, Mapitigama 29 h, Baddegama 13 h). `makeForecast` now cleans every gauge's `trend24h` once, before the models, the trend forecast and the rain helpers read it:
+one or two consecutive readings more than 2 ft from both neighbours (which agree within 1 ft, within ~1.6 h a step) and an identical value held 12 h or more (first reading kept; only if the gauge was moving, range >= 0.15 ft over the 12 h before, after spikes are removed, or the run lasts 36 h or more, so calm low-flow rivers are not starved) have their LEVEL set to null (rain is kept).
+The newest reading is never removed (a real flash rise must show); if it jumps more than 3 ft from a settled river (`latestLooksOdd`) the gauge's own forecast adds a note and widens 20%; status, wording and headline are unchanged
+(a real flash rise must keep its warning). Forecast inputs only: the level shown, the official step, verdicts, the sticky bar and push still use the readings as reported. Replay on the 22-29 Oct archive: 416 readings flagged on 59 gauges (18 spikes, 6 stuck runs), all the 28 Oct cases found except Mullamunai Bridge (calm before it froze for 13 h: no range rule can tell it from calm water).
+
 **Limits:** the first fit used 8 days, one rain event and no flood, so it under-predicts sharp rises (the
 event start by ~1 m), has no skill beyond ~12 h (24 h ships as persistence blended with the 12 h outlook),
 and knows nothing about dam releases or tides (Nagalagam Street is tidal). Treat it as a heads-up, not a warning;
