@@ -1,0 +1,304 @@
+{
+ "note": "Warning-rule candidates, LOGGED ONLY (lib/warningCandidates.mjs). rainOnset and upstream fitted 29 Oct 2026 on 23 Nov 2025 - 28 Oct 2026 with Ditwah (24 Nov - 8 Dec 2025) excluded; evidence in DOCS.md Forecast KPIs.",
+ "rainOnset": {
+  "rules": [
+   {
+    "name": "fast-rain-onset",
+    "gauges": [
+     "Kithulgala",
+     "Holombuwa",
+     "Urawa",
+     "Nawalapitiya",
+     "Peradeniya",
+     "Panadugama",
+     "Thawalama"
+    ],
+    "target": "alert",
+    "W": 6,
+    "R": 15,
+    "G": 0.75,
+    "rise": true,
+    "o3": null,
+    "chance": 0.45,
+    "lag": {
+     "p10": 1,
+     "p50": 2,
+     "p90": 5
+    },
+    "n": {
+     "triggers": 26,
+     "followed": 15,
+     "newlyCaughtInFit": 7,
+     "ruleDrivenGaugeDays": 18,
+     "ruleDrivenFalse": 8
+    },
+    "holdH": 3,
+    "status": "shadow",
+    "note": "fast tributaries (7 of 10): >=15 mm forecast in the next 6 h, river within 75% of its usual distance to the alert step and already rising; Norwood (0 of 9), Pitabeddara (0 of 5), Deraniyagala (2 of 7) dropped"
+   },
+   {
+    "name": "slow-rain-onset",
+    "gauges": [
+     "Nagalagam Street",
+     "Hanwella",
+     "Glencourse",
+     "Putupaula",
+     "Ellagawa",
+     "Rathnapura",
+     "Kalawellawa (Millakanda)",
+     "Magura",
+     "Baddegama",
+     "Moragaswewa",
+     "Siyambalanduwa",
+     "Thanamalwila",
+     "Wellawaya",
+     "Kuda Oya",
+     "Nakkala",
+     "Yaka Wewa",
+     "Padiyathalawa",
+     "Badalgama",
+     "Giriulla",
+     "Manampitiya",
+     "Thaldena",
+     "Thanthirimale",
+     "Galgamuwa",
+     "Moraketiya",
+     "Horowpothana"
+    ],
+    "target": "alert",
+    "W": 12,
+    "R": 25,
+    "G": 0.25,
+    "rise": false,
+    "o3": null,
+    "chance": 0.43,
+    "lag": {
+     "p10": 3,
+     "p50": 8,
+     "p90": 11
+    },
+    "n": {
+     "triggers": 26,
+     "followed": 11,
+     "newlyCaughtInFit": 4,
+     "ruleDrivenGaugeDays": 6,
+     "ruleDrivenFalse": 3
+    },
+    "holdH": 3,
+    "status": "shadow",
+    "note": "other gauges: >=25 mm forecast in the next 12 h, river within 25% of its usual distance to the alert step; Thalgahagoda (0 of 4) and Dunamale (0 of 2) dropped"
+   }
+  ],
+  "gauges": {
+   "Kithulgala": {
+    "alertFt": 9.843,
+    "medianFt": 5.444,
+    "minorFt": 13.123
+   },
+   "Holombuwa": {
+    "alertFt": 9.843,
+    "medianFt": 1.476,
+    "minorFt": 13.123
+   },
+   "Urawa": {
+    "alertFt": 8.202,
+    "medianFt": 0.492,
+    "minorFt": 13.123
+   },
+   "Nawalapitiya": {
+    "alertFt": 11.483,
+    "medianFt": 3.458,
+    "minorFt": 16.404
+   },
+   "Peradeniya": {
+    "alertFt": 16.404,
+    "medianFt": 5.984,
+    "minorFt": 22.966
+   },
+   "Panadugama": {
+    "alertFt": 16.404,
+    "medianFt": 8.091,
+    "minorFt": 19.685
+   },
+   "Thawalama": {
+    "alertFt": 13.123,
+    "medianFt": 4.843,
+    "minorFt": 19.685
+   },
+   "Nagalagam Street": {
+    "alertFt": 4,
+    "medianFt": 1.637,
+    "minorFt": 5
+   },
+   "Hanwella": {
+    "alertFt": 21.325,
+    "medianFt": 3.303,
+    "minorFt": 24.606
+   },
+   "Glencourse": {
+    "alertFt": 49.213,
+    "medianFt": 30.525,
+    "minorFt": 50.853
+   },
+   "Putupaula": {
+    "alertFt": 9.843,
+    "medianFt": 2.238,
+    "minorFt": 13.123
+   },
+   "Ellagawa": {
+    "alertFt": 32.808,
+    "medianFt": 15.584,
+    "minorFt": 35.105
+   },
+   "Rathnapura": {
+    "alertFt": 17.06,
+    "medianFt": 3.915,
+    "minorFt": 24.606
+   },
+   "Kalawellawa (Millakanda)": {
+    "alertFt": 16.404,
+    "medianFt": 7.56,
+    "minorFt": 21.325
+   },
+   "Magura": {
+    "alertFt": 13.123,
+    "medianFt": 4.38,
+    "minorFt": 19.685
+   },
+   "Baddegama": {
+    "alertFt": 11.483,
+    "medianFt": 4.232,
+    "minorFt": 13.123
+   },
+   "Moragaswewa": {
+    "alertFt": 15.584,
+    "medianFt": 0.671,
+    "minorFt": 19.685
+   },
+   "Siyambalanduwa": {
+    "alertFt": 14.764,
+    "medianFt": 1.444,
+    "minorFt": 19.685
+   },
+   "Thanamalwila": {
+    "alertFt": 13.123,
+    "medianFt": 1.87,
+    "minorFt": 16.404
+   },
+   "Wellawaya": {
+    "alertFt": 14.436,
+    "medianFt": 2.833,
+    "minorFt": 17.717
+   },
+   "Kuda Oya": {
+    "alertFt": 22.638,
+    "medianFt": 3.937,
+    "minorFt": 27.559
+   },
+   "Nakkala": {
+    "alertFt": 16.404,
+    "medianFt": 2.377,
+    "minorFt": 19.685
+   },
+   "Yaka Wewa": {
+    "alertFt": 13.123,
+    "medianFt": 2.198,
+    "minorFt": 16.404
+   },
+   "Padiyathalawa": {
+    "alertFt": 13.123,
+    "medianFt": 0.965,
+    "minorFt": 14.764
+   },
+   "Badalgama": {
+    "alertFt": 16.404,
+    "medianFt": 6.777,
+    "minorFt": 20.341
+   },
+   "Giriulla": {
+    "alertFt": 18.045,
+    "medianFt": 3.248,
+    "minorFt": 21.325
+   },
+   "Manampitiya": {
+    "alertFt": 9.843,
+    "medianFt": 0.656,
+    "minorFt": 14.108
+   },
+   "Thaldena": {
+    "alertFt": 9.843,
+    "medianFt": 0.986,
+    "minorFt": 13.123
+   },
+   "Thanthirimale": {
+    "alertFt": 16.404,
+    "medianFt": 4.101,
+    "minorFt": 22.31
+   },
+   "Galgamuwa": {
+    "alertFt": 15.879,
+    "medianFt": 0.566,
+    "minorFt": 19.488
+   },
+   "Moraketiya": {
+    "alertFt": 9.843,
+    "medianFt": 2.854,
+    "minorFt": 16.404
+   },
+   "Horowpothana": {
+    "alertFt": 19.685,
+    "medianFt": 5.279,
+    "minorFt": 24.606
+   }
+  }
+ },
+ "upstream": {
+  "rules": [
+   {
+    "up": "Nawalapitiya",
+    "down": "Peradeniya",
+    "basin": "Mahaweli Ganga",
+    "target": "alert",
+    "stepFt": 16.404,
+    "trigger": {
+     "id": "crossAlert",
+     "kind": "cross",
+     "levelFt": 11.483,
+     "gapMaxFt": null,
+     "gapId": "any",
+     "dRise3hFt": null
+    },
+    "chance": 0.45,
+    "windowH": 7,
+    "lag": {
+     "p10": 3.2,
+     "p50": 5,
+     "p90": 6
+    },
+    "n": {
+     "episodes": 6,
+     "follows": 5,
+     "falseEpisodes": 1,
+     "downAlertEvents": 5,
+     "coveredWithLead2h": 5
+    },
+    "heldOut": {
+     "rule": "crossAlert/any",
+     "ditwahFires": 0,
+     "ditwahReached12h": 0,
+     "ditwahLags": [],
+     "stableInPreWeekFit": true,
+     "weekFires": 1,
+     "weekReached12h": 1,
+     "weekLags": [
+      2
+     ],
+     "preWeekRule": "crossAlert/any",
+     "ditwahFiresPre": 0,
+     "ditwahReached12hPre": 0
+    },
+    "status": "ship"
+   }
+  ]
+ }
+}

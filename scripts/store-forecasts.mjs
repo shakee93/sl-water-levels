@@ -37,8 +37,11 @@ if (newestIssued && Date.now() - newestIssued > 3 * 3600_000) {
 // workflow step: a problem with a candidate must never cost the live forecast log. The table is created on first use there.
 const sql = [];
 const shadowSql = splitSql(await readFile(new URL("../d1/0016_forecast_shadow.sql", import.meta.url), "utf8")).map((x) => x + ";");
+// Warning-rule candidates (lib/warningCandidates.mjs, d1/0019): only rows that differ from the live chance, same file, same failure isolation.
+shadowSql.push(...splitSql(await readFile(new URL("../d1/0019_warning_shadow.sql", import.meta.url), "utf8")).map((x) => x + ";"));
 let points = 0;
 let shadowPoints = 0;
+let warningRows = 0;
 let obs = 0;
 
 for (const r of data.runs ?? []) {
@@ -70,6 +73,15 @@ for (const r of data.runs ?? []) {
       shadowPoints++;
     }
   }
+  for (const [variant, rows] of Object.entries(r.warningShadows ?? {})) {
+    for (const w of rows ?? []) {
+      if (!Number.isFinite(w.shown) || !w.threshold) continue;
+      shadowSql.push(
+        `INSERT OR IGNORE INTO forecast_warning_shadow (station, issued_at, variant, threshold, shown, eta_h) VALUES (${[r.station, r.issuedAt, variant, w.threshold, w.shown, w.etaHours].map(q).join(", ")});`,
+      );
+      warningRows++;
+    }
+  }
   for (const c of r.crossings ?? []) {
     sql.push(
       `INSERT OR IGNORE INTO forecast_crossings (run_id, threshold, level, probability, eta_ts, wording) SELECT ${runId}, ${q(c.threshold)}, ${q(c.level)}, ${q(c.probability)}, ${q(c.etaTs)}, ${q(c.wording)} WHERE ${runId} IS NOT NULL;`,
@@ -85,4 +97,4 @@ for (const r of data.runs ?? []) {
 
 await writeFile(output, sql.join("\n") + "\n");
 await writeFile(`${output}.shadow.sql`, shadowSql.join("\n") + "\n");
-console.log(`${data.runs?.length ?? 0} runs, ${points} points, ${obs} observations, ${shadowPoints} shadow points -> ${output}; errors: ${data.errors?.length ?? 0}`);
+console.log(`${data.runs?.length ?? 0} runs, ${points} points, ${obs} observations, ${shadowPoints} shadow points, ${warningRows} warning-candidate rows -> ${output}; errors: ${data.errors?.length ?? 0}`);

@@ -65,6 +65,10 @@ export type ForecastRain = {
   issuedAt: number;
   next6h: number | null;
   next6hP90: number | null;
+  /** Next 12 h (warning candidates only, lib/warningCandidates.mjs). */
+  next12h?: number | null;
+  /** The next-6 h / 12 h sums as seen 1-3 h ago, read from the same model run's hourly series (an approximation of the forecast as it stood then; null when the series has no such hours). */
+  back?: Record<number, { next6h: number | null; next12h: number | null }>;
   next24h: number | null;
   next24hP90: number | null;
   /** The weather model's own estimate of what fell: NOT a measurement. */
@@ -93,6 +97,8 @@ export async function forecastRainFor(basin: string, station: string, now = Date
     issuedAt: d.nowHour,
     next6h: sum(d.rain, d.nowHour, 6),
     next6hP90: sum(d.scenarios?.p90, d.nowHour, 6),
+    next12h: sum(d.rain, d.nowHour, 12),
+    back: Object.fromEntries([1, 2, 3].map((j) => [j, { next6h: sum(d.rain, d.nowHour - j * HOUR, 6), next12h: sum(d.rain, d.nowHour - j * HOUR, 12) }])),
     next24h: d.next24hMm.det,
     next24hP90: d.next24hMm.p90,
     modelPast6h: d.past6hMm,
@@ -120,7 +126,7 @@ export const getForecastRainAll = unstable_cache(
     }
     return out;
   },
-  ["forecast-rain-all-v1"],
+  ["forecast-rain-all-v2"],
   { revalidate: 1800 },
 );
 

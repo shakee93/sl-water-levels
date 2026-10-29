@@ -41,18 +41,20 @@ async function archiveDay(day) {
     for (const c of await selectRows("SELECT run_id, threshold, level, probability FROM forecast_crossings WHERE run_id BETWEEN ? AND ?", [s, e])) if (ids.has(c.run_id)) crossings.push(c);
   }
   const shadows = await selectRows("SELECT station, issued_at, variant, horizon_h, target_ts, level, low, high FROM forecast_shadow_points WHERE issued_at >= ? AND issued_at < ?", [a, b]).catch(() => []); // table appears with the first stored shadow run
+  // warning-rule candidates (d1/0019): null when the table does not exist yet (older days stay "not logged"), [] when it does and nothing differed
+  const warnings = await selectRows("SELECT station, issued_at, variant, threshold, shown, eta_h FROM forecast_warning_shadow WHERE issued_at >= ? AND issued_at < ?", [a, b]).catch(() => null);
   const obs = {};
   for (const st of new Set(runs.map((r) => r.station))) {
     obs[st] = await selectRows("SELECT ts, level FROM observations WHERE station = ? AND ts BETWEEN ? AND ?", [st, a - 36 * HOUR, b + 25 * HOUR]);
     obs[st].sort((x, y) => x.ts - y.ts);
   }
-  const lines = buildArchiveLines({ runs, points, crossings, shadows, obs });
+  const lines = buildArchiveLines({ runs, points, crossings, shadows, warnings, obs });
   const readings = buildReadings({ day, runs, obs }); // for scripts/forecast-kpi.mjs (real crossings, rates and outcomes)
   const file = path.join(out, "forecasts", day.slice(0, 4), `${day}.jsonl`);
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
   writeFileSync(path.join(path.dirname(file), `${day}.readings.json`), JSON.stringify(readings) + "\n");
-  console.log(`${day}: ${lines.length} runs, ${points.length} points, ${shadows.length} shadow points -> ${file}`);
+  console.log(`${day}: ${lines.length} runs, ${points.length} points, ${shadows.length} shadow points, ${warnings ? warnings.length : "no"} warning-candidate rows -> ${file}`);
 }
 
 for (const d of days) await archiveDay(d);

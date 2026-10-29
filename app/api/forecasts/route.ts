@@ -13,6 +13,7 @@ import { liftVerdict, riverRising } from "@/lib/verdictLift";
 import { getReleases, releaseAffectingFrom, type ReleasesResult } from "@/lib/releases";
 import { officialReleaseAlert } from "@/lib/releaseAlert";
 import { shadowVariants } from "@/lib/shadowForecast";
+import { warningCandidates, type WCRun } from "@/lib/warningCandidates.mjs";
 
 // Computed per request (no ISR): as an ISR route a failed background regeneration kept serving
 // one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
@@ -39,6 +40,8 @@ export async function GET(request: Request) {
       errors.push({ basin, error: String(e) });
       continue;
     }
+    // warning candidates (lib/warningCandidates.mjs) need the whole basin (upstream gauges), so they are computed after the basin's runs: logged only
+    const pending: { run: Record<string, unknown>; wc: Omit<WCRun, "snapshot"> }[] = [];
     for (const s of snapshot) {
       if (!s.latest) continue;
       try {
@@ -63,7 +66,7 @@ export async function GET(request: Request) {
         // a confirmed 5,000+ cusec release from the Irrigation Department directly above the gauge is at least Alert (lib/releaseAlert.ts)
         const relAlert = releases && (forecastVerdict === "normal" || forecastVerdict === "watch") ? officialReleaseAlert(releaseAffectingFrom(releases, s.station)) : null;
         const verdict = relAlert ? "alert" : forecastVerdict;
-        runs.push({
+        const run: Record<string, unknown> = {
           station: s.station,
           basin,
           issuedAt: f.asOfTs ?? s.latest.ts,
@@ -98,9 +101,44 @@ export async function GET(request: Request) {
           // the LOG keeps what the model said: uncapped chances and wording (the site shows the capped ones, lib/forecastRules.mjs)
           crossings: f.rawCrossings ?? f.crossings,
           observations: s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level, rain: r.rain_fall })),
-        });
+        };
+        runs.push(run);
+        if (withShadow) {
+          const issuedAt = f.asOfTs ?? s.latest.ts;
+          // the forecast rain "as it stood" at the run hour (and 1-3 h earlier, from the same model run's series, for the 3 h hold of rain-onset)
+          const rainBy = fr
+            ? [
+                { ts: issuedAt, next: { 6: fr.next6h, 12: fr.next12h ?? null } },
+                ...[1, 2, 3].map((j) => ({ ts: issuedAt - j * 3_600_000, next: { 6: fr.back?.[j]?.next6h ?? null, 12: fr.back?.[j]?.next12h ?? null } })),
+              ]
+            : null;
+          pending.push({
+            run,
+            wc: {
+              station: s.station,
+              method: f.method,
+              currentLevel: f.currentLevel,
+              asOfTs: f.asOfTs,
+              crossings: (f.rawCrossings ?? f.crossings).map((c) => ({ threshold: c.threshold, level: c.level, probability: c.probability })),
+              rate3hM: s.rate3hM,
+              rain: fr || f.rain ? { past6hMm: f.rain?.past6hMm ?? null, next24hMm: f.rain?.next24hMm.det ?? null, next24hP90Mm: f.rain?.next24hMm.p90 ?? null, storm: f.stormHorizons.length > 0 || f.rainRisk != null, rainRisk: f.rainRisk != null } : null,
+              rainBy,
+            },
+          });
+        }
       } catch (e) {
         errors.push({ basin, station: s.station, error: String(e) });
+      }
+    }
+    if (pending.length) {
+      const wcSnap = Object.fromEntries(snapshot.map((b) => [b.station, { unit: b.unit, readings: b.trend24h.map((r) => ({ ts: r.ts, level: r.water_level })) }]));
+      for (const p of pending) {
+        try {
+          const wc = warningCandidates({ ...p.wc, snapshot: wcSnap });
+          if (Object.keys(wc).length) p.run.warningShadows = wc; // only the variants and steps that differ from the live chance
+        } catch (e) {
+          errors.push({ basin, station: p.wc.station, error: `warning candidates: ${String(e)}` });
+        }
       }
     }
   }

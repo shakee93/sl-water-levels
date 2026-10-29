@@ -1,0 +1,21 @@
+export type WCRow = { threshold: string; shown: number; etaHours: number | null };
+export type WCReading = { ts: number; level: number | null };
+export type WCSnapshot = Record<string, { unit: "m" | "ft" | null; readings: WCReading[] }>;
+export type WCRun = {
+  station: string;
+  method: string;
+  currentLevel: number | null;
+  asOfTs: number | null;
+  crossings: { threshold: string; level: number | null; probability: number }[];
+  rate3hM: number | null;
+  rain: { past6hMm: number | null; next24hMm: number | null; next24hP90Mm: number | null; storm: boolean | null; rainRisk: boolean | null } | null;
+  rainBy: { ts: number; next: { 6?: number | null; 12?: number | null } }[] | null;
+  snapshot: WCSnapshot;
+};
+export const VARIANTS: string[];
+export const PARAMS: any;
+export function dryHoldApplies(x: { rainPast6hMm: number | null; rate3hM: number | null; rainNext24hMm: number | null; rainNext24hP90Mm?: number | null; storm: boolean | null; rainRisk?: boolean | null }): boolean;
+export function dryHold(x: Parameters<typeof dryHoldApplies>[0], crossings: WCRun["crossings"], currentLevel: number | null): { threshold: string; shown: number; etaHours: null; live: number }[];
+export function rainOnset(snapshot: WCSnapshot, nowTs: number, rain: Record<string, NonNullable<WCRun["rainBy"]>>, p?: any, opts?: { include?: string[] }): Record<string, { threshold: string; chance: number; etaHours: number; etaEarliestHours: number; rainMm: number }>;
+export function upstreamTrigger(snapshot: WCSnapshot, nowTs: number, p?: any, opts?: { include?: string[] }): Record<string, { threshold: string; chance: number; etaHours: number; etaEarliestHours: number; upstream: string; firedHoursAgo: number }>;
+export function warningCandidates(run: WCRun): Record<string, WCRow[]>;
