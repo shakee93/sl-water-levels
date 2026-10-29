@@ -6,6 +6,7 @@ import { isLocale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { statusT, type StatusKey } from "@/lib/i18n/status";
 import { runHealthChecks, type HealthCheck } from "@/lib/health";
+import UptimeSection from "./UptimeSection";
 
 // Public data-source status. Same checks as /api/health, cached a few minutes. Not indexed.
 export const revalidate = 300;
@@ -78,6 +79,7 @@ export default async function StatusPage({ params }: { params: Promise<{ lang: s
             {s(overall === "ok" ? "all.ok" : overall === "delayed" ? "all.delayed" : "all.down")}
           </p>
         </header>
+        <UptimeSection lang={lang} />
         <ul className="divide-y divide-slate-200 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           {rows.map((r) => (
             <li key={r.key} className="flex items-center justify-between gap-3 px-4 py-3">

@@ -23,3 +23,10 @@ crons = [
 
 [vars]
 REPO = "shakee93/sl-water-levels"
+
+# Uptime probe results (table uptime_checks, d1/0020_uptime.sql; the worker creates it on first run). Same database the site's
+# prediction log uses; `wrangler d1 list` shows the id.
+[[d1_databases]]
+binding = "DB"
+database_name = "sl-water-levels"
+database_id = "189c9d3e-a46a-426f-a097-3ba6427097ed"
