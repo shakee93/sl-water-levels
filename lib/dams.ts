@@ -17,6 +17,8 @@ export type Dam = {
   type: "hydropower-reservoir" | "hydropower-station" | "irrigation" | "diversion";
   capacityMCM?: number;
   pucslPlantId?: number;
+  /** Slug of its /reservoirs page when it differs from the name; null = no page (no storage or release source covers it). */
+  page?: string | null;
   note?: string;
 };
 
@@ -24,8 +26,8 @@ export const DAMS_BY_BASIN: Record<string, Dam[]> = {
   "Kelani Ganga": [
     { name: "Maussakele", type: "hydropower-reservoir", capacityMCM: 155, note: "Feeds Norton + New Laxapana via tunnels" },
     { name: "Castlereagh", type: "hydropower-reservoir", capacityMCM: 43, note: "Feeds Polpitiya + Wimalasurendra" },
-    { name: "Norton", type: "hydropower-reservoir", capacityMCM: 3, note: "Pondage for Norton scheme" },
-    { name: "Canyon", type: "hydropower-reservoir", capacityMCM: 3, note: "Pondage for Old Laxapana" },
+    { name: "Norton", type: "hydropower-reservoir", page: null, capacityMCM: 3, note: "Pondage for Norton scheme" },
+    { name: "Canyon", type: "hydropower-reservoir", page: null, capacityMCM: 3, note: "Pondage for Old Laxapana" },
     { name: "Old Laxapana", type: "hydropower-station", pucslPlantId: 3, note: "Tailrace into Maskeli Oya → Kelani" },
     { name: "Canyon (PS)", type: "hydropower-station", pucslPlantId: 4 },
     { name: "New Laxapana", type: "hydropower-station", pucslPlantId: 5 },
@@ -40,7 +42,7 @@ export const DAMS_BY_BASIN: Record<string, Dam[]> = {
     { name: "Ukuwela", type: "hydropower-station", pucslPlantId: 13 },
     { name: "Victoria", type: "hydropower-reservoir", capacityMCM: 722, pucslPlantId: 10, note: "Largest reservoir in the cascade" },
     { name: "Randenigala", type: "hydropower-reservoir", capacityMCM: 875, pucslPlantId: 11, note: "Largest by capacity" },
-    { name: "Rantembe", type: "hydropower-reservoir", capacityMCM: 22, pucslPlantId: 12, note: "Final dam in the upper cascade" },
+    { name: "Rantembe", type: "hydropower-reservoir", page: "rantambe", capacityMCM: 22, pucslPlantId: 12, note: "Final dam in the upper cascade" },
     { name: "Moragahakanda", type: "hydropower-reservoir", note: "Newer, on Amban Ganga branch" },
   ],
   "Walawe Ganga": [
@@ -48,6 +50,6 @@ export const DAMS_BY_BASIN: Record<string, Dam[]> = {
     { name: "Udawalawe", type: "irrigation", capacityMCM: 268, note: "Major irrigation reservoir" },
   ],
   "Kalu Ganga": [
-    { name: "Kukule Ganga", type: "hydropower-reservoir", pucslPlantId: 18, note: "On a Kalu Ganga tributary" },
+    { name: "Kukule Ganga", type: "hydropower-reservoir", page: null, pucslPlantId: 18, note: "On a Kalu Ganga tributary" },
   ],
 };

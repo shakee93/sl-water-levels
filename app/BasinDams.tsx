@@ -71,9 +71,9 @@ export async function BasinDams({ basin, lang }: { basin: string; lang: Locale }
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                    {d.type === "hydropower-reservoir" ? (
-                      // Every hydropower reservoir here has its own page (storage, level, weekly plan).
-                      <Link href={p(`/reservoirs/${d.name.toLowerCase().replace(/\s+/g, "-")}`)} className="text-sm font-medium truncate hover:text-sky-700 dark:hover:text-sky-300 inline-flex items-center gap-1">
+                    {d.type === "hydropower-reservoir" && d.page !== null ? (
+                      // A hydropower reservoir links to its /reservoirs page; `page` fixes a spelling or says there is none (Kukule, Norton, Canyon).
+                      <Link href={p(`/reservoirs/${d.page ?? d.name.toLowerCase().replace(/\s+/g, "-")}`)} className="text-sm font-medium truncate hover:text-sky-700 dark:hover:text-sky-300 inline-flex items-center gap-1">
                         {d.name}
                         <ArrowRight className="size-3 text-slate-400" aria-hidden />
                       </Link>
