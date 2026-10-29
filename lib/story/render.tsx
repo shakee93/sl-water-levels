@@ -56,9 +56,11 @@ function Level({ text, size, unit }: { text: string; size: number; unit: number 
 }
 
 type Dim = { W: number; Hh: number; pad: number; top: number; bottom: number; name: number; sub: number; level: number; unit: number; pill: number; trend: number; next: number; chartH: number; upd: number; brand: number; where: number; rowH: number; rowName: number; rowSub: number; rowLvl: number; rowPill: number; title: number; sum: number; gap: number };
-const DIM: Record<"story" | "square", Dim> = {
+const DIM: Record<"story" | "square" | "portrait", Dim> = {
   story: { W: 1080, Hh: 1920, pad: 64, top: 250, bottom: 250, name: 92, sub: 46, level: 210, unit: 92, pill: 58, trend: 56, next: 46, chartH: 470, upd: 34, brand: 92, where: 32, rowH: 112, rowName: 44, rowSub: 28, rowLvl: 48, rowPill: 28, title: 80, sum: 42, gap: 40 },
   square: { W: 1080, Hh: 1080, pad: 56, top: 44, bottom: 40, name: 62, sub: 32, level: 124, unit: 54, pill: 40, trend: 38, next: 32, chartH: 215, upd: 28, brand: 64, where: 26, rowH: 66, rowName: 33, rowSub: 20, rowLvl: 34, rowPill: 20, title: 58, sum: 32, gap: 26 },
+  // 4:5 Instagram feed post: the square sizes with more room; the grid crops it to 3:4 (34 px a side, inside the 56 px padding).
+  portrait: { W: 1080, Hh: 1350, pad: 56, top: 70, bottom: 60, name: 66, sub: 34, level: 140, unit: 60, pill: 42, trend: 40, next: 34, chartH: 330, upd: 28, brand: 66, where: 26, rowH: 80, rowName: 36, rowSub: 22, rowLvl: 38, rowPill: 22, title: 62, sum: 34, gap: 32 },
 };
 
 function Brand({ lang, size }: { lang: StoryModel["lang"]; size: number }) {
@@ -176,7 +178,7 @@ function RainLegend({ d }: { d: Dim; compact?: boolean }) {
 function RainCard({ m, d }: { m: StoryModel; d: Dim }) {
   const r = m.rain!;
   const s = STORY_STRINGS[m.lang];
-  const sq = d.Hh === d.W;
+  const sq = d.Hh < d.W * 1.5; // square and the 4:5 feed post share the compact sizes
   const innerW = d.W - 2 * d.pad;
   // list left, map right in both formats (the story has more height, so everything is bigger)
   const mapH = sq ? 520 : 760;
@@ -235,7 +237,7 @@ function RainCard({ m, d }: { m: StoryModel; d: Dim }) {
 function ResCard({ m, d }: { m: StoryModel; d: Dim }) {
   const r = m.res!;
   const s = STORY_STRINGS[m.lang];
-  const sq = d.Hh === d.W;
+  const sq = d.Hh < d.W * 1.5; // square and the 4:5 feed post share the compact sizes
   const rows = r.rows.slice(0, 6);
   const more = r.more + (r.rows.length - rows.length);
   const rowH = sq ? 84 : 118;

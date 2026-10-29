@@ -1,4 +1,4 @@
-// /api/story/<gauge|town|river|home|rain|reservoirs>/<slug>.png|.jpg[?format=story|square|og][&lang=si][&unit=m][&ext=jpg]
+// /api/story/<gauge|town|river|home|rain|reservoirs>/<slug>.png|.jpg[?format=story|square|portrait|og][&lang=si][&unit=m][&ext=jpg]
 // .jpg (or ext=jpg) is for Instagram, which accepts JPEG only. rain and reservoirs take the slug "now".
 // The picture people post to their Instagram / WhatsApp / Facebook story, and the link-preview image of the pages (format=og).
 // Server-rendered from our own caches; the CDN keeps each picture for 5 minutes, so shares cannot load the server.
@@ -13,7 +13,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ kind: string; s
   const { kind, slug: file } = await ctx.params;
   const q = new URL(req.url).searchParams;
   const fm = q.get("format");
-  const format: StoryFormat = fm === "square" ? "square" : fm === "og" ? "og" : "story";
+  const format: StoryFormat = fm === "square" ? "square" : fm === "portrait" ? "portrait" : fm === "og" ? "og" : "story";
   const lq = q.get("lang");
   const lang: Locale = isLocale(lq) ? lq : "en";
   const unit = q.get("unit") === "m" ? "m" : "ft";

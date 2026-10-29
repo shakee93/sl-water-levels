@@ -182,7 +182,7 @@ assert.equal(gate({ IG_MODE: "live", IG_ACCESS_TOKEN: "  ", IG_USER_ID: "1" }).m
   // a step up to Major: a story AND ONE feed post for the worst river (square river picture)
   p = planIg(hw("major", 12.4, at(-6.5)), state, noCtx);
   assert.deepEqual(p.items.map((i) => `${i.format}:${i.media.kind}/${i.media.slug}`).sort(), ["feed:river/kelani-ganga", "story:gauge/hanwella"]);
-  assert.equal(imageUrl(SITE, p.items.find((i) => i.format === "feed")), `${SITE}/api/story/river/kelani-ganga.jpg?format=square`);
+  assert.equal(imageUrl(SITE, p.items.find((i) => i.format === "feed")), `${SITE}/api/story/river/kelani-ganga.jpg?format=portrait`);
   assert.equal(p.items[0].format, "feed", "the Major feed post is the most important");
   state = p.state;
   // falls below Alert: no all-clear for 3 h; a bounce back up resets the hold
@@ -280,14 +280,14 @@ assert.equal(gate({ IG_MODE: "live", IG_ACCESS_TOKEN: "  ", IG_USER_ID: "1" }).m
   let c = planIg(calmSnap(T0), emptyIgState(), noCtx);
   assert.equal(c.situation.mode, "calm");
   assert.deepEqual(c.items.map((i) => [i.format, i.kind, i.media.kind]), [["feed", "keepalive:rain", "rain"]]);
-  assert.equal(imageUrl(SITE, c.items[0]), `${SITE}/api/story/rain/now.jpg?format=square`);
+  assert.equal(imageUrl(SITE, c.items[0]), `${SITE}/api/story/rain/now.jpg?format=portrait`);
   assert.equal(c.items[0].cap.rain.mm, 71);
   // rotation: the type posted longest ago goes next
   let ctx = { ...noCtx, keepWeek: 1, lastKeepMs: T0 - 2 * 86_400_000, lastByType: { rain: T0 - 2 * 86_400_000 } };
   c = planIg(calmSnap(T0), emptyIgState(), ctx);
   assert.equal(c.items[0].kind, "keepalive:reservoirs");
   assert.equal(c.items[0].cap.reservoirs.count, 1, "an old reading is not 'spilling now'");
-  assert.equal(imageUrl(SITE, c.items[0]), `${SITE}/api/story/reservoirs/now.jpg?format=square`);
+  assert.equal(imageUrl(SITE, c.items[0]), `${SITE}/api/story/reservoirs/now.jpg?format=portrait`);
   ctx = { ...ctx, lastByType: { rain: 1, reservoirs: 2, river: 3, survey: 4, embed: 5 } };
   assert.equal(planIg(calmSnap(T0), emptyIgState(), ctx).items[0].kind, "keepalive:rain");
   // not eligible: little rain, no reservoir spilling

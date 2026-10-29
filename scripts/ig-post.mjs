@@ -54,7 +54,7 @@ const quote = (t) => t.split("\n").map((l) => `> ${l}`).join("\n");
 
 /** What the owner sees in Slack for one post that would have gone to Instagram. */
 export function dryRunMessage({ n, of, item, caption, url, check, situation, reason, sample = false }) {
-  const size = item.format === "story" ? "story 1080x1920" : "square feed post 1080x1080";
+  const size = item.format === "story" ? "story 1080x1920" : "4:5 feed post 1080x1350";
   return [
     `*${sample ? "SAMPLE, " : ""}DRY RUN: not posted to Instagram* (${n}/${of}) [${item.format}: ${item.label}] mode: ${situation.mode} (${situation.why})`,
     `_Image (JPEG, ${size}):_ ${url}${check ? `\n_Image check:_ ${check}` : ""}`,

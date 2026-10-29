@@ -4,13 +4,14 @@ import { isLocale, type Locale } from "@/lib/i18n/config";
 // rain and reservoirs are the keep-alive pictures of the Instagram account (scripts/ig-post.mjs); their slug is always "now".
 export const STORY_KINDS = ["gauge", "town", "river", "home", "rain", "reservoirs"] as const;
 export type StoryKind = (typeof STORY_KINDS)[number];
-export type StoryFormat = "story" | "square" | "og";
+export type StoryFormat = "story" | "square" | "portrait" | "og";
 /** png for pages and X; jpg for Instagram (it accepts JPEG only). */
 export type StoryExt = "png" | "jpg";
 export const isStoryKind = (v: unknown): v is StoryKind => typeof v === "string" && (STORY_KINDS as readonly string[]).includes(v);
 export const SIZES: Record<StoryFormat, { width: number; height: number }> = {
   story: { width: 1080, height: 1920 },
   square: { width: 1080, height: 1080 },
+  portrait: { width: 1080, height: 1350 }, // Instagram feed posts: the profile grid crops to 3:4, which trims only 34 px a side of 4:5
   og: { width: 1200, height: 630 },
 };
 

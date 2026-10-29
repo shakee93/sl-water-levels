@@ -247,4 +247,4 @@ export function applyIgCaps(items, mode, used, cfgIn = {}) {
 }
 
 /** The picture's address: the JPEG variant of the share picture, story 1080x1920 for stories, square 1080x1080 for feed posts. */
-export const imageUrl = (site, item) => `${site.replace(/\/$/, "")}/api/story/${item.media.kind}/${encodeURIComponent(item.media.slug)}.jpg?format=${item.format === "story" ? "story" : "square"}`;
+export const imageUrl = (site, item) => `${site.replace(/\/$/, "")}/api/story/${item.media.kind}/${encodeURIComponent(item.media.slug)}.jpg?format=${item.format === "story" ? "story" : "portrait"}`;
