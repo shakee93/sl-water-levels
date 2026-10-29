@@ -6,7 +6,7 @@ const BY_CRON = {
   // every 5 min: the 15-min jobs on :00/:15/:30/:45 (filtered in wanted()), plus x-post as soon as a
   // new gauge reading has arrived (see freshReading), so river alerts reach X within ~5 min.
   "*/5 * * * *": ["releases-snapshot.yml", "curw-snapshot.yml", "x-replies.yml"], // x-replies: answers to people who write to the X account; curw: private CUrW canal-level archive, all day (no night filter)
-  "25 * * * *": ["store-forecasts.yml"],
+  "25 * * * *": ["store-forecasts.yml", "rivernet-snapshot.yml"], // rivernet: 1-minute sensor archive, every 2 h (filtered in wanted()); GitHub's own cron ran it 3 times in 2 days
   "7,37 * * * *": ["health-check.yml", "gsmap-snapshot.yml", "x-reposts.yml", "hmis-snapshot.yml"], // JAXA publishes at :01/:31
   "17,47 * * * *": ["rain-correct.yml"], // after the :07/:37 snapshots (gsmap, hmis) have pushed
   "30 7,19 * * *": ["snapshot.yml"],
@@ -17,6 +17,7 @@ const BY_CRON = {
 // Release snapshots: every 15 min 05:30-23:15 Colombo (00-17 UTC), hourly otherwise.
 function wanted(file, when) {
   if ((file === "releases-snapshot.yml" || file === "curw-snapshot.yml") && when.getUTCMinutes() % 15 !== 0) return false;
+  if (file === "rivernet-snapshot.yml") return when.getUTCHours() % 2 === 0;
   if (file !== "releases-snapshot.yml") return true;
   const h = when.getUTCHours();
   return h <= 17 || when.getUTCMinutes() === 0;
