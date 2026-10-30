@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-29T23:01:41.160Z",
-  "asOf": "2026-10-30",
+  "updatedAt": "2026-10-30T18:51:27.817Z",
+  "asOf": "2026-10-31",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 131,
-    "feedback": 114,
-    "street": 12,
-    "flood3d": 5,
-    "newTonight": 2,
-    "trusted": 5,
+    "total": 138,
+    "feedback": 118,
+    "street": 13,
+    "flood3d": 7,
+    "newTonight": 7,
+    "trusted": 7,
     "flagged": 0
   },
   "streetLevel": {
@@ -19,15 +19,15 @@
       "days": 5,
       "defaultFt": 5,
       "clamped": true,
-      "dryBelowN": 4
+      "dryBelowN": 5
     }
   },
   "groundRain": {
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 88,
-      "stepDays": 4,
+      "steps": 124,
+      "stepDays": 5,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -35,8 +35,8 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 88,
-      "stepDays": 4,
+      "steps": 124,
+      "stepDays": 5,
       "events": 6,
       "eventDays": 4,
       "metrics": {
@@ -123,8 +123,8 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 88,
-      "stepDays": 4,
+      "steps": 124,
+      "stepDays": 5,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -132,8 +132,8 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 88,
-      "stepDays": 4,
+      "steps": 124,
+      "stepDays": 5,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -141,8 +141,8 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 88,
-      "stepDays": 4,
+      "steps": 124,
+      "stepDays": 5,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -150,8 +150,8 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 88,
-      "stepDays": 4,
+      "steps": 124,
+      "stepDays": 5,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -161,32 +161,32 @@
     "window": {
       "from": "2026-10-22",
       "to": "2026-10-30",
-      "points": 9042
+      "points": 10669
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 3052,
-          "maeBase": 0.13,
-          "maeFit": 0.13,
+          "n": 3326,
+          "maeBase": 0.12,
+          "maeFit": 0.12,
           "gainPct": 1,
-          "maePooled": 0.13,
-          "pooledGainPct": -2
+          "maePooled": 0.12,
+          "pooledGainPct": -3
         },
         "3": {
-          "n": 3035,
-          "maeBase": 0.31,
-          "maeFit": 0.3,
+          "n": 3575,
+          "maeBase": 0.29,
+          "maeFit": 0.28,
           "gainPct": 1,
-          "maePooled": 0.31,
-          "pooledGainPct": 0
+          "maePooled": 0.29,
+          "pooledGainPct": 1
         },
         "6": {
-          "n": 2949,
-          "maeBase": 0.58,
-          "maeFit": 0.58,
-          "gainPct": 0,
-          "maePooled": 0.58,
+          "n": 3488,
+          "maeBase": 0.54,
+          "maeFit": 0.54,
+          "gainPct": 1,
+          "maePooled": 0.54,
           "pooledGainPct": 0
         }
       },
@@ -246,9 +246,9 @@
       "due": false
     },
     "Kelani floodplain (elsewhere)": {
-      "trusted": 2,
-      "newTrusted": 2,
-      "newPeople": 2,
+      "trusted": 3,
+      "newTrusted": 3,
+      "newPeople": 3,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -278,9 +278,9 @@
       "due": false
     },
     "Wellampitiya and Kolonnawa": {
-      "trusted": 0,
-      "newTrusted": 0,
-      "newPeople": 0,
+      "trusted": 1,
+      "newTrusted": 1,
+      "newPeople": 1,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -325,16 +325,16 @@
     {
       "kind": "map",
       "name": "Wellampitiya and Kolonnawa",
-      "have": 0,
+      "have": 1,
       "need": 10,
-      "missing": 10
+      "missing": 9
     },
     {
       "kind": "map",
       "name": "Kelani floodplain (elsewhere)",
-      "have": 2,
+      "have": 3,
       "need": 10,
-      "missing": 8
+      "missing": 7
     },
     {
       "kind": "map",

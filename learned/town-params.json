@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-29T23:01:41.160Z",
-  "asOf": "2026-10-30",
+  "updatedAt": "2026-10-30T18:51:27.817Z",
+  "asOf": "2026-10-31",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,8 +13,8 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 108,
-    "people": 104,
+    "answers": 111,
+    "people": 107,
     "streetReports": 11,
     "days": 5
   },
@@ -117,16 +117,16 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 22,
+        "n": 23,
         "days": 5,
         "yes": 10,
-        "worse": 6,
+        "worse": 7,
         "better": 2,
         "unsure": 4
       },
       "seen": {
-        "n": 4,
-        "higher": 3,
+        "n": 5,
+        "higher": 4,
         "same": 1,
         "lower": 0
       },
@@ -140,12 +140,12 @@
         "meanErrFt": 0.1
       },
       "falling": {
-        "n": 5,
-        "days": 2,
+        "n": 6,
+        "days": 3,
         "yes": 2,
-        "worse": 3,
+        "worse": 4,
         "better": 0,
-        "errN": 5,
+        "errN": 6,
         "meanErrFt": -0.11
       },
       "streetLevel": {
@@ -154,7 +154,7 @@
         "days": 5,
         "defaultFt": 5,
         "clamped": true,
-        "dryBelowN": 4
+        "dryBelowN": 5
       }
     },
     "Norwood": {
@@ -379,21 +379,21 @@
     },
     "Glencourse": {
       "answers": {
-        "n": 2,
-        "days": 2,
+        "n": 3,
+        "days": 3,
         "yes": 0,
         "worse": 2,
-        "better": 0,
+        "better": 1,
         "unsure": 0
       },
       "falling": {
-        "n": 2,
-        "days": 2,
+        "n": 3,
+        "days": 3,
         "yes": 0,
         "worse": 2,
-        "better": 0,
-        "errN": 2,
-        "meanErrFt": 0.39
+        "better": 1,
+        "errN": 3,
+        "meanErrFt": 0.21
       }
     },
     "Kalawellawa (Millakanda)": {
@@ -419,6 +419,16 @@
         "yes": 1,
         "worse": 0,
         "better": 0,
+        "unsure": 0
+      }
+    },
+    "Nakkala": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 0,
+        "better": 1,
         "unsure": 0
       }
     }
@@ -506,31 +516,31 @@
     "window": {
       "from": "2026-10-22",
       "to": "2026-10-30",
-      "points": 9042
+      "points": 10669
     },
     "horizons": {
       "1": {
-        "n": 3052,
-        "maeBase": 0.13,
-        "maeFit": 0.13,
+        "n": 3326,
+        "maeBase": 0.12,
+        "maeFit": 0.12,
         "gainPct": 1,
-        "maePooled": 0.13,
-        "pooledGainPct": -2
+        "maePooled": 0.12,
+        "pooledGainPct": -3
       },
       "3": {
-        "n": 3035,
-        "maeBase": 0.31,
-        "maeFit": 0.3,
+        "n": 3575,
+        "maeBase": 0.29,
+        "maeFit": 0.28,
         "gainPct": 1,
-        "maePooled": 0.31,
-        "pooledGainPct": 0
+        "maePooled": 0.29,
+        "pooledGainPct": 1
       },
       "6": {
-        "n": 2949,
-        "maeBase": 0.58,
-        "maeFit": 0.58,
-        "gainPct": 0,
-        "maePooled": 0.58,
+        "n": 3488,
+        "maeBase": 0.54,
+        "maeFit": 0.54,
+        "gainPct": 1,
+        "maePooled": 0.54,
         "pooledGainPct": 0
       }
     },
