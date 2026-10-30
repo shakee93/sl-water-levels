@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-30T18:51:27.817Z",
+  "updatedAt": "2026-10-30T22:42:28.043Z",
   "asOf": "2026-10-31",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
@@ -8,7 +8,7 @@
     "feedback": 118,
     "street": 13,
     "flood3d": 7,
-    "newTonight": 7,
+    "newTonight": 0,
     "trusted": 7,
     "flagged": 0
   },
@@ -26,7 +26,7 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 124,
+      "steps": 130,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 124,
+      "steps": 130,
       "stepDays": 5,
       "events": 6,
       "eventDays": 4,
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 124,
+      "steps": 130,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 124,
+      "steps": 130,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 124,
+      "steps": 130,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 124,
+      "steps": 130,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -160,31 +160,31 @@
   "forecast": {
     "window": {
       "from": "2026-10-22",
-      "to": "2026-10-30",
-      "points": 10669
+      "to": "2026-10-31",
+      "points": 10846
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 3326,
+          "n": 3424,
           "maeBase": 0.12,
           "maeFit": 0.12,
           "gainPct": 1,
-          "maePooled": 0.12,
-          "pooledGainPct": -3
+          "maePooled": 0.13,
+          "pooledGainPct": -2
         },
         "3": {
-          "n": 3575,
+          "n": 3402,
           "maeBase": 0.29,
-          "maeFit": 0.28,
+          "maeFit": 0.29,
           "gainPct": 1,
           "maePooled": 0.29,
           "pooledGainPct": 1
         },
         "6": {
-          "n": 3488,
-          "maeBase": 0.54,
-          "maeFit": 0.54,
+          "n": 3591,
+          "maeBase": 0.53,
+          "maeFit": 0.53,
           "gainPct": 1,
           "maePooled": 0.54,
           "pooledGainPct": 0
