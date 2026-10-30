@@ -51,6 +51,7 @@ import { colomboTime, tierLabel } from "@/app/tierUi";
 import { HmisGaugeNote } from "@/app/HmisGaugeNote";
 import { HmisWarnings } from "@/app/HmisWarnings";
 import { GroundRainLine } from "@/app/GroundRainLine";
+import { StreetNotes } from "@/app/colombo/StreetNotes";
 import { FasterReading } from "@/app/FasterReading";
 import { TownsOnGauge } from "@/app/flood/TownsOnGauge";
 
@@ -311,6 +312,11 @@ export default async function StationPage({
               <Forecast lang={lang} basin={basin} selectedStation={station} />
             </Suspense>
 
+            {station === "Nagalagam Street" && nat && hasPoint(nat.latitude, nat.longitude) && (
+              <Suspense key={`street-notes-${station}`} fallback={null}>
+                <StreetNotes lang={lang} tone={nat.tier} lat={nat.latitude} lon={nat.longitude} station={station} />
+              </Suspense>
+            )}
             {station === "Nagalagam Street" && <BetweenReadings />}
             {station === "Nagalagam Street" && <TideLineClient />}
 

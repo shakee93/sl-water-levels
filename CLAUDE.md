@@ -150,6 +150,11 @@ lib/
   predicted high/low times for 48 h, shown on Nagalagam Street, canal-area town pages and `/colombo-canals`. Times can be
   off by up to an hour; heights are never a river level. Basins, towns and gauge groups: `lib/colombo.ts`.
 
+- **Low-street notes** (30 Oct 2026, `lib/lowStreetNotes.ts` + `app/colombo/StreetNotes.tsx`, test `scripts/low-street-notes.test.mts`): on Nagalagam Street and Colombo canal-basin
+  town pages, when the tone is normal/watch, (A) "canals around Kolonnawa / north Colombo are higher than usual" from `basinState`, and (B) "rain gauge at X, N km: at least M mm
+  in the last hour / 3 hours" from a live HMIS gauge within 7 km (>= 5 mm/1 h or >= 6 mm/3 h). From visitors reporting street water under "Normal" on 28-30 Oct. Notes only:
+  never verdict, tone, sticky bar, push; the GROUND_RULE shadow is separate and unchanged.
+
 - **Learned parameters** (`learned/town-params.json` on the `data` branch, daily `scripts/feedback-learn.mjs` + `lib/learnedParams.mjs`, DOCS.md
   "Learning from feedback"): street-water gauge level and rain mark taught by visitors' answers, evidence-gated (>= 3 people, >= 2 days) and bounded.
   Notes and heads-ups only: NEVER the verdict step, tone, sticky bar or push levels. Counts only in the file. Forecast factor tested, not wired (no gain).

@@ -29,6 +29,7 @@ import { SpotCard } from "@/app/feedback/SpotCard";
 import { fbFor } from "@/lib/i18n/feedback";
 import { LowSpot } from "@/app/flood/LowSpot";
 import { ColomboBlock, basinCanalHigh } from "@/app/colombo/ColomboBlock";
+import { StreetNotes } from "@/app/colombo/StreetNotes";
 import { getCanals } from "@/lib/curw";
 import { basinOfTown } from "@/lib/colombo";
 import { d1Configured } from "@/lib/d1";
@@ -179,6 +180,13 @@ export default async function TownPage({ params }: Params) {
         />
 
         <YourRiver primary={data.input.primary} secondary={data.input.secondary} townTone={risk.tone} national={national} lang={lang} t={t} tt={tt} p={p} />
+
+        {/* Colombo-area notes under the verdict (canals still high / rain measured nearby); notes only, calm tones only, fail soft */}
+        {basinOfTown(place.slug) && (
+          <Suspense key={`street-notes-${place.slug}`} fallback={null}>
+            <StreetNotes lang={lang} tone={risk.tone} lat={place.lat} lon={place.lon} slug={place.slug} />
+          </Suspense>
+        )}
 
         {/* heavy rain on a canal-flood town: the street-water card first (state + one switch), then ask about the street while people are looking (answers tune the street rule) */}
         {place.rainZone && data.input.streetRain !== undefined && risk.lowSpot && lowSpotCard}
