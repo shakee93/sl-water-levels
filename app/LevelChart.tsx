@@ -563,6 +563,9 @@ function MyLevelControl({ station, unit, current, t }: { station: string; unit: 
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [bad, setBad] = useState(false);
+  // Open towards the side with room: on phones the button wraps to the left edge, and a box pinned to its right edge
+  // ran off-screen (owner report, 31 Oct 2026). 288 px = w-72.
+  const [toLeft, setToLeft] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const btn = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -605,6 +608,8 @@ function MyLevelControl({ station, unit, current, t }: { station: string; unit: 
         onClick={() => {
           setText(current != null ? plain(Number(current.toFixed(unit ? 1 : 2))) : "");
           setBad(false);
+          const r = btn.current?.getBoundingClientRect();
+          setToLeft(!!r && r.left + 288 <= window.innerWidth - 8);
           setOpen((o) => !o);
         }}
         className={`inline-flex items-center gap-1.5 h-9 sm:h-8 px-2.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 ${ring}`}
@@ -631,7 +636,7 @@ function MyLevelControl({ station, unit, current, t }: { station: string; unit: 
               close();
             }
           }}
-          className="absolute right-0 bottom-full mb-2 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-lg p-3 text-sm"
+          className={`absolute ${toLeft ? "left-0" : "right-0"} bottom-full mb-2 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-lg p-3 text-sm`}
         >
           <label htmlFor={`${id}-lvl`} className="block font-medium">
             {t("chart.levelFieldLabel")}
