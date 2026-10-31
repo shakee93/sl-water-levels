@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-31T18:50:49.318Z",
+  "updatedAt": "2026-10-31T21:57:47.640Z",
   "asOf": "2026-11-01",
   "minimums": {
     "answers": 3,
@@ -15,7 +15,7 @@
   "totals": {
     "answers": 113,
     "people": 109,
-    "streetReports": 11,
+    "streetReports": 12,
     "days": 6
   },
   "stations": {
@@ -486,6 +486,13 @@
       "deep": 0,
       "little": 1,
       "dry": 0
+    },
+    "dehiwala": {
+      "reports": 1,
+      "days": 1,
+      "deep": 0,
+      "little": 1,
+      "dry": 0
     }
   },
   "pending": [
@@ -525,12 +532,12 @@
   "forecast": {
     "window": {
       "from": "2026-10-23",
-      "to": "2026-10-31",
-      "points": 11947
+      "to": "2026-11-01",
+      "points": 11988
     },
     "horizons": {
       "1": {
-        "n": 3978,
+        "n": 3838,
         "maeBase": 0.11,
         "maeFit": 0.11,
         "gainPct": 0,
@@ -538,7 +545,7 @@
         "pooledGainPct": -3
       },
       "3": {
-        "n": 3954,
+        "n": 3810,
         "maeBase": 0.27,
         "maeFit": 0.27,
         "gainPct": 1,
@@ -546,11 +553,11 @@
         "pooledGainPct": 1
       },
       "6": {
-        "n": 3869,
-        "maeBase": 0.51,
+        "n": 3947,
+        "maeBase": 0.5,
         "maeFit": 0.5,
         "gainPct": 1,
-        "maePooled": 0.51,
+        "maePooled": 0.5,
         "pooledGainPct": 0
       }
     },

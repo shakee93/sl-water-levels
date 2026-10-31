@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-31T18:50:49.318Z",
+  "updatedAt": "2026-10-31T21:57:47.640Z",
   "asOf": "2026-11-01",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
@@ -8,7 +8,7 @@
     "feedback": 120,
     "street": 13,
     "flood3d": 8,
-    "newTonight": 3,
+    "newTonight": 0,
     "trusted": 8,
     "flagged": 0
   },
@@ -26,8 +26,8 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 160,
-      "stepDays": 5,
+      "steps": 166,
+      "stepDays": 6,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -35,8 +35,8 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 160,
-      "stepDays": 5,
+      "steps": 166,
+      "stepDays": 6,
       "events": 6,
       "eventDays": 4,
       "metrics": {
@@ -54,15 +54,15 @@
             "atCurrentPossible": {
               "events": 5,
               "hits": 0,
-              "episodes": 0,
-              "unmatched": 0
+              "episodes": 1,
+              "unmatched": 1
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
               "events": 5,
               "hits": 0,
-              "episodes": 0,
-              "unmatched": 0
+              "episodes": 1,
+              "unmatched": 1
             }
           }
         },
@@ -80,8 +80,8 @@
             "atCurrentPossible": {
               "events": 4,
               "hits": 0,
-              "episodes": 0,
-              "unmatched": 0
+              "episodes": 1,
+              "unmatched": 1
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
@@ -106,8 +106,8 @@
             "atCurrentPossible": {
               "events": 5,
               "hits": 0,
-              "episodes": 0,
-              "unmatched": 0
+              "episodes": 1,
+              "unmatched": 1
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
@@ -123,8 +123,8 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 160,
-      "stepDays": 5,
+      "steps": 166,
+      "stepDays": 6,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -132,8 +132,8 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 160,
-      "stepDays": 5,
+      "steps": 166,
+      "stepDays": 6,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -141,8 +141,8 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 160,
-      "stepDays": 5,
+      "steps": 166,
+      "stepDays": 6,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -150,8 +150,8 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 160,
-      "stepDays": 5,
+      "steps": 166,
+      "stepDays": 6,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -160,13 +160,13 @@
   "forecast": {
     "window": {
       "from": "2026-10-23",
-      "to": "2026-10-31",
-      "points": 11947
+      "to": "2026-11-01",
+      "points": 11988
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 3978,
+          "n": 3838,
           "maeBase": 0.11,
           "maeFit": 0.11,
           "gainPct": 0,
@@ -174,7 +174,7 @@
           "pooledGainPct": -3
         },
         "3": {
-          "n": 3954,
+          "n": 3810,
           "maeBase": 0.27,
           "maeFit": 0.27,
           "gainPct": 1,
@@ -182,11 +182,11 @@
           "pooledGainPct": 1
         },
         "6": {
-          "n": 3869,
-          "maeBase": 0.51,
+          "n": 3947,
+          "maeBase": 0.5,
           "maeFit": 0.5,
           "gainPct": 1,
-          "maePooled": 0.51,
+          "maePooled": 0.5,
           "pooledGainPct": 0
         }
       },
