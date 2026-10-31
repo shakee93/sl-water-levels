@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-30T22:42:28.043Z",
-  "asOf": "2026-10-31",
+  "updatedAt": "2026-10-31T18:50:49.318Z",
+  "asOf": "2026-11-01",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 138,
-    "feedback": 118,
+    "total": 141,
+    "feedback": 120,
     "street": 13,
-    "flood3d": 7,
-    "newTonight": 0,
-    "trusted": 7,
+    "flood3d": 8,
+    "newTonight": 3,
+    "trusted": 8,
     "flagged": 0
   },
   "streetLevel": {
@@ -26,7 +26,7 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 130,
+      "steps": 160,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 130,
+      "steps": 160,
       "stepDays": 5,
       "events": 6,
       "eventDays": 4,
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 130,
+      "steps": 160,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 130,
+      "steps": 160,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 130,
+      "steps": 160,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 130,
+      "steps": 160,
       "stepDays": 5,
       "events": 0,
       "eventDays": 0,
@@ -159,34 +159,34 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-10-22",
+      "from": "2026-10-23",
       "to": "2026-10-31",
-      "points": 10846
+      "points": 11947
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 3424,
-          "maeBase": 0.12,
-          "maeFit": 0.12,
-          "gainPct": 1,
-          "maePooled": 0.13,
-          "pooledGainPct": -2
+          "n": 3978,
+          "maeBase": 0.11,
+          "maeFit": 0.11,
+          "gainPct": 0,
+          "maePooled": 0.12,
+          "pooledGainPct": -3
         },
         "3": {
-          "n": 3402,
-          "maeBase": 0.29,
-          "maeFit": 0.29,
+          "n": 3954,
+          "maeBase": 0.27,
+          "maeFit": 0.27,
           "gainPct": 1,
-          "maePooled": 0.29,
+          "maePooled": 0.27,
           "pooledGainPct": 1
         },
         "6": {
-          "n": 3591,
-          "maeBase": 0.53,
-          "maeFit": 0.53,
+          "n": 3869,
+          "maeBase": 0.51,
+          "maeFit": 0.5,
           "gainPct": 1,
-          "maePooled": 0.54,
+          "maePooled": 0.51,
           "pooledGainPct": 0
         }
       },
@@ -246,9 +246,9 @@
       "due": false
     },
     "Kelani floodplain (elsewhere)": {
-      "trusted": 3,
-      "newTrusted": 3,
-      "newPeople": 3,
+      "trusted": 4,
+      "newTrusted": 4,
+      "newPeople": 4,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -331,17 +331,17 @@
     },
     {
       "kind": "map",
-      "name": "Kelani floodplain (elsewhere)",
+      "name": "Kelaniya",
       "have": 3,
       "need": 10,
       "missing": 7
     },
     {
       "kind": "map",
-      "name": "Kelaniya",
-      "have": 3,
+      "name": "Kelani floodplain (elsewhere)",
+      "have": 4,
       "need": 10,
-      "missing": 7
+      "missing": 6
     },
     {
       "kind": "streetLevel",
