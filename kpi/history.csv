@@ -384,31 +384,31 @@ day,scope,kpi,part,value,target,met,n
 2026-10-29,variant:recession-v2-slow,fastRises,called,46.2,95,no,13
 2026-10-29,variant:recession-v2-slow,risingRight,right,60,75,no,45
 2026-10-30,live-storm-day,warned,caught,,80,,0
-2026-10-30,live-storm-day,falseAlarms,possible,100,60,,1
+2026-10-30,live-storm-day,falseAlarms,possible,100,60,,2
 2026-10-30,live-storm-day,falseAlarms,likely,,25,,0
-2026-10-30,live-storm-day,honest,0-10,0,10,yes,78
-2026-10-30,live-storm-day,honest,10-20,0,10,,3
-2026-10-30,live-storm-day,honest,20-30,0,10,,2
-2026-10-30,live-storm-day,honest,30-50,0,10,,1
+2026-10-30,live-storm-day,honest,0-10,0,10,yes,1549
+2026-10-30,live-storm-day,honest,10-20,0,10,no,27
+2026-10-30,live-storm-day,honest,20-30,0,10,no,15
+2026-10-30,live-storm-day,honest,30-50,0,10,,5
 2026-10-30,live-storm-day,honest,50-70,,10,,0
 2026-10-30,live-storm-day,honest,70-90,,10,,0
 2026-10-30,live-storm-day,honest,90-100,,10,,0
 2026-10-30,live-storm-day,skill,h1,26.2,30,no,633
-2026-10-30,live-storm-day,skill,h3,28.3,30,no,584
-2026-10-30,live-storm-day,skill,h6,25.3,30,no,511
-2026-10-30,live-storm-day,skill,h12,19.2,20,no,217
-2026-10-30,live-storm-day,skill,h24,10.9,10,,16
-2026-10-30,live-storm-day,skill,worstPhase,2.3,0,yes,1859
-2026-10-30,live-storm-day,bias,rising,0.33,0.25,,6
-2026-10-30,live-storm-day,bias,slow rise,-0.27,0.25,no,13
-2026-10-30,live-storm-day,bias,calm,-0.16,0.25,yes,48
-2026-10-30,live-storm-day,bias,slow fall,0.09,0.25,yes,77
-2026-10-30,live-storm-day,bias,falling,0.94,0.25,no,53
+2026-10-30,live-storm-day,skill,h3,28.3,30,no,634
+2026-10-30,live-storm-day,skill,h6,25.3,30,no,635
+2026-10-30,live-storm-day,skill,h12,17.1,20,no,412
+2026-10-30,live-storm-day,skill,h24,9.4,10,no,414
+2026-10-30,live-storm-day,skill,worstPhase,2.8,0,yes,2597
+2026-10-30,live-storm-day,bias,rising,0.55,0.25,no,28
+2026-10-30,live-storm-day,bias,slow rise,-0.16,0.25,yes,33
+2026-10-30,live-storm-day,bias,calm,-0.2,0.25,yes,116
+2026-10-30,live-storm-day,bias,slow fall,-0.03,0.25,yes,127
+2026-10-30,live-storm-day,bias,falling,1.11,0.25,no,85
 2026-10-30,live-storm-day,coverage,h1,82.1,75-85,yes,633
-2026-10-30,live-storm-day,coverage,h3,88.9,75-85,no,584
-2026-10-30,live-storm-day,coverage,h6,87.3,75-85,no,511
-2026-10-30,live-storm-day,coverage,h12,82.5,75-85,yes,217
-2026-10-30,live-storm-day,coverage,h24,68.8,75-85,,16
+2026-10-30,live-storm-day,coverage,h3,87.4,75-85,no,634
+2026-10-30,live-storm-day,coverage,h6,84.9,75-85,yes,635
+2026-10-30,live-storm-day,coverage,h12,76.9,75-85,yes,412
+2026-10-30,live-storm-day,coverage,h24,67.6,75-85,no,414
 2026-10-30,live-storm-day,fastRises,called,60.9,95,no,23
 2026-10-30,live-storm-day,risingRight,right,57.1,75,no,91
 2026-10-30,live-storm-day,inputs,hours,24,24,yes,1
@@ -416,84 +416,198 @@ day,scope,kpi,part,value,target,met,n
 2026-10-30,live-storm-day,inputs,flaggedShare,2.5,,,1379
 2026-10-30,live-storm-day,people,agree,20,70,,5
 2026-10-30,variant:copy,skill,h1,26.2,30,no,633
-2026-10-30,variant:copy,skill,h3,28.3,30,no,584
-2026-10-30,variant:copy,skill,h6,25.3,30,no,511
-2026-10-30,variant:copy,skill,h12,19.2,20,no,217
-2026-10-30,variant:copy,skill,h24,10.9,10,,16
-2026-10-30,variant:copy,skill,worstPhase,2.3,0,yes,1859
-2026-10-30,variant:copy,bias,rising,0.33,0.25,,6
-2026-10-30,variant:copy,bias,slow rise,-0.27,0.25,no,13
-2026-10-30,variant:copy,bias,calm,-0.16,0.25,yes,48
-2026-10-30,variant:copy,bias,slow fall,0.09,0.25,yes,77
-2026-10-30,variant:copy,bias,falling,0.94,0.25,no,53
+2026-10-30,variant:copy,skill,h3,28.3,30,no,634
+2026-10-30,variant:copy,skill,h6,25.3,30,no,635
+2026-10-30,variant:copy,skill,h12,17.1,20,no,412
+2026-10-30,variant:copy,skill,h24,9.4,10,no,414
+2026-10-30,variant:copy,skill,worstPhase,2.8,0,yes,2597
+2026-10-30,variant:copy,bias,rising,0.55,0.25,no,28
+2026-10-30,variant:copy,bias,slow rise,-0.16,0.25,yes,33
+2026-10-30,variant:copy,bias,calm,-0.2,0.25,yes,116
+2026-10-30,variant:copy,bias,slow fall,-0.03,0.25,yes,127
+2026-10-30,variant:copy,bias,falling,1.11,0.25,no,85
 2026-10-30,variant:copy,coverage,h1,82.1,75-85,yes,633
-2026-10-30,variant:copy,coverage,h3,88.9,75-85,no,584
-2026-10-30,variant:copy,coverage,h6,87.3,75-85,no,511
-2026-10-30,variant:copy,coverage,h12,82.5,75-85,yes,217
-2026-10-30,variant:copy,coverage,h24,68.8,75-85,,16
+2026-10-30,variant:copy,coverage,h3,87.4,75-85,no,634
+2026-10-30,variant:copy,coverage,h6,84.9,75-85,yes,635
+2026-10-30,variant:copy,coverage,h12,76.9,75-85,yes,412
+2026-10-30,variant:copy,coverage,h24,67.6,75-85,no,414
 2026-10-30,variant:copy,fastRises,called,60.9,95,no,23
 2026-10-30,variant:copy,risingRight,right,57.1,75,no,91
 2026-10-30,variant:dry-hold,warned,caught,,80,,0
-2026-10-30,variant:dry-hold,falseAlarms,possible,100,60,,1
+2026-10-30,variant:dry-hold,falseAlarms,possible,100,60,,4
 2026-10-30,variant:dry-hold,falseAlarms,likely,,25,,0
-2026-10-30,variant:dry-hold,honest,0-10,0,10,yes,78
-2026-10-30,variant:dry-hold,honest,10-20,0,10,,5
-2026-10-30,variant:dry-hold,honest,20-30,0,10,,1
-2026-10-30,variant:dry-hold,honest,30-50,,10,,0
+2026-10-30,variant:dry-hold,honest,0-10,0,10,yes,1549
+2026-10-30,variant:dry-hold,honest,10-20,0,10,no,36
+2026-10-30,variant:dry-hold,honest,20-30,0,10,,9
+2026-10-30,variant:dry-hold,honest,30-50,0,10,,2
 2026-10-30,variant:dry-hold,honest,50-70,,10,,0
 2026-10-30,variant:dry-hold,honest,70-90,,10,,0
 2026-10-30,variant:dry-hold,honest,90-100,,10,,0
 2026-10-30,variant:recession-v1,skill,h1,26.2,30,no,633
-2026-10-30,variant:recession-v1,skill,h3,28.3,30,no,584
-2026-10-30,variant:recession-v1,skill,h6,25.3,30,no,511
-2026-10-30,variant:recession-v1,skill,h12,32.3,20,yes,217
-2026-10-30,variant:recession-v1,skill,h24,24.9,10,,16
-2026-10-30,variant:recession-v1,skill,worstPhase,2.3,0,yes,1859
-2026-10-30,variant:recession-v1,bias,rising,0.33,0.25,,6
-2026-10-30,variant:recession-v1,bias,slow rise,-0.27,0.25,no,13
-2026-10-30,variant:recession-v1,bias,calm,-0.16,0.25,yes,48
-2026-10-30,variant:recession-v1,bias,slow fall,-0.05,0.25,yes,77
-2026-10-30,variant:recession-v1,bias,falling,0.27,0.25,no,53
+2026-10-30,variant:recession-v1,skill,h3,28.3,30,no,634
+2026-10-30,variant:recession-v1,skill,h6,25.3,30,no,635
+2026-10-30,variant:recession-v1,skill,h12,29.1,20,yes,412
+2026-10-30,variant:recession-v1,skill,h24,21.5,10,yes,414
+2026-10-30,variant:recession-v1,skill,worstPhase,2.8,0,yes,2597
+2026-10-30,variant:recession-v1,bias,rising,0.55,0.25,no,28
+2026-10-30,variant:recession-v1,bias,slow rise,-0.16,0.25,yes,33
+2026-10-30,variant:recession-v1,bias,calm,-0.2,0.25,yes,116
+2026-10-30,variant:recession-v1,bias,slow fall,-0.15,0.25,yes,127
+2026-10-30,variant:recession-v1,bias,falling,0.42,0.25,no,85
 2026-10-30,variant:recession-v1,coverage,h1,82.1,75-85,yes,633
-2026-10-30,variant:recession-v1,coverage,h3,88.9,75-85,no,584
-2026-10-30,variant:recession-v1,coverage,h6,87.3,75-85,no,511
-2026-10-30,variant:recession-v1,coverage,h12,81.1,75-85,yes,217
-2026-10-30,variant:recession-v1,coverage,h24,68.8,75-85,,16
+2026-10-30,variant:recession-v1,coverage,h3,87.4,75-85,no,634
+2026-10-30,variant:recession-v1,coverage,h6,84.9,75-85,yes,635
+2026-10-30,variant:recession-v1,coverage,h12,75,75-85,yes,412
+2026-10-30,variant:recession-v1,coverage,h24,69.3,75-85,no,414
 2026-10-30,variant:recession-v1,fastRises,called,60.9,95,no,23
 2026-10-30,variant:recession-v1,risingRight,right,57.1,75,no,91
 2026-10-30,variant:recession-v2,skill,h1,26.2,30,no,633
-2026-10-30,variant:recession-v2,skill,h3,31.8,30,yes,584
-2026-10-30,variant:recession-v2,skill,h6,31.5,30,yes,511
-2026-10-30,variant:recession-v2,skill,h12,35,20,yes,217
-2026-10-30,variant:recession-v2,skill,h24,32,10,,16
-2026-10-30,variant:recession-v2,skill,worstPhase,2.3,0,yes,1859
-2026-10-30,variant:recession-v2,bias,rising,0.33,0.25,,6
-2026-10-30,variant:recession-v2,bias,slow rise,-0.27,0.25,no,13
-2026-10-30,variant:recession-v2,bias,calm,-0.16,0.25,yes,48
-2026-10-30,variant:recession-v2,bias,slow fall,0.08,0.25,yes,77
-2026-10-30,variant:recession-v2,bias,falling,0.04,0.25,yes,53
+2026-10-30,variant:recession-v2,skill,h3,31.8,30,yes,634
+2026-10-30,variant:recession-v2,skill,h6,31.2,30,yes,635
+2026-10-30,variant:recession-v2,skill,h12,30.8,20,yes,412
+2026-10-30,variant:recession-v2,skill,h24,32.6,10,yes,414
+2026-10-30,variant:recession-v2,skill,worstPhase,2.8,0,yes,2597
+2026-10-30,variant:recession-v2,bias,rising,0.55,0.25,no,28
+2026-10-30,variant:recession-v2,bias,slow rise,-0.16,0.25,yes,33
+2026-10-30,variant:recession-v2,bias,calm,-0.2,0.25,yes,116
+2026-10-30,variant:recession-v2,bias,slow fall,-0.04,0.25,yes,127
+2026-10-30,variant:recession-v2,bias,falling,0.23,0.25,yes,85
 2026-10-30,variant:recession-v2,coverage,h1,82.1,75-85,yes,633
-2026-10-30,variant:recession-v2,coverage,h3,89,75-85,no,584
-2026-10-30,variant:recession-v2,coverage,h6,87.7,75-85,no,511
-2026-10-30,variant:recession-v2,coverage,h12,83.4,75-85,yes,217
-2026-10-30,variant:recession-v2,coverage,h24,68.8,75-85,,16
+2026-10-30,variant:recession-v2,coverage,h3,87.7,75-85,no,634
+2026-10-30,variant:recession-v2,coverage,h6,85.7,75-85,no,635
+2026-10-30,variant:recession-v2,coverage,h12,79.4,75-85,yes,412
+2026-10-30,variant:recession-v2,coverage,h24,74.9,75-85,no,414
 2026-10-30,variant:recession-v2,fastRises,called,60.9,95,no,23
 2026-10-30,variant:recession-v2,risingRight,right,57.1,75,no,91
 2026-10-30,variant:recession-v2-slow,skill,h1,26.2,30,no,633
-2026-10-30,variant:recession-v2-slow,skill,h3,30.5,30,yes,584
-2026-10-30,variant:recession-v2-slow,skill,h6,30.8,30,yes,511
-2026-10-30,variant:recession-v2-slow,skill,h12,36,20,yes,217
-2026-10-30,variant:recession-v2-slow,skill,h24,45.7,10,,16
-2026-10-30,variant:recession-v2-slow,skill,worstPhase,2.3,0,yes,1859
-2026-10-30,variant:recession-v2-slow,bias,rising,0.33,0.25,,6
-2026-10-30,variant:recession-v2-slow,bias,slow rise,-0.27,0.25,no,13
-2026-10-30,variant:recession-v2-slow,bias,calm,-0.16,0.25,yes,48
-2026-10-30,variant:recession-v2-slow,bias,slow fall,-0.14,0.25,yes,77
-2026-10-30,variant:recession-v2-slow,bias,falling,0.04,0.25,yes,53
+2026-10-30,variant:recession-v2-slow,skill,h3,30.4,30,yes,634
+2026-10-30,variant:recession-v2-slow,skill,h6,30.5,30,yes,635
+2026-10-30,variant:recession-v2-slow,skill,h12,30.3,20,yes,412
+2026-10-30,variant:recession-v2-slow,skill,h24,36.2,10,yes,414
+2026-10-30,variant:recession-v2-slow,skill,worstPhase,2.8,0,yes,2597
+2026-10-30,variant:recession-v2-slow,bias,rising,0.55,0.25,no,28
+2026-10-30,variant:recession-v2-slow,bias,slow rise,-0.16,0.25,yes,33
+2026-10-30,variant:recession-v2-slow,bias,calm,-0.2,0.25,yes,116
+2026-10-30,variant:recession-v2-slow,bias,slow fall,-0.26,0.25,no,127
+2026-10-30,variant:recession-v2-slow,bias,falling,0.23,0.25,yes,85
 2026-10-30,variant:recession-v2-slow,coverage,h1,82.1,75-85,yes,633
-2026-10-30,variant:recession-v2-slow,coverage,h3,88.7,75-85,no,584
-2026-10-30,variant:recession-v2-slow,coverage,h6,88.1,75-85,no,511
-2026-10-30,variant:recession-v2-slow,coverage,h12,83.4,75-85,yes,217
-2026-10-30,variant:recession-v2-slow,coverage,h24,81.3,75-85,,16
+2026-10-30,variant:recession-v2-slow,coverage,h3,87.4,75-85,no,634
+2026-10-30,variant:recession-v2-slow,coverage,h6,85.8,75-85,no,635
+2026-10-30,variant:recession-v2-slow,coverage,h12,79.9,75-85,yes,412
+2026-10-30,variant:recession-v2-slow,coverage,h24,78,75-85,yes,414
 2026-10-30,variant:recession-v2-slow,fastRises,called,60.9,95,no,23
 2026-10-30,variant:recession-v2-slow,risingRight,right,57.1,75,no,91
+2026-10-31,live-storm-day,warned,caught,,80,,0
+2026-10-31,live-storm-day,falseAlarms,possible,,60,,0
+2026-10-31,live-storm-day,falseAlarms,likely,,25,,0
+2026-10-31,live-storm-day,honest,0-10,0,10,yes,109
+2026-10-31,live-storm-day,honest,10-20,0,10,,2
+2026-10-31,live-storm-day,honest,20-30,,10,,0
+2026-10-31,live-storm-day,honest,30-50,,10,,0
+2026-10-31,live-storm-day,honest,50-70,,10,,0
+2026-10-31,live-storm-day,honest,70-90,,10,,0
+2026-10-31,live-storm-day,honest,90-100,,10,,0
+2026-10-31,live-storm-day,skill,h1,27.7,30,no,649
+2026-10-31,live-storm-day,skill,h3,29.8,30,no,606
+2026-10-31,live-storm-day,skill,h6,25.7,30,no,525
+2026-10-31,live-storm-day,skill,h12,19.4,20,no,231
+2026-10-31,live-storm-day,skill,h24,6.7,10,,19
+2026-10-31,live-storm-day,skill,worstPhase,8.5,0,yes,1959
+2026-10-31,live-storm-day,bias,rising,0.63,0.25,no,22
+2026-10-31,live-storm-day,bias,slow rise,-0.06,0.25,yes,15
+2026-10-31,live-storm-day,bias,calm,0.09,0.25,yes,44
+2026-10-31,live-storm-day,bias,slow fall,0.37,0.25,no,79
+2026-10-31,live-storm-day,bias,falling,0.88,0.25,no,60
+2026-10-31,live-storm-day,coverage,h1,81.4,75-85,yes,649
+2026-10-31,live-storm-day,coverage,h3,86.3,75-85,no,606
+2026-10-31,live-storm-day,coverage,h6,83.4,75-85,yes,525
+2026-10-31,live-storm-day,coverage,h12,74.5,75-85,no,231
+2026-10-31,live-storm-day,coverage,h24,57.9,75-85,,19
+2026-10-31,live-storm-day,fastRises,called,64.3,95,no,14
+2026-10-31,live-storm-day,risingRight,right,65.1,75,no,86
+2026-10-31,live-storm-day,inputs,hours,24,24,yes,1
+2026-10-31,live-storm-day,inputs,gaugesPerHour,56.5,,,24
+2026-10-31,live-storm-day,inputs,flaggedShare,3.4,,,1362
+2026-10-31,live-storm-day,people,agree,50,70,,2
+2026-10-31,variant:copy,skill,h1,27.7,30,no,649
+2026-10-31,variant:copy,skill,h3,29.8,30,no,606
+2026-10-31,variant:copy,skill,h6,25.7,30,no,525
+2026-10-31,variant:copy,skill,h12,19.4,20,no,231
+2026-10-31,variant:copy,skill,h24,6.7,10,,19
+2026-10-31,variant:copy,skill,worstPhase,8.5,0,yes,1959
+2026-10-31,variant:copy,bias,rising,0.63,0.25,no,22
+2026-10-31,variant:copy,bias,slow rise,-0.06,0.25,yes,15
+2026-10-31,variant:copy,bias,calm,0.09,0.25,yes,44
+2026-10-31,variant:copy,bias,slow fall,0.37,0.25,no,79
+2026-10-31,variant:copy,bias,falling,0.88,0.25,no,60
+2026-10-31,variant:copy,coverage,h1,81.4,75-85,yes,649
+2026-10-31,variant:copy,coverage,h3,86.3,75-85,no,606
+2026-10-31,variant:copy,coverage,h6,83.4,75-85,yes,525
+2026-10-31,variant:copy,coverage,h12,74.5,75-85,no,231
+2026-10-31,variant:copy,coverage,h24,57.9,75-85,,19
+2026-10-31,variant:copy,fastRises,called,64.3,95,no,14
+2026-10-31,variant:copy,risingRight,right,65.1,75,no,86
+2026-10-31,variant:dry-hold,warned,caught,,80,,0
+2026-10-31,variant:dry-hold,falseAlarms,possible,,60,,0
+2026-10-31,variant:dry-hold,falseAlarms,likely,,25,,0
+2026-10-31,variant:dry-hold,honest,0-10,0,10,yes,109
+2026-10-31,variant:dry-hold,honest,10-20,0,10,,2
+2026-10-31,variant:dry-hold,honest,20-30,,10,,0
+2026-10-31,variant:dry-hold,honest,30-50,,10,,0
+2026-10-31,variant:dry-hold,honest,50-70,,10,,0
+2026-10-31,variant:dry-hold,honest,70-90,,10,,0
+2026-10-31,variant:dry-hold,honest,90-100,,10,,0
+2026-10-31,variant:recession-v1,skill,h1,27.7,30,no,649
+2026-10-31,variant:recession-v1,skill,h3,29.8,30,no,606
+2026-10-31,variant:recession-v1,skill,h6,25.7,30,no,525
+2026-10-31,variant:recession-v1,skill,h12,37.7,20,yes,231
+2026-10-31,variant:recession-v1,skill,h24,18.4,10,,19
+2026-10-31,variant:recession-v1,skill,worstPhase,8.5,0,yes,1959
+2026-10-31,variant:recession-v1,bias,rising,0.63,0.25,no,22
+2026-10-31,variant:recession-v1,bias,slow rise,-0.06,0.25,yes,15
+2026-10-31,variant:recession-v1,bias,calm,0.09,0.25,yes,44
+2026-10-31,variant:recession-v1,bias,slow fall,0.22,0.25,yes,79
+2026-10-31,variant:recession-v1,bias,falling,0.17,0.25,yes,60
+2026-10-31,variant:recession-v1,coverage,h1,81.4,75-85,yes,649
+2026-10-31,variant:recession-v1,coverage,h3,86.3,75-85,no,606
+2026-10-31,variant:recession-v1,coverage,h6,83.4,75-85,yes,525
+2026-10-31,variant:recession-v1,coverage,h12,80.1,75-85,yes,231
+2026-10-31,variant:recession-v1,coverage,h24,63.2,75-85,,19
+2026-10-31,variant:recession-v1,fastRises,called,64.3,95,no,14
+2026-10-31,variant:recession-v1,risingRight,right,65.1,75,no,86
+2026-10-31,variant:recession-v2,skill,h1,27.7,30,no,649
+2026-10-31,variant:recession-v2,skill,h3,33.4,30,yes,606
+2026-10-31,variant:recession-v2,skill,h6,32.8,30,yes,525
+2026-10-31,variant:recession-v2,skill,h12,33,20,yes,231
+2026-10-31,variant:recession-v2,skill,h24,20.8,10,,19
+2026-10-31,variant:recession-v2,skill,worstPhase,8.5,0,yes,1959
+2026-10-31,variant:recession-v2,bias,rising,0.63,0.25,no,22
+2026-10-31,variant:recession-v2,bias,slow rise,-0.06,0.25,yes,15
+2026-10-31,variant:recession-v2,bias,calm,0.09,0.25,yes,44
+2026-10-31,variant:recession-v2,bias,slow fall,0.37,0.25,no,79
+2026-10-31,variant:recession-v2,bias,falling,0.18,0.25,yes,60
+2026-10-31,variant:recession-v2,coverage,h1,81.4,75-85,yes,649
+2026-10-31,variant:recession-v2,coverage,h3,86.5,75-85,no,606
+2026-10-31,variant:recession-v2,coverage,h6,83.8,75-85,yes,525
+2026-10-31,variant:recession-v2,coverage,h12,77.9,75-85,yes,231
+2026-10-31,variant:recession-v2,coverage,h24,63.2,75-85,,19
+2026-10-31,variant:recession-v2,fastRises,called,64.3,95,no,14
+2026-10-31,variant:recession-v2,risingRight,right,65.1,75,no,86
+2026-10-31,variant:recession-v2-slow,skill,h1,27.7,30,no,649
+2026-10-31,variant:recession-v2-slow,skill,h3,32.3,30,yes,606
+2026-10-31,variant:recession-v2-slow,skill,h6,34.3,30,yes,525
+2026-10-31,variant:recession-v2-slow,skill,h12,37.1,20,yes,231
+2026-10-31,variant:recession-v2-slow,skill,h24,24.8,10,,19
+2026-10-31,variant:recession-v2-slow,skill,worstPhase,8.5,0,yes,1959
+2026-10-31,variant:recession-v2-slow,bias,rising,0.63,0.25,no,22
+2026-10-31,variant:recession-v2-slow,bias,slow rise,-0.06,0.25,yes,15
+2026-10-31,variant:recession-v2-slow,bias,calm,0.09,0.25,yes,44
+2026-10-31,variant:recession-v2-slow,bias,slow fall,0.17,0.25,yes,79
+2026-10-31,variant:recession-v2-slow,bias,falling,0.17,0.25,yes,60
+2026-10-31,variant:recession-v2-slow,coverage,h1,81.4,75-85,yes,649
+2026-10-31,variant:recession-v2-slow,coverage,h3,86.8,75-85,no,606
+2026-10-31,variant:recession-v2-slow,coverage,h6,85.1,75-85,no,525
+2026-10-31,variant:recession-v2-slow,coverage,h12,81.4,75-85,yes,231
+2026-10-31,variant:recession-v2-slow,coverage,h24,68.4,75-85,,19
+2026-10-31,variant:recession-v2-slow,fastRises,called,64.3,95,no,14
+2026-10-31,variant:recession-v2-slow,risingRight,right,65.1,75,no,86
