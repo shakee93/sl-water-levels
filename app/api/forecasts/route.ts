@@ -13,7 +13,9 @@ import { liftVerdict, riverRising } from "@/lib/verdictLift";
 import { getReleases, releaseAffectingFrom, type ReleasesResult } from "@/lib/releases";
 import { officialReleaseAlert } from "@/lib/releaseAlert";
 import { shadowVariants } from "@/lib/shadowForecast";
-import { warningCandidates, type WCRun } from "@/lib/warningCandidates.mjs";
+import { catchmentContains, warningCandidates, type WCRun } from "@/lib/warningCandidates.mjs";
+import { gaugeTotals } from "@/lib/groundRain";
+import { getGroundGauges } from "@/lib/groundRainLive";
 
 // Computed per request (no ISR): as an ISR route a failed background regeneration kept serving
 // one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
@@ -29,6 +31,8 @@ export async function GET(request: Request) {
   // Rain logged with each run (d1/0009_forecast_rain.sql): the 6 h figures and p90 from the cached weather fetch, the satellite file, the gauge itself.
   const [fcRain, sat] = await Promise.all([getForecastRainAll().catch(() => ({})), getGsmap().catch(() => null)]);
   const releases: ReleasesResult | null = await getReleases().catch(() => null); // fails soft: no answer = no release claimed
+  // HMIS ground rain gauges for the `ground-rain` warning candidate: the data branch's 4.5 h state + the site's own HMIS cache (no new upstream fetch); [] when unavailable
+  const groundGauges = withShadow ? await getGroundGauges().catch(() => []) : [];
   const runs: unknown[] = [];
   const errors: { basin: string; station?: string; error: string }[] = [];
 
@@ -112,6 +116,18 @@ export async function GET(request: Request) {
                 ...[1, 2, 3].map((j) => ({ ts: issuedAt - j * 3_600_000, next: { 6: fr.back?.[j]?.next6h ?? null, 12: fr.back?.[j]?.next12h ?? null } })),
               ]
             : null;
+          // ground gauges inside this gauge's catchment, with their 1 h / 3 h totals as they stood at the run hour and 1-3 h earlier (the 3 h hold)
+          const ground = groundGauges
+            .filter((g) => catchmentContains(s.station, g.lat, g.lon))
+            .map((g) => ({
+              name: g.n, lat: g.lat, lon: g.lon,
+              hist: [0, 1, 2, 3].map((j) => {
+                const t = issuedAt - j * 3_600_000;
+                const pts = g.pts.filter((p) => p[0] * 60_000 <= t);
+                const x = pts.length ? gaugeTotals(pts, t) : null;
+                return x ? { ageMin: x.ageMin, mm1h: x.mm1h, mm3h: x.mm3h } : null;
+              }),
+            }));
           pending.push({
             run,
             wc: {
@@ -123,6 +139,7 @@ export async function GET(request: Request) {
               rate3hM: s.rate3hM,
               rain: fr || f.rain ? { past6hMm: f.rain?.past6hMm ?? null, next24hMm: f.rain?.next24hMm.det ?? null, next24hP90Mm: f.rain?.next24hMm.p90 ?? null, storm: f.stormHorizons.length > 0 || f.rainRisk != null, rainRisk: f.rainRisk != null } : null,
               rainBy,
+              ground,
             },
           });
         }

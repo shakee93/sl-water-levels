@@ -4,7 +4,7 @@
 // heavy rain blocks dry-hold, and lib/forecastKpi.mjs scores KPI 1-3 per variant from the archive `candidates` field.
 import assert from "node:assert/strict";
 import { DRY_HOLD, POSSIBLE_P, shownChance } from "../lib/forecastRules.mjs";
-import { PARAMS, dryHold, dryHoldApplies, rainOnset, upstreamTrigger, warningCandidates } from "../lib/warningCandidates.mjs";
+import { PARAMS, VARIANTS, catchmentContains, dryHold, dryHoldApplies, groundRain, rainOnset, upstreamTrigger, warningCandidates } from "../lib/warningCandidates.mjs";
 import { HOUR, buildArchiveLines, buildReadings, dayStart } from "../lib/forecastScoreboard.mjs";
 import { buildContext, kpiSet, mergeReadings, variantsOf } from "../lib/forecastKpi.mjs";
 
@@ -110,6 +110,55 @@ const RAIN = (n6, n12 = null) => ({ ts: T0, next: { 6: n6, 12: n12 } });
   assert.deepEqual(Object.keys(upstreamTrigger(mk(2, 17), T0)), [], "downstream is already above its step");
   assert.deepEqual(Object.keys(upstreamTrigger({ Peradeniya: mk(2).Peradeniya }, T0)), [], "no upstream readings");
   assert.deepEqual(Object.keys(upstreamTrigger(mk(2), T0, { rules: [{ ...rule, status: "watch" }] })), [], "only shipped rules run by default");
+}
+
+// ---- 4. ground-rain
+{
+  assert.ok(VARIANTS.includes("ground-rain"));
+  const gp = PARAMS.groundRain;
+  assert.equal(gp.mm1h, 25); assert.equal(gp.mm3h, 40); assert.equal(gp.maxAgeMin, 180, "same marks as the measured-rain warning; record at most 3 h old");
+  // catchment = the model's rain-grid cells (0.15 deg squares): Holombuwa has the cell at 6.9 N 80.25 E, not the one at 79.95 E; a gauge without a grid has none
+  assert.equal(catchmentContains("Holombuwa", 6.9, 80.25), true);
+  assert.equal(catchmentContains("Holombuwa", 6.97, 80.32), true, "inside the square, off the lattice point");
+  assert.equal(catchmentContains("Holombuwa", 6.9, 79.95), false, "outside the catchment");
+  assert.equal(catchmentContains("Ampara", 7.3, 81.67), false, "no catchment grid: no rule");
+  const G = (h0, ...more) => ({ Holombuwa: [{ name: "Test gauge", lat: 6.9, lon: 80.25, hist: [h0, ...more] }] });
+  const hit = (mm1h, mm3h, ageMin = 20) => ({ ageMin, mm1h, mm3h });
+  // Holombuwa (fast): alert 9.843 ft, usual 1.476 -> within 75% of the distance = above 3.57 ft; no "already rising" test
+  const ok = groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(30, 35)));
+  assert.equal(ok.Holombuwa.chance, 0.45); assert.equal(ok.Holombuwa.threshold, "alert"); assert.equal(ok.Holombuwa.etaHours, 2); assert.equal(ok.Holombuwa.hours, 1);
+  assert.equal(groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(25, 25))).Holombuwa.rainMm, 25, "exactly 25 mm in 1 h trips");
+  assert.equal(groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(10, 40))).Holombuwa.hours, 3, "40 mm in 3 h trips on its own");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(24.9, 39.9)))), [], "just under both marks");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(null, null)))), [], "unknown totals are not rain");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(60, 80, 181)))), [], "a record older than 3 h says nothing");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 6, 6), T0, G(null))), [], "gauge with no record");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 6, 6), T0, {})), [], "no gauge inside the catchment");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 2.5, 2.5), T0, G(hit(60, 80)))), [], "river too far from the step");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 10.5, 8), T0, G(hit(60, 80)))), [], "already at the step");
+  assert.deepEqual(Object.keys(groundRain(snap("Norwood", "m", 4, 2), T0, { Norwood: G(hit(60, 80)).Holombuwa })), [], "no rule for Norwood");
+  // 3 h hold: the burst was recorded 2 h ago and the newest record shows less
+  const held = groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(5, 20), null, hit(30, 35)));
+  assert.equal(held.Holombuwa?.etaHours, 1, "held: arrival p50 2 h minus 2 h since, at least 1 h");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 6, 6), T0, G(hit(5, 20), null, null, null))), [], "nothing in the last 3 h");
+  // slow rule (Hanwella): within 25% of the distance, typically 8 h
+  const sl = groundRain(snap("Hanwella", "ft", 18, 18), T0, { Hanwella: G(hit(30, 35)).Holombuwa });
+  assert.equal(sl.Hanwella.chance, PARAMS.groundRain.rules[1].chance); assert.equal(sl.Hanwella.etaHours, 8);
+  assert.deepEqual(Object.keys(groundRain(snap("Hanwella", "ft", 15, 15), T0, { Hanwella: G(hit(30, 35)).Holombuwa })), [], "slow rule: not close enough");
+  // through warningCandidates(): a row only where it beats live, never a lowered one
+  const gbase = {
+    station: "Holombuwa", method: "model", currentLevel: 6 * FT, asOfTs: T0, rate3hM: 0, rain: null, rainBy: null, snapshot: snap("Holombuwa", "m", 6, 6),
+    crossings: [{ threshold: "alert", level: 9.843 * FT, probability: 0.1 }], ground: G(hit(30, 35)).Holombuwa,
+  };
+  assert.deepEqual(warningCandidates(gbase), { "ground-rain": [{ threshold: "alert", shown: 0.45, etaHours: 2 }] });
+  assert.deepEqual(warningCandidates({ ...gbase, ground: [] }), {}, "no ground gauge: no row");
+  assert.deepEqual(warningCandidates({ ...gbase, ground: null }), {}, "HMIS unavailable: no row");
+  assert.deepEqual(warningCandidates({ ...gbase, method: "trend" }), {});
+  for (const p of [0, 0.1, 0.44, 0.45, 0.6, 1]) {
+    const o = warningCandidates({ ...gbase, crossings: [{ ...gbase.crossings[0], probability: p }] });
+    for (const row of o["ground-rain"] ?? []) assert.ok(row.shown > shownChance("alert", p), `ground-rain never lowers (live ${p})`);
+    if (p >= 0.45) assert.equal(o["ground-rain"], undefined);
+  }
 }
 
 // ---- warningCandidates(): output shape, "only where it differs", add rules never lower, dry-hold never raises

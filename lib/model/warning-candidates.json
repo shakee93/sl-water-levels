@@ -252,6 +252,46 @@
    }
   }
  },
+ "groundRain": {
+  "note": "ground-rain, LOGGED ONLY (lib/warningCandidates.mjs groundRain). Marks are the measured-rain warning's (lib/measuredRain.ts); NOT tuned: the archive had 5 days (27-31 Oct 2026) when this was written. Gauge lists and steps are rainOnset's (gaugesFrom); chance and lag are borrowed from the matching rain-onset rule until live data can refit them.",
+  "mm1h": 25,
+  "mm3h": 40,
+  "maxAgeMin": 180,
+  "rules": [
+   {
+    "name": "fast-ground-rain",
+    "gaugesFrom": "fast-rain-onset",
+    "target": "alert",
+    "G": 0.75,
+    "rise": false,
+    "chance": 0.45,
+    "lag": {
+     "p10": 1,
+     "p50": 2,
+     "p90": 5
+    },
+    "holdH": 3,
+    "status": "shadow",
+    "note": "fast tributaries: a cloudburst in the catchment, river within 75% of its usual distance to the alert step (no 'already rising' test: the point is to warn before the river has answered)"
+   },
+   {
+    "name": "slow-ground-rain",
+    "gaugesFrom": "slow-rain-onset",
+    "target": "alert",
+    "G": 0.25,
+    "rise": false,
+    "chance": 0.43,
+    "lag": {
+     "p10": 3,
+     "p50": 8,
+     "p90": 11
+    },
+    "holdH": 3,
+    "status": "shadow",
+    "note": "other gauges: river within 25% of its usual distance to the alert step"
+   }
+  ]
+ },
  "upstream": {
   "rules": [
    {

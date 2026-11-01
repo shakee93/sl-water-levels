@@ -10,8 +10,11 @@ export type WCRun = {
   rate3hM: number | null;
   rain: { past6hMm: number | null; next24hMm: number | null; next24hP90Mm: number | null; storm: boolean | null; rainRisk: boolean | null } | null;
   rainBy: { ts: number; next: { 6?: number | null; 12?: number | null } }[] | null;
+  ground?: WCGround[] | null;
   snapshot: WCSnapshot;
 };
+export type WCGroundHist = { ageMin: number; mm1h: number | null; mm3h: number | null } | null;
+export type WCGround = { name: string; lat: number; lon: number; hist: WCGroundHist[] };
 export const VARIANTS: string[];
 export const PARAMS: any;
 export function dryHoldApplies(x: { rainPast6hMm: number | null; rate3hM: number | null; rainNext24hMm: number | null; rainNext24hP90Mm?: number | null; storm: boolean | null; rainRisk?: boolean | null }): boolean;
@@ -19,3 +22,5 @@ export function dryHold(x: Parameters<typeof dryHoldApplies>[0], crossings: WCRu
 export function rainOnset(snapshot: WCSnapshot, nowTs: number, rain: Record<string, NonNullable<WCRun["rainBy"]>>, p?: any, opts?: { include?: string[] }): Record<string, { threshold: string; chance: number; etaHours: number; etaEarliestHours: number; rainMm: number }>;
 export function upstreamTrigger(snapshot: WCSnapshot, nowTs: number, p?: any, opts?: { include?: string[] }): Record<string, { threshold: string; chance: number; etaHours: number; etaEarliestHours: number; upstream: string; firedHoursAgo: number }>;
 export function warningCandidates(run: WCRun): Record<string, WCRow[]>;
+export function catchmentContains(station: string, lat: number, lon: number): boolean;
+export function groundRain(snapshot: WCSnapshot, nowTs: number, ground: Record<string, WCGround[]>, p?: any, opts?: { include?: string[] }): Record<string, { threshold: string; chance: number; etaHours: number; etaEarliestHours: number; rainMm: number; hours: number; gauge: string }>;
