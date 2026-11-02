@@ -488,7 +488,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
   useEffect(() => {
     const map = mapRef.current, rc = rainCv.current;
     if (!ready || !map || !rc || !rain) return;
-    const { nx, ny } = rain.grid;
+    const { nx, ny, west: gw, north: gn, east: ge, south: gs } = rain.grid;
     const vals = rain.v.split(",").map((x) => (x === "" ? 0 : Number(x) / 10)); // mm/h
     const small = document.createElement("canvas"); small.width = nx; small.height = ny;
     const sctx = small.getContext("2d")!, img = sctx.createImageData(nx, ny);
@@ -500,7 +500,7 @@ export default function Flood3dMap({ towns = [], gauges = [], lang = "en", embed
     sctx.putImageData(img, 0, 0);
     const ctx = rc.getContext("2d")!; ctx.clearRect(0, 0, rc.width, rc.height); ctx.imageSmoothingEnabled = true; ctx.drawImage(small, 0, 0, rc.width, rc.height);
     const src = map.getSource("f3d-rain") as CanvasSource | undefined;
-    if (src) { src.play(); requestAnimationFrame(() => requestAnimationFrame(() => src.pause())); }
+    if (src) { src.setCoordinates([[gw, gn], [ge, gn], [ge, gs], [gw, gs]]); src.play(); requestAnimationFrame(() => requestAnimationFrame(() => src.pause())); }
   }, [ready, rain]);
   useEffect(() => {
     const map = mapRef.current, cvs = rainFx.current;

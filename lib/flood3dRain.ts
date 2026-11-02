@@ -1,18 +1,21 @@
 // "Rain now" for the unlisted 3D flood test map: a small intensity field (mm/h) over the corridor, from data we already have, no new
-// external request: the newest hourly satellite frame (JAXA GSMaP via the rain map cache) times the gauge-correction gain
-// (rain-correction on the data branch), pulled toward live HMIS ground gauges that reported within the last hour (hmis/rain-live.json
-// plus the site's own HMIS cache). An estimate: the satellite frame is 1-2 h old and ground gauges only say what fell at their spot.
+// external request. GROUND GAUGES FIRST (owner decision 2 Nov 2026): within GAUGE_KM of a live HMIS ground gauge that reported within the
+// last hour (hmis/rain-live.json plus the site's own HMIS cache) the cell is the gauges' inverse-distance mean, fading to the satellite
+// between GAUGE_KM and FADE_KM; beyond that, or with no live gauge, the newest hourly satellite frame (JAXA GSMaP via the rain map cache)
+// times the gauge-correction gain (rain-correction on the data branch). On 1 Nov the satellite read ~1 mm where Kithulgala measured 76 mm. An estimate: the satellite frame is 1-2 h old and ground gauges only say what fell at their spot.
 // Gauge-reported rain is a LOWER bound (lib/groundRain.ts), so a gauge never invents rain, it can miss some. Nothing here is an official step.
 import { unstable_cache } from "next/cache";
 import { getRainMap } from "./rainMap";
 import { getGroundGauges } from "./groundRainLive";
 import { gaugeTotals, haversineKm } from "./groundRain";
 
-export const RAIN_BOX = { south: 6.85, north: 7.05, west: 79.79, east: 80.15, step: 0.01 };
+/** The whole 3D map corridor (mouth to Ruwanwella, lib/flood3d coverage), not only the lower river. */
+export const RAIN_BOX = { south: 6.84, north: 7.1, west: 79.79, east: 80.31, step: 0.01 };
 const NX = Math.round((RAIN_BOX.east - RAIN_BOX.west) / RAIN_BOX.step);
 const NY = Math.round((RAIN_BOX.north - RAIN_BOX.south) / RAIN_BOX.step);
-/** Ground gauge counts for a cell within this distance; the weight fades to the satellite by then. */
-const NEAR_KM = 8;
+/** A cell within GAUGE_KM of a live gauge is the gauges' value alone; the gauge weight fades to the satellite by FADE_KM. */
+const GAUGE_KM = 6;
+const FADE_KM = 12;
 const FRESH_MIN = 60;
 
 export type RainGauge = { n: string; i: string; lat: number; lon: number; mm1h: number | null; mm24h: number; ageMin: number };
@@ -79,13 +82,13 @@ async function build(): Promise<RainNow | null> {
       let num_ = 0, den = 0, dmin = Infinity;
       for (const { gg, t } of live) {
         const d = haversineKm({ lat, lon }, gg);
-        if (d > NEAR_KM) continue;
+        if (d > FADE_KM) continue;
         const w = 1 / Math.max(1, d) ** 2;
         num_ += w * (t.mm1h as number); den += w; dmin = Math.min(dmin, d);
       }
       let v: number;
       if (den > 0) {
-        const wg = Math.max(0, 1 - dmin / NEAR_KM);
+        const wg = dmin <= GAUGE_KM ? 1 : Math.max(0, 1 - (dmin - GAUGE_KM) / (FADE_KM - GAUGE_KM));
         const gv = num_ / den;
         v = s == null ? gv : wg * gv + (1 - wg) * s;
       } else v = s ?? 0;
@@ -104,4 +107,4 @@ async function build(): Promise<RainNow | null> {
   };
 }
 
-export const getFlood3dRain = unstable_cache(async () => build(), ["flood3d-rain-v2"], { revalidate: 180 });
+export const getFlood3dRain = unstable_cache(async () => build(), ["flood3d-rain-v3"], { revalidate: 180 });

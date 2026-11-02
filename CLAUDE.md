@@ -202,7 +202,7 @@ lib/
   Weakest part: two dated maps only, none east of 80.2 E (class 0 hatch there); the one scalar is Nagalagam, which Hanwella leads by ~18 h and Glencourse by ~48 h, so upstream water in a replay or live
   view shows up half a day to two days late (a per-cell gauge driver would fix it; a gauge -> Nagalagam-equivalent rating was tried and dropped, see accuracy.json `upstream`); public reports (Locate me / Report here) go to D1 `flood3d_reports`
   (d1/0012, precise coordinates private, area counts of 3+ only; owner export `scripts/flood3d/reports-export.mjs` feeds `prep.py` via REPORTS=);
-  `/api/flood3d/rain` blends satellite hour x gauge gain with live HMIS gauges for the optional Rain now layer.
+  `/api/flood3d/rain` (optional Rain now layer, whole corridor): live HMIS ground gauges FIRST (cells within 6 km = gauge mean, fading to satellite by 12 km), else the satellite hour x gauge gain (owner decision 2 Nov 2026).
   Optional private report photos: browser resize to JPEG, `/api/flood3d/photo` strips metadata and stores via the `workers/flood-photos` Worker in the
   private R2 bucket `sl-flood-photos` (needs Vercel env FLOOD_PHOTO_URL + FLOOD_PHOTO_SECRET; dormant without them; D1 columns photo_key, photo_count,
   exif_agree). Live gauges: `lib/flood3d.ts` (one snapshot read; routes must stay dynamic: they read `headers()`).
