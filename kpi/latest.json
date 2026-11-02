@@ -1,17 +1,17 @@
 {
  "version": 1,
- "generatedAt": "2026-11-01T20:11:10.968Z",
- "asOf": "2026-11-01",
+ "generatedAt": "2026-11-02T20:11:23.934Z",
+ "asOf": "2026-11-02",
  "window": {
   "from": "2026-10-22",
-  "to": "2026-11-01",
-  "days": 11,
+  "to": "2026-11-02",
+  "days": 12,
   "requested": 30,
-  "daysWithReadings": 11
+  "daysWithReadings": 12
  },
  "feedbackSource": "d1",
- "runs": 9109,
- "events": 30,
+ "runs": 10521,
+ "events": 31,
  "summary": {
   "met": 0,
   "assessable": 10,
@@ -22,29 +22,29 @@
   {
    "id": 1,
    "key": "warned",
-   "value": 65.4,
+   "value": 66.7,
    "unit": "%",
    "target": 80,
    "met": false,
-   "n": 26,
+   "n": 27,
    "parts": [
     {
      "key": "caught",
-     "value": 65.4,
+     "value": 66.7,
      "target": 80,
-     "n": 26,
+     "n": 27,
      "met": false
     }
    ],
    "detail": {
-    "events": 26,
-    "caught": 17,
-    "medianLeadH": 6.6,
-    "medianLeadWhenCaughtH": 8.1,
+    "events": 27,
+    "caught": 18,
+    "medianLeadH": 7.1,
+    "medianLeadWhenCaughtH": 8.6,
     "byStep": {
      "alert": {
-      "n": 19,
-      "caught": 14
+      "n": 20,
+      "caught": 15
      },
      "minor": {
       "n": 7,
@@ -268,6 +268,14 @@
       "leadH": 49.9,
       "needH": 2,
       "caught": true
+     },
+     {
+      "station": "Thalgahagoda",
+      "step": "alert",
+      "at": "2026-11-02T02:35:43.000Z",
+      "leadH": 74.8,
+      "needH": 6,
+      "caught": true
      }
     ]
    },
@@ -276,37 +284,37 @@
   {
    "id": 2,
    "key": "falseAlarms",
-   "value": 82.8,
+   "value": 83.3,
    "unit": "%",
    "target": 60,
    "met": false,
-   "n": 84,
+   "n": 87,
    "parts": [
     {
      "key": "possible",
-     "value": 82.8,
+     "value": 83.3,
      "target": 60,
-     "n": 58,
+     "n": 60,
      "met": false
     },
     {
      "key": "likely",
-     "value": 30.8,
+     "value": 29.6,
      "target": 25,
-     "n": 26,
+     "n": 27,
      "met": false
     }
    ],
    "detail": {
-    "falseAlarms": 56,
-    "gaugeDays": 291,
-    "falseAlarmsPerGaugeDay": 0.19,
+    "falseAlarms": 58,
+    "gaugeDays": 320,
+    "falseAlarmsPerGaugeDay": 0.18,
     "possible": {
-     "n": 58,
-     "didNot": 48
+     "n": 60,
+     "didNot": 50
     },
     "likely": {
-     "n": 26,
+     "n": 27,
      "didNot": 8
     }
    },
@@ -319,46 +327,46 @@
    "unit": "%",
    "target": 10,
    "met": false,
-   "n": 10157,
+   "n": 11765,
    "parts": [
     {
      "key": "0-10",
-     "value": 0.6,
+     "value": 0.5,
      "shown": 0.2,
      "target": 10,
-     "n": 8961,
+     "n": 10522,
      "met": true
     },
     {
      "key": "10-20",
-     "value": 7.3,
-     "shown": 11.2,
+     "value": 6.9,
+     "shown": 11.3,
      "target": 10,
-     "n": 507,
+     "n": 539,
      "met": true
     },
     {
      "key": "20-30",
-     "value": 11.8,
-     "shown": 22.1,
+     "value": 11.4,
+     "shown": 22,
      "target": 10,
-     "n": 161,
+     "n": 167,
      "met": false
     },
     {
      "key": "30-50",
-     "value": 21,
-     "shown": 32.4,
+     "value": 20.9,
+     "shown": 32.5,
      "target": 10,
-     "n": 404,
+     "n": 412,
      "met": false
     },
     {
      "key": "50-70",
-     "value": 67.2,
-     "shown": 58.1,
+     "value": 67.7,
+     "shown": 58,
      "target": 10,
-     "n": 64,
+     "n": 65,
      "met": true
     },
     {
@@ -383,41 +391,41 @@
      {
       "from": 0,
       "to": 0.1,
-      "n": 8961,
+      "n": 10522,
       "shownPct": 0.2,
-      "observedPct": 0.6,
+      "observedPct": 0.5,
       "met": true
      },
      {
       "from": 0.1,
       "to": 0.2,
-      "n": 507,
-      "shownPct": 11.2,
-      "observedPct": 7.3,
+      "n": 539,
+      "shownPct": 11.3,
+      "observedPct": 6.9,
       "met": true
      },
      {
       "from": 0.2,
       "to": 0.3,
-      "n": 161,
-      "shownPct": 22.1,
-      "observedPct": 11.8,
+      "n": 167,
+      "shownPct": 22,
+      "observedPct": 11.4,
       "met": false
      },
      {
       "from": 0.3,
       "to": 0.5,
-      "n": 404,
-      "shownPct": 32.4,
-      "observedPct": 21,
+      "n": 412,
+      "shownPct": 32.5,
+      "observedPct": 20.9,
       "met": false
      },
      {
       "from": 0.5,
       "to": 0.7,
-      "n": 64,
-      "shownPct": 58.1,
-      "observedPct": 67.2,
+      "n": 65,
+      "shownPct": 58,
+      "observedPct": 67.7,
       "met": true
      },
      {
@@ -445,79 +453,79 @@
   {
    "id": 4,
    "key": "skill",
-   "value": 20.1,
+   "value": 19.4,
    "unit": "%",
    "target": 30,
    "met": false,
-   "n": 19847,
+   "n": 22574,
    "parts": [
     {
      "key": "h1",
-     "value": 30.2,
+     "value": 28.2,
      "target": 30,
-     "n": 4804,
-     "met": true
+     "n": 5441,
+     "met": false
     },
     {
      "key": "h3",
-     "value": 26.4,
+     "value": 25,
      "target": 30,
-     "n": 4771,
+     "n": 5409,
      "met": false
     },
     {
      "key": "h6",
-     "value": 20.1,
+     "value": 19.4,
      "target": 30,
-     "n": 4677,
+     "n": 5314,
      "met": false
     },
     {
      "key": "h12",
-     "value": 16.4,
+     "value": 15.3,
      "target": 20,
-     "n": 2906,
+     "n": 3311,
      "met": false
     },
     {
      "key": "h24",
-     "value": 5.9,
+     "value": 4.9,
      "target": 10,
-     "n": 2689,
+     "n": 3099,
      "met": false
     },
     {
      "key": "worstPhase",
-     "value": 2.4,
+     "value": 2.5,
      "target": 0,
-     "n": 19258,
+     "n": 21892,
      "met": true
     }
    ],
    "detail": {
     "phases": {
      "rising": {
-      "n": 2457,
-      "skill": 27.5,
+      "n": 2859,
+      "skill": 24.3,
       "horizons": 5
      },
      "slow rise": {
-      "n": 2261,
-      "skill": 9.7,
+      "n": 2619,
+      "skill": 8.9,
       "horizons": 5
      },
      "calm": {
-      "n": 4123,
-      "skill": 2.4,
+      "n": 4712,
+      "skill": 2.5,
       "horizons": 5
      },
      "slow fall": {
-      "n": 6158,
-      "skill": 13.2,
+      "n": 6973,
+      "skill": 12.3,
       "horizons": 5
      },
      "falling": {
-      "n": 4259,
+      "n": 4729,
       "skill": 26.2,
       "horizons": 5
      }
@@ -528,45 +536,45 @@
   {
    "id": 5,
    "key": "bias",
-   "value": 0.35,
+   "value": 0.28,
    "unit": "ft",
    "target": 0.25,
    "met": false,
-   "n": 2906,
+   "n": 3311,
    "parts": [
     {
      "key": "rising",
-     "value": -0.03,
+     "value": 0.09,
      "target": 0.25,
-     "n": 367,
+     "n": 431,
      "met": true
     },
     {
      "key": "slow rise",
-     "value": -0.01,
+     "value": -0.02,
      "target": 0.25,
-     "n": 344,
+     "n": 403,
      "met": true
     },
     {
      "key": "calm",
-     "value": 0.05,
+     "value": 0,
      "target": 0.25,
-     "n": 590,
+     "n": 681,
      "met": true
     },
     {
      "key": "slow fall",
-     "value": 0.22,
+     "value": 0.11,
      "target": 0.25,
-     "n": 841,
+     "n": 958,
      "met": true
     },
     {
      "key": "falling",
-     "value": 1.17,
+     "value": 1.06,
      "target": 0.25,
-     "n": 670,
+     "n": 729,
      "met": false
     }
    ],
@@ -576,45 +584,45 @@
   {
    "id": 6,
    "key": "coverage",
-   "value": 79.9,
+   "value": 79.2,
    "unit": "%",
    "target": "75-85",
    "met": false,
-   "n": 19847,
+   "n": 22574,
    "parts": [
     {
      "key": "h1",
-     "value": 80.4,
+     "value": 79.5,
      "target": "75-85",
-     "n": 4804,
+     "n": 5441,
      "met": true
     },
     {
      "key": "h3",
-     "value": 83,
+     "value": 82.4,
      "target": "75-85",
-     "n": 4771,
+     "n": 5409,
      "met": true
     },
     {
      "key": "h6",
-     "value": 81.3,
+     "value": 80.8,
      "target": "75-85",
-     "n": 4677,
+     "n": 5314,
      "met": true
     },
     {
      "key": "h12",
-     "value": 78.1,
+     "value": 76.9,
      "target": "75-85",
-     "n": 2906,
+     "n": 3311,
      "met": true
     },
     {
      "key": "h24",
-     "value": 72.7,
+     "value": 73,
      "target": "75-85",
-     "n": 2689,
+     "n": 3099,
      "met": false
     }
    ],
@@ -624,17 +632,17 @@
   {
    "id": 7,
    "key": "fastRises",
-   "value": 69.6,
+   "value": 71.1,
    "unit": "%",
    "target": 95,
    "met": false,
-   "n": 313,
+   "n": 388,
    "parts": [
     {
      "key": "called",
-     "value": 69.6,
+     "value": 71.1,
      "target": 95,
-     "n": 313,
+     "n": 388,
      "met": false
     }
    ],
@@ -644,17 +652,17 @@
   {
    "id": 8,
    "key": "risingRight",
-   "value": 67.2,
+   "value": 66.8,
    "unit": "%",
    "target": 75,
    "met": false,
-   "n": 1013,
+   "n": 1210,
    "parts": [
     {
      "key": "right",
-     "value": 67.2,
+     "value": 66.8,
      "target": 75,
-     "n": 1013,
+     "n": 1210,
      "met": false
     }
    ],
@@ -668,58 +676,58 @@
    "unit": "hours",
    "target": 24,
    "met": false,
-   "n": 11,
+   "n": 12,
    "parts": [
     {
      "key": "hours",
      "value": 24,
      "target": 24,
-     "n": 11,
+     "n": 12,
      "met": false,
      "worst": 2
     },
     {
      "key": "gaugesPerHour",
-     "value": 50.5,
+     "value": 52.5,
      "target": null,
-     "n": 188,
+     "n": 212,
      "met": null
     },
     {
      "key": "flaggedShare",
-     "value": 2.1,
+     "value": 2.3,
      "target": null,
-     "n": 9109,
+     "n": 10521,
      "met": null
     }
    ],
    "detail": {
-    "runs": 9109,
-    "flaggedRuns": 187
+    "runs": 10521,
+    "flaggedRuns": 243
    },
    "targetText": "forecasts in all 24 hours of every day"
   },
   {
    "id": 10,
    "key": "people",
-   "value": 63.9,
+   "value": 61.9,
    "unit": "%",
    "target": 70,
    "met": false,
-   "n": 108,
+   "n": 113,
    "parts": [
     {
      "key": "agree",
-     "value": 63.9,
+     "value": 61.9,
      "target": 70,
-     "n": 108,
+     "n": 113,
      "met": false
     }
    ],
    "detail": {
-    "yes": 69,
-    "worse": 29,
-    "better": 10,
+    "yes": 70,
+    "worse": 32,
+    "better": 11,
     "source": "answers"
    },
    "targetText": "at least 70% of people say the forecast matches what they see"
@@ -731,37 +739,38 @@
   "2026-10-28",
   "2026-10-30",
   "2026-10-31",
-  "2026-11-01"
+  "2026-11-01",
+  "2026-11-02"
  ],
  "storm": {
-  "days": 6,
+  "days": 7,
   "kpis": [
    {
     "id": 1,
     "key": "warned",
-    "value": 65.4,
+    "value": 66.7,
     "unit": "%",
     "target": 80,
     "met": false,
-    "n": 26,
+    "n": 27,
     "parts": [
      {
       "key": "caught",
-      "value": 65.4,
+      "value": 66.7,
       "target": 80,
-      "n": 26,
+      "n": 27,
       "met": false
      }
     ],
     "detail": {
-     "events": 26,
-     "caught": 17,
-     "medianLeadH": 6.6,
-     "medianLeadWhenCaughtH": 8.1,
+     "events": 27,
+     "caught": 18,
+     "medianLeadH": 7.1,
+     "medianLeadWhenCaughtH": 8.6,
      "byStep": {
       "alert": {
-       "n": 19,
-       "caught": 14
+       "n": 20,
+       "caught": 15
       },
       "minor": {
        "n": 7,
@@ -985,6 +994,14 @@
        "leadH": 49.9,
        "needH": 2,
        "caught": true
+      },
+      {
+       "station": "Thalgahagoda",
+       "step": "alert",
+       "at": "2026-11-02T02:35:43.000Z",
+       "leadH": 74.8,
+       "needH": 6,
+       "caught": true
       }
      ]
     },
@@ -993,37 +1010,37 @@
    {
     "id": 2,
     "key": "falseAlarms",
-    "value": 78.9,
+    "value": 80,
     "unit": "%",
     "target": 60,
     "met": false,
-    "n": 62,
+    "n": 65,
     "parts": [
      {
       "key": "possible",
-      "value": 78.9,
+      "value": 80,
       "target": 60,
-      "n": 38,
+      "n": 40,
       "met": false
      },
      {
       "key": "likely",
-      "value": 25,
+      "value": 24,
       "target": 25,
-      "n": 24,
+      "n": 25,
       "met": true
      }
     ],
     "detail": {
-     "falseAlarms": 36,
-     "gaugeDays": 174,
-     "falseAlarmsPerGaugeDay": 0.21,
+     "falseAlarms": 38,
+     "gaugeDays": 203,
+     "falseAlarmsPerGaugeDay": 0.19,
      "possible": {
-      "n": 38,
-      "didNot": 30
+      "n": 40,
+      "didNot": 32
      },
      "likely": {
-      "n": 24,
+      "n": 25,
       "didNot": 6
      }
     },
@@ -1036,46 +1053,46 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 7370,
+    "n": 8978,
     "parts": [
      {
       "key": "0-10",
-      "value": 0.8,
+      "value": 0.6,
       "shown": 0.2,
       "target": 10,
-      "n": 6434,
+      "n": 7995,
       "met": true
      },
      {
       "key": "10-20",
-      "value": 9.5,
-      "shown": 10.9,
+      "value": 8.8,
+      "shown": 11.1,
       "target": 10,
-      "n": 389,
+      "n": 421,
       "met": true
      },
      {
       "key": "20-30",
-      "value": 18.4,
-      "shown": 22.2,
+      "value": 17.3,
+      "shown": 22.1,
       "target": 10,
-      "n": 98,
+      "n": 104,
       "met": true
      },
      {
       "key": "30-50",
-      "value": 25.5,
-      "shown": 32.2,
+      "value": 25.1,
+      "shown": 32.4,
       "target": 10,
-      "n": 330,
+      "n": 338,
       "met": true
      },
      {
       "key": "50-70",
-      "value": 72.9,
-      "shown": 58.6,
+      "value": 73.3,
+      "shown": 58.5,
       "target": 10,
-      "n": 59,
+      "n": 60,
       "met": false
      },
      {
@@ -1100,41 +1117,41 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 6434,
+       "n": 7995,
        "shownPct": 0.2,
-       "observedPct": 0.8,
+       "observedPct": 0.6,
        "met": true
       },
       {
        "from": 0.1,
        "to": 0.2,
-       "n": 389,
-       "shownPct": 10.9,
-       "observedPct": 9.5,
+       "n": 421,
+       "shownPct": 11.1,
+       "observedPct": 8.8,
        "met": true
       },
       {
        "from": 0.2,
        "to": 0.3,
-       "n": 98,
-       "shownPct": 22.2,
-       "observedPct": 18.4,
+       "n": 104,
+       "shownPct": 22.1,
+       "observedPct": 17.3,
        "met": true
       },
       {
        "from": 0.3,
        "to": 0.5,
-       "n": 330,
-       "shownPct": 32.2,
-       "observedPct": 25.5,
+       "n": 338,
+       "shownPct": 32.4,
+       "observedPct": 25.1,
        "met": true
       },
       {
        "from": 0.5,
        "to": 0.7,
-       "n": 59,
-       "shownPct": 58.6,
-       "observedPct": 72.9,
+       "n": 60,
+       "shownPct": 58.5,
+       "observedPct": 73.3,
        "met": false
       },
       {
@@ -1162,80 +1179,80 @@
    {
     "id": 4,
     "key": "skill",
-    "value": 22.2,
+    "value": 21,
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 15058,
+    "n": 17785,
     "parts": [
      {
       "key": "h1",
-      "value": 31.8,
+      "value": 29.1,
       "target": 30,
-      "n": 3688,
-      "met": true
+      "n": 4325,
+      "met": false
      },
      {
       "key": "h3",
-      "value": 27.4,
+      "value": 25.5,
       "target": 30,
-      "n": 3634,
+      "n": 4272,
       "met": false
      },
      {
       "key": "h6",
-      "value": 22.2,
+      "value": 21,
       "target": 30,
-      "n": 3553,
+      "n": 4190,
       "met": false
      },
      {
       "key": "h12",
-      "value": 20.3,
+      "value": 18.3,
       "target": 20,
-      "n": 2200,
-      "met": true
+      "n": 2605,
+      "met": false
      },
      {
       "key": "h24",
-      "value": 9.7,
+      "value": 8.1,
       "target": 10,
-      "n": 1983,
+      "n": 2393,
       "met": false
      },
      {
       "key": "worstPhase",
-      "value": 5.7,
+      "value": 5.2,
       "target": 0,
-      "n": 14609,
+      "n": 17243,
       "met": true
      }
     ],
     "detail": {
      "phases": {
       "rising": {
-       "n": 2138,
-       "skill": 28.8,
+       "n": 2540,
+       "skill": 25.1,
        "horizons": 5
       },
       "slow rise": {
-       "n": 1855,
-       "skill": 14,
+       "n": 2213,
+       "skill": 12.2,
        "horizons": 5
       },
       "calm": {
-       "n": 3174,
-       "skill": 5.7,
+       "n": 3763,
+       "skill": 5.2,
        "horizons": 5
       },
       "slow fall": {
-       "n": 4382,
-       "skill": 13.9,
+       "n": 5197,
+       "skill": 12.6,
        "horizons": 5
       },
       "falling": {
-       "n": 3060,
-       "skill": 28.9,
+       "n": 3530,
+       "skill": 28.7,
        "horizons": 5
       }
      }
@@ -1245,45 +1262,45 @@
    {
     "id": 5,
     "key": "bias",
-    "value": 0.24,
+    "value": 0.17,
     "unit": "ft",
     "target": 0.25,
     "met": false,
-    "n": 2200,
+    "n": 2605,
     "parts": [
      {
       "key": "rising",
-      "value": -0.12,
+      "value": 0.02,
       "target": 0.25,
-      "n": 321,
+      "n": 385,
       "met": true
      },
      {
       "key": "slow rise",
-      "value": -0.16,
+      "value": -0.15,
       "target": 0.25,
-      "n": 289,
+      "n": 348,
       "met": true
      },
      {
       "key": "calm",
-      "value": -0.01,
+      "value": -0.06,
       "target": 0.25,
-      "n": 462,
+      "n": 553,
       "met": true
      },
      {
       "key": "slow fall",
-      "value": 0.14,
+      "value": 0.01,
       "target": 0.25,
-      "n": 593,
+      "n": 710,
       "met": true
      },
      {
       "key": "falling",
-      "value": 1.12,
+      "value": 0.97,
       "target": 0.25,
-      "n": 465,
+      "n": 524,
       "met": false
      }
     ],
@@ -1293,45 +1310,45 @@
    {
     "id": 6,
     "key": "coverage",
-    "value": 77.4,
+    "value": 76.9,
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 15058,
+    "n": 17785,
     "parts": [
      {
       "key": "h1",
-      "value": 77.6,
+      "value": 76.9,
       "target": "75-85",
-      "n": 3688,
+      "n": 4325,
       "met": true
      },
      {
       "key": "h3",
-      "value": 80.5,
+      "value": 80.1,
       "target": "75-85",
-      "n": 3634,
+      "n": 4272,
       "met": true
      },
      {
       "key": "h6",
-      "value": 79.2,
+      "value": 78.9,
       "target": "75-85",
-      "n": 3553,
+      "n": 4190,
       "met": true
      },
      {
       "key": "h12",
-      "value": 75.7,
+      "value": 74.5,
       "target": "75-85",
-      "n": 2200,
-      "met": true
+      "n": 2605,
+      "met": false
      },
      {
       "key": "h24",
-      "value": 69.6,
+      "value": 70.6,
       "target": "75-85",
-      "n": 1983,
+      "n": 2393,
       "met": false
      }
     ],
@@ -1341,17 +1358,17 @@
    {
     "id": 7,
     "key": "fastRises",
-    "value": 73,
+    "value": 73.9,
     "unit": "%",
     "target": 95,
     "met": false,
-    "n": 282,
+    "n": 357,
     "parts": [
      {
       "key": "called",
-      "value": 73,
+      "value": 73.9,
       "target": 95,
-      "n": 282,
+      "n": 357,
       "met": false
      }
     ],
@@ -1361,17 +1378,17 @@
    {
     "id": 8,
     "key": "risingRight",
-    "value": 72.8,
+    "value": 71.3,
     "unit": "%",
     "target": 75,
     "met": false,
-    "n": 847,
+    "n": 1044,
     "parts": [
      {
       "key": "right",
-      "value": 72.8,
+      "value": 71.3,
       "target": 75,
-      "n": 847,
+      "n": 1044,
       "met": false
      }
     ],
@@ -1385,58 +1402,58 @@
     "unit": "hours",
     "target": 24,
     "met": false,
-    "n": 6,
+    "n": 7,
     "parts": [
      {
       "key": "hours",
       "value": 24,
       "target": 24,
-      "n": 6,
+      "n": 7,
       "met": false,
       "worst": 16
      },
      {
       "key": "gaugesPerHour",
-      "value": 52,
+      "value": 53,
       "target": null,
-      "n": 136,
+      "n": 160,
       "met": null
      },
      {
       "key": "flaggedShare",
-      "value": 2,
+      "value": 2.3,
       "target": null,
-      "n": 6975,
+      "n": 8387,
       "met": null
      }
     ],
     "detail": {
-     "runs": 6975,
-     "flaggedRuns": 138
+     "runs": 8387,
+     "flaggedRuns": 194
     },
     "targetText": "forecasts in all 24 hours of every day"
    },
    {
     "id": 10,
     "key": "people",
-    "value": 65.7,
+    "value": 63.5,
     "unit": "%",
     "target": 70,
     "met": false,
-    "n": 99,
+    "n": 104,
     "parts": [
      {
       "key": "agree",
-      "value": 65.7,
+      "value": 63.5,
       "target": 70,
-      "n": 99,
+      "n": 104,
       "met": false
      }
     ],
     "detail": {
-     "yes": 65,
-     "worse": 24,
-     "better": 10,
+     "yes": 66,
+     "worse": 27,
+     "better": 11,
      "source": "answers"
     },
     "targetText": "at least 70% of people say the forecast matches what they see"
@@ -1454,80 +1471,80 @@
    {
     "id": 4,
     "key": "skill",
-    "value": 20.7,
+    "value": 19,
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 11156,
+    "n": 13883,
     "parts": [
      {
       "key": "h1",
-      "value": 25.5,
+      "value": 23.1,
       "target": 30,
-      "n": 2795,
+      "n": 3432,
       "met": false
      },
      {
       "key": "h3",
-      "value": 24.1,
+      "value": 21.9,
       "target": 30,
-      "n": 2733,
+      "n": 3371,
       "met": false
      },
      {
       "key": "h6",
-      "value": 20.7,
+      "value": 19,
       "target": 30,
-      "n": 2649,
+      "n": 3286,
       "met": false
      },
      {
       "key": "h12",
-      "value": 16.6,
+      "value": 14.2,
       "target": 20,
-      "n": 1593,
+      "n": 1998,
       "met": false
      },
      {
       "key": "h24",
-      "value": 8.3,
+      "value": 5.8,
       "target": 10,
-      "n": 1386,
+      "n": 1796,
       "met": false
      },
      {
       "key": "worstPhase",
-      "value": 3.6,
+      "value": 3.5,
       "target": 0,
-      "n": 10788,
+      "n": 13422,
       "met": true
      }
     ],
     "detail": {
      "phases": {
       "rising": {
-       "n": 865,
-       "skill": 16.1,
+       "n": 1267,
+       "skill": 11.5,
        "horizons": 5
       },
       "slow rise": {
-       "n": 1086,
-       "skill": 9.6,
+       "n": 1444,
+       "skill": 8,
        "horizons": 5
       },
       "calm": {
-       "n": 2757,
-       "skill": 3.6,
+       "n": 3346,
+       "skill": 3.5,
        "horizons": 5
       },
       "slow fall": {
-       "n": 4037,
-       "skill": 16.6,
+       "n": 4852,
+       "skill": 14.4,
        "horizons": 5
       },
       "falling": {
-       "n": 2043,
-       "skill": 30,
+       "n": 2513,
+       "skill": 29.2,
        "horizons": 5
       }
      }
@@ -1537,45 +1554,45 @@
    {
     "id": 5,
     "key": "bias",
-    "value": 0.29,
+    "value": 0.19,
     "unit": "ft",
     "target": 0.25,
     "met": false,
-    "n": 1593,
+    "n": 1998,
     "parts": [
      {
       "key": "rising",
-      "value": 0.54,
+      "value": 0.62,
       "target": 0.25,
-      "n": 117,
+      "n": 181,
       "met": false
      },
      {
       "key": "slow rise",
       "value": -0.05,
       "target": 0.25,
-      "n": 148,
+      "n": 207,
       "met": true
      },
      {
       "key": "calm",
-      "value": -0.01,
+      "value": -0.08,
       "target": 0.25,
-      "n": 367,
+      "n": 458,
       "met": true
      },
      {
       "key": "slow fall",
-      "value": 0.15,
+      "value": 0.01,
       "target": 0.25,
-      "n": 556,
+      "n": 673,
       "met": true
      },
      {
       "key": "falling",
-      "value": 0.92,
+      "value": 0.76,
       "target": 0.25,
-      "n": 347,
+      "n": 406,
       "met": false
      }
     ],
@@ -1585,45 +1602,45 @@
    {
     "id": 6,
     "key": "coverage",
-    "value": 80.6,
+    "value": 79.4,
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 11156,
+    "n": 13883,
     "parts": [
      {
       "key": "h1",
-      "value": 80.1,
+      "value": 78.7,
       "target": "75-85",
-      "n": 2795,
+      "n": 3432,
       "met": true
      },
      {
       "key": "h3",
-      "value": 84.7,
+      "value": 83.3,
       "target": "75-85",
-      "n": 2733,
+      "n": 3371,
       "met": true
      },
      {
       "key": "h6",
-      "value": 82.6,
+      "value": 81.6,
       "target": "75-85",
-      "n": 2649,
+      "n": 3286,
       "met": true
      },
      {
       "key": "h12",
-      "value": 77.6,
+      "value": 75.7,
       "target": "75-85",
-      "n": 1593,
+      "n": 1998,
       "met": true
      },
      {
       "key": "h24",
-      "value": 73.4,
+      "value": 73.8,
       "target": "75-85",
-      "n": 1386,
+      "n": 1796,
       "met": false
      }
     ],
@@ -1633,17 +1650,17 @@
    {
     "id": 7,
     "key": "fastRises",
-    "value": 62.1,
+    "value": 67.3,
     "unit": "%",
     "target": 95,
     "met": false,
-    "n": 145,
+    "n": 220,
     "parts": [
      {
       "key": "called",
-      "value": 62.1,
+      "value": 67.3,
       "target": 95,
-      "n": 145,
+      "n": 220,
       "met": false
      }
     ],
@@ -1653,17 +1670,17 @@
    {
     "id": 8,
     "key": "risingRight",
-    "value": 63.9,
+    "value": 64,
     "unit": "%",
     "target": 75,
     "met": false,
-    "n": 501,
+    "n": 698,
     "parts": [
      {
       "key": "right",
-      "value": 63.9,
+      "value": 64,
       "target": 75,
-      "n": 501,
+      "n": 698,
       "met": false
      }
     ],
@@ -1675,28 +1692,28 @@
    {
     "id": 1,
     "key": "warned",
-    "value": 50,
+    "value": 33.3,
     "unit": "%",
     "target": 80,
     "met": null,
-    "n": 2,
+    "n": 3,
     "parts": [
      {
       "key": "caught",
-      "value": 50,
+      "value": 33.3,
       "target": 80,
-      "n": 2,
+      "n": 3,
       "met": null
      }
     ],
     "detail": {
-     "events": 2,
+     "events": 3,
      "caught": 1,
-     "medianLeadH": 8.5,
+     "medianLeadH": 1,
      "medianLeadWhenCaughtH": 16,
      "byStep": {
       "alert": {
-       "n": 1,
+       "n": 2,
        "caught": 0
       },
       "minor": {
@@ -1729,31 +1746,39 @@
        "leadH": 16,
        "needH": 2,
        "caught": true
+      },
+      {
+       "station": "Thalgahagoda",
+       "step": "alert",
+       "at": "2026-11-02T02:35:43.000Z",
+       "leadH": 0,
+       "needH": 6,
+       "caught": false
       }
      ]
     },
     "targetText": "at least 80% warned in time",
     "baseline": {
-     "value": 50,
-     "n": 2,
+     "value": 66.7,
+     "n": 3,
      "met": null,
      "parts": [
       {
        "key": "caught",
-       "value": 50,
-       "n": 2,
+       "value": 66.7,
+       "n": 3,
        "met": null
       }
      ],
      "detail": {
-      "events": 2,
-      "caught": 1,
-      "medianLeadH": 8.5,
-      "medianLeadWhenCaughtH": 16,
+      "events": 3,
+      "caught": 2,
+      "medianLeadH": 16,
+      "medianLeadWhenCaughtH": 45.4,
       "byStep": {
        "alert": {
-        "n": 1,
-        "caught": 0
+        "n": 2,
+        "caught": 1
        },
        "minor": {
         "n": 1,
@@ -1785,26 +1810,34 @@
         "leadH": 16,
         "needH": 2,
         "caught": true
+       },
+       {
+        "station": "Thalgahagoda",
+        "step": "alert",
+        "at": "2026-11-02T02:35:43.000Z",
+        "leadH": 74.8,
+        "needH": 6,
+        "caught": true
        }
       ]
      }
     },
-    "runsLogged": 6677
+    "runsLogged": 8066
    },
    {
     "id": 2,
     "key": "falseAlarms",
-    "value": 93.8,
+    "value": 94.4,
     "unit": "%",
     "target": 60,
     "met": false,
-    "n": 19,
+    "n": 21,
     "parts": [
      {
       "key": "possible",
-      "value": 93.8,
+      "value": 94.4,
       "target": 60,
-      "n": 16,
+      "n": 18,
       "met": false
      },
      {
@@ -1816,12 +1849,12 @@
      }
     ],
     "detail": {
-     "falseAlarms": 17,
-     "gaugeDays": 145,
-     "falseAlarmsPerGaugeDay": 0.12,
+     "falseAlarms": 19,
+     "gaugeDays": 174,
+     "falseAlarmsPerGaugeDay": 0.11,
      "possible": {
-      "n": 16,
-      "didNot": 15
+      "n": 18,
+      "didNot": 17
      },
      "likely": {
       "n": 3,
@@ -1830,38 +1863,38 @@
     },
     "targetText": "at most 60% of \"possible\" and 25% of \"likely\" warnings fail to happen",
     "baseline": {
-     "value": 92.3,
-     "n": 17,
+     "value": 93.3,
+     "n": 20,
      "met": false,
      "parts": [
       {
        "key": "possible",
-       "value": 92.3,
-       "n": 13,
+       "value": 93.3,
+       "n": 15,
        "met": false
       },
       {
        "key": "likely",
-       "value": 75,
-       "n": 4,
+       "value": 60,
+       "n": 5,
        "met": null
       }
      ],
      "detail": {
-      "falseAlarms": 15,
-      "gaugeDays": 145,
+      "falseAlarms": 17,
+      "gaugeDays": 174,
       "falseAlarmsPerGaugeDay": 0.1,
       "possible": {
-       "n": 13,
-       "didNot": 12
+       "n": 15,
+       "didNot": 14
       },
       "likely": {
-       "n": 4,
+       "n": 5,
        "didNot": 3
       }
      }
     },
-    "runsLogged": 6677
+    "runsLogged": 8066
    },
    {
     "id": 3,
@@ -1870,38 +1903,38 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 6357,
+    "n": 7965,
     "parts": [
      {
       "key": "0-10",
       "value": 0.2,
       "shown": 0.1,
       "target": 10,
-      "n": 6093,
+      "n": 7654,
       "met": true
      },
      {
       "key": "10-20",
-      "value": 0,
-      "shown": 12.2,
+      "value": 1.2,
+      "shown": 12.4,
       "target": 10,
-      "n": 124,
+      "n": 162,
       "met": false
      },
      {
       "key": "20-30",
       "value": 0,
-      "shown": 22,
+      "shown": 21.8,
       "target": 10,
-      "n": 54,
+      "n": 60,
       "met": false
      },
      {
       "key": "30-50",
-      "value": 13.3,
-      "shown": 32.5,
+      "value": 12.8,
+      "shown": 32.7,
       "target": 10,
-      "n": 83,
+      "n": 86,
       "met": false
      },
      {
@@ -1934,7 +1967,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 6093,
+       "n": 7654,
        "shownPct": 0.1,
        "observedPct": 0.2,
        "met": true
@@ -1942,25 +1975,25 @@
       {
        "from": 0.1,
        "to": 0.2,
-       "n": 124,
-       "shownPct": 12.2,
-       "observedPct": 0,
+       "n": 162,
+       "shownPct": 12.4,
+       "observedPct": 1.2,
        "met": false
       },
       {
        "from": 0.2,
        "to": 0.3,
-       "n": 54,
-       "shownPct": 22,
+       "n": 60,
+       "shownPct": 21.8,
        "observedPct": 0,
        "met": false
       },
       {
        "from": 0.3,
        "to": 0.5,
-       "n": 83,
-       "shownPct": 32.5,
-       "observedPct": 13.3,
+       "n": 86,
+       "shownPct": 32.7,
+       "observedPct": 12.8,
        "met": false
       },
       {
@@ -1994,37 +2027,37 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 25,
-     "n": 6357,
+     "n": 7965,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0.2,
-       "n": 6093,
+       "n": 7654,
        "met": true
       },
       {
        "key": "10-20",
        "value": 0,
-       "n": 101,
+       "n": 133,
        "met": false
       },
       {
        "key": "20-30",
        "value": 0,
-       "n": 61,
+       "n": 67,
        "met": false
       },
       {
        "key": "30-50",
-       "value": 11.2,
-       "n": 98,
+       "value": 11.3,
+       "n": 106,
        "met": false
       },
       {
        "key": "50-70",
-       "value": 0,
-       "n": 3,
+       "value": 25,
+       "n": 4,
        "met": null
       },
       {
@@ -2045,7 +2078,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 6093,
+        "n": 7654,
         "shownPct": 0.1,
         "observedPct": 0.2,
         "met": true
@@ -2053,33 +2086,33 @@
        {
         "from": 0.1,
         "to": 0.2,
-        "n": 101,
-        "shownPct": 11.6,
+        "n": 133,
+        "shownPct": 11.8,
         "observedPct": 0,
         "met": false
        },
        {
         "from": 0.2,
         "to": 0.3,
-        "n": 61,
-        "shownPct": 22.1,
+        "n": 67,
+        "shownPct": 21.9,
         "observedPct": 0,
         "met": false
        },
        {
         "from": 0.3,
         "to": 0.5,
-        "n": 98,
-        "shownPct": 32.7,
-        "observedPct": 11.2,
+        "n": 106,
+        "shownPct": 33.1,
+        "observedPct": 11.3,
         "met": false
        },
        {
         "from": 0.5,
         "to": 0.7,
-        "n": 3,
+        "n": 4,
         "shownPct": 50,
-        "observedPct": 0,
+        "observedPct": 25,
         "met": null
        },
        {
@@ -2103,36 +2136,36 @@
       "groupsOk": 1
      }
     },
-    "runsLogged": 6677
+    "runsLogged": 8066
    }
   ],
   "ground-rain": [
    {
     "id": 1,
     "key": "warned",
-    "value": 50,
+    "value": 66.7,
     "unit": "%",
     "target": 80,
     "met": null,
-    "n": 2,
+    "n": 3,
     "parts": [
      {
       "key": "caught",
-      "value": 50,
+      "value": 66.7,
       "target": 80,
-      "n": 2,
+      "n": 3,
       "met": null
      }
     ],
     "detail": {
-     "events": 2,
-     "caught": 1,
-     "medianLeadH": 8.5,
-     "medianLeadWhenCaughtH": 16,
+     "events": 3,
+     "caught": 2,
+     "medianLeadH": 16,
+     "medianLeadWhenCaughtH": 45.4,
      "byStep": {
       "alert": {
-       "n": 1,
-       "caught": 0
+       "n": 2,
+       "caught": 1
       },
       "minor": {
        "n": 1,
@@ -2164,31 +2197,39 @@
        "leadH": 16,
        "needH": 2,
        "caught": true
+      },
+      {
+       "station": "Thalgahagoda",
+       "step": "alert",
+       "at": "2026-11-02T02:35:43.000Z",
+       "leadH": 74.8,
+       "needH": 6,
+       "caught": true
       }
      ]
     },
     "targetText": "at least 80% warned in time",
     "baseline": {
-     "value": 50,
-     "n": 2,
+     "value": 66.7,
+     "n": 3,
      "met": null,
      "parts": [
       {
        "key": "caught",
-       "value": 50,
-       "n": 2,
+       "value": 66.7,
+       "n": 3,
        "met": null
       }
      ],
      "detail": {
-      "events": 2,
-      "caught": 1,
-      "medianLeadH": 8.5,
-      "medianLeadWhenCaughtH": 16,
+      "events": 3,
+      "caught": 2,
+      "medianLeadH": 16,
+      "medianLeadWhenCaughtH": 45.4,
       "byStep": {
        "alert": {
-        "n": 1,
-        "caught": 0
+        "n": 2,
+        "caught": 1
        },
        "minor": {
         "n": 1,
@@ -2220,83 +2261,91 @@
         "leadH": 16,
         "needH": 2,
         "caught": true
+       },
+       {
+        "station": "Thalgahagoda",
+        "step": "alert",
+        "at": "2026-11-02T02:35:43.000Z",
+        "leadH": 74.8,
+        "needH": 6,
+        "caught": true
        }
       ]
      }
     },
-    "runsLogged": 6677
+    "runsLogged": 8066
    },
    {
     "id": 2,
     "key": "falseAlarms",
-    "value": 92.3,
+    "value": 93.8,
     "unit": "%",
     "target": 60,
     "met": false,
-    "n": 17,
+    "n": 21,
     "parts": [
      {
       "key": "possible",
-      "value": 92.3,
+      "value": 93.8,
       "target": 60,
-      "n": 13,
+      "n": 16,
       "met": false
      },
      {
       "key": "likely",
-      "value": 75,
+      "value": 60,
       "target": 25,
-      "n": 4,
+      "n": 5,
       "met": null
      }
     ],
     "detail": {
-     "falseAlarms": 15,
-     "gaugeDays": 145,
+     "falseAlarms": 18,
+     "gaugeDays": 174,
      "falseAlarmsPerGaugeDay": 0.1,
      "possible": {
-      "n": 13,
-      "didNot": 12
+      "n": 16,
+      "didNot": 15
      },
      "likely": {
-      "n": 4,
+      "n": 5,
       "didNot": 3
      }
     },
     "targetText": "at most 60% of \"possible\" and 25% of \"likely\" warnings fail to happen",
     "baseline": {
-     "value": 92.3,
-     "n": 17,
+     "value": 93.3,
+     "n": 20,
      "met": false,
      "parts": [
       {
        "key": "possible",
-       "value": 92.3,
-       "n": 13,
+       "value": 93.3,
+       "n": 15,
        "met": false
       },
       {
        "key": "likely",
-       "value": 75,
-       "n": 4,
+       "value": 60,
+       "n": 5,
        "met": null
       }
      ],
      "detail": {
-      "falseAlarms": 15,
-      "gaugeDays": 145,
+      "falseAlarms": 17,
+      "gaugeDays": 174,
       "falseAlarmsPerGaugeDay": 0.1,
       "possible": {
-       "n": 13,
-       "didNot": 12
+       "n": 15,
+       "didNot": 14
       },
       "likely": {
-       "n": 4,
+       "n": 5,
        "didNot": 3
       }
      }
     },
-    "runsLogged": 6677
+    "runsLogged": 8066
    },
    {
     "id": 3,
@@ -2305,46 +2354,46 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 6357,
+    "n": 7965,
     "parts": [
      {
       "key": "0-10",
       "value": 0.2,
       "shown": 0.1,
       "target": 10,
-      "n": 6093,
+      "n": 7652,
       "met": true
      },
      {
       "key": "10-20",
       "value": 0,
-      "shown": 11.6,
+      "shown": 11.8,
       "target": 10,
-      "n": 101,
+      "n": 133,
       "met": false
      },
      {
       "key": "20-30",
       "value": 0,
-      "shown": 22.1,
+      "shown": 21.9,
       "target": 10,
-      "n": 61,
+      "n": 67,
       "met": false
      },
      {
       "key": "30-50",
-      "value": 11.2,
-      "shown": 32.7,
+      "value": 11.1,
+      "shown": 33.3,
       "target": 10,
-      "n": 98,
+      "n": 108,
       "met": false
      },
      {
       "key": "50-70",
-      "value": 0,
+      "value": 25,
       "shown": 50,
       "target": 10,
-      "n": 3,
+      "n": 4,
       "met": null
      },
      {
@@ -2369,7 +2418,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 6093,
+       "n": 7652,
        "shownPct": 0.1,
        "observedPct": 0.2,
        "met": true
@@ -2377,33 +2426,33 @@
       {
        "from": 0.1,
        "to": 0.2,
-       "n": 101,
-       "shownPct": 11.6,
+       "n": 133,
+       "shownPct": 11.8,
        "observedPct": 0,
        "met": false
       },
       {
        "from": 0.2,
        "to": 0.3,
-       "n": 61,
-       "shownPct": 22.1,
+       "n": 67,
+       "shownPct": 21.9,
        "observedPct": 0,
        "met": false
       },
       {
        "from": 0.3,
        "to": 0.5,
-       "n": 98,
-       "shownPct": 32.7,
-       "observedPct": 11.2,
+       "n": 108,
+       "shownPct": 33.3,
+       "observedPct": 11.1,
        "met": false
       },
       {
        "from": 0.5,
        "to": 0.7,
-       "n": 3,
+       "n": 4,
        "shownPct": 50,
-       "observedPct": 0,
+       "observedPct": 25,
        "met": null
       },
       {
@@ -2429,37 +2478,37 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 25,
-     "n": 6357,
+     "n": 7965,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0.2,
-       "n": 6093,
+       "n": 7654,
        "met": true
       },
       {
        "key": "10-20",
        "value": 0,
-       "n": 101,
+       "n": 133,
        "met": false
       },
       {
        "key": "20-30",
        "value": 0,
-       "n": 61,
+       "n": 67,
        "met": false
       },
       {
        "key": "30-50",
-       "value": 11.2,
-       "n": 98,
+       "value": 11.3,
+       "n": 106,
        "met": false
       },
       {
        "key": "50-70",
-       "value": 0,
-       "n": 3,
+       "value": 25,
+       "n": 4,
        "met": null
       },
       {
@@ -2480,7 +2529,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 6093,
+        "n": 7654,
         "shownPct": 0.1,
         "observedPct": 0.2,
         "met": true
@@ -2488,33 +2537,33 @@
        {
         "from": 0.1,
         "to": 0.2,
-        "n": 101,
-        "shownPct": 11.6,
+        "n": 133,
+        "shownPct": 11.8,
         "observedPct": 0,
         "met": false
        },
        {
         "from": 0.2,
         "to": 0.3,
-        "n": 61,
-        "shownPct": 22.1,
+        "n": 67,
+        "shownPct": 21.9,
         "observedPct": 0,
         "met": false
        },
        {
         "from": 0.3,
         "to": 0.5,
-        "n": 98,
-        "shownPct": 32.7,
-        "observedPct": 11.2,
+        "n": 106,
+        "shownPct": 33.1,
+        "observedPct": 11.3,
         "met": false
        },
        {
         "from": 0.5,
         "to": 0.7,
-        "n": 3,
+        "n": 4,
         "shownPct": 50,
-        "observedPct": 0,
+        "observedPct": 25,
         "met": null
        },
        {
@@ -2538,87 +2587,87 @@
       "groupsOk": 1
      }
     },
-    "runsLogged": 6677
+    "runsLogged": 8066
    }
   ],
   "recession-v1": [
    {
     "id": 4,
     "key": "skill",
-    "value": 20.7,
+    "value": 19,
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 11156,
+    "n": 13883,
     "parts": [
      {
       "key": "h1",
-      "value": 25.5,
+      "value": 23.1,
       "target": 30,
-      "n": 2795,
+      "n": 3432,
       "met": false
      },
      {
       "key": "h3",
-      "value": 24.1,
+      "value": 21.9,
       "target": 30,
-      "n": 2733,
+      "n": 3371,
       "met": false
      },
      {
       "key": "h6",
-      "value": 20.7,
+      "value": 19,
       "target": 30,
-      "n": 2649,
+      "n": 3286,
       "met": false
      },
      {
       "key": "h12",
-      "value": 26.6,
+      "value": 21.8,
       "target": 20,
-      "n": 1593,
+      "n": 1998,
       "met": true
      },
      {
       "key": "h24",
-      "value": 20.9,
+      "value": 15.4,
       "target": 10,
-      "n": 1386,
+      "n": 1796,
       "met": true
      },
      {
       "key": "worstPhase",
-      "value": 3.6,
+      "value": 3.5,
       "target": 0,
-      "n": 10788,
+      "n": 13422,
       "met": true
      }
     ],
     "detail": {
      "phases": {
       "rising": {
-       "n": 865,
-       "skill": 16.1,
+       "n": 1267,
+       "skill": 11.5,
        "horizons": 5
       },
       "slow rise": {
-       "n": 1086,
-       "skill": 9.6,
+       "n": 1444,
+       "skill": 8,
        "horizons": 5
       },
       "calm": {
-       "n": 2757,
-       "skill": 3.6,
+       "n": 3346,
+       "skill": 3.5,
        "horizons": 5
       },
       "slow fall": {
-       "n": 4037,
-       "skill": 19.2,
+       "n": 4852,
+       "skill": 16.1,
        "horizons": 5
       },
       "falling": {
-       "n": 2043,
-       "skill": 38.6,
+       "n": 2513,
+       "skill": 37,
        "horizons": 5
       }
      }
@@ -2628,46 +2677,46 @@
    {
     "id": 5,
     "key": "bias",
-    "value": 0.1,
+    "value": 0.01,
     "unit": "ft",
     "target": 0.25,
     "met": false,
-    "n": 1593,
+    "n": 1998,
     "parts": [
      {
       "key": "rising",
-      "value": 0.54,
+      "value": 0.62,
       "target": 0.25,
-      "n": 117,
+      "n": 181,
       "met": false
      },
      {
       "key": "slow rise",
       "value": -0.05,
       "target": 0.25,
-      "n": 148,
+      "n": 207,
       "met": true
      },
      {
       "key": "calm",
-      "value": -0.01,
+      "value": -0.08,
       "target": 0.25,
-      "n": 367,
+      "n": 458,
       "met": true
      },
      {
       "key": "slow fall",
-      "value": 0.02,
+      "value": -0.12,
       "target": 0.25,
-      "n": 556,
+      "n": 673,
       "met": true
      },
      {
       "key": "falling",
-      "value": 0.26,
+      "value": 0.09,
       "target": 0.25,
-      "n": 347,
-      "met": false
+      "n": 406,
+      "met": true
      }
     ],
     "detail": {},
@@ -2676,45 +2725,45 @@
    {
     "id": 6,
     "key": "coverage",
-    "value": 80.7,
+    "value": 79.4,
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 11156,
+    "n": 13883,
     "parts": [
      {
       "key": "h1",
-      "value": 80.1,
+      "value": 78.7,
       "target": "75-85",
-      "n": 2795,
+      "n": 3432,
       "met": true
      },
      {
       "key": "h3",
-      "value": 84.7,
+      "value": 83.3,
       "target": "75-85",
-      "n": 2733,
+      "n": 3371,
       "met": true
      },
      {
       "key": "h6",
-      "value": 82.6,
+      "value": 81.6,
       "target": "75-85",
-      "n": 2649,
+      "n": 3286,
       "met": true
      },
      {
       "key": "h12",
-      "value": 77.3,
+      "value": 75.2,
       "target": "75-85",
-      "n": 1593,
+      "n": 1998,
       "met": true
      },
      {
       "key": "h24",
-      "value": 74.5,
+      "value": 74.1,
       "target": "75-85",
-      "n": 1386,
+      "n": 1796,
       "met": false
      }
     ],
@@ -2724,17 +2773,17 @@
    {
     "id": 7,
     "key": "fastRises",
-    "value": 62.1,
+    "value": 67.3,
     "unit": "%",
     "target": 95,
     "met": false,
-    "n": 145,
+    "n": 220,
     "parts": [
      {
       "key": "called",
-      "value": 62.1,
+      "value": 67.3,
       "target": 95,
-      "n": 145,
+      "n": 220,
       "met": false
      }
     ],
@@ -2744,17 +2793,17 @@
    {
     "id": 8,
     "key": "risingRight",
-    "value": 63.9,
+    "value": 64,
     "unit": "%",
     "target": 75,
     "met": false,
-    "n": 501,
+    "n": 698,
     "parts": [
      {
       "key": "right",
-      "value": 63.9,
+      "value": 64,
       "target": 75,
-      "n": 501,
+      "n": 698,
       "met": false
      }
     ],
@@ -2766,301 +2815,80 @@
    {
     "id": 4,
     "key": "skill",
-    "value": 22.6,
+    "value": 20.7,
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 8804,
+    "n": 11531,
     "parts": [
      {
       "key": "h1",
-      "value": 24.2,
+      "value": 21.8,
       "target": 30,
-      "n": 2235,
+      "n": 2872,
       "met": false
      },
      {
       "key": "h3",
-      "value": 24.8,
+      "value": 21.9,
       "target": 30,
-      "n": 2177,
+      "n": 2815,
       "met": false
      },
      {
       "key": "h6",
-      "value": 22.6,
+      "value": 20.7,
       "target": 30,
-      "n": 2094,
+      "n": 2731,
       "met": false
      },
      {
       "key": "h12",
-      "value": 23.8,
+      "value": 18.6,
       "target": 20,
-      "n": 1246,
-      "met": true
+      "n": 1651,
+      "met": false
      },
      {
       "key": "h24",
-      "value": 24.6,
+      "value": 16.3,
       "target": 10,
-      "n": 1052,
+      "n": 1462,
       "met": true
      },
      {
       "key": "worstPhase",
-      "value": 3.3,
+      "value": 3.2,
       "target": 0,
-      "n": 8501,
+      "n": 11135,
       "met": true
      }
     ],
     "detail": {
      "phases": {
       "rising": {
-       "n": 718,
-       "skill": 15.8,
+       "n": 1120,
+       "skill": 10.8,
        "horizons": 5
       },
       "slow rise": {
-       "n": 924,
-       "skill": 8.2,
+       "n": 1282,
+       "skill": 7.1,
        "horizons": 5
       },
       "calm": {
-       "n": 2246,
-       "skill": 3.3,
+       "n": 2835,
+       "skill": 3.2,
        "horizons": 5
       },
       "slow fall": {
-       "n": 3197,
-       "skill": 14.8,
+       "n": 4012,
+       "skill": 12.4,
        "horizons": 5
       },
       "falling": {
-       "n": 1416,
-       "skill": 47.5,
-       "horizons": 5
-      }
-     }
-    },
-    "targetText": "beats \"no change\" by 30% at 1-6 h, 20% at 12 h, 10% at 24 h, and in every kind of river movement"
-   },
-   {
-    "id": 5,
-    "key": "bias",
-    "value": 0.06,
-    "unit": "ft",
-    "target": 0.25,
-    "met": false,
-    "n": 1246,
-    "parts": [
-     {
-      "key": "rising",
-      "value": 0.48,
-      "target": 0.25,
-      "n": 99,
-      "met": false
-     },
-     {
-      "key": "slow rise",
-      "value": -0.1,
-      "target": 0.25,
-      "n": 125,
-      "met": true
-     },
-     {
-      "key": "calm",
-      "value": -0.06,
-      "target": 0.25,
-      "n": 291,
-      "met": true
-     },
-     {
-      "key": "slow fall",
-      "value": 0.09,
-      "target": 0.25,
-      "n": 439,
-      "met": true
-     },
-     {
-      "key": "falling",
-      "value": 0.03,
-      "target": 0.25,
-      "n": 245,
-      "met": true
-     }
-    ],
-    "detail": {},
-    "targetText": "12 h forecast within 0.25 ft of reality on average, in every kind of river movement"
-   },
-   {
-    "id": 6,
-    "key": "coverage",
-    "value": 81.5,
-    "unit": "%",
-    "target": "75-85",
-    "met": true,
-    "n": 8804,
-    "parts": [
-     {
-      "key": "h1",
-      "value": 80.1,
-      "target": "75-85",
-      "n": 2235,
-      "met": true
-     },
-     {
-      "key": "h3",
-      "value": 84.4,
-      "target": "75-85",
-      "n": 2177,
-      "met": true
-     },
-     {
-      "key": "h6",
-      "value": 83.2,
-      "target": "75-85",
-      "n": 2094,
-      "met": true
-     },
-     {
-      "key": "h12",
-      "value": 79.5,
-      "target": "75-85",
-      "n": 1246,
-      "met": true
-     },
-     {
-      "key": "h24",
-      "value": 77.1,
-      "target": "75-85",
-      "n": 1052,
-      "met": true
-     }
-    ],
-    "detail": {},
-    "targetText": "the stated 80% range holds the real level 75-85% of the time at every horizon"
-   },
-   {
-    "id": 7,
-    "key": "fastRises",
-    "value": 68.5,
-    "unit": "%",
-    "target": 95,
-    "met": false,
-    "n": 127,
-    "parts": [
-     {
-      "key": "called",
-      "value": 68.5,
-      "target": 95,
-      "n": 127,
-      "met": false
-     }
-    ],
-    "detail": {},
-    "targetText": "at least 95% of rises of 10 cm or more in an hour were called Rising"
-   },
-   {
-    "id": 8,
-    "key": "risingRight",
-    "value": 66.8,
-    "unit": "%",
-    "target": 75,
-    "met": false,
-    "n": 455,
-    "parts": [
-     {
-      "key": "right",
-      "value": 66.8,
-      "target": 75,
-      "n": 455,
-      "met": false
-     }
-    ],
-    "detail": {},
-    "targetText": "at least 75% of Rising calls were followed by a rise"
-   }
-  ],
-  "recession-v2-slow": [
-   {
-    "id": 4,
-    "key": "skill",
-    "value": 22.1,
-    "unit": "%",
-    "target": 30,
-    "met": false,
-    "n": 8804,
-    "parts": [
-     {
-      "key": "h1",
-      "value": 24.2,
-      "target": 30,
-      "n": 2235,
-      "met": false
-     },
-     {
-      "key": "h3",
-      "value": 23.8,
-      "target": 30,
-      "n": 2177,
-      "met": false
-     },
-     {
-      "key": "h6",
-      "value": 22.1,
-      "target": 30,
-      "n": 2094,
-      "met": false
-     },
-     {
-      "key": "h12",
-      "value": 24.4,
-      "target": 20,
-      "n": 1246,
-      "met": true
-     },
-     {
-      "key": "h24",
-      "value": 29.7,
-      "target": 10,
-      "n": 1052,
-      "met": true
-     },
-     {
-      "key": "worstPhase",
-      "value": 3.3,
-      "target": 0,
-      "n": 8501,
-      "met": true
-     }
-    ],
-    "detail": {
-     "phases": {
-      "rising": {
-       "n": 718,
-       "skill": 15.8,
-       "horizons": 5
-      },
-      "slow rise": {
-       "n": 924,
-       "skill": 8.2,
-       "horizons": 5
-      },
-      "calm": {
-       "n": 2246,
-       "skill": 3.3,
-       "horizons": 5
-      },
-      "slow fall": {
-       "n": 3197,
-       "skill": 17.4,
-       "horizons": 5
-      },
-      "falling": {
-       "n": 1416,
-       "skill": 47.5,
+       "n": 1886,
+       "skill": 43.4,
        "horizons": 5
       }
      }
@@ -3074,41 +2902,41 @@
     "unit": "ft",
     "target": 0.25,
     "met": false,
-    "n": 1246,
+    "n": 1651,
     "parts": [
      {
       "key": "rising",
-      "value": 0.48,
+      "value": 0.59,
       "target": 0.25,
-      "n": 99,
+      "n": 163,
       "met": false
      },
      {
       "key": "slow rise",
-      "value": -0.1,
+      "value": -0.09,
       "target": 0.25,
-      "n": 125,
+      "n": 184,
       "met": true
      },
      {
       "key": "calm",
-      "value": -0.06,
+      "value": -0.13,
       "target": 0.25,
-      "n": 291,
+      "n": 382,
       "met": true
      },
      {
       "key": "slow fall",
-      "value": -0.13,
+      "value": -0.07,
       "target": 0.25,
-      "n": 439,
+      "n": 556,
       "met": true
      },
      {
       "key": "falling",
-      "value": 0.03,
+      "value": -0.12,
       "target": 0.25,
-      "n": 245,
+      "n": 304,
       "met": true
      }
     ],
@@ -3118,45 +2946,45 @@
    {
     "id": 6,
     "key": "coverage",
-    "value": 82,
+    "value": 79.9,
     "unit": "%",
     "target": "75-85",
     "met": true,
-    "n": 8804,
+    "n": 11531,
     "parts": [
      {
       "key": "h1",
-      "value": 80.1,
+      "value": 78.4,
       "target": "75-85",
-      "n": 2235,
+      "n": 2872,
       "met": true
      },
      {
       "key": "h3",
-      "value": 84.3,
+      "value": 82.9,
       "target": "75-85",
-      "n": 2177,
+      "n": 2815,
       "met": true
      },
      {
       "key": "h6",
-      "value": 83.5,
+      "value": 82.1,
       "target": "75-85",
-      "n": 2094,
+      "n": 2731,
       "met": true
      },
      {
       "key": "h12",
-      "value": 80.3,
+      "value": 76.9,
       "target": "75-85",
-      "n": 1246,
+      "n": 1651,
       "met": true
      },
      {
       "key": "h24",
-      "value": 79.8,
+      "value": 76.3,
       "target": "75-85",
-      "n": 1052,
+      "n": 1462,
       "met": true
      }
     ],
@@ -3166,17 +2994,17 @@
    {
     "id": 7,
     "key": "fastRises",
-    "value": 68.5,
+    "value": 71.8,
     "unit": "%",
     "target": 95,
     "met": false,
-    "n": 127,
+    "n": 202,
     "parts": [
      {
       "key": "called",
-      "value": 68.5,
+      "value": 71.8,
       "target": 95,
-      "n": 127,
+      "n": 202,
       "met": false
      }
     ],
@@ -3186,17 +3014,459 @@
    {
     "id": 8,
     "key": "risingRight",
-    "value": 66.8,
+    "value": 66.1,
     "unit": "%",
     "target": 75,
     "met": false,
-    "n": 455,
+    "n": 652,
     "parts": [
      {
       "key": "right",
-      "value": 66.8,
+      "value": 66.1,
       "target": 75,
-      "n": 455,
+      "n": 652,
+      "met": false
+     }
+    ],
+    "detail": {},
+    "targetText": "at least 75% of Rising calls were followed by a rise"
+   }
+  ],
+  "recession-v2-slow": [
+   {
+    "id": 4,
+    "key": "skill",
+    "value": 19.9,
+    "unit": "%",
+    "target": 30,
+    "met": false,
+    "n": 11531,
+    "parts": [
+     {
+      "key": "h1",
+      "value": 21.8,
+      "target": 30,
+      "n": 2872,
+      "met": false
+     },
+     {
+      "key": "h3",
+      "value": 21.3,
+      "target": 30,
+      "n": 2815,
+      "met": false
+     },
+     {
+      "key": "h6",
+      "value": 19.9,
+      "target": 30,
+      "n": 2731,
+      "met": false
+     },
+     {
+      "key": "h12",
+      "value": 17.6,
+      "target": 20,
+      "n": 1651,
+      "met": false
+     },
+     {
+      "key": "h24",
+      "value": 19,
+      "target": 10,
+      "n": 1462,
+      "met": true
+     },
+     {
+      "key": "worstPhase",
+      "value": 3.2,
+      "target": 0,
+      "n": 11135,
+      "met": true
+     }
+    ],
+    "detail": {
+     "phases": {
+      "rising": {
+       "n": 1120,
+       "skill": 10.8,
+       "horizons": 5
+      },
+      "slow rise": {
+       "n": 1282,
+       "skill": 7.1,
+       "horizons": 5
+      },
+      "calm": {
+       "n": 2835,
+       "skill": 3.2,
+       "horizons": 5
+      },
+      "slow fall": {
+       "n": 4012,
+       "skill": 12.5,
+       "horizons": 5
+      },
+      "falling": {
+       "n": 1886,
+       "skill": 43.5,
+       "horizons": 5
+      }
+     }
+    },
+    "targetText": "beats \"no change\" by 30% at 1-6 h, 20% at 12 h, 10% at 24 h, and in every kind of river movement"
+   },
+   {
+    "id": 5,
+    "key": "bias",
+    "value": -0.1,
+    "unit": "ft",
+    "target": 0.25,
+    "met": false,
+    "n": 1651,
+    "parts": [
+     {
+      "key": "rising",
+      "value": 0.59,
+      "target": 0.25,
+      "n": 163,
+      "met": false
+     },
+     {
+      "key": "slow rise",
+      "value": -0.09,
+      "target": 0.25,
+      "n": 184,
+      "met": true
+     },
+     {
+      "key": "calm",
+      "value": -0.13,
+      "target": 0.25,
+      "n": 382,
+      "met": true
+     },
+     {
+      "key": "slow fall",
+      "value": -0.29,
+      "target": 0.25,
+      "n": 556,
+      "met": false
+     },
+     {
+      "key": "falling",
+      "value": -0.12,
+      "target": 0.25,
+      "n": 304,
+      "met": true
+     }
+    ],
+    "detail": {},
+    "targetText": "12 h forecast within 0.25 ft of reality on average, in every kind of river movement"
+   },
+   {
+    "id": 6,
+    "key": "coverage",
+    "value": 80.2,
+    "unit": "%",
+    "target": "75-85",
+    "met": true,
+    "n": 11531,
+    "parts": [
+     {
+      "key": "h1",
+      "value": 78.4,
+      "target": "75-85",
+      "n": 2872,
+      "met": true
+     },
+     {
+      "key": "h3",
+      "value": 82.8,
+      "target": "75-85",
+      "n": 2815,
+      "met": true
+     },
+     {
+      "key": "h6",
+      "value": 82.4,
+      "target": "75-85",
+      "n": 2731,
+      "met": true
+     },
+     {
+      "key": "h12",
+      "value": 77.2,
+      "target": "75-85",
+      "n": 1651,
+      "met": true
+     },
+     {
+      "key": "h24",
+      "value": 77.7,
+      "target": "75-85",
+      "n": 1462,
+      "met": true
+     }
+    ],
+    "detail": {},
+    "targetText": "the stated 80% range holds the real level 75-85% of the time at every horizon"
+   },
+   {
+    "id": 7,
+    "key": "fastRises",
+    "value": 71.8,
+    "unit": "%",
+    "target": 95,
+    "met": false,
+    "n": 202,
+    "parts": [
+     {
+      "key": "called",
+      "value": 71.8,
+      "target": 95,
+      "n": 202,
+      "met": false
+     }
+    ],
+    "detail": {},
+    "targetText": "at least 95% of rises of 10 cm or more in an hour were called Rising"
+   },
+   {
+    "id": 8,
+    "key": "risingRight",
+    "value": 66.1,
+    "unit": "%",
+    "target": 75,
+    "met": false,
+    "n": 652,
+    "parts": [
+     {
+      "key": "right",
+      "value": 66.1,
+      "target": 75,
+      "n": 652,
+      "met": false
+     }
+    ],
+    "detail": {},
+    "targetText": "at least 75% of Rising calls were followed by a rise"
+   }
+  ],
+  "wet-core": [
+   {
+    "id": 4,
+    "key": "skill",
+    "value": 3.2,
+    "unit": "%",
+    "target": 30,
+    "met": false,
+    "n": 392,
+    "parts": [
+     {
+      "key": "h1",
+      "value": 6.9,
+      "target": 30,
+      "n": 194,
+      "met": false
+     },
+     {
+      "key": "h3",
+      "value": 5,
+      "target": 30,
+      "n": 140,
+      "met": false
+     },
+     {
+      "key": "h6",
+      "value": 3.2,
+      "target": 30,
+      "n": 58,
+      "met": false
+     },
+     {
+      "key": "h12",
+      "value": null,
+      "target": 20,
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "h24",
+      "value": null,
+      "target": 10,
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "worstPhase",
+      "value": -4.8,
+      "target": 0,
+      "n": 391,
+      "met": false
+     }
+    ],
+    "detail": {
+     "phases": {
+      "rising": {
+       "n": 86,
+       "skill": 6.9,
+       "horizons": 2
+      },
+      "slow rise": {
+       "n": 65,
+       "skill": 1.9,
+       "horizons": 3
+      },
+      "calm": {
+       "n": 78,
+       "skill": -4.8,
+       "horizons": 3
+      },
+      "slow fall": {
+       "n": 102,
+       "skill": 6.2,
+       "horizons": 3
+      },
+      "falling": {
+       "n": 60,
+       "skill": 12.5,
+       "horizons": 3
+      }
+     }
+    },
+    "targetText": "beats \"no change\" by 30% at 1-6 h, 20% at 12 h, 10% at 24 h, and in every kind of river movement"
+   },
+   {
+    "id": 5,
+    "key": "bias",
+    "value": null,
+    "unit": "ft",
+    "target": 0.25,
+    "met": null,
+    "n": 0,
+    "parts": [
+     {
+      "key": "rising",
+      "value": null,
+      "target": 0.25,
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "slow rise",
+      "value": null,
+      "target": 0.25,
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "calm",
+      "value": null,
+      "target": 0.25,
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "slow fall",
+      "value": null,
+      "target": 0.25,
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "falling",
+      "value": null,
+      "target": 0.25,
+      "n": 0,
+      "met": null
+     }
+    ],
+    "detail": {},
+    "targetText": "12 h forecast within 0.25 ft of reality on average, in every kind of river movement"
+   },
+   {
+    "id": 6,
+    "key": "coverage",
+    "value": 57.4,
+    "unit": "%",
+    "target": "75-85",
+    "met": false,
+    "n": 392,
+    "parts": [
+     {
+      "key": "h1",
+      "value": 58.8,
+      "target": "75-85",
+      "n": 194,
+      "met": false
+     },
+     {
+      "key": "h3",
+      "value": 56.4,
+      "target": "75-85",
+      "n": 140,
+      "met": false
+     },
+     {
+      "key": "h6",
+      "value": 55.2,
+      "target": "75-85",
+      "n": 58,
+      "met": false
+     },
+     {
+      "key": "h12",
+      "value": null,
+      "target": "75-85",
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "h24",
+      "value": null,
+      "target": "75-85",
+      "n": 0,
+      "met": null
+     }
+    ],
+    "detail": {},
+    "targetText": "the stated 80% range holds the real level 75-85% of the time at every horizon"
+   },
+   {
+    "id": 7,
+    "key": "fastRises",
+    "value": 76.5,
+    "unit": "%",
+    "target": 95,
+    "met": false,
+    "n": 51,
+    "parts": [
+     {
+      "key": "called",
+      "value": 76.5,
+      "target": 95,
+      "n": 51,
+      "met": false
+     }
+    ],
+    "detail": {},
+    "targetText": "at least 95% of rises of 10 cm or more in an hour were called Rising"
+   },
+   {
+    "id": 8,
+    "key": "risingRight",
+    "value": 64.3,
+    "unit": "%",
+    "target": 75,
+    "met": false,
+    "n": 98,
+    "parts": [
+     {
+      "key": "right",
+      "value": 64.3,
+      "target": 75,
+      "n": 98,
       "met": false
      }
     ],
@@ -6051,8 +6321,530 @@
    "name": "Rising when the river just rose",
    "from": "2026-10-29T10:00:00Z",
    "what": "When a river has just risen 3 cm or more in the last hour, the \"Next hour\" line says Rising even if the forecast had expected it to hold, so fast rises are not missed.",
-   "runs": 4653,
-   "days": 4,
+   "runs": 5721,
+   "days": 5,
+   "liveUntil": "2026-11-02T12:00:00Z",
+   "kpis": [
+    {
+     "id": 1,
+     "key": "warned",
+     "value": 100,
+     "unit": "%",
+     "target": 80,
+     "met": null,
+     "n": 1,
+     "parts": [
+      {
+       "key": "caught",
+       "value": 100,
+       "target": 80,
+       "n": 1,
+       "met": null
+      }
+     ],
+     "detail": {
+      "events": 1,
+      "caught": 1,
+      "medianLeadH": 74.8,
+      "medianLeadWhenCaughtH": 74.8,
+      "byStep": {
+       "alert": {
+        "n": 1,
+        "caught": 1
+       },
+       "minor": {
+        "n": 0,
+        "caught": 0
+       },
+       "major": {
+        "n": 0,
+        "caught": 0
+       }
+      },
+      "leadNeeded": {
+       "bigAlertH": 6,
+       "bigOtherH": 12,
+       "fastH": 2
+      },
+      "list": [
+       {
+        "station": "Thalgahagoda",
+        "step": "alert",
+        "at": "2026-11-02T02:35:43.000Z",
+        "leadH": 74.8,
+        "needH": 6,
+        "caught": true
+       }
+      ]
+     },
+     "targetText": "at least 80% warned in time"
+    },
+    {
+     "id": 2,
+     "key": "falseAlarms",
+     "value": 100,
+     "unit": "%",
+     "target": 60,
+     "met": false,
+     "n": 13,
+     "parts": [
+      {
+       "key": "possible",
+       "value": 100,
+       "target": 60,
+       "n": 11,
+       "met": false
+      },
+      {
+       "key": "likely",
+       "value": 50,
+       "target": 25,
+       "n": 2,
+       "met": null
+      }
+     ],
+     "detail": {
+      "falseAlarms": 12,
+      "gaugeDays": 144,
+      "falseAlarmsPerGaugeDay": 0.08,
+      "possible": {
+       "n": 11,
+       "didNot": 11
+      },
+      "likely": {
+       "n": 2,
+       "didNot": 1
+      }
+     },
+     "targetText": "at most 60% of \"possible\" and 25% of \"likely\" warnings fail to happen"
+    },
+    {
+     "id": 3,
+     "key": "honest",
+     "value": 25,
+     "unit": "%",
+     "target": 10,
+     "met": false,
+     "n": 5461,
+     "parts": [
+      {
+       "key": "0-10",
+       "value": 0,
+       "shown": 0.1,
+       "target": 10,
+       "n": 5293,
+       "met": true
+      },
+      {
+       "key": "10-20",
+       "value": 0,
+       "shown": 12.3,
+       "target": 10,
+       "n": 84,
+       "met": false
+      },
+      {
+       "key": "20-30",
+       "value": 0,
+       "shown": 22,
+       "target": 10,
+       "n": 44,
+       "met": false
+      },
+      {
+       "key": "30-50",
+       "value": 2.6,
+       "shown": 33.2,
+       "target": 10,
+       "n": 38,
+       "met": false
+      },
+      {
+       "key": "50-70",
+       "value": 50,
+       "shown": 50,
+       "target": 10,
+       "n": 2,
+       "met": null
+      },
+      {
+       "key": "70-90",
+       "value": null,
+       "shown": null,
+       "target": 10,
+       "n": 0,
+       "met": null
+      },
+      {
+       "key": "90-100",
+       "value": null,
+       "shown": null,
+       "target": 10,
+       "n": 0,
+       "met": null
+      }
+     ],
+     "detail": {
+      "bins": [
+       {
+        "from": 0,
+        "to": 0.1,
+        "n": 5293,
+        "shownPct": 0.1,
+        "observedPct": 0,
+        "met": true
+       },
+       {
+        "from": 0.1,
+        "to": 0.2,
+        "n": 84,
+        "shownPct": 12.3,
+        "observedPct": 0,
+        "met": false
+       },
+       {
+        "from": 0.2,
+        "to": 0.3,
+        "n": 44,
+        "shownPct": 22,
+        "observedPct": 0,
+        "met": false
+       },
+       {
+        "from": 0.3,
+        "to": 0.5,
+        "n": 38,
+        "shownPct": 33.2,
+        "observedPct": 2.6,
+        "met": false
+       },
+       {
+        "from": 0.5,
+        "to": 0.7,
+        "n": 2,
+        "shownPct": 50,
+        "observedPct": 50,
+        "met": null
+       },
+       {
+        "from": 0.7,
+        "to": 0.9,
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
+        "met": null
+       },
+       {
+        "from": 0.9,
+        "to": 1,
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
+        "met": null
+       }
+      ],
+      "groupsJudged": 4,
+      "groupsOk": 1
+     },
+     "targetText": "within 10 points in every group with 10+ cases"
+    },
+    {
+     "id": 4,
+     "key": "skill",
+     "value": 18.1,
+     "unit": "%",
+     "target": 30,
+     "met": false,
+     "n": 10879,
+     "parts": [
+      {
+       "key": "h1",
+       "value": 25.2,
+       "target": 30,
+       "n": 2623,
+       "met": false
+      },
+      {
+       "key": "h3",
+       "value": 23.5,
+       "target": 30,
+       "n": 2620,
+       "met": false
+      },
+      {
+       "key": "h6",
+       "value": 18.1,
+       "target": 30,
+       "n": 2618,
+       "met": false
+      },
+      {
+       "key": "h12",
+       "value": 12.2,
+       "target": 20,
+       "n": 1610,
+       "met": false
+      },
+      {
+       "key": "h24",
+       "value": 4.8,
+       "target": 10,
+       "n": 1408,
+       "met": false
+      },
+      {
+       "key": "worstPhase",
+       "value": 3.5,
+       "target": 0,
+       "n": 10487,
+       "met": true
+      }
+     ],
+     "detail": {
+      "phases": {
+       "rising": {
+        "n": 1022,
+        "skill": 12.8,
+        "horizons": 5
+       },
+       "slow rise": {
+        "n": 1199,
+        "skill": 8.6,
+        "horizons": 5
+       },
+       "calm": {
+        "n": 2669,
+        "skill": 3.5,
+        "horizons": 5
+       },
+       "slow fall": {
+        "n": 3814,
+        "skill": 13,
+        "horizons": 5
+       },
+       "falling": {
+        "n": 1783,
+        "skill": 30.6,
+        "horizons": 5
+       }
+      }
+     },
+     "targetText": "beats \"no change\" by 30% at 1-6 h, 20% at 12 h, 10% at 24 h, and in every kind of river movement"
+    },
+    {
+     "id": 5,
+     "key": "bias",
+     "value": 0.11,
+     "unit": "ft",
+     "target": 0.25,
+     "met": false,
+     "n": 1610,
+     "parts": [
+      {
+       "key": "rising",
+       "value": 0.6,
+       "target": 0.25,
+       "n": 160,
+       "met": false
+      },
+      {
+       "key": "slow rise",
+       "value": -0.09,
+       "target": 0.25,
+       "n": 180,
+       "met": true
+      },
+      {
+       "key": "calm",
+       "value": -0.13,
+       "target": 0.25,
+       "n": 368,
+       "met": true
+      },
+      {
+       "key": "slow fall",
+       "value": -0.08,
+       "target": 0.25,
+       "n": 546,
+       "met": true
+      },
+      {
+       "key": "falling",
+       "value": 0.59,
+       "target": 0.25,
+       "n": 294,
+       "met": false
+      }
+     ],
+     "detail": {},
+     "targetText": "12 h forecast within 0.25 ft of reality on average, in every kind of river movement"
+    },
+    {
+     "id": 6,
+     "key": "coverage",
+     "value": 79.9,
+     "unit": "%",
+     "target": "75-85",
+     "met": false,
+     "n": 10879,
+     "parts": [
+      {
+       "key": "h1",
+       "value": 79.6,
+       "target": "75-85",
+       "n": 2623,
+       "met": true
+      },
+      {
+       "key": "h3",
+       "value": 83.8,
+       "target": "75-85",
+       "n": 2620,
+       "met": true
+      },
+      {
+       "key": "h6",
+       "value": 82,
+       "target": "75-85",
+       "n": 2618,
+       "met": true
+      },
+      {
+       "key": "h12",
+       "value": 75.7,
+       "target": "75-85",
+       "n": 1610,
+       "met": true
+      },
+      {
+       "key": "h24",
+       "value": 74.4,
+       "target": "75-85",
+       "n": 1408,
+       "met": false
+      }
+     ],
+     "detail": {},
+     "targetText": "the stated 80% range holds the real level 75-85% of the time at every horizon"
+    },
+    {
+     "id": 7,
+     "key": "fastRises",
+     "value": 70.7,
+     "unit": "%",
+     "target": 95,
+     "met": false,
+     "n": 150,
+     "parts": [
+      {
+       "key": "called",
+       "value": 70.7,
+       "target": 95,
+       "n": 150,
+       "met": false
+      }
+     ],
+     "detail": {},
+     "targetText": "at least 95% of rises of 10 cm or more in an hour were called Rising"
+    },
+    {
+     "id": 8,
+     "key": "risingRight",
+     "value": 66.2,
+     "unit": "%",
+     "target": 75,
+     "met": false,
+     "n": 557,
+     "parts": [
+      {
+       "key": "right",
+       "value": 66.2,
+       "target": 75,
+       "n": 557,
+       "met": false
+      }
+     ],
+     "detail": {},
+     "targetText": "at least 75% of Rising calls were followed by a rise"
+    },
+    {
+     "id": 9,
+     "key": "inputs",
+     "value": 24,
+     "unit": "hours",
+     "target": 24,
+     "met": false,
+     "n": 5,
+     "parts": [
+      {
+       "key": "hours",
+       "value": 24,
+       "target": 24,
+       "n": 5,
+       "met": false,
+       "worst": 9
+      },
+      {
+       "key": "gaugesPerHour",
+       "value": 57,
+       "target": null,
+       "n": 99,
+       "met": null
+      },
+      {
+       "key": "flaggedShare",
+       "value": 3.4,
+       "target": null,
+       "n": 5721,
+       "met": null
+      }
+     ],
+     "detail": {
+      "runs": 5721,
+      "flaggedRuns": 194
+     },
+     "targetText": "forecasts in all 24 hours of every day"
+    },
+    {
+     "id": 10,
+     "key": "people",
+     "value": 28.6,
+     "unit": "%",
+     "target": 70,
+     "met": false,
+     "n": 14,
+     "parts": [
+      {
+       "key": "agree",
+       "value": 28.6,
+       "target": 70,
+       "n": 14,
+       "met": false
+      }
+     ],
+     "detail": {
+      "yes": 4,
+      "worse": 7,
+      "better": 3,
+      "source": "answers"
+     },
+     "targetText": "at least 70% of people say the forecast matches what they see"
+    }
+   ],
+   "summary": {
+    "met": 0,
+    "assessable": 9,
+    "total": 10,
+    "notJudged": 1
+   }
+  },
+  {
+   "id": "gauge-first-rain",
+   "name": "Rain gauges first",
+   "from": "2026-11-02T12:00:00Z",
+   "what": "In storms the forecast reads the rain measured by the rain gauges inside the catchment first, and the satellite only where no gauge is reporting.",
+   "runs": 344,
+   "days": 1,
    "liveUntil": null,
    "kpis": [
     {
@@ -6103,38 +6895,38 @@
     {
      "id": 2,
      "key": "falseAlarms",
-     "value": 100,
+     "value": null,
      "unit": "%",
      "target": 60,
      "met": null,
-     "n": 10,
+     "n": 0,
      "parts": [
       {
        "key": "possible",
-       "value": 100,
+       "value": null,
        "target": 60,
-       "n": 9,
+       "n": 0,
        "met": null
       },
       {
        "key": "likely",
-       "value": 100,
+       "value": null,
        "target": 25,
-       "n": 1,
+       "n": 0,
        "met": null
       }
      ],
      "detail": {
-      "falseAlarms": 10,
-      "gaugeDays": 115,
-      "falseAlarmsPerGaugeDay": 0.09,
+      "falseAlarms": 0,
+      "gaugeDays": 29,
+      "falseAlarmsPerGaugeDay": 0,
       "possible": {
-       "n": 9,
-       "didNot": 9
+       "n": 0,
+       "didNot": 0
       },
       "likely": {
-       "n": 1,
-       "didNot": 1
+       "n": 0,
+       "didNot": 0
       }
      },
      "targetText": "at most 60% of \"possible\" and 25% of \"likely\" warnings fail to happen"
@@ -6142,50 +6934,50 @@
     {
      "id": 3,
      "key": "honest",
-     "value": 25,
+     "value": null,
      "unit": "%",
      "target": 10,
-     "met": false,
-     "n": 3853,
+     "met": null,
+     "n": 0,
      "parts": [
       {
        "key": "0-10",
-       "value": 0,
-       "shown": 0.1,
+       "value": null,
+       "shown": null,
        "target": 10,
-       "n": 3732,
-       "met": true
+       "n": 0,
+       "met": null
       },
       {
        "key": "10-20",
-       "value": 0,
-       "shown": 12,
+       "value": null,
+       "shown": null,
        "target": 10,
-       "n": 52,
-       "met": false
+       "n": 0,
+       "met": null
       },
       {
        "key": "20-30",
-       "value": 0,
-       "shown": 22.4,
+       "value": null,
+       "shown": null,
        "target": 10,
-       "n": 38,
-       "met": false
+       "n": 0,
+       "met": null
       },
       {
        "key": "30-50",
-       "value": 0,
-       "shown": 31.8,
+       "value": null,
+       "shown": null,
        "target": 10,
-       "n": 30,
-       "met": false
+       "n": 0,
+       "met": null
       },
       {
        "key": "50-70",
-       "value": 0,
-       "shown": 50,
+       "value": null,
+       "shown": null,
        "target": 10,
-       "n": 1,
+       "n": 0,
        "met": null
       },
       {
@@ -6210,41 +7002,41 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 3732,
-        "shownPct": 0.1,
-        "observedPct": 0,
-        "met": true
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
+        "met": null
        },
        {
         "from": 0.1,
         "to": 0.2,
-        "n": 52,
-        "shownPct": 12,
-        "observedPct": 0,
-        "met": false
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
+        "met": null
        },
        {
         "from": 0.2,
         "to": 0.3,
-        "n": 38,
-        "shownPct": 22.4,
-        "observedPct": 0,
-        "met": false
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
+        "met": null
        },
        {
         "from": 0.3,
         "to": 0.5,
-        "n": 30,
-        "shownPct": 31.8,
-        "observedPct": 0,
-        "met": false
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
+        "met": null
        },
        {
         "from": 0.5,
         "to": 0.7,
-        "n": 1,
-        "shownPct": 50,
-        "observedPct": 0,
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
         "met": null
        },
        {
@@ -6264,89 +7056,89 @@
         "met": null
        }
       ],
-      "groupsJudged": 4,
-      "groupsOk": 1
+      "groupsJudged": 0,
+      "groupsOk": 0
      },
      "targetText": "within 10 points in every group with 10+ cases"
     },
     {
      "id": 4,
      "key": "skill",
-     "value": 18.9,
+     "value": 2.7,
      "unit": "%",
      "target": 30,
      "met": false,
-     "n": 8462,
+     "n": 310,
      "parts": [
       {
        "key": "h1",
-       "value": 24,
+       "value": 6.7,
        "target": 30,
-       "n": 2152,
+       "n": 166,
        "met": false
       },
       {
        "key": "h3",
-       "value": 22.9,
+       "value": 5.9,
        "target": 30,
-       "n": 2095,
+       "n": 113,
        "met": false
       },
       {
        "key": "h6",
-       "value": 18.9,
+       "value": 2.7,
        "target": 30,
-       "n": 2012,
+       "n": 31,
        "met": false
       },
       {
        "key": "h12",
-       "value": 14.5,
+       "value": null,
        "target": 20,
-       "n": 1205,
-       "met": false
+       "n": 0,
+       "met": null
       },
       {
        "key": "h24",
-       "value": 8.5,
+       "value": null,
        "target": 10,
-       "n": 998,
-       "met": false
+       "n": 0,
+       "met": null
       },
       {
        "key": "worstPhase",
-       "value": 3.3,
+       "value": -1.5,
        "target": 0,
-       "n": 8162,
-       "met": true
+       "n": 309,
+       "met": false
       }
      ],
      "detail": {
       "phases": {
        "rising": {
-        "n": 697,
-        "skill": 15.3,
-        "horizons": 5
+        "n": 77,
+        "skill": 6.3,
+        "horizons": 2
        },
        "slow rise": {
-        "n": 897,
-        "skill": 8.4,
-        "horizons": 5
+        "n": 56,
+        "skill": 2.4,
+        "horizons": 2
        },
        "calm": {
-        "n": 2138,
-        "skill": 3.3,
-        "horizons": 5
+        "n": 58,
+        "skill": -1.5,
+        "horizons": 2
        },
        "slow fall": {
-        "n": 3074,
-        "skill": 14.7,
-        "horizons": 5
+        "n": 75,
+        "skill": 7.4,
+        "horizons": 2
        },
        "falling": {
-        "n": 1356,
-        "skill": 31.1,
-        "horizons": 5
+        "n": 43,
+        "skill": 17.5,
+        "horizons": 2
        }
       }
      },
@@ -6355,46 +7147,46 @@
     {
      "id": 5,
      "key": "bias",
-     "value": 0.21,
+     "value": null,
      "unit": "ft",
      "target": 0.25,
-     "met": false,
-     "n": 1205,
+     "met": null,
+     "n": 0,
      "parts": [
       {
        "key": "rising",
-       "value": 0.5,
+       "value": null,
        "target": 0.25,
-       "n": 96,
-       "met": false
+       "n": 0,
+       "met": null
       },
       {
        "key": "slow rise",
-       "value": -0.1,
+       "value": null,
        "target": 0.25,
-       "n": 121,
-       "met": true
+       "n": 0,
+       "met": null
       },
       {
        "key": "calm",
-       "value": -0.05,
+       "value": null,
        "target": 0.25,
-       "n": 277,
-       "met": true
+       "n": 0,
+       "met": null
       },
       {
        "key": "slow fall",
-       "value": 0.08,
+       "value": null,
        "target": 0.25,
-       "n": 429,
-       "met": true
+       "n": 0,
+       "met": null
       },
       {
        "key": "falling",
-       "value": 0.8,
+       "value": null,
        "target": 0.25,
-       "n": 235,
-       "met": false
+       "n": 0,
+       "met": null
       }
      ],
      "detail": {},
@@ -6403,46 +7195,46 @@
     {
      "id": 6,
      "key": "coverage",
-     "value": 80.8,
+     "value": 56.5,
      "unit": "%",
      "target": "75-85",
      "met": false,
-     "n": 8462,
+     "n": 310,
      "parts": [
       {
        "key": "h1",
-       "value": 80,
+       "value": 57.8,
        "target": "75-85",
-       "n": 2152,
-       "met": true
+       "n": 166,
+       "met": false
       },
       {
        "key": "h3",
-       "value": 84.2,
+       "value": 55.8,
        "target": "75-85",
-       "n": 2095,
-       "met": true
+       "n": 113,
+       "met": false
       },
       {
        "key": "h6",
-       "value": 83,
+       "value": 51.6,
        "target": "75-85",
-       "n": 2012,
-       "met": true
+       "n": 31,
+       "met": false
       },
       {
        "key": "h12",
-       "value": 78.2,
+       "value": null,
        "target": "75-85",
-       "n": 1205,
-       "met": true
+       "n": 0,
+       "met": null
       },
       {
        "key": "h24",
-       "value": 74.1,
+       "value": null,
        "target": "75-85",
-       "n": 998,
-       "met": false
+       "n": 0,
+       "met": null
       }
      ],
      "detail": {},
@@ -6451,17 +7243,17 @@
     {
      "id": 7,
      "key": "fastRises",
-     "value": 69,
+     "value": 76.5,
      "unit": "%",
      "target": 95,
      "met": false,
-     "n": 126,
+     "n": 51,
      "parts": [
       {
        "key": "called",
-       "value": 69,
+       "value": 76.5,
        "target": 95,
-       "n": 126,
+       "n": 51,
        "met": false
       }
      ],
@@ -6471,17 +7263,17 @@
     {
      "id": 8,
      "key": "risingRight",
-     "value": 67,
+     "value": 65.9,
      "unit": "%",
      "target": 75,
      "met": false,
-     "n": 451,
+     "n": 91,
      "parts": [
       {
        "key": "right",
-       "value": 67,
+       "value": 65.9,
        "target": 75,
-       "n": 451,
+       "n": 91,
        "met": false
       }
      ],
@@ -6491,62 +7283,62 @@
     {
      "id": 9,
      "key": "inputs",
-     "value": 24,
+     "value": 7,
      "unit": "hours",
      "target": 24,
      "met": false,
-     "n": 4,
+     "n": 1,
      "parts": [
       {
        "key": "hours",
-       "value": 24,
+       "value": 7,
        "target": 24,
-       "n": 4,
+       "n": 1,
        "met": false,
-       "worst": 9
+       "worst": 7
       },
       {
        "key": "gaugesPerHour",
-       "value": 56,
+       "value": 49,
        "target": null,
-       "n": 81,
+       "n": 7,
        "met": null
       },
       {
        "key": "flaggedShare",
-       "value": 3,
+       "value": 0.9,
        "target": null,
-       "n": 4653,
+       "n": 344,
        "met": null
       }
      ],
      "detail": {
-      "runs": 4653,
-      "flaggedRuns": 141
+      "runs": 344,
+      "flaggedRuns": 3
      },
      "targetText": "forecasts in all 24 hours of every day"
     },
     {
      "id": 10,
      "key": "people",
-     "value": 36.4,
+     "value": 50,
      "unit": "%",
      "target": 70,
-     "met": false,
-     "n": 11,
+     "met": null,
+     "n": 2,
      "parts": [
       {
        "key": "agree",
-       "value": 36.4,
+       "value": 50,
        "target": 70,
-       "n": 11,
-       "met": false
+       "n": 2,
+       "met": null
       }
      ],
      "detail": {
-      "yes": 4,
-      "worse": 5,
-      "better": 2,
+      "yes": 1,
+      "worse": 1,
+      "better": 0,
       "source": "answers"
      },
      "targetText": "at least 70% of people say the forecast matches what they see"
@@ -6554,9 +7346,9 @@
    ],
    "summary": {
     "met": 0,
-    "assessable": 8,
+    "assessable": 5,
     "total": 10,
-    "notJudged": 2
+    "notJudged": 5
    }
   }
  ]
