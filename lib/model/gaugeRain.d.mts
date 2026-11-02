@@ -15,7 +15,7 @@ export type GroundRainSeries = {
   near: RainFn;
   up: RainFn | null;
   past24Full: number | null;
-  used: { name: string; institute: string; zones: string[]; mm24: number }[];
+  used: { name: string; institute: string; zones: string[]; mm24: number; mm3: number }[];
 };
 export function groundRainSeries(a: { gauges: GroundGauge[]; origin: number; sat?: { full?: RainFn; near?: RainFn; up?: RainFn } | null; zones: Zones | null }): GroundRainSeries | null;
 export const GUARD_MIN_GAUGES: number;

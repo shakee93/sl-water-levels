@@ -52,6 +52,7 @@ import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { isStormHour4, rainTotals, stormFeatures, stormFeatures4, tier4Bin, v4Rain } from "./model/stormModel.mjs";
 import { groundRainSeries, switchOnAllowed, zonesFrom, type GroundGauge, type GroundRainSeries } from "./model/gaugeRain.mjs";
+import { wetCore, wetCoreRise, wetCoreScale } from "./model/wetCore.mjs";
 import catchmentsJson from "./model/catchments.json";
 import subcatchmentsJson from "./model/subcatchments.json";
 import {
@@ -162,6 +163,11 @@ export type Forecast = {
   horizonLimitH?: number | null;
   /** Every fitted horizon before the limit above (same shape as `horizons`), for the forecast log only; absent when nothing was cut. */
   rawHorizons?: Forecast["horizons"];
+  /**
+   * HIDDEN SHADOW input (lib/model/wetCore.mjs, variant `wet-core` in lib/shadowForecast.ts): the live gauges' wet core and the rise it implies. For the forecast log
+   * only (/api/forecasts?shadow=1); never shown, never read by a verdict. Present only when the core is active at a gauge whose storm model is skilled.
+   */
+  wetCore?: { rise: number; base0: number; core24: number; mean24: number; recent3: number | null; k: number; n: number };
   /** GloFAS flag. null = no GloFAS for this basin or the feed failed. */
   outlook: "normal" | "elevated" | null;
   headline: string;
@@ -722,6 +728,7 @@ function fromModel(
     basis,
     horizons: hsV.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })),
     horizonLimitH: limitH,
+    ...(gsteps?.wetCore ? { wetCore: gsteps.wetCore } : {}),
     ...(hsV !== hs ? { rawHorizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })) } : {}),
     crossings, rawCrossings, outlook, headline, notes,
     signals: signalsOf(trend, w?.past6hMm ?? null),
@@ -765,7 +772,7 @@ type GaugeStep = {
   /** The rain it read came from live rain gauges in the catchment (lib/model/gaugeRain.mjs), not (only) the satellite. */
   ground?: boolean;
 };
-type GaugeSteps = GaugeStep[] & { groundUsed?: { name: string; institute: string }[] };
+type GaugeSteps = GaugeStep[] & { groundUsed?: { name: string; institute: string }[]; wetCore?: NonNullable<Forecast["wetCore"]> };
 
 /** Hourly catchment rain: the deterministic series (past analysis + forecast) and the heavier ensemble scenario (p90), keyed by hour-end ms. */
 type StormRain = { det: RainSeries; p90: RainSeries | null };
@@ -893,6 +900,15 @@ function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, n
   }
   const sorted = out.sort((a, b) => a.h - b.h) as GaugeSteps;
   if (gr && sorted.some((x) => x.ground)) sorted.groundUsed = gr.used.map((u) => ({ name: u.name, institute: u.institute }));
+  // hidden shadow `wet-core` (lib/model/wetCore.mjs): the wettest part of the catchment is raining now and the gauge's storm model is skilled -> the rise it implies
+  if (gr && m4) {
+    const core = wetCore(gr.used);
+    const rise = wetCoreRise(core, wetCoreScale(m4));
+    const own = series.get(station)?.filter((r) => r.ts <= anchor && r.ts >= anchor - 24 * HOUR_MS).map((r) => r.wl) ?? [];
+    if (rise > 0 && own.length >= 6 && core.core24 != null && core.mean24 != null) {
+      sorted.wetCore = { rise, base0: Math.min(...own), core24: core.core24, mean24: core.mean24, recent3: core.recent3, k: core.k, n: core.n };
+    }
+  }
   return sorted;
 }
 

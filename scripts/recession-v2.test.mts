@@ -82,7 +82,7 @@ for (let n = 0; n < 300; n++) {
 // 4. the slow-fall variant: a gentle fall is copied by v2 and lowered by v2-slow; both are in shadowVariants and the rain gate applies
 const gentle = mkObs(0.05);
 const sv = shadowVariants(f, gentle, OK_RAIN);
-assert.deepEqual(sv.map((v) => v.variant), ["copy", "recession-v1", "recession-v2", "recession-v2-slow"]);
+assert.deepEqual(sv.map((v) => v.variant), ["copy", "recession-v1", "recession-v2", "recession-v2-slow", "wet-core"]);
 assert.deepEqual(sv[2].horizons, f.horizons, "v2: 0.05 ft/h is not falling enough");
 assert.ok(sv[3].horizons.some((p, i) => p.level < f.horizons[i].level), "v2-slow lowers a gentle fall");
 const sv2 = shadowVariants(f, obs, OK_RAIN);

@@ -18,10 +18,14 @@
 //                 a guard list of gauges where the law lost to "no change". Levels and the 80% range move; crossing chances are NOT recomputed:
 //                 the nightly KPIs 4-8 (lib/forecastKpi.mjs) score shadows on levels and bands only.
 //   recession-v2-slow  the same law from a gentle fall (-0.03 ft/h): tests the slow-fall bias (+0.34 ft at 12 h, +0.58 ft at 24 h in the live week).
+//   wet-core      (lib/model/wetCore.mjs, 2 Nov 2026) a FLOOR on the rise when the wettest part of the catchment is raining now (mean of the wettest fifth of the live
+//                 HMIS gauges >= 40 mm in 24 h and >= 25 mm in the last 3 h) at a gauge whose storm model is skilled. 1 Nov: the Hanwella catchment MEAN was 17 mm, the core
+//                 51 mm, the 12 h forecast 2.82 m vs 3.19 m. Raises level and range together, never lowers; a copy whenever the core is not active.
 
 import type { Forecast } from "./forecast";
 import { TRIGGER_FT_PER_H, TRIGGER_SLOW_FT_PER_H, VARIANT as RECESSION_V2, VARIANT_SLOW as RECESSION_V2_SLOW, recessionV2, type RV2Params, type RV2Rain } from "./recessionV2.mjs";
 import recessionParams from "./model/recession-params.json" with { type: "json" };
+import { VARIANT as WET_CORE, applyWetCore } from "./model/wetCore.mjs";
 
 export type ShadowHorizon = { h: number; ts: number; level: number; low: number | null; high: number | null };
 export type ShadowVariant = { variant: string; horizons: ShadowHorizon[] };
@@ -58,7 +62,7 @@ export function recessionCorrectionFt(unit: "ft" | "m" | null, currentLevel: num
  * `rain` = the run's rain inputs for the recession-v2 gate (storm flag, 6 h forecast rain, 24 h p90); omitted or null = unknown, and then the v2 variants are
  * plain copies. `station` is needed for the per-gauge law (omitted: v2 variants are copies).
  */
-export function shadowVariants(f: Pick<Forecast, "unit" | "currentLevel" | "asOfTs" | "horizons" | "method"> & { station?: string }, observations: Obs[], rain?: RV2Rain | null): ShadowVariant[] {
+export function shadowVariants(f: Pick<Forecast, "unit" | "currentLevel" | "asOfTs" | "horizons" | "method" | "wetCore"> & { station?: string }, observations: Obs[], rain?: RV2Rain | null): ShadowVariant[] {
   if (!f.horizons.length) return [];
   const copy = f.horizons.map((p) => ({ ...p }));
   const corr = f.method === "model" ? recessionCorrectionFt(f.unit, f.currentLevel, f.asOfTs, observations) : null;
@@ -76,5 +80,6 @@ export function shadowVariants(f: Pick<Forecast, "unit" | "currentLevel" | "asOf
     { variant: RECESSION_VARIANT, horizons: rec },
     { variant: RECESSION_V2, horizons: v2(TRIGGER_FT_PER_H) },
     { variant: RECESSION_V2_SLOW, horizons: v2(TRIGGER_SLOW_FT_PER_H) },
+    { variant: WET_CORE, horizons: f.method === "model" && f.wetCore ? applyWetCore(f.horizons, f.wetCore.base0, f.wetCore.rise) : f.horizons.map((p) => ({ ...p })) },
   ];
 }

@@ -1238,6 +1238,25 @@ Owner decision: "prioritize the live rain gauges and fall back to satellite if n
   the Kelani gauges are unchanged in the level (no switch-on). Limit: a gauge MEAN dilutes a storm concentrated in a few cells (Hanwella 1 Nov 14:00Z: core gauges 60-77 mm, catchment mean 17 mm, under the 40 mm gate;
   even forcing the gate on moves the 12 h step by 0.04 m), so this does not by itself fix that miss.
 
+### Shadow: `wet-core` (2 Nov 2026)
+
+HIDDEN, logged beside the live forecast (`shadows` in `/api/forecasts?shadow=1`, D1 `forecast_shadow_points`, scored nightly in `kpi/latest.json` `variants`); visitors see nothing, the live forecast, verdicts and push are unchanged.
+Why: on 1 Nov the Hanwella catchment MEAN rain was 17 mm (46 gauges) while the wet core read 46-60 mm; the 14:35Z 12 h forecast was 2.82 m vs 3.19 m actual (the gauge-first change above did not fix it).
+- **What it is** (`lib/model/wetCore.mjs`, tests `scripts/wet-core.test.mts`): `core24` = mean of the wettest fifth (min 3) of the live gauges' 24 h totals inside the full catchment (`GroundRainSeries.used`).
+  ACTIVE only when `core24 >= 40 mm`, the k-th wettest gauge alone `>= 20 mm`, at least 6 gauges, AND the same k gauges averaged `>= 25 mm` in the last 3 h (`mm3`, the hours the 4.5 h of points cover: the core is raining now;
+  without this, 28 Oct's leftover 24 h totals of 41-48 mm over a falling Kelani switched it on). Then `rise = min(1.5, BETA x (core24 - 20)) x scale`, `BETA = 0.03` (metres per mm per unit of the gauge's own v4 storm `scale`),
+  and the shadow level at horizon h is `max(live, base0 + rise x min(1, h / 12))`, `base0` = lowest reading of the last 24 h; the 80% range moves up with it. Never lowers. Only for gauges whose v4 storm model is skilled at some horizon
+  (`wetCoreScale`: Hanwella, Nagalagam Street, Magura, Ellagawa, Kalawellawa, Putupaula, Dunamale, Horowpothana, Manampitiya, Moragaswewa, Nawalapitiya, Peradeniya); everywhere else, and whenever the core is not active, it is a plain copy of live.
+- **Tried and rejected: scaling the rain.** Multiplying the gauge-first rain up to the core (effective rain = mean + lambda x (core - mean), which also lets the storm gate fire) did not move the Hanwella 12 h step (+-0.03 m even with lambda = 1: the 12 h weights of the v4 model sit on forecast rain and the last hour,
+  not on the past 24 h) and at lambda = 0.5 switched storm models on in 35 runs, 25 of them false (river rose < 10 cm). So the shadow does not touch the storm model.
+- **Backtest** (`node --experimental-strip-types --no-warnings scripts/wet-core-backtest.mts <archiveDir> --sweep`; same archive and replay as the gauge-first backtest, 27 Oct - 1 Nov, 4,697 runs, 19,291 rows): active on 6 runs (Hanwella 3, Nagalagam Street 3, all 1 Nov), 11 rows changed (all Hanwella).
+  Hanwella 1 Nov 11:00-19:00Z, 28 rows: MAE 0.256 -> 0.180 m (12 h 0.573 -> 0.359 m, bias -0.21 -> +0.01); the 14:35Z run: 12 h 3.18 vs 3.19 m actual (live 2.82). 15:30Z onward unchanged (live already follows the rise). Glencourse is not eligible (its storm model is not skilled): unchanged, 12 h MAE 0.695.
+  Calm days (27, 29-31 Oct) and 28 Oct: identical to live by construction, 0 false raises. Without the eligibility and "raining now" gates the same rule raised 56 rows on 9 gauge-days, 41 of them farther from the outcome.
+- **Limits.** The only fitted number, `BETA`, is fitted on ONE storm and effectively one gauge (Hanwella): leave-one-gauge-out and leave-one-day-out have nothing to validate on. Cross-check: the observed total rise per `scale x (core24 - 20)` on 1 Nov
+  was 0.015-0.07 (median ~0.03) across nine Kelani / Ratnapura gauges (not all eligible) that responded. The active window is the first 3-5 h of a cloudburst (the live state keeps 4.5 h); the model then relies on the live forecast once the river itself rises. `base0` is the 24 h minimum, so a gauge that is
+  already high from an earlier flood is floored from its pre-event trough: guarded by the "raining now" test, not eliminated.
+- **Promotion** (KPI cycle): at least 7 days in shadow including a rain event, KPIs 4-6 better than live for the variant and KPI 1 / KPI 2 not worse, Ditwah gate; then a `versions.json` entry with si/ta strings. Until then re-run the backtest after every storm and refit `BETA`.
+
 ## Forecast KPIs (29 Oct 2026)
 
 Ten targets the owner approved, scored every night over a rolling 30 days and per day, for the live forecast and each shadow candidate, and per forecast version. Public page: `/forecast-accuracy` (en/si/ta), plain language, "Forecasts met N of 10 targets". MEASURES ONLY: nothing here changes a forecast, a verdict, an alert or a push.

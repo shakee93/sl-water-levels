@@ -1,0 +1,16 @@
+export const VARIANT: string;
+export const CORE_SHARE: number;
+export const CORE_MIN_K: number;
+export const CORE_MIN_N: number;
+export const CORE_MIN_MM: number;
+export const CORE_EDGE_MM: number;
+export const RECENT_MIN_MM: number;
+export const BETA: number;
+export const RISE_CAP: number;
+export const PEAK_H: number;
+export type WetCore = { active: boolean; n: number; k: number; core24: number | null; mean24: number | null; recent3: number | null };
+export function wetCore(used: { mm24: number; mm3?: number }[], o?: { share?: number; minMm?: number; edgeMm?: number; recentMm?: number }): WetCore;
+export function wetCoreRise(core: WetCore | null | undefined, scale: number, o?: { beta?: number; edgeMm?: number }): number;
+export function wetCoreFloor(base0: number, rise: number, h: number, peakH?: number): number;
+export function applyWetCore<T extends { h: number; level: number; low: number | null; high: number | null }>(horizons: T[], base0: number | null, rise: number, peakH?: number): T[];
+export function wetCoreScale(m4: { scale?: number; horizons?: Record<string, { use?: boolean }> } | null | undefined): number;
