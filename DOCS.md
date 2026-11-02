@@ -1215,6 +1215,29 @@ re-validating every number against the same bounds (`streetLevelOf`, `rainPossib
 **Known limits.** One person who answers on the site and in the street report counts twice (the two tables use different salts). A gauge
 level learned from rain-caused street water (Nagalagam Street, ~3 ft) is a level at which water WAS seen, not proof the river caused it.
 
+## Gauge-first rain for the river forecast (2 Nov 2026)
+
+Owner decision: "prioritize the live rain gauges and fall back to satellite if not available", for the rain the river-level forecast reads
+(`lib/forecast.ts` `gaugeSteps`). Why: on 31 Oct - 1 Nov the HMIS ground gauges inside the Kelani catchment measured 55-77 mm in 24 h
+(Kithulgala, Kalupahana, Deraniyagala) while JAXA GSMaP read about 1 mm, so the storm models never switched on.
+
+- **Code**: `lib/model/gaugeRain.mjs` (pure, tested by `scripts/gauge-first-rain.test.mts`), read by `v4Rain` in `lib/model/stormModel.mjs`; the live gauges come from
+  `lib/groundRainLive.ts getGroundGauges()` (the data branch's `hmis/rain-live.json` plus the site's own HMIS cache: no new upstream request), loaded in `loadForecast`
+  with a 2.5 s budget. Any failure or no gauge = the satellite, byte for byte as before.
+- **Rule**: per zone (full catchment, "near" beside the gauge, "up" up-channels; the cells of `catchments.json` / `subcatchments.json`) and per hour `k = -24 ... 0`: if at
+  least one live HMIS gauge inside the zone has the hour, the zone's rain is the MEAN of those gauges (no satellite bias factor, same 15 mm/h clip); otherwise the satellite
+  hour with its bias factor, as before. The v3 storm gate also fires when the gauges' past-24 h catchment mean reaches `STORM.gate` (it still needs the weather model's `rain` for its features).
+- **Hourly rain from a rolling 24 h sum** (the state keeps 4.5 h of `[minute, S]`; the exact recursion needs the rain of 24 h earlier): the 24 hours before the forecast hour add up
+  to the gauge's own 24 h figure at the hour mark (so the storm-gate total is exact); hours the kept points cover get `S(e) - S(e - 1 h)` (a lower bound, floored at 0); the rest
+  of the total is spread over the uncovered hours in the satellite's shape (70% shape + 30% uniform; uniform when the satellite shows < 2 mm there). A gauge older than ~1.75 h at the
+  hour mark or reading > 500 mm in 24 h is skipped.
+- **Shown**: the forecast basis names "the rain gauges inside it (HMIS - Irrigation Department (hmis.gov.lk), NBRO / Met Department / ACCIMT)" for the steps whose rain came from gauges
+  (`Forecast.stormHorizonsGround`, `Forecast.rainGauges`), "the satellite" otherwise. Official steps alone still drive verdicts and push; HMIS gauges are rain inputs here, never "upstream" level gauges.
+- **Backtest**: `scripts/gauge-first-rain-backtest.mts <archiveDir>` replays the forecast archive (exact live gauge state from the `hmis/rain-live.json` commits). Its header lists the assumptions.
+  27 Oct - 1 Nov (4,697 runs, 36 gauges): calm rows identical by construction; storm-affected rows (157) MAE 0.427 -> 0.407 m, 80% band coverage 88% -> 94% (ranges wider: 2.39 -> 3.04 m);
+  the Kelani gauges are unchanged in the level (no switch-on). Limit: a gauge MEAN dilutes a storm concentrated in a few cells (Hanwella 1 Nov 14:00Z: core gauges 60-77 mm, catchment mean 17 mm, under the 40 mm gate;
+  even forcing the gate on moves the 12 h step by 0.04 m), so this does not by itself fix that miss.
+
 ## Forecast KPIs (29 Oct 2026)
 
 Ten targets the owner approved, scored every night over a rolling 30 days and per day, for the live forecast and each shadow candidate, and per forecast version. Public page: `/forecast-accuracy` (en/si/ta), plain language, "Forecasts met N of 10 targets". MEASURES ONLY: nothing here changes a forecast, a verdict, an alert or a push.

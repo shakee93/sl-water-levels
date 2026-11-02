@@ -95,6 +95,8 @@ const en = {
   "ver.storm-v4.what": "In storms the forecast reads the rain the satellite actually measured, timing rain beside the gauge and rain upstream separately.",
   "ver.glitch-filter.name": "Sensor-glitch filter",
   "ver.glitch-filter.what": "One-reading spikes and frozen sensors are cleaned out of the readings the forecast learns from, so a faulty gauge no longer distorts it.",
+  "ver.gauge-first-rain.name": "Rain gauges first",
+  "ver.gauge-first-rain.what": "In storms the forecast reads the rain measured by the rain gauges inside the catchment first, and the satellite only where no gauge is reporting.",
   "link": "How accurate has this been? See forecast accuracy",
 } as const;
 
@@ -191,6 +193,8 @@ const si: Record<ForecastKpiKey, string> = {
   "ver.storm-v4.what": "කුණාටු වලදී පුරෝකථනය චන්ද්‍රිකාව සැබවින්ම මැනූ වැසි කියවයි, මානය අසල වැසි සහ ඉහළ ප්‍රදේශයේ වැසි වෙන වෙනම වේලා ගත කරයි.",
   "ver.glitch-filter.name": "සංවේදක දෝෂ පෙරහන",
   "ver.glitch-filter.what": "එක් කියවීමක උල්පත් සහ අවහිර වූ සංවේදක පුරෝකථනය ඉගෙන ගන්නා කියවීම් වලින් ඉවත් කෙරේ, එබැවින් දෝෂ සහිත මානයක් එය තවදුරටත් විකෘති නොකරයි.",
+  "ver.gauge-first-rain.name": "වැසි මානවලට මුල්තැන",
+  "ver.gauge-first-rain.what": "කුණාටු වලදී පුරෝකථනය මුලින්ම ජල පෝෂක ප්‍රදේශය තුළ ඇති වැසි මාන මැනූ වැසි කියවයි; කිසිදු මානයක් වාර්තා නොකරන තැන්වල පමණක් චන්ද්‍රිකා දත්ත භාවිත කරයි.",
   "link": "මෙය කොතරම් නිවැරදිද? පුරෝකථන නිරවද්‍යතාව බලන්න",
 };
 
@@ -285,6 +289,8 @@ const ta: Record<ForecastKpiKey, string> = {
   "ver.storm-v4.what": "புயல்களில் முன்னறிவிப்பு செயற்கைக்கோள் உண்மையில் அளந்த மழையைப் படிக்கிறது, நிலையத்தின் அருகிலுள்ள மழையையும் மேல்பகுதி மழையையும் தனித்தனியாக நேரப்படுத்துகிறது.",
   "ver.glitch-filter.name": "உணரிப் பழுது வடிகட்டி",
   "ver.glitch-filter.what": "ஒரு அளவீட்டு உச்சங்களும் உறைந்த உணரிகளும் முன்னறிவிப்பு கற்கும் அளவீடுகளிலிருந்து நீக்கப்படுகின்றன, இதனால் பழுதான நிலையம் இனி அதைச் சிதைக்காது.",
+  "ver.gauge-first-rain.name": "மழைமானிகளுக்கு முன்னுரிமை",
+  "ver.gauge-first-rain.what": "புயல்களில் முன்னறிவிப்பு முதலில் நீர்ப்பிடிப்புப் பகுதிக்குள் உள்ள மழைமானிகள் அளந்த மழையைப் படிக்கிறது; எந்த மானியும் அறிவிக்காத இடங்களில் மட்டுமே செயற்கைக்கோள் தரவைப் பயன்படுத்துகிறது.",
   "link": "இது எவ்வளவு துல்லியமாக இருந்தது? முன்னறிவிப்புத் துல்லியத்தைப் பார்க்கவும்",
 };
 

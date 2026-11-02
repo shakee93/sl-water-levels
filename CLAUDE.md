@@ -263,6 +263,10 @@ These cost real debugging time. Future-you should not relearn them.
 
 - **Forecast KPIs** (29 Oct 2026, DOCS.md "Forecast KPIs"): ten owner-approved targets scored nightly (`lib/forecastKpi.mjs`, `scripts/forecast-kpi.mjs` -> `kpi/latest.json` on `data`, versions in `lib/model/versions.json`, public `/forecast-accuracy`). The archive carries the readings (`forecasts/YYYY/*.readings.json`); a new forecast version needs a `versions.json` entry (+ si/ta strings) when it goes live.
 
+- **Gauge-first forecast rain** (2 Nov 2026, owner decision, DOCS.md "Gauge-first rain for the river forecast"): `lib/model/gaugeRain.mjs` builds the hourly full / near / up catchment rain the storm models
+  read from the live HMIS rain gauges (`lib/groundRainLive.ts`, no new upstream requests) and falls back to the satellite per zone and hour; no gauge = unchanged. Forecast basis names the HMIS gauges + institute.
+  Test `node --experimental-strip-types --no-warnings scripts/gauge-first-rain.test.mts`; backtest `scripts/gauge-first-rain-backtest.mts`. A gauge MEAN dilutes a storm concentrated in a few cells (Hanwella 1 Nov: core 60-77 mm, catchment mean 17 mm, under the 40 mm gate).
+
 - **Forecast display rules** (owner decisions 28 Oct 2026, `lib/forecastRules.mjs`, audit in the private `research/forecast-audit-workflow-2026-10-28.md`):
   shown chance of Minor <= 30% and Major <= 10%, never "likely" for them (the model's own figures stay in `Forecast.rawCrossings` / `rawHorizons` for the
   log); no forecast on `NO_FORECAST_GAUGES` (Ampara, Katharagama, Weraganthota); fast tributaries (`SHORT_FORECAST_GAUGES`) show the model only to 6 h;

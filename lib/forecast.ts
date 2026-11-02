@@ -51,6 +51,9 @@ import { isTidalStation } from "./verdictLift";
 import { rainTriggersFor } from "./rainTriggers";
 import { bandFor, gaugeFeatures, predictGauge, type GaugeStationModel } from "./model/gaugeModel.mjs";
 import { isStormHour4, rainTotals, stormFeatures, stormFeatures4, tier4Bin, v4Rain } from "./model/stormModel.mjs";
+import { groundRainSeries, switchOnAllowed, zonesFrom, type GroundGauge, type GroundRainSeries } from "./model/gaugeRain.mjs";
+import catchmentsJson from "./model/catchments.json";
+import subcatchmentsJson from "./model/subcatchments.json";
 import {
   evalStation,
   floorSigmaM,
@@ -190,6 +193,10 @@ export type Forecast = {
   stormHorizons: number[];
   /** Of `stormHorizons`, the steps that read MEASURED (satellite) rain with up-channel timing (model v4); the rest read the weather model's rain (v3). */
   stormHorizonsMeasured: number[];
+  /** Of the storm steps, the ones whose rain came from live rain gauges in the catchment (HMIS, lib/model/gaugeRain.mjs) rather than the satellite. Absent when none did. */
+  stormHorizonsGround?: number[];
+  /** The gauges behind `stormHorizonsGround` (name and institute, for the credit). Absent when none were used. */
+  rainGauges?: { name: string; institute: string }[];
 };
 
 export type ForecastInput = {
@@ -203,8 +210,26 @@ export type ForecastInput = {
   glofas?: Fetched<Glofas> | null;
   /** gsmap/latest.json (lib/gsmap.ts getGsmap: null when missing or older than 3 h); feeds the measured-rain storm model (v4). */
   gsmap?: GsmapFile | null;
+  /**
+   * Live HMIS rain gauges (lib/groundRainLive.ts getGroundGauges: [epoch minute, rolling 24 h sum] points). The rain the storm models read is
+   * GAUGE FIRST: where a gauge inside the catchment has the hour, its mean is used; the satellite only fills the hours and zones without one
+   * (lib/model/gaugeRain.mjs). null/empty = satellite only, exactly as before.
+   */
+  ground?: GroundGauge[] | null;
   now?: number;
 };
+
+/** Never wait long for the gauge state: it is a cached read, and a slow one must not hold up a forecast (fails soft to the satellite). */
+const GROUND_BUDGET_MS = 2500;
+async function loadGround(): Promise<GroundGauge[]> {
+  try {
+    const { getGroundGauges } = await import("./groundRainLive");
+    const g = await Promise.race([getGroundGauges(), new Promise<never[]>((r) => setTimeout(() => r([]), GROUND_BUDGET_MS))]);
+    return g as GroundGauge[];
+  } catch {
+    return [];
+  }
+}
 
 /** Fetch weather + GloFAS (both fail soft) and build the forecast. */
 // Forecast and StationCard (the chart) both ask for the same forecast in one render: compute it once.
@@ -214,10 +239,10 @@ export const loadForecast = cache(async function loadForecast(basin: string, sna
   if (hasNoForecast(station)) return makeForecast({ basin, snapshot, station, weather: null, glofas: null, gsmap: null });
   const covered = COEFFS[station] && normaliseBasin(COEFFS[station].basin) === key;
   // Rain is fetched for every gauge that has a grid (trend-only gauges show it too); GloFAS only matters to fitted models.
-  const [weather, glofas, gsmap] = hasCatchment(key, station)
-    ? await Promise.all([getBasinWeather(key, station), covered ? getGlofas(key) : null, STORM4.stations[station] ? import("./gsmap").then((m) => m.getGsmap()) : null])
-    : [null, null, null];
-  return makeForecast({ basin, snapshot, station, weather, glofas, gsmap });
+  const [weather, glofas, gsmap, ground] = hasCatchment(key, station)
+    ? await Promise.all([getBasinWeather(key, station), covered ? getGlofas(key) : null, STORM4.stations[station] ? import("./gsmap").then((m) => m.getGsmap()) : null, STORM4.stations[station] ? loadGround() : null])
+    : [null, null, null, null];
+  return makeForecast({ basin, snapshot, station, weather, glofas, gsmap, ground });
 });
 
 const r5 = (p: number) => Math.round(p * 20) / 20;
@@ -336,9 +361,11 @@ function v4InputOf(input: ForecastInput): V4In | null {
   const w = input.weather && input.weather.ok ? input.weather.data : null;
   const key = `${normaliseBasin(input.basin)}/${input.station}`;
   const sat = input.gsmap?.stations?.[key] ?? null;
-  return w && sat ? { sat, w } : null;
+  const gauges = input.ground ?? [];
+  // satellite file missing or too old is fine when ground gauges can supply the past rain
+  return w && (sat || gauges.length) ? { sat, w, gauges } : null;
 }
-type V4In = { sat: GsmapGauge; w: BasinWeather };
+type V4In = { sat: GsmapGauge | null; w: BasinWeather; gauges: GroundGauge[] };
 
 /**
  * Measured heavy rain (lib/measuredRain.ts) at `station` or a gauge upstream of it on the same river (BASIN_ORDER; a river that
@@ -371,7 +398,7 @@ const rainBits = (r: NonNullable<Forecast["rain"]>) =>
   `${r.past6hMm != null ? `${r.past6hMm.toFixed(1)} mm modelled for the last 6 hours, ` : ""}${r.past24hMm != null ? `${r.past24hMm.toFixed(0)} mm modelled for the last 24 hours` : ""}${r.next24hMm.det != null ? `, ${r.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}`.replace(/^, /, "");
 
 /** Trend-only forecast for stations without a fitted model. */
-function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number, anchor: number, weather: ForecastInput["weather"], steps: GaugeStep[] | null): Forecast {
+function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number, anchor: number, weather: ForecastInput["weather"], steps: GaugeSteps | null): Forecast {
   // The next hour is the gauge-only model where it beat "level stays put" out of sample, and plain "level stays put"
   // (never an extrapolated trend: it was less accurate than no change) with an honest range everywhere else.
   const step = steps?.find((x) => x.h === 1) ?? null;
@@ -513,6 +540,7 @@ function fromModel(
   const v2h = new Set<number>();
   const stormH = new Set<number>();
   const stormM = new Set<number>();
+  const stormG = new Set<number>(); // of the storm steps, the ones that read rain gauges in the catchment (lib/model/gaugeRain.mjs)
   for (const st of gsteps ?? []) {
     const j = hs.findIndex((x) => x.h === st.h);
     if (j < 0) continue;
@@ -524,6 +552,7 @@ function fromModel(
     v2h.add(st.h);
     if (st.storm) stormH.add(st.h);
     if (st.measured) stormM.add(st.h);
+    if (st.ground) stormG.add(st.h);
   }
   // A persistence horizon says "stays where it is", which is wrong right after a rain-driven
   // rise: a river that peaks at 12h is rarely back to normal by 24h. Blend 40% of the previous
@@ -669,7 +698,15 @@ function fromModel(
     basis.push(`Forecast model estimate of catchment rain (Open-Meteo, area average over ${w.cells.det} grid cells above ${station})${past != null ? `: ${past.toFixed(0)} mm modelled for the last 24 hours` : ""}${w.next24hMm.det != null ? `, ${w.next24hMm.det.toFixed(0)} mm forecast for the next 24 hours` : ""}${w.scenarios ? ", with ECMWF ensemble spread" : ""}.`);
   }
   if (v2h.size) basis.push(`The ${[...v2h].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings, including the November 2025 Ditwah floods); where this was tested against 'level stays the same' it missed by less.`);
-  if (stormM.size) basis.push(`The ${[...stormM].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b).join(", ")} hour steps read the rain the satellite measured over ${station}'s catchment (JAXA GSMaP, corrected for how it reads here), with rain beside the gauge and rain on the channels upstream timed separately (about ${STORM4.stations[station]?.lags.near ?? "?"} h from beside the gauge${STORM4.stations[station]?.lags.up ? `, about ${STORM4.stations[station].lags.up} h from upstream` : ""}). Tested storm by storm it was closer than the version that reads the weather model's rain.`);
+  const shownH = (set: Set<number>) => [...set].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b);
+  const satM = new Set([...stormM].filter((h) => !stormG.has(h)));
+  const gaugeM = new Set([...stormM].filter((h) => stormG.has(h)));
+  const groundUsed = gsteps?.groundUsed ?? [];
+  if (gaugeM.size && shownH(gaugeM).length) {
+    const inst = [...new Set(groundUsed.map((g) => g.institute).filter(Boolean))];
+    basis.push(`The ${shownH(gaugeM).join(", ")} hour steps read the rain measured over ${station}'s catchment, using the rain gauges inside it first (${groundUsed.length} gauge${groundUsed.length === 1 ? "" : "s"}: HMIS – Irrigation Department (hmis.gov.lk)${inst.length ? `, ${inst.join(", ")}` : ""}) and the satellite (JAXA GSMaP, corrected for how it reads here) only for the hours and parts of the catchment with no gauge. Rain beside the gauge and rain on the channels upstream are timed separately (about ${STORM4.stations[station]?.lags.near ?? "?"} h from beside the gauge${STORM4.stations[station]?.lags.up ? `, about ${STORM4.stations[station].lags.up} h from upstream` : ""}).`);
+  }
+  if (satM.size && shownH(satM).length) basis.push(`The ${shownH(satM).join(", ")} hour steps read the rain the satellite measured over ${station}'s catchment (JAXA GSMaP, corrected for how it reads here), with rain beside the gauge and rain on the channels upstream timed separately (about ${STORM4.stations[station]?.lags.near ?? "?"} h from beside the gauge${STORM4.stations[station]?.lags.up ? `, about ${STORM4.stations[station].lags.up} h from upstream` : ""}). Tested storm by storm it was closer than the version that reads the weather model's rain.`);
   if (stormH.size) basis.push(`Heavy rain upstream is part of the ${[...stormH].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b).join(", ")} hour steps: rain that has fallen or is forecast over the catchment above ${station} raises the level, and the top of the range allows for the heavier forecast rain. Tested storm by storm (leaving each storm out, Ditwah included) it was closer than the river's own trend alone.`);
   const old = hsV.filter((x) => !v2h.has(x.h));
   if (old.length) {
@@ -692,6 +729,7 @@ function fromModel(
     rainRisk: w ? rainRiskOf({ det: w.next24hMm.det, p90: w.next24hMm.p90 }) : null,
     stormHorizons: [...stormH].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b),
     stormHorizonsMeasured: [...stormM].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b),
+    ...(stormG.size ? { stormHorizonsGround: shownH(stormG), rainGauges: groundUsed } : {}),
   };
 }
 
@@ -724,7 +762,10 @@ type GaugeStep = {
   storm: boolean;
   /** The storm correction came from the measured-rain model (v4). */
   measured?: boolean;
+  /** The rain it read came from live rain gauges in the catchment (lib/model/gaugeRain.mjs), not (only) the satellite. */
+  ground?: boolean;
 };
+type GaugeSteps = GaugeStep[] & { groundUsed?: { name: string; institute: string }[] };
 
 /** Hourly catchment rain: the deterministic series (past analysis + forecast) and the heavier ensemble scenario (p90), keyed by hour-end ms. */
 type StormRain = { det: RainSeries; p90: RainSeries | null };
@@ -738,7 +779,7 @@ type StormRain = { det: RainSeries; p90: RainSeries | null };
  * Returns null when the gauge has no entry in the model files. When the gauge's own history is too short for the features
  * the range comes from the middle volatility bin and `missing` names it.
  */
-function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number, rain: StormRain | null = null, measuredHeavy = false, v4in: V4In | null = null): GaugeStep[] | null {
+function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, now: number, rain: StormRain | null = null, measuredHeavy = false, v4in: V4In | null = null): GaugeSteps | null {
   const gm = GAUGE_MODEL.stations[station];
   const sm = STORM.stations[station];
   if (!gm) return null;
@@ -757,13 +798,39 @@ function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, n
   const heaviest = tot ? Math.max(tot.past24 ?? 0, tot.next24 ?? 0) : 0;
   // Storm hours: forecast or catchment-analysis rain reaches the gate, OR the gauges themselves measured heavy rain
   // (lib/measuredRain.ts). The correction still reads the catchment rain series, so it needs that series (rain != null).
-  const stormOn = !!sm && (heaviest >= STORM.gate || (measuredHeavy && !!rain));
-  // v4: measured rain for the past, if the satellite hours are there (hour ending at the forecast time, file fresh)
+  // v4: measured rain for the past. GAUGE FIRST (owner decision 2 Nov 2026, lib/model/gaugeRain.mjs): where a live HMIS rain gauge inside the
+  // catchment zone has the hour, the gauge mean is the rain; the satellite (hour ending at the forecast time, file fresh) only fills what no gauge has.
   const m4 = STORM4.stations[station];
+  let gr: GroundRainSeries | null = null;
+  if (v4in && m4 && v4in.gauges.length) {
+    const sat = v4in.sat;
+    const shape = (arr: (number | null)[] | null | undefined) =>
+      arr && sat
+        ? (k: number): number | null => {
+            const i = 95 - Math.round(((sat.hourlyEnd ?? NaN) - (origin + k * HOUR_MS)) / HOUR_MS);
+            const v = i >= 0 && i < arr.length ? arr[i] : null;
+            return typeof v === "number" && Number.isFinite(v) ? v : null;
+          }
+        : undefined;
+    gr = groundRainSeries({
+      gauges: v4in.gauges, origin, zones: zonesFrom(catchmentsJson, subcatchmentsJson, station),
+      sat: sat ? { full: shape(sat.hourly), near: shape(sat.hourlyNear), up: shape(sat.hourlyUp) } : null,
+    });
+  }
+  // v3 gate also fires when the gauges' own past-24 h catchment total reaches the gate (it still needs `rain` for its features)
+  // the gauges may only switch a storm model ON (the satellite / weather path would not) with >= 2 gauges at >= 20 mm (lib/model/gaugeRain.mjs switchOnAllowed)
+  const guardOk = !!gr && switchOnAllowed(gr.used);
+  const groundGate = guardOk && !!rain && gr!.past24Full != null && gr!.past24Full >= STORM.gate;
+  const stormOn = !!sm && (heaviest >= STORM.gate || (measuredHeavy && !!rain) || groundGate);
   const r4 = v4in && m4
-    ? v4Rain(v4in.sat, m4.bias.k, STORM4.clipMmPerHour, origin, { full: v4in.w.rain, near: v4in.w.nearRain, up: v4in.w.upRain, fullHeavy: v4in.w.scenarios?.p90 ?? null })
+    ? v4Rain(v4in.sat, m4.bias.k, STORM4.clipMmPerHour, origin, { full: v4in.w.rain, near: v4in.w.nearRain, up: v4in.w.upRain, fullHeavy: v4in.w.scenarios?.p90 ?? null }, gr)
     : null;
-  const stormOn4 = !!r4 && isStormHour4(r4.rFull, STORM4.gate, STORM4.burstMm3h);
+  let stormOn4 = !!r4 && isStormHour4(r4.rFull, STORM4.gate, STORM4.burstMm3h);
+  if (stormOn4 && gr && !guardOk) {
+    // gauge-first says storm; without the guard it only stands if the satellite-only rain says so too
+    const r4s = v4in && m4 ? v4Rain(v4in.sat, m4.bias.k, STORM4.clipMmPerHour, origin, { full: v4in.w.rain, near: v4in.w.nearRain, up: v4in.w.upRain, fullHeavy: v4in.w.scenarios?.p90 ?? null }) : null;
+    stormOn4 = !!r4s && isStormHour4(r4s.rFull, STORM4.gate, STORM4.burstMm3h);
+  }
   const out: GaugeStep[] = [];
   const keys = new Set([...Object.keys(gm.horizons), ...Object.keys(sm?.horizons ?? {}).filter((k) => sm?.horizons[k].base)]);
   for (const key of keys) {
@@ -797,6 +864,7 @@ function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, n
         step.q90 = Math.max(q90, 0, corrH - corr);
         step.storm = true;
         step.measured = true;
+        if (gr) step.ground = true;
         out.push(step);
         continue;
       }
@@ -818,11 +886,14 @@ function gaugeSteps(snapshot: BasinStation[], station: string, anchor: number, n
         step.q10 = Math.min(q10, 0);
         step.q90 = Math.max(q90, 0, corrH - corr); // never below the answer under the heavier rain scenario
         step.storm = true;
+        if (groundGate && heaviest < STORM.gate) step.ground = true; // the gauges switched it on; the weather model alone would not have
       }
     }
     out.push(step);
   }
-  return out.sort((a, b) => a.h - b.h);
+  const sorted = out.sort((a, b) => a.h - b.h) as GaugeSteps;
+  if (gr && sorted.some((x) => x.ground)) sorted.groundUsed = gr.used.map((u) => ({ name: u.name, institute: u.institute }));
+  return sorted;
 }
 
 // ===========================================================================

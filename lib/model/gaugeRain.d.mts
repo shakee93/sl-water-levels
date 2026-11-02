@@ -1,0 +1,23 @@
+export const HOUR: number;
+export const MAX_GAUGE_24H_MM: number;
+export const SHAPE_SAT_WEIGHT: number;
+export const SHAPE_MIN_SAT_MM: number;
+export const EXTRAPOLATE_TOTAL_MIN: number;
+export const EXTRAPOLATE_INC_MIN: number;
+export type Zones = { basin: string; half: number; full: [number, number][]; near: [number, number][] | null; up: [number, number][] | null };
+export function zonesFrom(catchments: unknown, subcatchments: unknown, station: string): Zones | null;
+export function inCells(cells: [number, number][] | null, half: number, lat: number, lon: number): boolean;
+export function gaugeHourly(pts: [number, number][], origin: number, shape?: (k: number) => number | null): { r: Map<number, number>; total24: number; covered: number } | null;
+export type RainFn = (k: number) => number | null;
+export type GroundGauge = { n: string; i?: string; lat: number; lon: number; pts: [number, number][] };
+export type GroundRainSeries = {
+  full: RainFn;
+  near: RainFn;
+  up: RainFn | null;
+  past24Full: number | null;
+  used: { name: string; institute: string; zones: string[]; mm24: number }[];
+};
+export function groundRainSeries(a: { gauges: GroundGauge[]; origin: number; sat?: { full?: RainFn; near?: RainFn; up?: RainFn } | null; zones: Zones | null }): GroundRainSeries | null;
+export const GUARD_MIN_GAUGES: number;
+export const GUARD_MIN_MM: number;
+export function switchOnAllowed(used: { mm24: number }[]): boolean;
