@@ -149,7 +149,12 @@ export async function run(o = {}) {
     log(`held by the daily limit: ${h.kind} ${h.dedupe}`);
     await query("INSERT OR IGNORE INTO ig_posts (ts, day, kind, format, situation, dedupe_key, mode, status, caption) VALUES (?, ?, ?, ?, ?, ?, ?, 'held', ?)", [now, day, h.kind, h.format, situation.mode ?? "unknown", `held:${h.dedupe}:${now}`, g.mode, `(held by daily limit) ${h.label}`]);
   }
-  if (held.length) await note(`:information_source: Instagram: ${held.length} post(s) held back by the daily limit (${situation.mode === "disaster" ? `${cfg.storiesMax} stories + ${cfg.feedMaxDisaster} feed posts` : "1 post"} a day).`);
+  // once a day: the same held post is planned again every 30-min run, and a note per run flooded Slack (owner, 3 Nov 2026)
+  if (held.length && meta.heldNoteDay !== day) {
+    await note(`:information_source: Instagram: ${held.length} post(s) held back by the daily limit (${situation.mode === "disaster" ? `${cfg.storiesMax} stories + ${cfg.feedMaxDisaster} feed posts` : "1 post"} a day). (This note comes once a day.)`);
+    meta.heldNoteDay = day;
+    await saveValue("meta", meta, now, query);
+  }
 
   // the API's own 50 a day: one read before the first live post; unreadable = trust our own caps
   let blocked = false;
