@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T18:51:25.148Z",
+  "updatedAt": "2026-11-03T23:43:40.481Z",
   "asOf": "2026-11-04",
   "minimums": {
     "answers": 3,
@@ -557,36 +557,36 @@
   "forecast": {
     "window": {
       "from": "2026-10-26",
-      "to": "2026-11-03",
-      "points": 15798
+      "to": "2026-11-04",
+      "points": 15775
     },
     "horizons": {
       "1": {
-        "n": 5266,
-        "maeBase": 0.12,
-        "maeFit": 0.12,
+        "n": 4699,
+        "maeBase": 0.13,
+        "maeFit": 0.13,
         "gainPct": 0,
         "maePooled": 0.13,
-        "pooledGainPct": -1
+        "pooledGainPct": -2
       },
       "3": {
-        "n": 5211,
-        "maeBase": 0.3,
-        "maeFit": 0.3,
+        "n": 4649,
+        "maeBase": 0.31,
+        "maeFit": 0.31,
         "gainPct": 0,
-        "maePooled": 0.3,
-        "pooledGainPct": -1
+        "maePooled": 0.32,
+        "pooledGainPct": -2
       },
       "6": {
-        "n": 5127,
-        "maeBase": 0.52,
-        "maeFit": 0.52,
-        "gainPct": 0,
-        "maePooled": 0.52,
+        "n": 5257,
+        "maeBase": 0.54,
+        "maeFit": 0.53,
+        "gainPct": 1,
+        "maePooled": 0.54,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 4,
+    "gaugesPassingOwnTest": 5,
     "useful": false,
     "wired": false
   }
