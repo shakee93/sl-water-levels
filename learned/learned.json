@@ -1,32 +1,32 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T01:22:16.538Z",
-  "asOf": "2026-11-03",
+  "updatedAt": "2026-11-03T18:51:25.148Z",
+  "asOf": "2026-11-04",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 150,
-    "feedback": 128,
+    "total": 153,
+    "feedback": 131,
     "street": 14,
     "flood3d": 8,
-    "newTonight": 1,
+    "newTonight": 3,
     "trusted": 8,
     "flagged": 0
   },
   "streetLevel": {
     "Nagalagam Street": {
       "ft": 3,
-      "n": 7,
-      "days": 4,
+      "n": 5,
+      "days": 3,
       "defaultFt": 5,
       "clamped": true,
-      "dryBelowN": 5
+      "dryBelowN": 4
     }
   },
   "groundRain": {
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 243,
+      "steps": 270,
       "stepDays": 8,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 243,
+      "steps": 270,
       "stepDays": 8,
       "events": 6,
       "eventDays": 4,
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 243,
+      "steps": 270,
       "stepDays": 8,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 243,
+      "steps": 270,
       "stepDays": 8,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 243,
+      "steps": 270,
       "stepDays": 8,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 243,
+      "steps": 270,
       "stepDays": 8,
       "events": 0,
       "eventDays": 0,
@@ -161,56 +161,56 @@
     "window": {
       "from": "2026-10-26",
       "to": "2026-11-03",
-      "points": 15461
+      "points": 15798
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4753,
+          "n": 5266,
           "maeBase": 0.12,
           "maeFit": 0.12,
           "gainPct": 0,
-          "maePooled": 0.12,
+          "maePooled": 0.13,
           "pooledGainPct": -1
         },
         "3": {
-          "n": 4701,
-          "maeBase": 0.27,
-          "maeFit": 0.27,
+          "n": 5211,
+          "maeBase": 0.3,
+          "maeFit": 0.3,
           "gainPct": 0,
-          "maePooled": 0.27,
-          "pooledGainPct": 1
+          "maePooled": 0.3,
+          "pooledGainPct": -1
         },
         "6": {
-          "n": 4629,
-          "maeBase": 0.47,
-          "maeFit": 0.47,
-          "gainPct": 1,
-          "maePooled": 0.47,
-          "pooledGainPct": 1
+          "n": 5127,
+          "maeBase": 0.52,
+          "maeFit": 0.52,
+          "gainPct": 0,
+          "maePooled": 0.52,
+          "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 6,
+      "gaugesPassingOwnTest": 4,
       "useful": false,
       "wired": false
     },
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 25,
-          "testN": 25,
+          "rowsWithReports": 17,
+          "testN": 17,
           "testDays": 6,
-          "maeBase": 0.15,
-          "maeFit": 0.16,
-          "gainPct": -1,
+          "maeBase": 0.18,
+          "maeFit": 0.18,
+          "gainPct": 0,
           "beta": 0
         },
         "3": {
-          "rowsWithReports": 25,
-          "testN": 25,
-          "testDays": 6,
-          "maeBase": 0.39,
-          "maeFit": 0.39,
+          "rowsWithReports": 18,
+          "testN": 18,
+          "testDays": 7,
+          "maeBase": 0.46,
+          "maeFit": 0.46,
           "gainPct": 0,
           "beta": 0
         }
