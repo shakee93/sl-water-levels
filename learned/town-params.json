@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-02T18:50:51.424Z",
+  "updatedAt": "2026-11-03T01:22:16.538Z",
   "asOf": "2026-11-03",
   "minimums": {
     "answers": 3,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 120,
-    "people": 116,
+    "answers": 121,
+    "people": 117,
     "streetReports": 12,
-    "days": 8
+    "days": 9
   },
   "stations": {
     "Badalgama": {
@@ -117,10 +117,10 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 26,
-        "days": 8,
+        "n": 27,
+        "days": 9,
         "yes": 10,
-        "worse": 9,
+        "worse": 10,
         "better": 3,
         "unsure": 4
       },
@@ -131,10 +131,10 @@
         "lower": 0
       },
       "rising": {
-        "n": 11,
-        "days": 6,
+        "n": 12,
+        "days": 7,
         "yes": 6,
-        "worse": 3,
+        "worse": 4,
         "better": 2,
         "errN": 11,
         "meanErrFt": 0.08
@@ -573,32 +573,32 @@
   "forecast": {
     "window": {
       "from": "2026-10-26",
-      "to": "2026-11-02",
-      "points": 15020
+      "to": "2026-11-03",
+      "points": 15461
     },
     "horizons": {
       "1": {
-        "n": 4612,
-        "maeBase": 0.11,
-        "maeFit": 0.11,
+        "n": 4753,
+        "maeBase": 0.12,
+        "maeFit": 0.12,
         "gainPct": 0,
-        "maePooled": 0.11,
+        "maePooled": 0.12,
         "pooledGainPct": -1
       },
       "3": {
-        "n": 4556,
-        "maeBase": 0.25,
-        "maeFit": 0.25,
-        "gainPct": 1,
-        "maePooled": 0.25,
+        "n": 4701,
+        "maeBase": 0.27,
+        "maeFit": 0.27,
+        "gainPct": 0,
+        "maePooled": 0.27,
         "pooledGainPct": 1
       },
       "6": {
-        "n": 4474,
-        "maeBase": 0.44,
-        "maeFit": 0.44,
+        "n": 4629,
+        "maeBase": 0.47,
+        "maeFit": 0.47,
         "gainPct": 1,
-        "maePooled": 0.44,
+        "maePooled": 0.47,
         "pooledGainPct": 1
       }
     },
