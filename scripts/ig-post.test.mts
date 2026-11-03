@@ -231,10 +231,10 @@ assert.equal(gate({ IG_MODE: "live", IG_ACCESS_TOKEN: "  ", IG_USER_ID: "1" }).m
   const base = hw("normal", 4, T0, { warnings: [bulletin()] });
   let p = planIg(base, emptyIgState(), noCtx);
   assert.equal(p.situation.mode, "disaster");
-  assert.deepEqual(p.items.map((i) => `${i.kind}:${i.format}:${i.media.kind}/${i.media.slug}`), ["warning:story:river/kalu-ganga", "morning:story:home/now"]);
+  assert.deepEqual(p.items.map((i) => `${i.kind}:${i.format}:${i.media.kind}/${i.media.slug}`), ["warning:story:river/kalu-ganga", "flood_morning:feed:home/now", "morning:story:home/now"]);
   assert.equal(p.items.find((i) => i.kind === "warning").dedupe, "story:warning:https://dmc.example/kalu-03.pdf");
   p = planIg({ ...base, now: T0 + 0.5 * H }, p.state, noCtx);
-  assert.equal(p.items.length, 0, "neither the bulletin nor the morning story twice");
+  assert.equal(p.items.length, 0, "neither the bulletin nor the morning story / feed post twice");
   // a morning story outside the morning window is not made
   const late = hw("alert", 9, at(5), { warnings: [] });
   assert.ok(!planIg(late, emptyIgState(), noCtx).items.some((i) => i.kind === "morning"));
@@ -428,7 +428,7 @@ const rows = async (q) => q("SELECT kind, format, situation, mode, status, dedup
   const many = (now, s) => snap(["a", "b", "c", "d"].map((n) => st(`r${n}/g${n}`, `G${n}`, `R${n}`, s, 9, now)), now);
   await run({ env: w.env, doFetch: w.doFetch, query: q, snap: many(at(-3), "normal"), now: at(-3) });
   const r = await run({ env: w.env, doFetch: w.doFetch, query: q, snap: many(at(-2.5), "alert"), now: at(-2.5) });
-  assert.deepEqual([r.posted, r.held], [2, 3]); // 4 gauge stories + the 06:30 morning story, 2 allowed
+  assert.deepEqual([r.posted, r.held], [3, 3]); // 4 gauge stories + the 06:30 morning story, 2 allowed; + the morning feed post (own cap)
   assert.ok(w.slack.some((s) => /3 post\(s\) held back by the daily limit/.test(s)));
 }
 // schema in d1/0018 matches the one the script creates

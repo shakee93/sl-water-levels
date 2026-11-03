@@ -12,7 +12,7 @@
 //   disaster  any gauge at Alert or above, or an official DMC / Irrigation flood bulletin in force (or a story we told is still
 //             waiting for its all-clear)  -> STORIES (one per gauge reaching Alert / Minor / Major, one more when it moves up a step,
 //             an all-clear after a 3 h hold below Alert, one per new bulletin, the morning "Rivers right now"), plus ONE feed post
-//             when a gauge reaches Minor or Major (the worst river).
+//             when a gauge reaches Minor or Major (the worst river) and the morning "Rivers right now" as a feed post too.
 //   weather   no gauge at Alert, but a Met Department advisory (heavy rain, cyclone) or a very heavy rain forecast is active
 //             -> ONE daily feed post in the morning: "Rivers right now" + the rain outlook. No stories.
 //   calm      nothing active -> keep-alive feed posts, at most 3 a week: rain, reservoirs spilling, river of the week, survey, embed.
@@ -142,6 +142,9 @@ export function planIg(snap, prev, ctx, cfgIn = {}) {
     if (morningOk) {
       state.md = day;
       items.push({ format: "story", kind: "morning", priority: 15, dedupe: `story:morning:${day}`, media: { kind: "home", slug: "now" }, cap: { type: "home", home: home(false) }, label: "Rivers right now" });
+      // and the same picture as ONE feed post a day, so the grid shows the account is live during a flood (owner, 3 Nov 2026: stories
+      // vanish after 24 h and the feed sat still for days). Below the Minor / Major feed post in priority; counts towards feedMaxDisaster.
+      items.push({ format: "feed", kind: "flood_morning", priority: 30, dedupe: `feed:morning:${day}`, media: { kind: "home", slug: "now" }, cap: { type: "home", home: home(false) }, label: "Rivers right now (flood day)" });
     }
     // ONE feed post when a gauge reaches Minor or Major: the worst river (highest step, then furthest above its Alert mark)
     const serious = risen.filter((r) => r.lvl >= 3).sort((a, c) => c.lvl - a.lvl || (c.g.alertMark ? c.g.level / c.g.alertMark : 0) - (a.g.alertMark ? a.g.level / a.g.alertMark : 0))[0];
