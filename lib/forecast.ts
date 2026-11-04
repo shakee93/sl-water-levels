@@ -411,13 +411,21 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
   const mpu = me.metresPerUnit;
   const pred = step ? L0 + step.delta : L0;
   const steadyBand = STEADY_3H_M / mpu / 3;
-  const dir: Forecast["direction"] = step ? (step.delta > steadyBand ? "rising" : step.delta < -steadyBand ? "falling" : "steady") : "steady";
+  // No gauge model: the number stays "level stays the same" (no extrapolation beat it), but the WORD follows the measured 3 h change,
+  // like the Next hour tile (nextHourRateM). Before, these gauges said "Steady" while visibly falling (Denawaka Ganga, 4 Nov: -0.08 ft/h).
+  const rate3h = t.localRatePerH != null && Number.isFinite(t.localRatePerH) ? t.localRatePerH : null; // gauge unit per hour
+  const rate3hM = rate3h == null ? null : rate3h * mpu;
+  const dir: Forecast["direction"] = step
+    ? (step.delta > steadyBand ? "rising" : step.delta < -steadyBand ? "falling" : "steady")
+    : rate3hM == null || Math.abs(rate3hM) < STEADY_M_PER_H ? "steady" : rate3hM > 0 ? "rising" : "falling";
   const word = dir === "rising" ? "Rising" : dir === "falling" ? "Falling" : dir === "steady" ? "Steady" : "Unclear";
   const w = weather && weather.ok ? weather.data : null;
   const rain: Forecast["rain"] = w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null;
   const grid = weather !== undefined && weather !== null;
   const reason = noModelReason(station, grid);
-  const headline = `${word}: expected to be about ${formatLevel(pred, me.unit)} an hour from now.`; // the level, not the change ("about 16.7 ft in an hour" read as a 16.7 ft rise)
+  const headline = step || dir === "steady" || rate3h == null
+    ? `${word}: expected to be about ${formatLevel(pred, me.unit)} an hour from now.`
+    : `${word}: about ${formatLevel(L0, me.unit)} now, ${dir === "rising" ? "up" : "down"} about ${formatLevel(Math.abs(rate3h), me.unit)} an hour over the last 3 hours.`; // the level, not the change ("about 16.7 ft in an hour" read as a 16.7 ft rise)
   const infl = GM_WIDEN * (step && step.missing.length ? 1.3 : 1); // an upstream gauge that is not reporting widens the range
   const low = step ? pred + step.q10 * infl : null;
   const high = step ? pred + step.q90 * infl : null;
