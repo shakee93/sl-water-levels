@@ -29,7 +29,7 @@ import { fetchBasinSnapshot } from "./arcgis";
 import { loadForecast } from "./forecast";
 import { ACTION, TIDE_RISE, dayFact } from "@/app/Forecast";
 import { nextHourRateM } from "@/lib/forecastRules.mjs";
-import { VERDICT, BELOW_ALERT_LEVEL, NORMAL_RISING, headlineRising, directionFor, STEADY_M_PER_H } from "@/app/verdict";
+import { VERDICT, BELOW_ALERT_LEVEL, NORMAL_RISING, NO_FLOOD_FACT, headlineRising, directionFor, STEADY_M_PER_H } from "@/app/verdict";
 import { isTidalStation, liftVerdict, riverRising } from "./verdictLift";
 import { getReleases, releaseAffectingFrom } from "./releases";
 import { officialReleaseAlert } from "./releaseAlert";
@@ -512,7 +512,7 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     tone = relAlert ? "alert" : lift.verdict === "alert" && (nat.tier === "normal" || nat.tier === "watch") ? "alert" : (lift.verdict === "watch" || releaseLift) && nat.tier === "normal" ? "watch" : (nat.tier as VerdictTone);
     // the same "Next 24 hours" line as the gauge page: one helper (app/Forecast.tsx dayFact), incl. "Falling now" for a falling river
     const day24 = dayFact({ f, tier: nat.tier, now, lift, rate3hM: me.rate3hM ?? null, mpu, tidal: isTidalStation(station) });
-    day = { label: c.e("w.fcDayLabel"), text: day24[L], ok: day24.en === "No flooding expected today" };
+    day = { label: c.e("w.fcDayLabel"), text: day24[L], ok: day24.en === NO_FLOOD_FACT.en };
     const word = r == null ? null : tideOnly ? TIDE_RISE : directionFor(r);
     if (word) {
       const lvl = h1 ? fmt(h1.level, f.unit, want) : null;

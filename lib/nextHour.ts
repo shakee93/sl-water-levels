@@ -10,7 +10,7 @@ import { fetchBasinSnapshot, getNational } from "./arcgis";
 import { loadForecast, type Forecast } from "./forecast";
 import { rainRiskLine, type RainRisk } from "./rainRisk";
 import { FT_IN_M, toShown, type Unit } from "./units";
-import { STEADY_M_PER_H, nextHourRateM } from "./forecastRules.mjs";
+import { OLD_READING_MIN, STEADY_M_PER_H, modelTurn, nextHourRateM } from "./forecastRules.mjs";
 import { isTidalStation, riverRising } from "./verdictLift";
 
 const SLOW_M_PER_H = 0.05;
@@ -27,6 +27,13 @@ export type NextHour = {
   direction: "rising" | "falling" | "steady";
   /** True only for a gentle RISE (rising, under about 0.16 ft an hour): the page says "Rising slowly". False for steady and falling. */
   slow: boolean;
+  /**
+   * Set when the model's 1 h view points the other way from the measured direction shown: "up" = the word is Falling but the model expects it to turn
+   * up, "down" = the word is Rising but the model expects it to ease (owner decision 4 Nov 2026). null = they agree.
+   */
+  modelView: "up" | "down" | null;
+  /** Minutes since the reading when it is older than 45 min and not yet stale; else null. The Next hour word is shown with "reading N min old". */
+  readingAgeMin: number | null;
   /** "may reach alert level" etc., only when the range reaches a flood mark within the hour; else null. */
   crossing: string | null;
   /** The reading the forecast starts from (ISO 8601). The hour counts from here. */
@@ -57,7 +64,7 @@ export type NextHour = {
 const MARK: Record<string, string> = { alert: "alert level", minor: "minor flood level", major: "major flood level" };
 
 /** What the gauge measured, so `direction` is the same word as the page's Next hour tile (nextHourRateM): optional, a missing field falls back to the forecast alone. */
-export type NextHourReading = { rate1hM?: number | null; rate3hM?: number | null; source?: string | null; trend24h?: Parameters<typeof riverRising>[1]; metresPerUnit?: number };
+export type NextHourReading = { ageMin?: number | null; rate1hM?: number | null; rate3hM?: number | null; source?: string | null; trend24h?: Parameters<typeof riverRising>[1]; metresPerUnit?: number };
 
 /** The 1 h point of a forecast in feet, or null when there is none (stale gauge, unknown unit, no forecast). */
 export function nextHourOf(f: Forecast, me?: NextHourReading): NextHour | null {
@@ -89,6 +96,8 @@ export function nextHourOf(f: Forecast, me?: NextHourReading): NextHour | null {
     change_ft: r2(toShown(h1.level - f.currentLevel, unit)),
     direction,
     slow: direction === "rising" && Math.abs(rM) < SLOW_M_PER_H,
+    modelView: tideOnly ? null : modelTurn(dM, rM),
+    readingAgeMin: me?.ageMin != null && me.ageMin > OLD_READING_MIN && me.ageMin <= 180 ? Math.round(me.ageMin) : null,
     crossing,
     issuedAt: new Date(f.asOfTs).toISOString(),
     method: f.method,

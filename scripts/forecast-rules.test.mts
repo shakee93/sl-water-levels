@@ -10,7 +10,7 @@ import {
   MINOR_P_CAP, MAJOR_P_CAP, shownChance, shownWording,
   NO_FORECAST_GAUGES, hasNoForecast,
   FAST_TRIBUTARIES, SHORT_FORECAST_GAUGES, FAST_MAX_H, maxForecastHours,
-  STEADY_M_PER_H, isFalling3h, fallingOutlook, nextHourRateM,
+  STEADY_M_PER_H, isFalling3h, fallingOutlook, nextHourRateM, modelTurn,
 } from "../lib/forecastRules.mjs";
 import { liftVerdict, chanceWords, RISING_M_PER_H as LIFT_RISING } from "../lib/verdictLift.ts";
 import { assessTown } from "../lib/townRisk.ts";
@@ -105,8 +105,18 @@ assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "rivernet", m
 assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "hmis", method: "trend" }), -0.02);
 assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "arcgis", method: "trend" }), -0.02, "an ArcGIS gauge with no fitted model reads the measured 3 h rate too (tile = sentence)");
 assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "arcgis", method: "trend", measuredForAll: false }), 0, "the KPI scorer keeps the old figure for runs before the change");
-assert.equal(nextHourRateM({ h1ChangeM: 0.02, rate3hM: -0.02, source: "arcgis", method: "model" }), 0.02, "a fitted model keeps its own 1 h change");
-assert.equal(nextHourRateM({ h1ChangeM: -0.01, rate3hM: 0.05, source: "rivernet", method: "model" }), -0.01);
+assert.equal(nextHourRateM({ h1ChangeM: 0.02, rate3hM: 0.03, source: "arcgis", method: "model" }), 0.02, "a fitted model keeps its own 1 h change when the measured change agrees");
+// owner decision 4 Nov 2026 (option A): the model turns against a measured move beyond the steady band, the measured word is shown
+assert.equal(nextHourRateM({ h1ChangeM: 0.02, rate3hM: -0.02, source: "arcgis", method: "model" }), -0.02, "falling now, model says up: Falling");
+assert.equal(nextHourRateM({ h1ChangeM: -0.02, rate3hM: 0.05, source: "arcgis", method: "model" }), 0.05, "rising now, model says down: Rising");
+assert.equal(nextHourRateM({ h1ChangeM: 0.02, rate3hM: -0.02, source: "arcgis", method: "model", measuredWins: false }), 0.02, "the KPI scorer keeps the old word for earlier runs");
+assert.equal(nextHourRateM({ h1ChangeM: 0.02, rate3hM: -0.004, source: "arcgis", method: "model" }), 0.02, "a measured change inside the steady band does not override");
+assert.equal(nextHourRateM({ h1ChangeM: 0.02, rate3hM: -0.02, source: "arcgis", method: "model", tidal: true }), 0.02, "tidal gauges keep the model");
+assert.equal(modelTurn(0.02, -0.02), "up");
+assert.equal(modelTurn(-0.02, 0.05), "down");
+assert.equal(modelTurn(0.02, 0.05), null);
+assert.equal(modelTurn(0.003, -0.05), null, "a steady model view is not a turn");
+assert.equal(nextHourRateM({ h1ChangeM: -0.01, rate3hM: 0.05, source: "rivernet", method: "model" }), 0.05, "model against a measured rise: the measured word");
 assert.equal(nextHourRateM({ h1ChangeM: null, rate3hM: 0.03, source: "arcgis", method: "none" }), 0.03);
 
 // ---- 4. falling river: never steady words for the day ahead
@@ -218,7 +228,7 @@ console.log("forecast-rules tests passed");
   assert.equal(minorFact({ f: F({ wording: "possible", probability: 0.3 }), tier: "normal", fact: calm }).en, "Minor flood possible in the next 24 hours (up to 3 in 10)");
   assert.equal(minorFact({ f: F({ wording: "possible", probability: 0.2 }), tier: "alert", fact: calm }).en, "Minor flood possible in the next 24 hours (up to 2 in 10)");
   assert.equal(minorFact({ f: F({ wording: "unlikely", probability: 0.1 }), tier: "normal", fact: calm }).en, "Minor flood not expected in the next 24 hours");
-  assert.equal(minorFact({ f: F({ wording: "unlikely", probability: 0.1 }), tier: "normal", fact: { en: "No flooding expected today", si: "", ta: "" } }), null, "the 24 h line already says it");
+  assert.equal(minorFact({ f: F({ wording: "unlikely", probability: 0.1 }), tier: "normal", fact: { en: "No flood level expected in the next 24 hours", si: "", ta: "" } }), null, "the 24 h line already says it");
   assert.equal(minorFact({ f: F({ wording: "possible", probability: 0.3 }), tier: "normal", fact: { en: "Could reach flood level in ~4 hours", si: "", ta: "" } }), null, "the 24 h line already names the flood level");
   assert.equal(minorFact({ f: F({ wording: "already", probability: 1 }), tier: "alert", fact: calm }).en, "Already at Minor flood level");
   assert.equal(minorFact({ f: F({ wording: "already", probability: 1 }), tier: "minor", fact: calm }), null, "the step already says Minor flood");

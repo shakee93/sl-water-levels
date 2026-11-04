@@ -70,7 +70,7 @@ const en = {
   "k9.title": "Forecasts every hour",
   "k9.what": "Whether the forecast ran every hour of the day, on enough gauges, and how often a faulty sensor reading got in the way.",
   "k9.target": "forecasts in all 24 hours of every day",
-  "k9.value": "Forecasts in {h} of 24 hours a day, from {g} gauges an hour. {f} of forecasts started from a reading that looked like a sensor fault and were left out of these checks.",
+  "k9.value": "Forecasts in {h} of 24 hours on a typical day{wn}, from {g} gauges an hour. {f} of forecasts started from a reading that looked like a sensor fault and were left out of these checks.",
   "k10.title": "What people tell us",
   "k10.what": "Of the people who answered \"Is this right?\" on our pages, how many said the forecast matches what they see.",
   "k10.target": "at least 70% say it matches",
@@ -97,6 +97,8 @@ const en = {
   "ver.glitch-filter.what": "One-reading spikes and frozen sensors are cleaned out of the readings the forecast learns from, so a faulty gauge no longer distorts it.",
   "ver.gauge-first-rain.name": "Rain gauges first",
   "ver.gauge-first-rain.what": "In storms the forecast reads the rain measured by the rain gauges inside the catchment first, and the satellite only where no gauge is reporting.",
+  "ver.measured-wins.name": "Next hour follows what was measured",
+  "ver.measured-wins.what": "When the forecast points the other way from the river's last 3 hours (for example it fell but the model expects a turn up), the \"Next hour\" word now follows what was measured and a short note says what the forecast expects.",
   "link": "How accurate has this been? See forecast accuracy",
 } as const;
 
@@ -168,7 +170,7 @@ const si: Record<ForecastKpiKey, string> = {
   "k9.title": "සෑම පැයකම පුරෝකථන",
   "k9.what": "පුරෝකථනය දවසේ සෑම පැයකම, ප්‍රමාණවත් මාන ගණනකින් ක්‍රියාත්මක වූවාද, සහ දෝෂ සහිත සංවේදක කියවීමක් කොපමණ වාරයක් බාධා කළාද.",
   "k9.target": "සෑම දිනකම පැය 24 පුරාම පුරෝකථන",
-  "k9.value": "දිනකට පැය 24 න් {h} ක පුරෝකථන, පැයකට මාන {g} කින්. පුරෝකථන වලින් {f} ක් සංවේදක දෝෂයක් ලෙස පෙනෙන කියවීමකින් ආරම්භ වූ අතර මෙම පරීක්ෂා වලින් ඉවත් කරන ලදී.",
+  "k9.value": "සාමාන්‍ය දිනකට පැය 24 න් {h} ක පුරෝකථන{wn}, පැයකට මාන {g} කින්. පුරෝකථන වලින් {f} ක් සංවේදක දෝෂයක් ලෙස පෙනෙන කියවීමකින් ආරම්භ වූ අතර මෙම පරීක්ෂා වලින් ඉවත් කරන ලදී.",
   "k10.title": "මිනිසුන් අපට කියන දේ",
   "k10.what": "අපගේ පිටු වල \"මෙය නිවැරදිද?\" ට පිළිතුරු දුන් අයගෙන්, පුරෝකථනය තමන් දකින දේට ගැළපෙනවා යැයි කී අය කීදෙනාද.",
   "k10.target": "අවම වශයෙන් 70% ක් ගැළපෙනවා යැයි කියයි",
@@ -195,6 +197,8 @@ const si: Record<ForecastKpiKey, string> = {
   "ver.glitch-filter.what": "එක් කියවීමක උල්පත් සහ අවහිර වූ සංවේදක පුරෝකථනය ඉගෙන ගන්නා කියවීම් වලින් ඉවත් කෙරේ, එබැවින් දෝෂ සහිත මානයක් එය තවදුරටත් විකෘති නොකරයි.",
   "ver.gauge-first-rain.name": "වැසි මානවලට මුල්තැන",
   "ver.gauge-first-rain.what": "කුණාටු වලදී පුරෝකථනය මුලින්ම ජල පෝෂක ප්‍රදේශය තුළ ඇති වැසි මාන මැනූ වැසි කියවයි; කිසිදු මානයක් වාර්තා නොකරන තැන්වල පමණක් චන්ද්‍රිකා දත්ත භාවිත කරයි.",
+  "ver.measured-wins.name": "ඊළඟ පැය මනින ලද දෙයට අනුව",
+  "ver.measured-wins.what": "පුරෝකථනය ගඟේ පසුගිය පැය 3 ට පටහැනි නම් (උදා: පහළ ගියත් ආකෘතිය නැවත ඉහළ යාමක් බලාපොරොත්තු වේ), \"ඊළඟ පැය\" වචනය දැන් මනින ලද දෙයට අනුව වන අතර පුරෝකථනය බලාපොරොත්තු වන දේ කෙටි සටහනකින් දැක්වේ.",
   "link": "මෙය කොතරම් නිවැරදිද? පුරෝකථන නිරවද්‍යතාව බලන්න",
 };
 
@@ -264,7 +268,7 @@ const ta: Record<ForecastKpiKey, string> = {
   "k9.title": "ஒவ்வொரு மணிநேரமும் முன்னறிவிப்பு",
   "k9.what": "முன்னறிவிப்பு நாளின் ஒவ்வொரு மணிநேரமும், போதுமான நிலையங்களில் இயங்கியதா, பழுதான உணரி அளவீடு எவ்வளவு முறை குறுக்கிட்டது.",
   "k9.target": "ஒவ்வொரு நாளும் 24 மணிநேரமும் முன்னறிவிப்புகள்",
-  "k9.value": "நாளுக்கு 24 மணிநேரத்தில் {h} இல் முன்னறிவிப்புகள், மணிநேரத்துக்கு {g} நிலையங்களிலிருந்து. முன்னறிவிப்புகளில் {f} உணரிப் பழுது போலத் தெரிந்த அளவீட்டிலிருந்து தொடங்கியதால் இந்தச் சோதனைகளிலிருந்து நீக்கப்பட்டன.",
+  "k9.value": "வழக்கமான நாளில் 24 மணிநேரத்தில் {h} இல் முன்னறிவிப்புகள்{wn}, மணிநேரத்துக்கு {g} நிலையங்களிலிருந்து. முன்னறிவிப்புகளில் {f} உணரிப் பழுது போலத் தெரிந்த அளவீட்டிலிருந்து தொடங்கியதால் இந்தச் சோதனைகளிலிருந்து நீக்கப்பட்டன.",
   "k10.title": "மக்கள் எங்களுக்குச் சொல்வது",
   "k10.what": "எங்கள் பக்கங்களில் \"இது சரியா?\" என்பதற்குப் பதிலளித்தவர்களில், முன்னறிவிப்பு தாங்கள் பார்ப்பதுடன் பொருந்துகிறது என்றவர்கள் எத்தனை பேர்.",
   "k10.target": "குறைந்தது 70% பேர் பொருந்துகிறது என்கிறார்கள்",
@@ -291,6 +295,8 @@ const ta: Record<ForecastKpiKey, string> = {
   "ver.glitch-filter.what": "ஒரு அளவீட்டு உச்சங்களும் உறைந்த உணரிகளும் முன்னறிவிப்பு கற்கும் அளவீடுகளிலிருந்து நீக்கப்படுகின்றன, இதனால் பழுதான நிலையம் இனி அதைச் சிதைக்காது.",
   "ver.gauge-first-rain.name": "மழைமானிகளுக்கு முன்னுரிமை",
   "ver.gauge-first-rain.what": "புயல்களில் முன்னறிவிப்பு முதலில் நீர்ப்பிடிப்புப் பகுதிக்குள் உள்ள மழைமானிகள் அளந்த மழையைப் படிக்கிறது; எந்த மானியும் அறிவிக்காத இடங்களில் மட்டுமே செயற்கைக்கோள் தரவைப் பயன்படுத்துகிறது.",
+  "ver.measured-wins.name": "அடுத்த மணி நேரம் அளவிட்டதைப் பின்பற்றும்",
+  "ver.measured-wins.what": "முன்னறிவிப்பு ஆற்றின் கடந்த 3 மணி நேரத்துக்கு எதிர்த்திசையில் இருந்தால் (எ.கா. குறைந்தும் மாதிரி மீண்டும் உயரும் என்றால்), \"அடுத்த மணி நேரம்\" சொல் இப்போது அளவிட்டதைப் பின்பற்றுகிறது, முன்னறிவிப்பு எதிர்பார்ப்பதை ஒரு சிறு குறிப்பு சொல்கிறது.",
   "link": "இது எவ்வளவு துல்லியமாக இருந்தது? முன்னறிவிப்புத் துல்லியத்தைப் பார்க்கவும்",
 };
 
