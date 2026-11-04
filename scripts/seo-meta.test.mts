@@ -73,7 +73,7 @@ assert.equal(representativeGauge("Unknown Oya", []), null);
 // ---- gauge title / description
 const g = gaugeMeta("en", { gauge: "Ratnapura", basin: "Kalu Ganga", oneGauge: false, level: "9.9 ft", status: "Normal", alert: "17.1 ft", minor: "24.6 ft", major: "31.2 ft" });
 assert.equal(g.title, "Ratnapura Water Level Today & Flood Level (Kalu Ganga)");
-assert.equal(g.description, "Ratnapura water level now: 9.9 ft (Normal). Flood levels: alert 17.1 ft, minor 24.6 ft, major 31.2 ft. Kalu Ganga gauge with a next-hour forecast.");
+assert.equal(g.description, "Ratnapura water level, latest reading: 9.9 ft (Normal). Flood levels: alert 17.1 ft, minor 24.6 ft, major 31.2 ft. Kalu Ganga gauge with a next-hour forecast.");
 assert.deepEqual(g.alias, "Also searched as Rathnapura.");
 // Hanwella keeps the title that already performs
 assert.equal(gaugeMeta("en", { gauge: "Hanwella", basin: "Kelani Ganga", oneGauge: false }).title, "Hanwella Water Level Today (Kelani River, Live)");

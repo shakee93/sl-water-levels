@@ -54,7 +54,7 @@ export function tierWithRelease<T extends string>(tier: T, r: ReleaseFacts | nul
 /** "Deduru Oya reservoir is releasing 10,400 cusecs through 8 gates" (gates left out when the source gives none). */
 export function releaseAlertLine(a: ReleaseAlert, lang: "en" | "si" | "ta" = "en"): string {
   const c = Math.round(a.cusecs).toLocaleString("en-US");
-  if (lang === "si") return `${a.reservoir} ජලාශයෙන් ඝන අඩි ${c} ක් මුදා හරියි${a.gates ? ` (දොරටු ${a.gates}ක් හරහා)` : ""}`;
+  if (lang === "si") return `${a.reservoir} ජලාශයෙන් තත්පරයකට ඝන අඩි ${c} ක් මුදා හරියි${a.gates ? ` (දොරටු ${a.gates}ක් හරහා)` : ""}`;
   if (lang === "ta") return `${a.reservoir} நீர்த்தேக்கம் ${a.gates ? `${a.gates} மதகுகள் வழியாக ` : ""}வினாடிக்கு ${c} கன அடி வெளியேற்றுகிறது`;
   return `${a.reservoir} reservoir is releasing ${c} cusecs${a.gates ? ` through ${a.gates} ${a.gates === 1 ? "gate" : "gates"}` : ""}`;
 }

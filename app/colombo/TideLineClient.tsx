@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Waves } from "lucide-react";
 import { ccFor } from "@/lib/i18n/colombo";
 import { clock } from "@/lib/i18n/format";
-import { colomboDay, tideEvents, tideNow } from "@/lib/tide";
+import { tideDayKey, tideEvents, tideNow, tideWeekday } from "@/lib/tide";
 import { useI18n } from "../LocaleProvider";
 
 /**
@@ -30,8 +30,7 @@ export function TideLineClient() {
   const tn = tideNow(now);
   const highs = tn.highs.slice(0, 2);
   if (!highs.length) return null;
-  const day = (ms: number) => (colomboDay(ms) === colomboDay(now) ? "tide.today" : "tide.tomorrow");
-  const parts = highs.map((h) => cc(day(h.t), { time: clock(h.t, t) }));
+  const parts = highs.map((h) => cc(tideDayKey(h.t, now), { time: clock(h.t, t), day: tideWeekday(h.t, lang) }));
   const times = parts.length === 2 ? cc("tide.and", { a: parts[0], b: parts[1] }) : parts[0];
   const after = tideEvents(now, 30).find((e) => e.kind === "high" && e.t > now + 90 * 60_000);
   const main = tn.nearHigh ? cc("tide.now") + (after ? " " + cc("tide.nowNext", { times: clock(after.t, t) }) : "") : `${cc("tide.highs", { times })} ${cc("tide.slow")}`;

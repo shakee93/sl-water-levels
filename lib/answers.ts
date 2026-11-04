@@ -9,10 +9,11 @@
 import type { NationalStation } from "./arcgis";
 import { stationDisplayName } from "./displayName";
 import { STEADY_M_PER_H } from "./forecastRules.mjs";
+import { isTidalStation, riverRising } from "./verdictLift";
 import { fullStamp, riverName } from "./i18n/format";
 import type { Locale } from "./i18n/config";
 import type { TFn } from "./i18n/translate";
-import { shownNumber, type Unit } from "./units";
+import { readingLooksUnreliable, shownNumber, type Unit } from "./units";
 import type { NextHour } from "./nextHour";
 import { rainRiskLine } from "./rainRisk";
 import { byGaugeDemand } from "./seoNames";
@@ -32,9 +33,15 @@ const D = {
     ta: "{asOf}, {river} ஆற்றின் {name} இல் நீர்மட்டம் {lv}; {rel}{dir}.",
   },
   sentenceNoMarks: {
-    en: "{asOf}, the water level at {name} was {lv}{dir}. No official flood levels are published for this gauge, so there is no flood step.",
-    si: "{asOf}, {name} හි ජල මට්ටම {lv} විය{dir}. මෙම මානයට නිල ගංවතුර මට්ටම් පළ කර නැති බැවින් ගංවතුර පියවරක් නැත.",
-    ta: "{asOf}, {name} இல் நீர்மட்டம் {lv}{dir}. இந்த அளவிக்கு அதிகாரப்பூர்வ வெள்ள மட்டங்கள் வெளியிடப்படவில்லை, எனவே வெள்ள நிலை இல்லை.",
+    en: "{asOf}, the water level at {name} was {lv}{dir}. No official flood levels are published for this gauge, so it cannot be compared with an alert level and this page cannot say whether it is flooding.",
+    si: "{asOf}, {name} හි ජල මට්ටම {lv} විය{dir}. මෙම මානයට නිල ගංවතුර මට්ටම් පළ කර නැති බැවින් එය අනතුරු ඇඟවීමේ මට්ටමක් සමඟ සසඳා බැලිය නොහැක; ගංවතුරක් තිබේද යන්න මෙම පිටුවට කිව නොහැක.",
+    ta: "{asOf}, {name} இல் நீர்மட்டம் {lv}{dir}. இந்த அளவீட்டுக்கு அதிகாரப்பூர்வ வெள்ள மட்டங்கள் வெளியிடப்படவில்லை, எனவே எச்சரிக்கை மட்டத்துடன் ஒப்பிட முடியாது; வெள்ளம் உள்ளதா என்பதை இந்தப் பக்கத்தால் சொல்ல முடியாது.",
+  },
+  // a zero with no unit, a negative level or a datum-fault gauge: the number is not quoted and nothing is compared with a mark (si/ta drafts)
+  unreliable: {
+    en: "{name} is sending a reading that looks wrong (a negative or stuck level), so this page cannot say whether the river is high or flooding there. Please use the Disaster Management Centre's warnings for this area.",
+    si: "{name} හි මානය වැරදි බවක් පෙනෙන කියවීමක් (ඍණ හෝ එක තැන ඇලී ඇති මට්ටමක්) එවයි, එබැවින් එහි ගඟ ඉහළ ද ගංවතුරක් ඇති ද යන්න මෙම පිටුවට කිව නොහැක. මෙම ප්‍රදේශය සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානයේ අනතුරු ඇඟවීම් බලන්න.",
+    ta: "{name} அனுப்பும் அளவீடு தவறாகத் தெரிகிறது (எதிர்மறை அல்லது மாறாமல் நிற்கும் அளவு), எனவே அங்கு ஆறு உயர்ந்துள்ளதா அல்லது வெள்ளம் உள்ளதா என்பதை இந்தப் பக்கத்தால் சொல்ல முடியாது. இந்தப் பகுதிக்கு அனர்த்த முகாமைத்துவ நிலையத்தின் எச்சரிக்கைகளைப் பாருங்கள்.",
   },
   // a RiverNet gauge that has stopped reporting: their network, not the Irrigation Department's (si/ta drafts)
   noDataRivernet: {
@@ -53,10 +60,13 @@ const D = {
   minor: { en: "above the {v} minor flood level", si: "සුළු ගංවතුර මට්ටම ({v}) ඉක්මවා ඇත", ta: "சிறிய வெள்ள மட்டத்தை ({v}) தாண்டியுள்ளது" },
   major: { en: "above the {v} major flood level", si: "ප්‍රධාන ගංවතුර මට්ටම ({v}) ඉක්මවා ඇත", ta: "பெரிய வெள்ள மட்டத்தை ({v}) தாண்டியுள்ளது" },
   none: { en: "and this gauge has no published flood levels", si: "මෙම මානයට පළ කළ ගංවතුර මට්ටම් නැත", ta: "இந்த அளவீட்டுக்கு வெள்ள மட்டங்கள் வெளியிடப்படவில்லை" },
-  rising: { en: ", and rising", si: "; ඉහළ යමින් තිබේ", ta: "; உயர்ந்து வருகிறது" },
-  risingSlow: { en: ", and rising slowly", si: "; සෙමින් ඉහළ යමින් තිබේ", ta: "; மெதுவாக உயர்ந்து வருகிறது" },
-  falling: { en: ", and falling", si: "; පහළ යමින් තිබේ", ta: "; குறைந்து வருகிறது" },
-  steady: { en: ", and steady", si: "; ස්ථාවරව තිබේ", ta: "; மாற்றமின்றி உள்ளது" },
+  // the window is named: the next-hour sentence under it is a forecast and may point the other way (4 Nov sweep)
+  rising: { en: ", and rising over the last 3 hours", si: "; පසුගිය පැය 3 තුළ ඉහළ යමින් තිබේ", ta: "; கடந்த 3 மணி நேரத்தில் உயர்ந்து வருகிறது" },
+  risingSlow: { en: ", and rising slowly over the last 3 hours", si: "; පසුගිය පැය 3 තුළ සෙමින් ඉහළ යමින් තිබේ", ta: "; கடந்த 3 மணி நேரத்தில் மெதுவாக உயர்ந்து வருகிறது" },
+  falling: { en: ", and falling over the last 3 hours", si: "; පසුගිය පැය 3 තුළ පහළ යමින් තිබේ", ta: "; கடந்த 3 மணி நேரத்தில் குறைந்து வருகிறது" },
+  steady: { en: ", and steady over the last 3 hours", si: "; පසුගිය පැය 3 තුළ ස්ථාවරව තිබේ", ta: "; கடந்த 3 மணி நேரத்தில் மாற்றமின்றி உள்ளது" },
+  // a tidal gauge whose rise is only the tide, not the river
+  tide: { en: ", and rising with the tide", si: "; උදම සමඟ ඉහළ යමින් තිබේ", ta: "; அலையுடன் உயர்ந்து வருகிறது" },
   stale: {
     en: "{name} is not reporting a current level. Its last reading was {lv}, {stamp} (Sri Lanka time).",
     si: "{name} දැන් මට්ටමක් වාර්තා කරන්නේ නැත. අවසන් කියවීම {lv}, {stamp} (ශ්‍රී ලංකා වේලාවෙන්).",
@@ -76,6 +86,16 @@ const lvText = (v: number, u: Unit, digits = 1) => (u ? `${shownNumber(v, u)} ft
 const STEADY = STEADY_M_PER_H; // one threshold for the whole site (lib/forecastRules.mjs)
 const SLOW = 0.05;
 
+/** The measured 3 h direction of a gauge as the page's words: one threshold, and a tidal gauge whose rise is only the tide is not a rising river. */
+export function directionKey(s: NationalStation): "steady" | "falling" | "risingSlow" | "rising" | "tide" | null {
+  const r = s.rate3hM;
+  if (r == null || !Number.isFinite(r)) return null;
+  if (Math.abs(r) < STEADY) return "steady";
+  if (r < 0) return "falling";
+  if (isTidalStation(s.station) && !riverRising(s.station, s.trend24h, s.metresPerUnit, r)) return "tide";
+  return r < SLOW ? "risingSlow" : "rising";
+}
+
 /** One sentence: the level now, against the official marks, and where it is heading. */
 export function stationAnswer(lang: Locale, t: TFn, s: NationalStation): string {
   const name = stationDisplayName(s.station);
@@ -85,6 +105,8 @@ export function stationAnswer(lang: Locale, t: TFn, s: NationalStation): string 
   const lv = lvText(s.latest.water_level, s.unit);
   const stamp = fullStamp(s.latest.ts, t);
   if (s.tier === "stale") return W(D.stale, lang, { name, lv, stamp });
+  // words only: the official step and status pill keep reading the published numbers
+  if (readingLooksUnreliable(s.station, s.latest.water_level, s.unit)) return W(D.unreliable, lang, { name });
   const th = s.thresholds;
   const mark = (v: number | null) => (v == null ? "" : lvText(v, s.unit));
   let rel: string;
@@ -96,8 +118,7 @@ export function stationAnswer(lang: Locale, t: TFn, s: NationalStation): string 
     case "normal": rel = W(D.below, lang, { v: mark(th.alert) }); break;
     default: rel = W(D.none, lang);
   }
-  const r = s.rate3hM;
-  const dir = r == null ? "" : W(Math.abs(r) < STEADY ? D.steady : r < 0 ? D.falling : r < SLOW ? D.risingSlow : D.rising, lang);
+  const dir = directionKey(s) == null ? "" : W(D[directionKey(s)!], lang);
   if (!["major", "minor", "alert", "watch", "normal"].includes(s.tier)) return W(D.sentenceNoMarks, lang, { asOf: W(D.asOf, lang, { stamp }), name, lv, dir });
   return W(river ? D.sentence : D.sentenceNoRiver, lang, { asOf: W(D.asOf, lang, { stamp }), river, name, lv, rel, dir });
 }
@@ -117,15 +138,45 @@ const NH = {
     si: "ඊළඟ පැය තුළ {subj} පාහේ වෙනස් නොවී පවතිනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
     ta: "அடுத்த மணி நேரத்தில் {subj} ஏறக்குறைய மாறாமல் இருக்கும் என எதிர்பார்க்கப்படுகிறது{rng}.",
   },
+  // "could" stays "could" in si/ta (a possibility, not an expectation); one unit word and order per language ({ft})
   rise: {
-    en: "In the next hour {subj} could rise to about {lv} ft{rng}.",
-    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් අඩි {lv} දක්වා ඉහළ යනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
-    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} அடிக்கு உயரும் என எதிர்பார்க்கப்படுகிறது{rng}.",
+    en: "In the next hour {subj} could rise to about {lv}{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් {lv} දක්වා ඉහළ යා හැක{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} வரை உயரலாம்{rng}.",
   },
   fall: {
-    en: "In the next hour {subj} could fall to about {lv} ft{rng}.",
-    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් අඩි {lv} දක්වා පහළ යනු ඇතැයි අපේක්ෂා කෙරේ{rng}.",
-    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} அடிக்குக் குறையும் என எதிர்பார்க்கப்படுகிறது{rng}.",
+    en: "In the next hour {subj} could fall to about {lv}{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් {lv} දක්වා පහළ යා හැක{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} வரை குறையலாம்{rng}.",
+  },
+  // the page says Rising / Falling but the model's own change is under 0.1 ft: say the direction, not a number that looks unchanged
+  riseSlight: {
+    en: "In the next hour {subj} could creep up to about {lv}{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් {lv} දක්වා සුළු වශයෙන් ඉහළ යා හැක{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} வரை சிறிதளவு உயரலாம்{rng}.",
+  },
+  fallSlight: {
+    en: "In the next hour {subj} could ease down to about {lv}{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් {lv} දක්වා සුළු වශයෙන් පහළ යා හැක{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} வரை சிறிதளவு குறையலாம்{rng}.",
+  },
+  // measured direction and the model disagree (owner decision 4 Nov 2026): the measured word, then what the forecast expects
+  turnUp: {
+    en: "{subj} is falling now, but the forecast expects it to turn up to about {lv}{rng} in the next hour.",
+    si: "{subj} දැන් පහළ යමින් තිබේ, නමුත් ඊළඟ පැය තුළ ආසන්න වශයෙන් {lv}{rng} දක්වා නැවත ඉහළ යනු ඇතැයි පුරෝකථනය කරයි.",
+    ta: "{subj} இப்போது குறைந்து வருகிறது, ஆனால் அடுத்த மணி நேரத்தில் சுமார் {lv}{rng} வரை மீண்டும் உயரும் என முன்னறிவிப்பு கூறுகிறது.",
+  },
+  turnDown: {
+    en: "{subj} is rising now, but the forecast expects it to ease to about {lv}{rng} in the next hour.",
+    si: "{subj} දැන් ඉහළ යමින් තිබේ, නමුත් ඊළඟ පැය තුළ ආසන්න වශයෙන් {lv}{rng} දක්වා අඩු වනු ඇතැයි පුරෝකථනය කරයි.",
+    ta: "{subj} இப்போது உயர்ந்து வருகிறது, ஆனால் அடுத்த மணி நேரத்தில் சுமார் {lv}{rng} வரை குறையும் என முன்னறிவிப்பு கூறுகிறது.",
+  },
+  oldReading: { en: " (the latest reading is {n} minutes old)", si: " (නවතම කියවීම මිනිත්තු {n}ක් පැරණියි)", ta: " (சமீபத்திய அளவீடு {n} நிமிடம் பழையது)" },
+  // steady direction but the level still moves (tide) or a mark is in reach: do not say "the same"
+  about: {
+    en: "In the next hour {subj} could be about {lv}{rng}.",
+    si: "ඊළඟ පැය තුළ {subj} ආසන්න වශයෙන් {lv} විය හැක{rng}.",
+    ta: "அடுத்த மணி நேரத்தில் {subj} சுமார் {lv} ஆக இருக்கலாம்{rng}.",
   },
   reachAlert: { en: " It {how} reach the alert level.", si: " එය අනතුරු ඇඟවීමේ මට්ටමට {how}.", ta: " அது எச்சரிக்கை மட்டத்தை {how}." },
   reachMinor: { en: " It {how} reach the minor flood level.", si: " එය සුළු ගංවතුර මට්ටමට {how}.", ta: " அது சிறிய வெள்ள மட்டத்தை {how}." },
@@ -139,13 +190,24 @@ export function nextHourSentence(lang: Locale, nh: NextHour | null, subject?: st
   if (!nh) return null;
   const subj = subject ?? NH.subjIt[lang];
   const dec = (v: number) => v.toFixed(1);
+  // feet in the page language: "5.0 ft", "අඩි 5.0", "5.0 அடி" (one order per language)
+  const ft = (n: string) => (lang === "si" ? `අඩි ${n}` : lang === "ta" ? `${n} அடி` : `${n} ft`);
   const lo = nh.low_ft != null ? dec(nh.low_ft) : null;
   const hi = nh.high_ft != null ? dec(nh.high_ft) : null;
-  const rng = lo != null && hi != null && lo !== hi ? ` (${lo}–${hi} ft)` : "";
-  const lv = dec(nh.level_ft);
-  const small = Math.abs(Number(dec(nh.change_ft))) < 0.1;
-  const d = small ? NH.steady : nh.change_ft < 0 ? NH.fall : NH.rise;
-  let out = W(d, lang, { subj, lv, rng });
+  const rng = lo != null && hi != null && lo !== hi ? ` (${lang === "si" ? `අඩි ${lo}–${hi}` : lang === "ta" ? `${lo}–${hi} அடி` : `${lo}–${hi} ft`})` : "";
+  const lv = ft(dec(nh.level_ft));
+  const chg = Number(dec(nh.change_ft));
+  const big = Math.abs(chg) >= 0.1;
+  // the direction is the page's Next hour word (lib/nextHour.ts: measured rate for gauges without a fitted model, tide-only = steady);
+  // "stay about the same" only when that word is Steady and nothing is within reach of a mark
+  const dirn = nh.direction ?? (big ? (chg < 0 ? "falling" : "rising") : "steady");
+  const d =
+    dirn === "steady" ? (big || nh.crossing ? NH.about : NH.steady)
+    : dirn === "falling" ? (chg < -0.05 && big ? NH.fall : NH.fallSlight)
+    : chg > 0.05 && big ? NH.rise : NH.riseSlight;
+  const subjCap = subj.charAt(0).toUpperCase() + subj.slice(1);
+  let out = nh.modelView === "up" ? W(NH.turnUp, lang, { subj: subjCap, lv, rng }) : nh.modelView === "down" ? W(NH.turnDown, lang, { subj: subjCap, lv, rng }) : W(d, lang, { subj, lv, rng });
+  if (nh.readingAgeMin != null) out = out.replace(/\.$/, "") + W(NH.oldReading, lang, { n: nh.readingAgeMin }) + ".";
   if (nh.crossing) {
     const k = nh.crossing.includes("major") ? NH.reachMajor : nh.crossing.includes("minor") ? NH.reachMinor : NH.reachAlert;
     out += W(k, lang, { how: W(nh.crossing.startsWith("expected") ? NH.expected : NH.may, lang) });
@@ -172,6 +234,12 @@ const R = {
     en: "{asOf}, {n} of the {m} reporting gauges on the {river} are at or above an official mark (Alert, Minor flood or Major flood): {names}.",
     si: "{asOf}, {river} හි වාර්තා කරන මාන {m} න් {n} ක් අනතුරු ඇඟවීමේ හෝ ඉහළ මට්ටමක ඇත: {names}.",
     ta: "{asOf}, {river} இல் தகவல் தரும் {m} அளவீடுகளில் {n} எச்சரிக்கை அல்லது அதற்கு மேல் மட்டத்தில் உள்ளன: {names}.",
+  },
+  // every flagged gauge is only at Alert (the first step): the answer to "is it flooding" starts with no flood level reached (si / ta drafts)
+  alertOnly: {
+    en: "{asOf}, no gauge on the {river} is at a flood level. {n} of the {m} reporting gauges {is} at Alert: {names}.",
+    si: "{asOf}, {river} හි කිසිදු මානයක් ගංවතුර මට්ටමක නැත. වාර්තා කරන මාන {m} න් {n} ක් අනතුරු ඇඟවීමේ මට්ටමේ ඇත: {names}.",
+    ta: "{asOf}, {river} இல் எந்த அளவீடும் வெள்ள மட்டத்தில் இல்லை. தகவல் தரும் {m} அளவீடுகளில் {n} எச்சரிக்கை மட்டத்தில் உள்ளன: {names}.",
   },
   calm: {
     en: "{asOf}, all {m} reporting gauges on the {river} are below their alert levels{list}.",
@@ -204,7 +272,9 @@ export function riverAnswer(lang: Locale, t: TFn, basin: string, snap: NationalS
   if (!flagged.length) return W(R.calm, lang, { asOf, river, m: reporting.length, list: top.length ? ` (${top.map(lv).join(", ")})` : "" });
   const names = flagged.map((s) => `${stationDisplayName(s.station)} (${lvText(s.latest!.water_level!, s.unit)})`).join(", ");
   const others = flagged.length < 3 ? top.filter((s) => !flagged.includes(s)).slice(0, 3 - flagged.length) : [];
-  return W(R.flagged, lang, { asOf, river, n: flagged.length, m: reporting.length, names }) + (others.length ? W(R.also, lang, { list: others.map(lv).join(", ") }) : "");
+  const onlyAlert = flagged.every((s) => s.tier === "alert");
+  const gaugesWord = flagged.length === 1 ? "is" : "are";
+  return W(onlyAlert ? R.alertOnly : R.flagged, lang, { asOf, river, n: flagged.length, m: reporting.length, names, is: gaugesWord }) + (others.length ? W(R.also, lang, { list: others.map(lv).join(", ") }) : "");
 }
 
 /** Up to three reporting gauges, the ones people search by name first (lib/seoNames.ts byGaugeDemand), then upstream order. */
@@ -230,7 +300,7 @@ const Q = {
   riverMarks: { en: "What is the flood level on the {river}?", si: "{river} හි ගංවතුර මට්ටම කීයද?", ta: "{river} இல் வெள்ள மட்டம் என்ன?" },
   riverMarksA: {
     en: "Each gauge has its own official marks from the Department of Irrigation. {list}. Alert means the river has reached the alert mark: move valuables up and charge your phone. Minor flood means water is spilling over low ground, and major flood means move to safety.",
-    si: "සෑම මානයකටම ජල සම්පාදන දෙපාර්තමේන්තුවේ තමන්ගේම නිල මට්ටම් ඇත. {list}. අනතුරු ඇඟවීම යනු සූදානම් වීම, සුළු ගංවතුර යනු පහත් බිම්වලට ජලය පැමිණීම, ප්‍රධාන ගංවතුර යනු ආරක්ෂිත ස්ථානයකට යාම.",
+    si: "සෑම මානයකටම වාරිමාර්ග දෙපාර්තමේන්තුවේ තමන්ගේම නිල මට්ටම් ඇත. {list}. අනතුරු ඇඟවීම යනු සූදානම් වීම, සුළු ගංවතුර යනු පහත් බිම්වලට ජලය පැමිණීම, ප්‍රධාන ගංවතුර යනු ආරක්ෂිත ස්ථානයකට යාම.",
     ta: "ஒவ்வொரு அளவீட்டு நிலையத்துக்கும் நீர்ப்பாசனத் திணைக்களத்தின் சொந்த அதிகாரப்பூர்வ மட்டங்கள் உள்ளன. {list}. எச்சரிக்கை என்பது தயாராக இருப்பது, சிறிய வெள்ளம் என்பது தாழ்ந்த நிலங்களில் நீர் புகுவது, பெரிய வெள்ளம் என்பது பாதுகாப்பான இடத்துக்குச் செல்வது.",
   },
   riverStatus: { en: "What is the status of the {river}?", si: "{river} හි තත්ත්වය කුමක්ද?", ta: "{river} இன் நிலை என்ன?" },
@@ -240,7 +310,7 @@ const Q = {
   source: { en: "Where does this come from and how often does it update?", si: "මෙය කොහෙන්ද, කොපමණ වාරයක් යාවත්කාලීන වේද?", ta: "இது எங்கிருந்து வருகிறது, எத்தனை முறை புதுப்பிக்கப்படுகிறது?" },
   sourceA: {
     en: "River readings come from the Department of Irrigation's gauges, roughly once an hour, and this page checks for new ones every minute. This site is independent and not an official warning service: follow the Disaster Management Centre and call 117 in an emergency.",
-    si: "ගංගා මට්ටම් ජල සම්පාදන දෙපාර්තමේන්තුවේ මානවලින් පැයකට වරක් පමණ ලැබේ; මෙම පිටුව සෑම මිනිත්තුවකටම නව දත්ත පරීක්ෂා කරයි. මෙම වෙබ් අඩවිය ස්වාධීනයි, නිල අනතුරු ඇඟවීමක් නොවේ: ආපදා කළමනාකරණ මධ්‍යස්ථානය අනුගමනය කර හදිසි අවස්ථාවක 117 අමතන්න.",
+    si: "ගංගා මට්ටම් වාරිමාර්ග දෙපාර්තමේන්තුවේ මානවලින් පැයකට වරක් පමණ ලැබේ; මෙම පිටුව සෑම මිනිත්තුවකටම නව දත්ත පරීක්ෂා කරයි. මෙම වෙබ් අඩවිය ස්වාධීනයි, නිල අනතුරු ඇඟවීමක් නොවේ: ආපදා කළමනාකරණ මධ්‍යස්ථානය අනුගමනය කර හදිසි අවස්ථාවක 117 අමතන්න.",
     ta: "ஆற்று அளவீடுகள் நீர்ப்பாசனத் திணைக்களத்தின் அளவீட்டு நிலையங்களிலிருந்து ஏறக்குறைய ஒவ்வொரு மணி நேரமும் வருகின்றன; இந்தப் பக்கம் ஒவ்வொரு நிமிடமும் புதியவற்றைச் சரிபார்க்கிறது. இந்தத் தளம் சுயாதீனமானது, அதிகாரப்பூர்வ எச்சரிக்கை சேவை அல்ல: அனர்த்த முகாமைத்துவ நிலையத்தைப் பின்பற்றி அவசரத்தில் 117 ஐ அழைக்கவும்.",
   },
   gauges: { en: "Which gauges are on the {river}?", si: "{river} හි මාන මොනවාද?", ta: "{river} இல் எந்த அளவீட்டு நிலையங்கள் உள்ளன?" },
@@ -254,7 +324,7 @@ const Q = {
   },
   rsvSourceA: {
     en: "From the Irrigation Department's daily reservoir sheet and the Mahaweli Authority's daily report. Both update about once a day, so check the date shown. This site is independent: for spill-gate warnings follow the Disaster Management Centre and call 117.",
-    si: "ජල සම්පාදන දෙපාර්තමේන්තුවේ දෛනික වැව් වාර්තාවෙන් සහ මහවැලි අධිකාරියේ දෛනික වාර්තාවෙන්. දෙකම දිනකට වරක් පමණ යාවත්කාලීන වේ, එබැවින් පෙන්වන දිනය බලන්න. මෙය ස්වාධීන වෙබ් අඩවියකි: වාන් දොරටු අනතුරු ඇඟවීම් සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානය අනුගමනය කර 117 අමතන්න.",
+    si: "වාරිමාර්ග දෙපාර්තමේන්තුවේ දෛනික වැව් වාර්තාවෙන් සහ මහවැලි අධිකාරියේ දෛනික වාර්තාවෙන්. දෙකම දිනකට වරක් පමණ යාවත්කාලීන වේ, එබැවින් පෙන්වන දිනය බලන්න. මෙය ස්වාධීන වෙබ් අඩවියකි: වාන් දොරටු අනතුරු ඇඟවීම් සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානය අනුගමනය කර 117 අමතන්න.",
     ta: "நீர்ப்பாசனத் திணைக்களத்தின் தினசரி நீர்த்தேக்க அறிக்கையிலிருந்தும் மகாவலி அதிகாரசபையின் தினசரி அறிக்கையிலிருந்தும். இரண்டும் நாளுக்கு ஒருமுறை புதுப்பிக்கப்படும், எனவே காட்டப்படும் திகதியைப் பார்க்கவும். இது சுயாதீனத் தளம்: வான் கதவு எச்சரிக்கைகளுக்கு அனர்த்த முகாமைத்துவ நிலையத்தைப் பின்பற்றி 117 ஐ அழைக்கவும்.",
   },
   nhStation: { en: "Will the {river} at {name} rise in the next hour?", si: "{river} හි {name} හි ජල මට්ටම ඊළඟ පැය තුළ ඉහළ යාවිද?", ta: "{river} ஆற்றின் {name} இல் அடுத்த மணி நேரத்தில் நீர்மட்டம் உயருமா?" },
@@ -264,7 +334,7 @@ const Q = {
   nhNote: {
     en: "This is a forecast from the recent trend, the gauges upstream and rain, not an official warning.",
     si: "මෙය මෑත ප්‍රවණතාව, ඉහළ මාන සහ වර්ෂාව මත පදනම් වූ පුරෝකථනයකි, නිල අනතුරු ඇඟවීමක් නොවේ.",
-    ta: "இது சமீபத்திய போக்கு, மேல்நிலை நிலையங்கள் மற்றும் மழையை அடிப்படையாகக் கொண்ட முன்னறிவிப்பு, அதிகாரப்பூர்வ எச்சரிக்கை அல்ல.",
+    ta: "இது சமீபத்திய போக்கு, ஆற்றின் மேற்பகுதி நிலையங்கள் மற்றும் மழையை அடிப்படையாகக் கொண்ட முன்னறிவிப்பு, அதிகாரப்பூர்வ எச்சரிக்கை அல்ல.",
   },
   nhTownNote: {
     en: "This is a forecast for the river, not an official warning, and streets can flood before the river reaches a flood mark.",
@@ -316,12 +386,14 @@ export function stationFaq(lang: Locale, s: NationalStation, answer: string, nh:
   add(Q.minorWord, th.minor);
   add(Q.majorWord, th.major);
   const river = s.basin.trim() ? riverName(s.basin.trim(), lang) : "";
-  const next = nextHourSentence(lang, nh, nextHourSubject(lang, s.basin, s.station));
-  const rate = s.tier !== "stale" && s.latest ? s.rate3hM : null;
+  // an unreliable reading (negative, stuck zero, datum-fault gauge) gets no trend or next-hour answer
+  const bad = s.latest != null && readingLooksUnreliable(s.station, s.latest.water_level, s.unit);
+  const next = bad ? null : nextHourSentence(lang, nh, nextHourSubject(lang, s.basin, s.station));
+  const dk = s.tier !== "stale" && s.latest && !bad ? directionKey(s) : null;
   const trendItem: Faq[] =
-    rate == null || s.latest == null || s.latest.water_level == null
+    dk == null || s.latest == null || s.latest.water_level == null
       ? []
-      : [{ q: W(Q.risingStation, lang, { name }), a: W(Math.abs(rate) < STEADY ? Q.risingStationSame : rate > 0 ? Q.risingStationUp : Q.risingStationDown, lang, { name, lv: lvText(s.latest.water_level, s.unit) }) }];
+      : [{ q: W(Q.risingStation, lang, { name }), a: W(dk === "steady" || dk === "tide" ? Q.risingStationSame : dk === "falling" ? Q.risingStationDown : Q.risingStationUp, lang, { name, lv: lvText(s.latest.water_level, s.unit) }) }];
   return [
     { q: W(Q.now, lang, { name }), a: answer },
     ...trendItem,
@@ -352,9 +424,10 @@ export function riverFaq(
     ? [{ q: W(Q.rising, lang, { name: river }), a: W(Q.risingRiverA, lang, { m: tm, river, parts: [trend.up && W(Q.nhUp, lang, { n: trend.up }), trend.same && W(Q.nhSame, lang, { n: trend.same }), trend.down && W(Q.nhDown, lang, { n: trend.down })].filter(Boolean).join(", ") }) }]
     : [];
   const have = next.filter((x): x is { station: string; nh: NextHour } => x.nh != null);
-  const flat = (n: NextHour) => Math.abs(Number(n.change_ft.toFixed(1))) < 0.1;
-  const up = have.filter((x) => !flat(x.nh) && x.nh.change_ft > 0).length;
-  const down = have.filter((x) => !flat(x.nh) && x.nh.change_ft < 0).length;
+  // the same word as each gauge's Next hour tile (NextHour.direction)
+  const dirOf = (n: NextHour) => n.direction ?? (Math.abs(Number(n.change_ft.toFixed(1))) < 0.1 ? "steady" : n.change_ft < 0 ? "falling" : "rising");
+  const up = have.filter((x) => dirOf(x.nh) === "rising").length;
+  const down = have.filter((x) => dirOf(x.nh) === "falling").length;
   const same = have.length - up - down;
   const parts = [up && W(Q.nhUp, lang, { n: up }), same && W(Q.nhSame, lang, { n: same }), down && W(Q.nhDown, lang, { n: down })].filter(Boolean).join(", ");
   const reach = have.filter((x) => x.nh.crossing).map((x) => stationDisplayName(x.station));
@@ -389,7 +462,7 @@ export function townFaq(
   const out: Faq[] = [{ q: W(Q.now, lang, { name: town }), a: answer }];
   const sentence = next ? nextHourSentence(lang, next.nh, nextHourSubject(lang, next.basin, next.station)) : null;
   if (sentence) out.push({ q: W(Q.nhTown, lang, { town }), a: `${answer} ${sentence} ${W(Q.nhTownNote, lang)}` });
-  if (gauge) out.push({ q: W(Q.townHow, lang, { name: town }), a: W(Q.townHowA, lang, gauge) });
+  if (gauge) out.push({ q: W(Q.townHow, lang, { name: town }), a: W(Q.townHowA, lang, { gauge: gauge.name, km: gauge.km }) });
   out.push({ q: W(Q.source, lang), a: W(Q.sourceA, lang) });
   return out;
 }

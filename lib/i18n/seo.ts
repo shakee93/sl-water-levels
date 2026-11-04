@@ -139,18 +139,24 @@ export const SEO = {
   },
   // {sp} = " (Alert)" or empty; {marks} = "alert 17.1 ft, minor 24.6 ft, major 31.2 ft" (only the marks that exist)
   "gauge.desc": {
-    en: "{gauge} water level now: {level}{sp}. Flood levels: {marks}. {river} gauge with a next-hour forecast.",
-    si: "{gauge} ජල මට්ටම දැන්: {level}{sp}. ගංවතුර මට්ටම්: {marks}. {river} මානය, ඊළඟ පැය පුරෝකථනය සමඟ.",
-    ta: "{gauge} நீர் மட்டம் இப்போது: {level}{sp}. வெள்ள மட்டங்கள்: {marks}. {river} நிலையம், அடுத்த மணி நேர முன்னறிவிப்புடன்.",
+    en: "{gauge} water level, latest reading: {level}{sp}. Flood levels: {marks}. {river} gauge with a next-hour forecast.",
+    si: "{gauge} ජල මට්ටම, නවතම කියවීම: {level}{sp}. ගංවතුර මට්ටම්: {marks}. {river} මානය, ඊළඟ පැය පුරෝකථනය සමඟ.",
+    ta: "{gauge} நீர் மட்டம், சமீபத்திய அளவீடு: {level}{sp}. வெள்ள மட்டங்கள்: {marks}. {river} நிலையம், அடுத்த மணி நேர முன்னறிவிப்புடன்.",
   },
   "gauge.descNoMarks": {
-    en: "{gauge} water level now: {level}{sp}. No official flood levels are published for this gauge. {river} gauge with a next-hour forecast.",
-    si: "{gauge} ජල මට්ටම දැන්: {level}{sp}. මෙම මානයට නිල ගංවතුර මට්ටම් පළ කර නැත. {river} මානය, ඊළඟ පැය පුරෝකථනය සමඟ.",
-    ta: "{gauge} நீர் மட்டம் இப்போது: {level}{sp}. இந்த நிலையத்துக்கு அதிகாரப்பூர்வ வெள்ள மட்டங்கள் வெளியிடப்படவில்லை. {river} நிலையம், அடுத்த மணி நேர முன்னறிவிப்புடன்.",
+    en: "{gauge} water level, latest reading: {level}{sp}. No official flood levels are published for this gauge. {river} gauge with a next-hour forecast.",
+    si: "{gauge} ජල මට්ටම, නවතම කියවීම: {level}{sp}. මෙම මානයට නිල ගංවතුර මට්ටම් පළ කර නැත. {river} මානය, ඊළඟ පැය පුරෝකථනය සමඟ.",
+    ta: "{gauge} நீர் மட்டம், சமீபத்திய அளவீடு: {level}{sp}. இந்த நிலையத்துக்கு அதிகாரப்பூர்வ வெள்ள மட்டங்கள் வெளியிடப்படவில்லை. {river} நிலையம், அடுத்த மணி நேர முன்னறிவிப்புடன்.",
   },
   "gauge.markAlert": { en: "alert {v}", si: "අනතුරු ඇඟවීම {v}", ta: "எச்சரிக்கை {v}" },
   "gauge.markMinor": { en: "minor {v}", si: "සුළු ගංවතුර {v}", ta: "சிறிய வெள்ளம் {v}" },
   "gauge.markMajor": { en: "major {v}", si: "ප්‍රධාන ගංවතුර {v}", ta: "பெரிய வெள்ளம் {v}" },
+  // a negative level, a stuck zero or a datum-fault gauge: no level in the snippet and no forecast promised (si / ta drafts)
+  "gauge.descUnreliable": {
+    en: "{gauge} gauge on the {river}: its latest reading looks unreliable, so no water level is shown. The Department of Irrigation's flood levels and official warnings are linked on the page.",
+    si: "{river} හි {gauge} මානය: එහි නවතම කියවීම විශ්වාස කළ නොහැකි බව පෙනෙන බැවින් ජල මට්ටමක් පෙන්වන්නේ නැත. වාරිමාර්ග දෙපාර්තමේන්තුවේ ගංවතුර මට්ටම් සහ නිල අනතුරු ඇඟවීම් පිටුවේ ඇත.",
+    ta: "{river} இன் {gauge} நிலையம்: அதன் சமீபத்திய அளவீடு நம்பகமற்றதாகத் தெரிவதால் நீர்மட்டம் காட்டப்படவில்லை. நீர்ப்பாசனத் திணைக்களத்தின் வெள்ள மட்டங்களும் அதிகாரப்பூர்வ எச்சரிக்கைகளும் பக்கத்தில் உள்ளன.",
+  },
   "gauge.descNone": {
     en: "Live {gauge} water level on the {river}, Sri Lanka, with the Department of Irrigation's alert, minor flood and major flood levels and a next-hour forecast.",
     si: "අද {gauge} ජල මට්ටම ({river}), වාරිමාර්ග දෙපාර්තමේන්තුවේ අනතුරු ඇඟවීම, සුළු සහ ප්‍රධාන ගංවතුර මට්ටම් සහ ඊළඟ පැය පුරෝකථනය සමඟ.",

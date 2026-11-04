@@ -115,7 +115,7 @@ export function riverMeta(lang: Locale, basin: string, o: { gauges: string[]; no
 /** Gauge page. `oneGauge`: the river has only this gauge (its own page redirects here), so the river's query leads. */
 export function gaugeMeta(
   lang: Locale,
-  o: { gauge: string; basin: string; oneGauge: boolean; level?: string; status?: string; alert?: string; minor?: string; major?: string },
+  o: { gauge: string; basin: string; oneGauge: boolean; unreliable?: boolean; level?: string; status?: string; alert?: string; minor?: string; major?: string },
 ) {
   const s = seoFor(lang);
   const n = riverNameParts(o.basin, lang);
@@ -132,7 +132,9 @@ export function gaugeMeta(
   const title = titles.find((x) => x.length <= TITLE_MAX) ?? (legacy.length > TITLE_MAX ? legacy.replace(/ \((Live|සජීවී|நேரடி)\)$/, "") : legacy);
   const w = (key: "gauge.markAlert" | "gauge.markMinor" | "gauge.markMajor", v?: string) => (v && v !== "—" ? [s(key, { v })] : []);
   const marks = [...w("gauge.markAlert", o.alert), ...w("gauge.markMinor", o.minor), ...w("gauge.markMajor", o.major)].join(", ");
-  const description = o.level
+  const description = o.unreliable
+    ? s("gauge.descUnreliable", { gauge: o.gauge, river: n.lead })
+    : o.level
     ? s(marks ? "gauge.desc" : "gauge.descNoMarks", { gauge: o.gauge, river: lang === "en" ? n.lead : n.native, level: o.level, sp: o.status ? ` (${o.status})` : "", marks })
     : s("gauge.descNone", { gauge: o.gauge, river: n.lead });
   return {

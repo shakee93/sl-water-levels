@@ -38,6 +38,11 @@ export const DIR: Record<"fast" | "rising" | "slow" | "falling" | "steady", T3> 
   steady: { en: "Steady", si: "ස්ථාවරයි", ta: "மாற்றமில்லை" },
 };
 
+/** The gauge page's "Next 24 hours" line when the river forecast reaches no flood level. "today" was wrong at night and the line said "no flooding" although the model only covers the river (4 Nov 2026 sweep). */
+export const NO_FLOOD_FACT: T3 = { en: "No flood level expected in the next 24 hours", si: "ඉදිරි පැය 24 තුළ ගංවතුර මට්ටමක් අපේක්ෂා නොකෙරේ", ta: "அடுத்த 24 மணி நேரத்தில் வெள்ள மட்டம் எதிர்பார்க்கப்படவில்லை" };
+/** Same, when heavy rain is forecast or has fallen above the gauge: the river forecast alone is not the whole story. */
+export const NO_FLOOD_BUT_RAIN: T3 = { en: "River forecast stays below flood level, but heavy rain could change that", si: "ගං පුරෝකථනය ගංවතුර මට්ටමට පහළයි, නමුත් අධික වැසි එය වෙනස් කළ හැක", ta: "ஆற்று முன்னறிவிப்பு வெள்ள மட்டத்துக்குக் கீழே உள்ளது, ஆனால் கனமழை அதை மாற்றலாம்" };
+
 export const NEXT_HOUR: T3 = { en: "Next hour:", si: "ඊළඟ පැය:", ta: "அடுத்த மணி நேரம்:" };
 
 // one threshold for the whole site: lib/forecastRules.mjs
@@ -103,9 +108,9 @@ export function hourReason(o: {
   if (kind === "rising") {
     if (o.release) clause = { en: "reservoir release upstream", si: "උඩුගං ජලාශ මුදා හැරීම", ta: "மேலே நீர்த்தேக்க வெளியேற்றம்" };
     else if (o.heavyRain) clause = { en: "heavy rain upstream", si: "උඩුගං අධික වැසි", ta: "மேலே கனமழை" };
-    else if (up != null && up > 0.03) clause = { en: "upstream gauges rising", si: "උඩුගං මාපක ඉහළ යයි", ta: "மேல்நிலை அளவீடுகள் உயர்கின்றன" };
+    else if (up != null && up > 0.03) clause = { en: "upstream gauges rising", si: "උඩුගං මාපක ඉහළ යයි", ta: "ஆற்றின் மேற்பகுதி அளவீடுகள் உயர்கின்றன" };
   } else if (kind === "falling") {
-    if (up != null && up < -0.03) clause = { en: "upstream is falling too", si: "උඩුගං ද පහළ යයි", ta: "மேல்நிலையும் குறைகிறது" };
+    if (up != null && up < -0.03) clause = { en: "upstream is falling too", si: "උඩුගං ද පහළ යයි", ta: "ஆற்றின் மேற்பகுதியும் குறைகிறது" };
     else if (o.heavyRain === false && o.lowRain) clause = { en: "little rain upstream", si: "උඩුගං වැසි අඩුයි", ta: "மேலே மழை குறைவு" };
   } else if (o.heavyRain === false && o.lowRain) clause = { en: "no heavy rain nearby", si: "අවට අධික වැසි නැත", ta: "அருகில் கனமழை இல்லை" };
   if (!clause) return lead;
@@ -170,7 +175,7 @@ export function minorFact(o: { f: ForecastT; tier: string; fact: T3 | null }): T
     const w = noEstimateBeyond(f.horizonLimitH);
     return fact?.en === w.en ? null : w;
   }
-  if (!m || (fact && (/flood level/i.test(fact.en) || fact.en === "No flooding expected today"))) return null;
+  if (!m || (fact && (/flood level/i.test(fact.en) || fact.en === NO_FLOOD_FACT.en))) return null;
   if ((m.wording === "possible" || m.wording === "likely") && m.probability >= 0.2) return minorPossible(Math.min(10, Math.max(1, Math.floor(m.probability * 10 + 1e-9))));
   return m.wording === "unlikely" ? MINOR_NOT_EXPECTED : null;
 }

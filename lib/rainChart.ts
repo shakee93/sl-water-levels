@@ -1,6 +1,9 @@
 // Pure helpers for the "Rain in <town>" chart (app/flood/TownRain.tsx): rain intensity words, the y-axis scale, Sri Lanka
 // clock hours, and the plain-language lead line. No fetching, no strings: the component turns keys into words.
 
+// @ts-ignore node strip-types needs explicit extensions
+import { rainBand } from "./rainWords.ts";
+
 /** Standard hourly rain rates (WMO / AMS): light < 2.5 mm/h, moderate 2.5-7.6, heavy 7.6-50, violent > 50. */
 export const LIGHT_MAX_MM_H = 2.5;
 export const MODERATE_MAX_MM_H = 7.6;
@@ -15,6 +18,16 @@ export function rainClass(mmPerHour: number): RainClass | null {
   if (mmPerHour < MODERATE_MAX_MM_H) return "moderate";
   if (mmPerHour <= HEAVY_MAX_MM_H) return "heavy";
   return "violent";
+}
+
+/**
+ * The word for a 24 h TOTAL, from the same bands as every other rain sentence (lib/rainWords.ts: moderate 10, heavy 50, very heavy 100 mm).
+ * It used to come from the heaviest single hour, so 35 mm spread over a day read "Heavy rain" while the gauge page said moderate (4 Nov 2026 sweep).
+ * The bars keep the per-hour class for their colours.
+ */
+function windowClass(mm24: number): RainClass {
+  const b = rainBand("24h", mm24);
+  return b === "veryHeavy" ? "violent" : b === "heavy" ? "heavy" : b === "moderate" ? "moderate" : "light";
 }
 
 /** Gridline values for the y-axis: a round step so there are 2-4 lines, and the top of the scale (at least 2.5 mm so a drizzle does not look like a storm). */
@@ -78,12 +91,12 @@ export function leadLine(past: RainBar[], pastMm24: number | null, next: RainBar
   const pp = peakOf(past);
   if (pastMm24 == null) pastPart = { key: "rain.lead.pastNA" };
   else if (pastMm24 < DRY_MM) pastPart = { key: "rain.lead.pastNone" };
-  else pastPart = { key: "rain.lead.past", cls: rainClass(pp?.mm ?? 0) ?? "light", mm: Math.round(pastMm24) };
+  else pastPart = { key: "rain.lead.past", cls: windowClass(pastMm24), mm: Math.round(pastMm24) };
 
   const total = next.reduce((s, x) => s + (x.mm ?? 0), 0);
   const np = peakOf(next);
   let nextPart: LeadLine["next"];
   if (total < DRY_MM || !np) nextPart = { key: "rain.lead.nextNone" };
-  else nextPart = { key: "rain.lead.next", cls: rainClass(np.mm ?? 0) ?? "light", mm: Math.max(1, Math.round(total)), when: whenKey(np.end - HOUR, nowMs) };
+  else nextPart = { key: "rain.lead.next", cls: windowClass(total), mm: Math.max(1, Math.round(total)), when: whenKey(np.end - HOUR, nowMs) };
   return { past: pastPart, next: nextPart };
 }

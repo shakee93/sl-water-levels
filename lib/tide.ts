@@ -114,3 +114,11 @@ export function highTideWithin(now: number, hours: number): TideEvent | null {
 
 /** Colombo (UTC+5:30, no daylight saving) calendar-day number of a timestamp. */
 export const colomboDay = (t: number): number => Math.floor((t + 5.5 * H) / (24 * H));
+
+/** Which day a tide falls on, for the words: today, tomorrow, or later (the 48 h window can reach the day after tomorrow, which used to say "tomorrow" too). */
+export const tideDayKey = (ms: number, now: number): "tide.today" | "tide.tomorrow" | "tide.later" => {
+  const d = colomboDay(ms) - colomboDay(now);
+  return d <= 0 ? "tide.today" : d === 1 ? "tide.tomorrow" : "tide.later";
+};
+/** Short weekday of a time in Sri Lanka, in the page language ("Fri"). */
+export const tideWeekday = (ms: number, lang: string): string => new Intl.DateTimeFormat(lang === "si" ? "si-LK" : lang === "ta" ? "ta-LK" : "en-GB", { weekday: "short", timeZone: "Asia/Colombo" }).format(ms);

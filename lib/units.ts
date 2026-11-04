@@ -11,6 +11,8 @@
 // Gauges not in that report (Ampara, Calidonia, Thambuththegama: no published thresholds) fall back
 // to the heuristic, which now only ever says "m" for a small alert mark and otherwise stays silent.
 
+import { hasNoForecast } from "./forecastRules.mjs";
+
 export type Unit = "ft" | "m" | null;
 
 type Thresholds = { alert: number | null; minor: number | null; major: number | null };
@@ -144,4 +146,14 @@ export function plainShown(v: number, unit: Unit): string {
 /** The official figure for a metre gauge ("7.50 m"), to sit beside the feet value; null when nothing was converted. */
 export function publishedAs(v: number | null | undefined, unit: Unit, digits = 2): string | null {
   return v == null || unit !== "m" ? null : `${v.toFixed(digits)} m`;
+}
+
+/**
+ * A reading that should not be quoted as a river level: a negative level or a zero with no known unit (a stuck sensor), or a gauge on the
+ * datum-fault list (Ampara, Katharagama, Weraganthota: lib/forecastRules.mjs NO_FORECAST_GAUGES). Words only: the official step, the status
+ * pill and every trigger keep reading the published numbers.
+ */
+export function readingLooksUnreliable(station: string, level: number | null | undefined, unit: Unit): boolean {
+  if (level == null || !Number.isFinite(level)) return false;
+  return level < 0 || (level === 0 && unit == null) || hasNoForecast(station);
 }

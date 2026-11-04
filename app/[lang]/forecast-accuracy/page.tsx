@@ -41,6 +41,9 @@ function dateText(iso: string, lang: string) {
   return d.toLocaleDateString(lang === "en" ? "en-GB" : lang === "si" ? "si-LK" : "ta-LK", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Colombo" });
 }
 
+/** "(the weakest day had 21)": the target needs every day, so the sentence says the day that missed it. si / ta: DRAFT. */
+const worstDayNote = (lang: string, n: number) => (lang === "si" ? ` (දුර්වලම දිනයේ ${n})` : lang === "ta" ? ` (மிகக் குறைந்த நாளில் ${n})` : ` (the weakest day had ${n})`);
+
 export default async function ForecastAccuracyPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
@@ -76,7 +79,7 @@ export default async function ForecastAccuracyPage({ params }: { params: Promise
       case "risingRight":
         return s("k8.value", { v: roundPct(k.value) ?? "–", n: k.n });
       case "inputs":
-        return k.n === 0 ? s("dash") : s("k9.value", { h: k.value ?? "–", g: Math.round(part(k, "gaugesPerHour")?.value ?? 0), f: roundPct(part(k, "flaggedShare")?.value) ?? "0%" });
+        return k.n === 0 ? s("dash") : s("k9.value", { h: k.value ?? "–", wn: k.met === false && part(k, "hours")?.worst != null && Number(part(k, "hours")!.worst) < Number(part(k, "hours")!.target ?? 24) ? worstDayNote(lang, part(k, "hours")!.worst!) : "", g: Math.round(part(k, "gaugesPerHour")?.value ?? 0), f: roundPct(part(k, "flaggedShare")?.value) ?? "0%" });
       case "people":
         return s("k10.value", { v: roundPct(k.value) ?? "–", n: k.n });
     }

@@ -39,7 +39,7 @@ const wet = bars(Array(24).fill(0).map((_, i) => (i === 8 ? 12 : 1)), noon);
 let l = leadLine(dry, 0, wet, noon);
 assert.equal(l.past.key, "rain.lead.pastNone");
 assert.equal(l.next.key, "rain.lead.next");
-assert.equal(l.next.cls, "heavy");
+assert.equal(l.next.cls, "moderate", "35 mm in the day is moderate by the 24 h bands, whatever the heaviest hour was");
 assert.equal(l.next.mm, 35);
 assert.equal(leadLine(dry, null, dry, noon).past.key, "rain.lead.pastNA");
 assert.equal(leadLine(dry, 0, dry, noon).next.key, "rain.lead.nextNone");

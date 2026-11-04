@@ -123,6 +123,17 @@ const STEADY_3H_M = STEADY_M_PER_H * 3;
 export type ThresholdName = "alert" | "minor" | "major";
 export type Wording = "likely" | "possible" | "unlikely" | "already";
 
+export type HeadlineParts =
+  | { k: "unclear" }
+  | { k: "trend"; dir: "rising" | "falling" | "steady"; level: string; pred: string; rate: string | null }
+  | { k: "above"; mark: ThresholdName; then: "falling" | "keeps" | "stay" | "ease"; spanH: number; reach?: HeadlineReach }
+  | { k: "reach"; r: HeadlineReach }
+  | { k: "below"; mark: ThresholdName; hedge: boolean; spanH: number }
+  | { k: "about"; level: string; spanH: number }
+  | { k: "none"; why: "unreliable" | "stale" | "other" };
+/** A crossing in the headline: how sure, which mark, hours from the forecast start (null = "within the next span") and the chance in percent. */
+export type HeadlineReach = { likely: boolean; mark: ThresholdName; etaH: number | null; spanH: number; pct: number };
+
 export type Forecast = {
   station: string;
   unit: Unit;
@@ -171,6 +182,8 @@ export type Forecast = {
   /** GloFAS flag. null = no GloFAS for this basin or the feed failed. */
   outlook: "normal" | "elevated" | null;
   headline: string;
+  /** The headline as plain data, so si / ta pages can say it in their own language (lib/forecastText.ts); absent on older cached runs. */
+  headlineParts?: HeadlineParts;
   notes: string[];
   /** Raw signals behind the forecast (all stations; what the old panel displayed). */
   signals: {
@@ -279,6 +292,7 @@ function emptyResult(station: string, unit: Unit, headline: string, notes: strin
     station, unit, currentLevel: level, asOfTs,
     method: "none", status: "unavailable", direction: "unknown", experimental: true,
     basis: [], horizons: [], crossings: [], outlook: null, headline, notes,
+    headlineParts: { k: "none", why: headline.startsWith("No forecast for this gauge") ? "unreliable" : /hours old|not reporting/.test(headline) ? "stale" : "other" },
     signals: signalsOf(trend), rain: null, rainRisk: null, stormHorizons: [], stormHorizonsMeasured: [],
   };
 }
@@ -433,6 +447,9 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
     : dir === "steady" || rate3h == null
       ? `${word}: expected to be about ${formatLevel(pred, me.unit)} an hour from now.`
       : `${word}: about ${formatLevel(L0, me.unit)} now, ${dir === "rising" ? "up" : "down"} about ${formatDelta(Math.abs(rate3h), me.unit)} an hour over the last 3 hours.`; // the level, not the change ("about 16.7 ft in an hour" read as a 16.7 ft rise); formatDelta keeps 0.05 from printing as 0.0
+  const headlineParts: HeadlineParts = dir === "unknown"
+    ? { k: "unclear" }
+    : { k: "trend", dir, level: formatLevel(L0, me.unit), pred: formatLevel(pred, me.unit), rate: dir === "steady" || rate3h == null ? null : formatDelta(Math.abs(rate3h), me.unit) };
   const infl = GM_WIDEN * (step && step.missing.length ? 1.3 : 1); // an upstream gauge that is not reporting widens the range
   const low = step ? pred + step.q10 * infl : null;
   const high = step ? pred + step.q90 * infl : null;
@@ -454,7 +471,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
         (t.upstreamCount === 0 ? " This is the topmost gauge on its river, so there is no upstream gauge; the catchment rain above is the only upstream signal." : ""),
     ],
     horizons: [{ h: 1, ts: anchor + HOUR_MS, level: pred, low, high }],
-    crossings: [], outlook: null, headline,
+    crossings: [], outlook: null, headline, headlineParts,
     notes,
     signals: signalsOf(t, w?.past6hMm ?? null), rain, rainRisk: rainRiskOf(rain ? { det: rain.next24hMm.det, p90: rain.next24hMm.p90 } : null), stormHorizons: [], stormHorizonsMeasured: [],
   };
@@ -678,7 +695,7 @@ function fromModel(
     const n = w.next24hMm;
     const fmt = (v: number | null) => (v == null ? "n/a" : v.toFixed(0));
     // 50 mm and more is the "heavy rain upstream" warning (lib/rainRisk.ts), so this softer note covers only 20 to 50 mm and does not say "heavy".
-    if (n.det != null && n.det >= 20 && n.det < 50) notes.push(`Some rain is forecast over the catchment: about ${fmt(n.det)} mm in the next 24 hours${n.p10 != null ? ` (ensemble range ${fmt(n.p10)} to ${fmt(n.p90)} mm)` : ""}.`);
+    if (n.det != null && n.det >= 20 && n.det < 50) notes.push(`Some rain is forecast over the catchment: ${n.p10 != null ? `the main forecast run gives about ${fmt(n.det)} mm in the next 24 hours (the ensemble of runs ranges from ${fmt(n.p10)} to ${fmt(n.p90)} mm)` : `about ${fmt(n.det)} mm in the next 24 hours`}.`);
   }
 
   // ---- headline
@@ -695,20 +712,24 @@ function fromModel(
   const spanTxt = hLast.h >= 24 ? "24 hours" : `${hLast.h} hours`;
   const fmtL = (v: number) => formatLevel(v, unit);
   let headline: string;
-  if (above && upcoming) headline = `Above ${nameOf[above.threshold]} now and ${reach(upcoming)}.`;
+  let headlineParts: HeadlineParts;
+  const reachParts = (c: NonNullable<typeof upcoming>): HeadlineReach => ({ likely: c.wording === "likely", mark: c.threshold, etaH: c.etaTs ? Math.max(1, Math.round((c.etaTs - now) / HOUR_MS)) : null, spanH: hLast.h, pct: Math.round(c.probability * 100) });
+  if (above && upcoming) { headline = `Above ${nameOf[above.threshold]} now and ${reach(upcoming)}.`; headlineParts = { k: "above", mark: above.threshold, then: "stay", spanH: hLast.h, reach: reachParts(upcoming) }; }
   else if (above) {
     const stay = 1 - mixCdf(above.level, hLast.mix);
     // Falling over the last 3 h: say so, never "expected to stay there" (audit 28 Oct 2026: the model held the river high for a day after a peak
     // while it fell; "stay" was wrong in 71 of 71 checkable runs). A tidal gauge's fall is partly the tide, so it only gets "falling now".
     const fall = fallingOutlook({ rate3hM: me.rate3hM, level: L0, horizons: isTidalStation(station) ? [] : hsV, mpu });
     headline = fall ? `Above ${nameOf[above.threshold]} now and falling${fall === "keeps" ? "; expected to keep dropping" : ""}.` : stay >= LIKELY ? `Above ${nameOf[above.threshold]} now and expected to stay there for the next ${spanTxt}.` : `Above ${nameOf[above.threshold]} now but expected to ease below it within ${spanTxt}.`;
-  } else if (upcoming) headline = cap(reach(upcoming)) + ".";
+    headlineParts = { k: "above", mark: above.threshold, then: fall ? (fall === "keeps" ? "keeps" : "falling") : stay >= LIKELY ? "stay" : "ease", spanH: hLast.h };
+  } else if (upcoming) { headline = cap(reach(upcoming)) + "."; headlineParts = { k: "reach", r: reachParts(upcoming) }; }
   else if (lowestName) {
     // A crossing that is "unlikely" by the persistence rule can still carry real probability (>= 20% at one horizon): hedge the wording.
     const lowP = crossings.find((c) => c.threshold === lowestName)?.probability ?? 0;
     headline = `${degraded || lowP >= POSSIBLE ? "Probably staying" : "Expected to stay"} below ${nameOf[lowestName]} for the next ${spanTxt}.`;
+    headlineParts = { k: "below", mark: lowestName, hedge: !!(degraded || lowP >= POSSIBLE), spanH: hLast.h };
   }
-  else headline = `Expected to be about ${fmtL(hLast.level)} in ${spanTxt}.`;
+  else { headline = `Expected to be about ${fmtL(hLast.level)} in ${spanTxt}.`; headlineParts = { k: "about", level: fmtL(hLast.level), spanH: hLast.h }; }
 
   // ---- basis
   const basis: string[] = [];
@@ -745,7 +766,7 @@ function fromModel(
     horizonLimitH: limitH,
     ...(gsteps?.wetCore ? { wetCore: gsteps.wetCore } : {}),
     ...(hsV !== hs ? { rawHorizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })) } : {}),
-    crossings, rawCrossings, outlook, headline, notes,
+    crossings, rawCrossings, outlook, headline, headlineParts, notes,
     signals: signalsOf(trend, w?.past6hMm ?? null),
     rain: w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null,
     rainRisk: w ? rainRiskOf({ det: w.next24hMm.det, p90: w.next24hMm.p90 }) : null,
@@ -1173,7 +1194,7 @@ function trendForecast(
       );
     } else if (isDry) {
       if (confidence === "high") confidence = "medium";
-      notes.push("No recent rain — rise is likely to plateau soon.");
+      notes.push("No recent rain at the gauge or upstream, so the rise may level off soon.");
     }
   } else if (direction === "falling" && rainTotalMm > 30) {
     if (confidence === "high") confidence = "medium";
@@ -1184,9 +1205,10 @@ function trendForecast(
   if (!rainKnown) notes.push("No rain data reported nearby; rain effects not factored in.");
 
   if (leaderRaw && Math.abs(leaderRaw.rateM) >= LEADER_NOTE_M_PER_H) {
+    // unit and window named, no doubled sign ("falling at -0.11/h" was a bare number)
     const lr = leaderRaw.rateM / mpu;
     notes.push(
-      `${leaderRaw.station} ${lr > 0 ? "rising" : "falling"} at ${lr.toFixed(2)}/h.`,
+      `${leaderRaw.station} ${lr > 0 ? "rising" : "falling"} about ${formatDelta(Math.abs(lr), me.unit)} an hour.`,
     );
   }
 

@@ -3,7 +3,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { clock } from "@/lib/i18n/format";
 import { ccFor } from "@/lib/i18n/colombo";
-import { colomboDay, tideEvents, tideNow } from "@/lib/tide";
+import { tideDayKey, tideEvents, tideNow, tideWeekday } from "@/lib/tide";
 import type { Canals } from "@/lib/curw";
 
 /** "2:36 pm today and 3:06 am tomorrow" for the next two high tides; `null` when none is found. */
@@ -12,8 +12,7 @@ export function highTideTimes(lang: Locale, now: number): { times: string; nearH
   const cc = ccFor(lang);
   const tn = tideNow(now);
   const highs = tn.highs.slice(0, 2);
-  const day = (ms: number) => (colomboDay(ms) === colomboDay(now) ? "tide.today" : "tide.tomorrow");
-  const parts = highs.map((h) => cc(day(h.t), { time: clock(h.t, t) }));
+  const parts = highs.map((h) => cc(tideDayKey(h.t, now), { time: clock(h.t, t), day: tideWeekday(h.t, lang) }));
   const times = parts.length === 2 ? cc("tide.and", { a: parts[0], b: parts[1] }) : parts[0] ?? "";
   return { times, nearHigh: tn.nearHigh, next: highs[0]?.t ?? null };
 }

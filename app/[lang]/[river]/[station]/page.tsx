@@ -21,7 +21,7 @@ import {
   type NationalStation,
 } from "@/lib/arcgis";
 import { basinPath, resolveStation, stationPath, stationSlug } from "@/lib/slug";
-import { formatLevel } from "@/lib/units";
+import { formatLevel, readingLooksUnreliable } from "@/lib/units";
 import { EmbedLink } from "@/app/EmbedLink";
 import { StationPicker } from "@/app/StationPicker";
 import { StationFinder } from "@/app/StationFinder";
@@ -101,6 +101,8 @@ export async function generateMetadata({
     if (!nat) throw new Error("gauge not in the national snapshot");
     const level = nat.tier !== "stale" ? nat.latest?.water_level : null;
     const unit = nat.unit;
+    // a negative level, a stuck zero or a datum-fault gauge: no number in the snippet, no forecast promised (words only, the step is unchanged)
+    const unreliable = readingLooksUnreliable(resolved.station, level, unit);
     // Marks come straight from the gauge's own thresholds; a mark that does not exist is left out, never invented.
     const markText = (v: number | null) => (v == null ? "—" : formatLevel(v, unit, 1));
     // official steps only: near alert is Normal
@@ -113,7 +115,8 @@ export async function generateMetadata({
       gauge: name,
       basin: nat.basin || resolved.basin || "Sri Lanka",
       oneGauge,
-      ...(level != null
+      unreliable,
+      ...(level != null && !unreliable
         ? {
             // Feet like the page itself (metre gauges converted); a gauge of unknown unit stays unitless.
             level: formatLevel(level, unit, 1),
@@ -251,7 +254,7 @@ export default async function StationPage({
             crumbs={[{ label: riverName(basin, lang), href: p(basinPath(basin)) }, { label: stationDisplayName(station) }]}
             // official steps only: near alert is Normal, and the forecast lift is not an official step
             pill={{ label: tierLabel(t, nat.tier === "watch" ? "normal" : nat.tier), tier: nat.tier === "watch" ? "normal" : nat.tier }}
-            bits={nat.latest ? [formatLevel(nat.latest.water_level, nat.unit), colomboTime(nat.latest.ts, t)] : []}
+            bits={nat.latest ? [...(readingLooksUnreliable(nat.station, nat.latest.water_level, nat.unit) ? [] : [formatLevel(nat.latest.water_level, nat.unit)]), colomboTime(nat.latest.ts, t)] : []}
           />
         )}
 

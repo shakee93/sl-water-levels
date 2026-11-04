@@ -15,10 +15,11 @@ import { rainTriggersFor } from "@/lib/rainTriggers";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { contactsForDistrict } from "@/lib/help";
 import { statusFor } from "@/lib/status";
-import { formatDelta, formatLevel, publishedAs, shownNumber } from "@/lib/units";
+import { formatDelta, formatLevel, publishedAs, readingLooksUnreliable, shownNumber } from "@/lib/units";
 import { stationDisplayName } from "@/lib/displayName";
 import { stationPath, stationSlug } from "@/lib/slug";
 import { getI18n } from "@/lib/i18n/server";
+import { forecastHeadline } from "@/lib/forecastText";
 import { fkT } from "@/lib/i18n/forecastKpi";
 import { clock, riverName, shortStamp } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
@@ -27,9 +28,9 @@ import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareBut
 import Link from "next/link";
 import { PLACES } from "@/lib/places";
 import { fallSummary, heavyRainAround, nearRain24hClipped, riseSummary, townsNear } from "@/lib/levelNotes";
-import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, headlineRising, minorFact, noEstimateBeyond, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
+import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, NO_FLOOD_BUT_RAIN, NO_FLOOD_FACT, headlineRising, minorFact, noEstimateBeyond, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
 import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
-import { fallingOutlook, nextHourRateM } from "@/lib/forecastRules.mjs";
+import { OLD_READING_MIN, fallingOutlook, modelTurn, nextHourRateM } from "@/lib/forecastRules.mjs";
 import { getHold } from "@/lib/verdictHoldData";
 import { heldTone, NO_HOLD } from "@/lib/verdictHold";
 
@@ -47,6 +48,17 @@ function hoursPhrase(n: number): T3 {
   return n <= 1
     ? { en: "~1 hour", si: "පැයක් පමණ", ta: "சுமார் 1 மணி நேரம்" }
     : { en: `~${n} hours`, si: `පැය ${n}ක් පමණ`, ta: `சுமார் ${n} மணி நேரம்` };
+}
+
+/** The reason line of the Next hour tile plus (when they apply) what the model expects and how old the reading is. si / ta: DRAFT translations. */
+function addNotes(reason: T3 | null, turn: "up" | "down" | null, oldMin: number | null): T3 | null {
+  const bits: T3[] = [];
+  if (reason) bits.push(reason);
+  if (turn === "up") bits.push({ en: "the forecast expects it to turn up", si: "පුරෝකථනය නැවත ඉහළ යනු ඇතැයි කියයි", ta: "மீண்டும் உயரும் என முன்னறிவிப்பு கூறுகிறது" });
+  if (turn === "down") bits.push({ en: "the forecast expects it to ease", si: "පුරෝකථනය අඩු වනු ඇතැයි කියයි", ta: "குறையும் என முன்னறிவிப்பு கூறுகிறது" });
+  if (oldMin != null) bits.push({ en: `reading ${oldMin} min old`, si: `කියවීම මිනිත්තු ${oldMin}ක් පැරණියි`, ta: `அளவீடு ${oldMin} நிமிடம் பழையது` });
+  if (!bits.length) return null;
+  return { en: bits.map((b) => b.en).join("; "), si: bits.map((b) => b.si).join("; "), ta: bits.map((b) => b.ta).join("; ") };
 }
 
 /** One forecast fact, or null. Never numbers beyond the ETA, never probabilities. */
@@ -112,11 +124,12 @@ export function forecastFact(f: ForecastT, tier: string, readingNow: number): { 
   if (f.method === "model" && f.status === "ok" && (tier === "normal" || tier === "watch")) {
     return {
       target: -1,
-      fact: { en: "No flooding expected today", si: "අද ගංවතුර අපේක්ෂා නොකෙරේ", ta: "இன்று வெள்ளம் எதிர்பார்க்கப்படவில்லை" },
+      // heavy rain forecast or measured above the gauge: the river forecast alone does not promise a calm day
+      fact: f.rainRisk != null || f.stormHorizons.length > 0 ? NO_FLOOD_BUT_RAIN : NO_FLOOD_FACT,
     };
   }
   if (f.method === "trend" && tier === "watch") {
-    return { target: -1, fact: { en: "Close to alert level", si: "අනතුරු ඇඟවීමේ මට්ටමට ආසන්නයි", ta: "எச்சரிக்கை மட்டத்திற்கு அருகில்" } };
+    return { target: -1, fact: { en: "Close to alert level", si: "අනතුරු ඇඟවීමේ මට්ටමට ආසන්නයි", ta: "எச்சரிக்கை மட்டத்திற்கு அருகில்" } }; // dayFact adds the direction
   }
   return { fact: null, target: -1 };
 }
@@ -156,7 +169,14 @@ export function dayFact(o: {
     const fall = fallingOutlook({ rate3hM: o.rate3hM, level: f.currentLevel, horizons: o.tidal ? [] : f.horizons, mpu: o.mpu });
     if (fall) return FALLING_DAY[fall];
   }
-  return fact ?? { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" };
+  // close to Alert on a gauge with no model: say which way the measured 3 h change points ("Close to alert level, rising")
+  if (fact && f.method === "trend" && fact.en === "Close to alert level" && o.rate3hM != null && Number.isFinite(o.rate3hM)) {
+    const r = o.rate3hM;
+    const w: T3 = Math.abs(r) < STEADY_M_PER_H ? { en: "steady", si: "ස්ථාවරයි", ta: "மாற்றமில்லை" } : r < 0 ? { en: "falling", si: "පහළ යයි", ta: "குறைகிறது" } : { en: "rising", si: "ඉහළ යයි", ta: "உயர்கிறது" };
+    return { en: `${fact.en}, ${w.en}`, si: `${fact.si}, ${w.si}`, ta: `${fact.ta}, ${w.ta}` };
+  }
+  // a gauge with only a trend has no 24 hour forecast at all: "No estimate yet" read as "coming soon"
+  return fact ?? (f.method === "trend" ? { en: "No 24 hour forecast for this gauge", si: "මෙම මානය සඳහා පැය 24 පුරෝකථනයක් නැත", ta: "இந்த அளவீட்டுக்கு 24 மணி நேர முன்னறிவிப்பு இல்லை" } : { en: "No estimate yet", si: "තවම ඇස්තමේන්තුවක් නැත", ta: "இன்னும் மதிப்பீடு இல்லை" });
 }
 
 /** Why a calm gauge still says "keep an eye on it" (the headline hold, lib/verdictHold.ts). si / ta: DRAFT translations. */
@@ -164,6 +184,13 @@ export const HELD_NOTE: T3 = {
   en: "It was close to the alert level in the last few hours, so this stays on watch for a while",
   si: "පසුගිය පැය කිහිපය තුළ එය අනතුරු ඇඟවීමේ මට්ටමට ආසන්න විය, එබැවින් මෙය ටික වේලාවක් අවධානයෙන් තබා ගන්න",
   ta: "கடந்த சில மணி நேரத்தில் இது எச்சரிக்கை மட்டத்திற்கு அருகில் இருந்தது, எனவே சிறிது நேரம் கவனத்தில் வைத்திருங்கள்",
+};
+
+/** The note under the card for a reading that looks wrong (a negative or stuck level): no level is shown and no distance to a mark. si / ta: DRAFT translations. */
+export const UNRELIABLE_NOTE: T3 = {
+  en: "This gauge's reading looks wrong (a negative or stuck level), so no level is shown. Check the Disaster Management Centre's warnings for this area.",
+  si: "මෙම මානයේ කියවීම වැරදි බව පෙනේ (ඍණ හෝ එක තැන ඇලී ඇති මට්ටමක්), එබැවින් මට්ටමක් පෙන්වන්නේ නැත. මෙම ප්‍රදේශය සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානයේ අනතුරු ඇඟවීම් බලන්න.",
+  ta: "இந்த அளவீட்டின் அளவு தவறாகத் தெரிகிறது (எதிர்மறை அல்லது மாறாமல் நிற்கும் அளவு), எனவே அளவு காட்டப்படவில்லை. இந்தப் பகுதிக்கு அனர்த்த முகாமைத்துவ நிலையத்தின் எச்சரிக்கைகளைப் பாருங்கள்.",
 };
 
 export const TIDE_RISE: T3 = {
@@ -225,7 +252,11 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const tidal = isTidalStation(selectedStation);
   const rising = !stale && riverRising(selectedStation, me?.trend24h, mpu, me?.rate3hM ?? null);
   const tideOnly = tidal && !stale && r != null && r > STEADY_M_PER_H && !rising;
-  const noFc = !!f.noForecast && !stale;
+  const noFc = (!!f.noForecast || readingLooksUnreliable(selectedStation, me?.latest?.water_level, me?.unit ?? null)) && !stale;
+  // the model points the other way from the measured word (owner decision 4 Nov 2026) and the age of an older reading, both said beside the word
+  const h1ChangeM = h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null;
+  const turn = !tidal || !tideOnly ? modelTurn(h1ChangeM, r) : null;
+  const oldMin = me?.ageMin != null && me.ageMin > OLD_READING_MIN && me.ageMin <= 180 ? Math.round(me.ageMin) : null;
   const direction: T3 | null = noFc
     ? null
     : stale
@@ -241,7 +272,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         ? TIDE_RISE
         : withReason(
             directionFor(r),
-            hourReason({
+            addNotes(hourReason({
               kind: Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "falling" : "rising",
               delta3hM: me?.rate3hM != null ? me.rate3hM * 3 : null,
               unit: me?.unit ?? null,
@@ -249,8 +280,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
               heavyRain: f.rain == null && f.rainRisk == null ? null : f.rainRisk != null || f.stormHorizons.length > 0,
               lowRain: f.rain?.past6hMm != null && f.rain.past6hMm < 10,
               release: release.active,
-            }),
-          );
+            }), turn, oldMin));
   // A confirmed reservoir release upstream counts as an expected crossing only when
   // the gauge is already close to alert (within 1 m, or 20% of the alert level) and
   // rising: a release far below alert, or on a falling river, stays informational
@@ -302,11 +332,14 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   ) : (
     t("common.noReading")
   );
-  const levelText = level != null ? formatLevel(level, unit) : null;
+  // A negative level, a stuck zero with no unit or a datum-fault gauge: the number is not shown as a level and nothing is measured from it
+  // ("24.6 ft below alert" under -8.2 ft). Words only: the official step and its pill are unchanged.
+  const unreliable = !stale && readingLooksUnreliable(selectedStation, level, unit);
+  const levelText = level != null && !unreliable ? formatLevel(level, unit) : null;
   const rn = riverName(basin, lang);
   // A near-alert gauge, or a calm one the forecast or a release points at, still reads "Normal": the reason is the small note
   // under it (owner, 26 Oct 2026: the verdict ladder is the Department's four steps only).
-  const nearNote: string | null = releaseAlert
+  const nearNote: string | null = unreliable ? UNRELIABLE_NOTE[lang] : releaseAlert
     ? releaseAlertLine(releaseAlert, lang)
     : tone !== "watch" || !me
       ? null
@@ -322,7 +355,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   // Normal (or Watch shown as Normal) while the river is rising: the headline says so, with the distance to Alert under it. Words only: tone, colour and step are unchanged.
   const normalRising = !stale && headlineRising({ rising, nextHourM: r, tideOnly }) && (tone === "normal" || tone === "watch") && (realTier === "normal" || realTier === "watch");
   const aboveAlertNote: string | null =
-    normalRising && !nearNote && unit != null && alertLvl != null && alertLvl > 0 && lvlNow != null && alertLvl > lvlNow ? BELOW_ALERT_LEVEL(formatDelta(alertLvl - lvlNow, unit))[lang] : null;
+    normalRising && !nearNote && !unreliable && unit != null && alertLvl != null && alertLvl > 0 && lvlNow != null && alertLvl > lvlNow ? BELOW_ALERT_LEVEL(formatDelta(alertLvl - lvlNow, unit))[lang] : null;
   const shareText = stale
     ? t("share.stale", { name, river: rn, last: level != null ? t("share.staleLast", { level: formatLevel(level, unit) }) : "" })
     : // at Alert or above the share line names the official step ("Kalu Ganga at Ratnapura is at Alert, 19.0 ft, river falling")
@@ -347,7 +380,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const w = warnings[0];
   const fu = f.unit ? " ft" : "";
   // Metre gauges are shown in feet; the official figures stay one line away so bulletins can be matched.
-  const pubLevel = publishedAs(level, unit);
+  const pubLevel = unreliable ? null : publishedAs(level, unit);
   const pubMarks = me
     ? (["alert", "minor", "major"] as const)
         .filter((k) => me.thresholds[k] != null && me.thresholds[k]! > 0)
@@ -370,7 +403,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   // direction tile, so the page never says rising in one place and falling in another. Tidal gauges: a tide swing is not a river rise.
   const series = me?.trend24h ?? null;
   const moreNotes: React.ReactNode[] = [];
-  if (!stale && me && unit != null && !(tidal && !rising)) {
+  if (!stale && !unreliable && me && unit != null && !(tidal && !rising)) {
     // 1. "Rose 7.9 ft in the last 9 hours": a big climb, unless the next hour says it is falling now
     const rise = r == null || r > -STEADY_M_PER_H ? riseSummary(series, mpu) : null;
     // 2. "Falling: down 1.2 ft since the peak at 3:40 pm": still Alert or above, clearly falling, and the next hour agrees
@@ -442,7 +475,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         fact={fact}
         factExtra={minorLine}
         tide={tideOnly}
-        factKind={!stale && fact && fact.en === "No flooding expected today" ? "ok" : "soon"}
+        factKind={!stale && fact && fact.en === NO_FLOOD_FACT.en ? "ok" : "soon"}
         labels={
           stale || noFc
             ? undefined
@@ -474,7 +507,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         level={levelText}
         levelInfo={levelText ? t("level.info", { level: levelText, gauge: name }) : null}
         gauge={
-          !stale && level != null && me
+          !stale && level != null && me && !unreliable
             ? { tone, level, next24: f.horizons.find((h) => h.h === 24)?.level ?? null, unit, thresholds: me.thresholds }
             : null
         }
@@ -483,7 +516,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         moreNotes={moreNotes}
       >
         <div className="rounded-md border border-slate-200 dark:border-slate-800 p-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300" data-forecast-headline>
-          <p className="font-medium">{f.headline}</p>
+          <p className="font-medium" lang={f.headlineParts && lang !== "en" ? lang : "en"}>
+            {forecastHeadline(f, lang)}
+            {lang !== "en" && f.headlineParts ? <span className="ml-1 text-xs font-normal opacity-70">({t("common.machineTranslated")})</span> : null}
+          </p>
           {pubLevel && (
             <p data-published-as className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {t("unit.publishedAs", { v: pubLevel })}
@@ -525,10 +561,10 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
               </ul>
             )}
             <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-              <Cell label={t("fc.localTrend")}>{f.signals.localRatePerH != null ? `${formatDelta(f.signals.localRatePerH, f.unit, { sign: true })}/h` : "—"}</Cell>
+              <Cell label={t("fc.localTrend")}>{f.signals.localRatePerH != null ? `${formatDelta(f.signals.localRatePerH, f.unit, { sign: true })}${t("unit.perH")}` : "—"}</Cell>
               <Cell label={t("fc.upstreamAvg")}>
                 {f.signals.upstreamRatePerH != null
-                  ? `${formatDelta(f.signals.upstreamRatePerH, f.unit, { sign: true })}/h`
+                  ? `${formatDelta(f.signals.upstreamRatePerH, f.unit, { sign: true })}${t("unit.perH")}`
                   : f.signals.upstreamCount === 0 ? t("fc.upstreamTop") : "—"}
               </Cell>
             </div>
@@ -566,13 +602,15 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
             )}
             {f.notes.length > 0 && (
               <ul className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                {f.notes.map((n, i) => <li key={i}>· {n}</li>)}
+                {/* the notes are written in English (lib/forecast.ts): say so on si / ta pages instead of mixing languages unmarked */}
+                {lang !== "en" && <li className="opacity-80">{t("common.englishNote")}</li>}
+                {f.notes.map((n, i) => <li key={i} lang="en">· {n}</li>)}
               </ul>
             )}
             {f.basis.length > 0 && (
               <ul className="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-                <li className="font-medium">{t("fc.how")}</li>
-                {f.basis.map((n, i) => <li key={i}>· {n}</li>)}
+                <li className="font-medium">{t("fc.how")}{lang !== "en" ? <span className="ml-1 font-normal opacity-80">{t("common.englishNote")}</span> : null}</li>
+                {f.basis.map((n, i) => <li key={i} lang="en">· {n}</li>)}
                 <li>· <Link href={p("/forecast-accuracy")} className="underline underline-offset-2 hover:no-underline">{fkT(lang)("link")}</Link></li>
               </ul>
             )}
