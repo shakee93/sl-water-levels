@@ -14,6 +14,9 @@
 // Env: SITE_URL, SLACK_WEBHOOK_URL, CLOUDFLARE_API_TOKEN (state), X_POSTING, X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN,
 //      X_ACCESS_SECRET, OPENAI_API_KEY (the writer, gpt-6-luna; templates without it), X_AI_POLISH=off (turns the writer off), X_AI_TEMPERATURE, X_LANGS=en,si,ta (default en), X_DAILY_MAX,
 //      X_EVENING=on.
+// What posts (owner decision 4 Nov 2026, DOCS.md "X account"): Alert+ rises, all-clears, new bulletins and the morning summary; ONE reservoir
+// digest a day (10:30 am to 3 pm Colombo) instead of per-reservoir start/stop posts; storm updates only at Alert+ and, with rain heads-ups,
+// capped at X_DAILY_MAX (default 4) a day. Hashtags (#lka, river, district/town) only on Alert+ rises and bulletins (lib/xCompose.ts).
 // ONE post per run (lib/xAggregate.ts): several events become one combined post, most severe first; a routine update within
 // X_MIN_GAP_MIN (default 45) minutes of the last post waits (state.deferred); Minor/Major crossings and official warnings go
 // at once. X_LONG_POSTS=1 lifts the 280 limit (X Premium); otherwise "+N more on waterlevels.lk". Never a thread of updates.
@@ -28,12 +31,12 @@ import { pathToFileURL } from "node:url";
 import { d1Query, isD1ReadBlip } from "../lib/d1.ts";
 import { gate, postTweet } from "../lib/xClient.ts";
 import {
-  composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop,
+  composeGaugeRise, composeGaugeClear, composeReservoirStart, composeReservoirStop, composeReservoirDigest,
   composeWarning, composeSummary, composeStorm, stormTide, composeRiversRising, composeRainWatch, validatePost, validateText, lunaWrite, tweetLength, colomboDay, MAX_TWEET,
 } from "../lib/xCompose.ts";
 import { OPENAI_MODEL } from "../lib/openai.ts";
 import { mediaMode, pickMedia, mediaCost, fetchImage, attachMedia } from "./x-media.mjs";
-import { evaluate, emptyState, summaryEvent, tierLevel, DEFAULTS } from "./x-engine.mjs";
+import { evaluate, emptyState, summaryEvent, reservoirDigest, tierLevel, DEFAULTS } from "./x-engine.mjs";
 import { refreshEvents, composeCombined, validateCombined, decide, capBatch, batchKey, MIN_GAP_MS, DEFER_MAX_AGE_MS } from "../lib/xAggregate.ts";
 import { PLACES } from "../lib/places.ts";
 import { pushText } from "../lib/i18n/return.ts";
@@ -46,6 +49,8 @@ export const X_SCHEMA = [
 ];
 
 const SITE_DEFAULT = "https://waterlevels.lk";
+/** Routine (non-priority) posts a day, X_DAILY_MAX. Alert+ rises, all-clears, bulletins, summaries and the reservoir digest are never held by it. */
+export const ROUTINE_DAILY_MAX = 4;
 const RAIN_PLACES = ["colombo", "gampaha", "kalutara", "ratnapura", "kandy", "galle", "matara", "anuradhapura", "batticaloa", "jaffna"];
 const bucketOf = (ms) => Math.floor(ms / 1_800_000);
 
@@ -97,6 +102,20 @@ export async function buildSnapshot({ site = SITE_DEFAULT, now = Date.now(), doF
   return { now, site, stations, reservoirs, warnings: warn?.warnings ?? null, rain, rainCatch, fallen };
 }
 
+/**
+ * "Would a person in that area care right now?" (owner decision 4 Nov 2026). Dropped before anything is composed:
+ *  - reservoir_start / reservoir_stop: replaced by the daily reservoir digest (x-engine reservoirDigest);
+ *  - storm updates whose gauges are all below Alert (a river merely "rising towards" a mark): the Alert rise itself is posted when it happens.
+ * Everything else passes: Alert+ rises, all-clears, bulletins, summaries, Alert+ storm updates and the heavy-rain heads-up (the last two are routine and capped).
+ */
+export function keepWorthPosting(events) {
+  return events.filter((e) => {
+    if (e.type === "reservoir_start" || e.type === "reservoir_stop") return false;
+    if (e.type === "storm") return e.storm.gauges.some((g) => (tierLevel(g.tier) ?? 0) >= 2);
+    return true;
+  });
+}
+
 // ---- words ---------------------------------------------------------------------------------------------------------
 
 /** The Post (text, reply, facts) for one event. */
@@ -109,6 +128,7 @@ export function composeEvent(ev) {
     case "reservoir_start": c = composeReservoirStart(ev.reservoirs); facts = ev.reservoirs; break;
     case "reservoir_stop": c = composeReservoirStop(ev.reservoirs); facts = ev.reservoirs; break;
     case "warning": c = composeWarning(ev.warning); facts = ev.warning; break;
+    case "reservoir_digest": c = composeReservoirDigest(ev.digest); facts = ev.digest; break;
     case "summary": c = composeSummary(ev.summary); facts = ev.summary; break;
     case "storm": c = composeStorm(ev.storm); facts = ev.storm; break;
     case "rivers_rising": c = composeRiversRising(ev.rivers); facts = ev.rivers; break;
@@ -190,7 +210,7 @@ export function costOf(text, replies, rates, media = false) {
 }
 
 /** The raw facts of an event, the shape lunaFacts() reads. */
-const eventFacts = (ev) => ev.gauges ?? ev.reservoirs ?? ev.warning ?? ev.summary ?? ev.storm ?? ev.rivers ?? ev.rainwatch;
+const eventFacts = (ev) => ev.gauges ?? ev.reservoirs ?? ev.warning ?? ev.summary ?? ev.storm ?? ev.rivers ?? ev.rainwatch ?? ev.digest;
 
 /**
  * Compose, write and check. The template is always built and checked first (a template that fails its own checks is never
@@ -205,6 +225,7 @@ export async function prepare(ev, llm, { links = "off", replies = false, recent 
   if (bad.length) return { error: `template failed its own checks (${bad.join("; ")})`, post };
   const withLink = linkWanted(ev, links);
   let text = withLink ? post.text : post.textNoLink;
+  if (ev.type === "reservoir_digest") return { post, text, reply: null, ai: false, why: "daily digest, template", withLink }; // routine, fixed wording: no model
   const w = await lunaWrite(post, { type: ev.type, facts: eventFacts(ev), recent, withLink, llm, offReason });
   text = w.text;
   const ai = w.used === "llm";
@@ -302,7 +323,7 @@ export async function run(o = {}) {
   for (const s of X_SCHEMA) await query(s);
   const day = colomboDay(now).day;
   const cfg = {
-    dailyMax: Number(env.X_DAILY_MAX) > 0 ? Number(env.X_DAILY_MAX) : 15,
+    dailyMax: Number(env.X_DAILY_MAX) > 0 ? Number(env.X_DAILY_MAX) : ROUTINE_DAILY_MAX, // routine posts a day (storm updates, rain heads-ups)
     evening: (env.X_EVENING ?? "").toLowerCase() === "on",
   };
   const links = ["alerts", "all"].includes((env.X_LINKS ?? "").trim().toLowerCase()) ? env.X_LINKS.trim().toLowerCase() : "off";
@@ -334,7 +355,11 @@ export async function run(o = {}) {
     return { mode: g.mode, posted: 0, skipped: "site unreadable" };
   }
   const prev = (await loadValue("main", query)) ?? emptyState();
-  const { events: fresh, state } = evaluate(snap, prev, cfg);
+  const { events: evaluated, state } = evaluate(snap, prev, cfg);
+  const fresh = keepWorthPosting(evaluated);
+  // reservoirs: no per-reservoir start/stop posts any more, one digest a day (late morning)
+  const digest = reservoirDigest(snap, state, now, cfg);
+  if (digest) fresh.push(digest);
 
   // ONE post per run. Updates held back earlier (a post went out < minGap ago) and this run's events are merged; they
   // become one combined post, unless a single event is all there is (then its own, better-worded post goes out).
@@ -347,6 +372,7 @@ export async function run(o = {}) {
     if (now - d.at > DEFER_MAX_AGE_MS) await note(`:warning: X account: dropped a held update that is now too old to send (${d.ev.type}).`);
     else if (!seen.has(d.ev.dedupe)) held.push(d.ev);
   }
+  held.splice(0, held.length, ...keepWorthPosting(held)); // updates held under the old rules (per-reservoir posts) are dropped
   // held updates are re-read against this run's snapshot (current level, or dropped, or flagged with their own time)
   events.push(...refreshEvents(held, snap.stations));
   events.push(...fresh);
@@ -355,6 +381,7 @@ export async function run(o = {}) {
   state.deferred = [];
   state.pending = []; // pre-aggregation queue of ready-made texts: no longer used (failed batches are kept as events in `deferred`)
 
+  const routineRows = await query("SELECT COUNT(*) AS n FROM x_posts WHERE day = ? AND mode = ? AND kind = 'storm' AND status IN ('posted','dry')", [day, g.mode]);
   const usedRows = await query("SELECT COUNT(*) AS n, MAX(ts) AS last FROM x_posts WHERE day = ? AND mode = ? AND status IN ('posted','dry')", [day, g.mode]);
   const lastRow = await query("SELECT MAX(ts) AS last FROM x_posts WHERE mode = ? AND status IN ('posted','dry')", [g.mode]);
   const lastPostMs = lastRow[0]?.last != null ? Number(lastRow[0].last) : null;
@@ -366,14 +393,14 @@ export async function run(o = {}) {
     log(`a post went out ${Math.round((now - lastPostMs) / 60_000)} min ago (gap ${Math.round(minGap / 60_000)} min): ${events.length} update(s) held for the next combined post`);
     defer(events);
   } else if (verdict === "send") {
-    if (capBatch(events, Number(usedRows[0]?.n ?? 0), { ...DEFAULTS, ...cfg })) batch = events;
+    if (capBatch(events, Number(usedRows[0]?.n ?? 0), { ...DEFAULTS, ...cfg }, Number(routineRows[0]?.n ?? 0))) batch = events;
     else heldByCap = events;
   }
   for (const e of heldByCap) {
     log(`held by the daily limit: ${e.type} ${e.dedupe}`);
     await query("INSERT OR IGNORE INTO x_posts (ts, day, kind, dedupe_key, mode, status, text) VALUES (?, ?, ?, ?, ?, 'held', ?)", [now, day, e.kind, `held:${e.dedupe}:${now}`, g.mode, `(held by daily limit) ${e.type}`]);
   }
-  if (heldByCap.length) await note(`:information_source: X account: ${heldByCap.length} update(s) held back by the daily limit (${cfg.dailyMax}/day, urgent ${cfg.urgentMax}).`);
+  if (heldByCap.length) await note(`:information_source: X account: ${heldByCap.length} update(s) held back by the daily limit (routine ${cfg.dailyMax}/day, all ${DEFAULTS.urgentMax}/day).`);
 
   const month = day.slice(0, 7);
   let spent = Number((await query("SELECT COALESCE(SUM(cost_usd), 0) AS c FROM x_posts WHERE day LIKE ? AND mode = ? AND status IN ('posted','dry')", [`${month}%`, g.mode]))[0]?.c ?? 0);
@@ -523,8 +550,8 @@ export async function sample(o = {}) {
     const fact = (s) => ({ station: s.station, river: s.river, tier: s.status, level: s.level, mark: s.marks?.[s.status] ?? null, alertMark: s.marks?.alert ?? null, trend: s.trend, nextHour: s.nextHour ? { level: s.nextHour.level_ft, low: s.nextHour.low_ft, high: s.nextHour.high_ft, direction: s.nextHour.direction, crossing: s.nextHour.crossing } : null, url: s.url, at: Date.parse(s.observedAt) });
     evs.push({ type: "storm", kind: "storm", storm: { river: top.river, at: now, gauges: all.map(fact), url: all[0].url, tide: stormTide(top.river, now) } });
   }
-  const res = (snap.reservoirs ?? []).filter((r) => (r.status === "spilling" || r.status === "releasing") && r.flow?.cusecs > 0).sort((a, b) => b.flow.cusecs - a.flow.cusecs)[0];
-  if (res) evs.push({ type: "reservoir_start", kind: "reservoir", reservoirs: [{ name: res.name, river: res.river, status: res.status, cusecs: res.flow.cusecs, storagePercent: res.storagePercent, day: res.flow.day ?? res.readingDay, source: res.source, url: res.url }] });
+  const dg = reservoirDigest(snap, {}, now, { digestFrom: 0, digestTo: 24 * 60 });
+  if (dg) evs.push(dg);
   const out = [];
   for (const [i, ev] of evs.slice(0, 3).entries()) {
     const r = await prepare(ev, llm, { recent, offReason });

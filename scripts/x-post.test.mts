@@ -6,9 +6,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { gate, oauthHeader, postTweet } from "../lib/xClient.ts";
-import { composeGaugeRise, composeGaugeClear, composeSummary, composeStorm, stormTide, composeWarning, composeReservoirStart, validatePost, validateText, polish, tweetLength, numbersIn, MAX_TWEET, DISCLAIMER } from "../lib/xCompose.ts";
-import { evaluate, applyCaps, emptyState } from "./x-engine.mjs";
-import { run, X_SCHEMA, prepare, linkWanted, isCritical, costOf } from "./x-post.mjs";
+import { composeGaugeRise, composeGaugeClear, composeSummary, composeStorm, stormTide, composeWarning, composeReservoirStart, composeReservoirDigest, alertTags, withTags, riverTag, validatePost, validateText, polish, tweetLength, numbersIn, MAX_TWEET, DISCLAIMER } from "../lib/xCompose.ts";
+import { evaluate, applyCaps, emptyState, reservoirDigest } from "./x-engine.mjs";
+import { run, X_SCHEMA, prepare, linkWanted, isCritical, costOf, keepWorthPosting } from "./x-post.mjs";
 
 const SITE = "https://waterlevels.lk";
 const NOW = Date.parse("2026-10-26T01:10:00Z"); // 6:40 am in Colombo
@@ -311,6 +311,78 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
   assert.equal(evaluate(snap(null), emptyState()).events.length, 0);
 }
 
+// ---- reservoir digest (4 Nov 2026): one post a day, late morning, top 3 by cusecs; no per-reservoir posts
+{
+  const R = (id, name, status, cusecs, day = "2026-10-26") => ({ id, name, river: null, status, storagePercent: 100, flow: cusecs == null ? null : { cusecs, day, source: "Irrigation Department" }, readingDay: day, source: "Irrigation Department", url: `${SITE}/reservoirs/${id}` });
+  const list = [R("a", "Nalanda", "spilling", 668), R("b", "Ukuwela", "spilling", 400), R("c", "Kotmale", "releasing", 2500), R("d", "Small", "spilling", 120), R("e", "Gate", "releasing", 900), R("f", "Minor", "spilling", 350), R("g", "Dry", "holding", null), R("h", "Old", "spilling", 5000, "2026-10-20")];
+  const noon = Date.parse("2026-10-26T06:30:00Z"); // 12:00 pm Colombo
+  const s0 = emptyState();
+  assert.equal(reservoirDigest(snap(calm(), { reservoirs: list }, NOW), s0, NOW), null, "6:40 am: before the window");
+  assert.equal(s0.rd, undefined, "outside the window the day is not marked");
+  assert.equal(reservoirDigest(snap(calm(), { reservoirs: null }, noon), s0, noon), null);
+  assert.equal(s0.rd, undefined, "unreadable sheet: not marked, a later run in the window tries again");
+  const d = reservoirDigest(snap(calm(), { reservoirs: list }, noon), s0, noon);
+  assert.equal(d.type, "reservoir_digest"); assert.ok(d.exempt && !d.urgent);
+  assert.deepEqual(d.digest.top.map((r) => r.name), ["Kotmale", "Nalanda", "Ukuwela"], "top 3 by cusecs; below-threshold, no-data and old readings are left out");
+  assert.equal(d.digest.total, 4, "Kotmale, Nalanda, Ukuwela and Minor (350 cusecs); Gate (900 < the 2,000 gate-release bar) is not counted"); assert.equal(d.digest.more, 1);
+  assert.equal(s0.rd, "2026-10-26");
+  assert.equal(reservoirDigest(snap(calm(), { reservoirs: list }, noon), s0, noon + 600_000), null, "once a day");
+  assert.equal(reservoirDigest(snap(calm(), { reservoirs: list }, noon + 4 * 3_600_000), emptyState(), noon + 4 * 3_600_000), null, "after 3 pm: nothing");
+  // nothing releasing: no post, but the day is settled
+  const s1 = emptyState();
+  assert.equal(reservoirDigest(snap(calm(), { reservoirs: [R("g", "Dry", "holding", null)] }, noon), s1, noon), null); assert.equal(s1.rd, "2026-10-26");
+  // the wording: top few, "and N more", no hashtags, within 280, numbers from the data
+  const post = composeReservoirDigest(d.digest);
+  assert.match(post.text, /^4 reservoirs are letting water out \(26 Oct readings\): Kotmale 2,500 cusecs, Nalanda 668 cusecs, Ukuwela 400 cusecs and 1 more\./);
+  assert.ok(!/#/.test(post.text) && tweetLength(post.text) <= MAX_TWEET);
+  assert.deepEqual(validatePost({ kind: "reservoir", facts: d.digest, ...post }), []);
+  // evaluate() itself is unchanged for the other account: it still reports starts / stops, and x-post filters them
+  const ev = evaluate(snap(calm(), { reservoirs: [R("a", "Nalanda", "holding", null)] }), emptyState());
+  const ev2 = evaluate(snap(calm(), { reservoirs: [R("a", "Nalanda", "spilling", 668)] }), ev.state);
+  assert.equal(ev2.events.filter((e) => e.type === "reservoir_start").length, 1);
+  assert.equal(keepWorthPosting(ev2.events).filter((e) => e.type === "reservoir_start" || e.type === "reservoir_stop").length, 0);
+}
+
+// ---- which routine kinds still post (keepWorthPosting)
+{
+  const g = (tier) => ({ station: "Hanwella", river: "Kelani Ganga", tier, level: 7, alertMark: 8, url: SITE, at: NOW });
+  const storm = (tier) => ({ type: "storm", kind: "storm", storm: { river: "Kelani Ganga", at: NOW, gauges: [g(tier)], url: SITE } });
+  assert.equal(keepWorthPosting([storm("watch")]).length, 0, "a river only rising towards a mark: no storm update (the Alert rise itself is posted)");
+  assert.equal(keepWorthPosting([storm("alert")]).length, 1);
+  const rest = [{ type: "gauge_rise" }, { type: "gauge_clear" }, { type: "warning" }, { type: "summary" }, { type: "rivers_rising" }, { type: "rainwatch" }];
+  assert.equal(keepWorthPosting(rest).length, rest.length);
+  assert.equal(keepWorthPosting([{ type: "reservoir_start" }, { type: "reservoir_stop" }]).length, 0);
+}
+
+// ---- hashtags (4 Nov 2026): Alert-and-above rises and bulletins only; #lka, river, district or town; max 3; town/district dropped first
+{
+  assert.deepEqual(alertTags("Kalu Ganga", "Putupaula"), ["#lka", "#KaluGanga", "#Kalutara"], "district when the station has one");
+  assert.deepEqual(alertTags("Kelani Ganga", "Some New Gauge"), ["#lka", "#KelaniGanga", "#SomeNewGauge"], "else the gauge's town");
+  assert.deepEqual(alertTags("Maha Oya"), ["#lka", "#MahaOya"]);
+  assert.deepEqual(alertTags("Kalu Ganga", "Putupaula").length <= 3, true);
+  const rise = composeGaugeRise([gf({ station: "Hanwella", river: "Kelani Ganga" })]);
+  assert.ok(rise.text.endsWith("\n#lka #KelaniGanga #Colombo") && rise.textNoLink.endsWith("\n#lka #KelaniGanga #Colombo"), rise.text);
+  assert.deepEqual(rise.hashtags, ["#lka", "#KelaniGanga", "#Colombo"]);
+  assert.deepEqual(validatePost({ kind: "alert", facts: [gf({ station: "Hanwella", river: "Kelani Ganga" })], ...rise }), []);
+  const bulletin = composeWarning({ source: "Irrigation Department", severity: "minor flood", basins: ["Kalu Ganga"], issuedAt: NOW, releaseCusecs: null, bulletinUrl: `${SITE}/b`, url: `${SITE}/kalu-ganga` });
+  assert.ok(bulletin.text.endsWith("\n#lka #KaluGanga"), bulletin.text);
+  // routine posts carry none
+  assert.ok(!/#/.test(composeGaugeClear([gf({ tier: "normal" })]).text));
+  assert.ok(!/#/.test(composeStorm({ river: "Kelani Ganga", at: NOW, gauges: [gf()], url: SITE }).text));
+  assert.ok(!/#/.test(composeSummary({ period: "morning", at: NOW, reporting: 40, assessed: 38, atAlert: [], nearAlert: 0, rain: null, rainWindowH: 24, spilling: 0, url: SITE }).text));
+  assert.ok(!/#/.test(composeReservoirStart([{ name: "Nalanda", river: "Mahaweli Ganga", status: "spilling", cusecs: 668, storagePercent: 90, day: "2026-10-26", source: null, url: SITE }]).text));
+  // length: a long station name drops the town tag first, then the river, never goes over 280
+  const longRise = composeGaugeRise([gf({ station: "Kalawellawa (Millakanda) upper reach gauge", river: "Kalu Ganga", trend: "rising slowly" })]);
+  for (const t of [longRise.text, longRise.textNoLink]) assert.ok(tweetLength(t) <= MAX_TWEET, String(tweetLength(t)));
+  const T3 = ["#lka", "#KaluGanga", "#Kalutara"];
+  assert.equal(withTags("x".repeat(250), T3), `${"x".repeat(250)}\n#lka #KaluGanga #Kalutara`);
+  assert.equal(withTags("x".repeat(255), T3), `${"x".repeat(255)}\n#lka #KaluGanga`, "town/district dropped first");
+  assert.equal(withTags("x".repeat(270), T3), `${"x".repeat(270)}\n#lka`, "then the river");
+  assert.equal(withTags("x".repeat(279), T3), "x".repeat(279), "no room: no tags, never over 280");
+  // Sinhala / Tamil text still counts the way X counts it (1 per character in those ranges): tags fit the same
+  assert.ok(tweetLength(withTags("ගඟ ".repeat(80), ["#lka", "#KaluGanga", "#Kalutara"])) <= MAX_TWEET);
+}
+
 // ---- daily limit
 {
   const ev = (urgent, exempt = false) => ({ urgent, exempt, type: "t", dedupe: "d" });
@@ -441,6 +513,53 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
     assert.equal(w.calls.x.length, 2);
     assert.equal((await query("SELECT COUNT(*) AS n FROM x_posts WHERE status = 'posted'"))[0].n, 1);
     world.xStatus = null;
+  }
+  // reservoirs: no per-reservoir posts; ONE digest after 10:30 am, once a day, no hashtags
+  {
+    const R = (id, name, status, cusecs) => ({ id, name, river: null, status, storagePercent: 100, flow: cusecs == null ? null : { cusecs, day: "2026-10-26", source: "Irrigation Department" }, readingDay: "2026-10-26", source: "Irrigation Department", url: `${SITE}/reservoirs/${id}` });
+    const early = NOW - 7 * 3_600_000;
+    const holding = [R("a", "Nalanda", "holding", null), R("b", "Ukuwela", "holding", null)];
+    const spilling = [R("a", "Nalanda", "spilling", 668), R("b", "Ukuwela", "spilling", 400), R("c", "Kotmale", "spilling", 350), R("d", "Bowatenna", "spilling", 320), R("e", "Rantembe", "spilling", 310)];
+    const w = world({ X_MEDIA: "off" }); const query = makeDb();
+    await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null, reservoirs: holding }, early), now: early });
+    const r1 = await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null, reservoirs: spilling }, NOW + 1_800_000), now: NOW + 1_800_000 }); // 7:10 am: starts detected, nothing posted
+    assert.equal(r1.posted, 1, "only the morning summary goes out; the five 'started letting water out' events are not posted one by one");
+    assert.equal((await query("SELECT COUNT(*) AS n FROM x_posts WHERE kind = 'reservoir'"))[0].n, 0);
+    const noon = NOW + 6 * 3_600_000 + 1_800_000; // 1:10 pm
+    const r2 = await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null, reservoirs: spilling }, noon), now: noon });
+    assert.equal(r2.posted, 1);
+    const msg = w.calls.slack.filter((t) => /DRY RUN/.test(t)).pop();
+    assert.match(msg, /\[reservoir\]/); assert.match(msg, /5 reservoirs are letting water out \(26 Oct readings\): Nalanda 668 cusecs, Ukuwela 400 cusecs, Kotmale 350 cusecs and 2 more\./);
+    assert.ok(!/#/.test(msg.split("\n").slice(1).join("\n")), "no hashtags on the digest");
+    const again = await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null, reservoirs: spilling }, noon + 3_600_000), now: noon + 3_600_000 });
+    assert.equal(again.posted, 0, "one digest a day");
+    // several reservoirs stop: still silent
+    const stopped = await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null, reservoirs: holding }, noon + 7_200_000), now: noon + 7_200_000 });
+    assert.equal(stopped.posted, 0);
+    assert.equal((await query("SELECT COUNT(*) AS n FROM x_posts WHERE kind = 'reservoir'"))[0].n, 1);
+  }
+  // hashtags on an Alert+ rise (single post), none on the routine morning summary
+  {
+    const w = world({ X_MEDIA: "off" }); const query = makeDb();
+    await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null }, NOW - 7 * 3_600_000), now: NOW - 7 * 3_600_000 });
+    await run({ env: w.env, doFetch: w.doFetch, query, snap: rising(LATE), now: LATE });
+    const rise = (await query("SELECT text FROM x_posts WHERE kind = 'alert'"))[0].text;
+    assert.ok(/\n#lka #KelaniGanga #Colombo$/.test(rise), rise);
+    assert.ok(tweetLength(rise) <= MAX_TWEET);
+    const w2 = world({ X_MEDIA: "off" }); const q2 = makeDb();
+    await run({ env: w2.env, doFetch: w2.doFetch, query: q2, snap: sceneA(), now: NOW });
+    assert.ok(!/#/.test((await q2("SELECT text FROM x_posts"))[0].text), "summary has no hashtags");
+  }
+  // daily cap for routine posts (rain heads-up / storm update): held at X_DAILY_MAX; an Alert+ rise is never held by it
+  {
+    const w = world({ X_MEDIA: "off", X_DAILY_MAX: "1" }); const query = makeDb();
+    await run({ env: w.env, doFetch: w.doFetch, query, snap: snap(calm(), { rain: null }, NOW - 7 * 3_600_000), now: NOW - 7 * 3_600_000 });
+    await query("INSERT INTO x_posts (ts, day, kind, dedupe_key, mode, status, text) VALUES (?, '2026-10-26', 'storm', 'storm:earlier', 'dry', 'dry', 'Earlier storm update')", [NOW]);
+    const heavy = snap(calm(), { rain: { mm: 120, place: "Ratnapura" } }, LATE);
+    const held = await run({ env: w.env, doFetch: w.doFetch, query, snap: heavy, now: LATE });
+    assert.equal(held.posted, 0); assert.equal(held.held, 1, "the second routine post of the day is held");
+    const rise = await run({ env: w.env, doFetch: w.doFetch, query, snap: rising(LATE + 3_600_000), now: LATE + 3_600_000 });
+    assert.equal(rise.posted, 1, "a Major rise goes out although the routine cap is used up");
   }
   // site unreadable: nothing happens
   {

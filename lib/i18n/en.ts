@@ -118,6 +118,7 @@ export const en = {
   "common.callDmcOffice": "{district} DMC office",
   "common.call117": "Call 117",
   "common.moreHelp": "More help",
+  "common.followX": "Follow on X for alerts",
   "common.more": "More",
   "common.less": "Less",
   "common.floodHelpLink": "Flood help & emergency numbers",

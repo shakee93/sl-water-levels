@@ -87,6 +87,17 @@ export async function StationHelpCard({
           {t("common.moreHelp")} <ArrowRight className="size-4" aria-hidden />
         </Link>
       </div>
+      {/* the site's automated alerts account; only on the Alert-and-above card (owner decision 4 Nov 2026) */}
+      <p className="mt-3 text-sm">
+        <a
+          href="https://x.com/waterlevelslk"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center min-h-11 sm:min-h-0 text-slate-600 dark:text-slate-400 hover:text-sky-700 dark:hover:text-sky-300 hover:underline rounded ${ring}`}
+        >
+          {t("common.followX")}
+        </a>
+      </p>
     </section>
   );
 }

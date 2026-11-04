@@ -2,11 +2,14 @@
 // Pure: takes the events scripts/x-engine.mjs found and returns ONE combined post, most severe first. No I/O, no clock;
 // scripts/x-aggregate.test.mts drives it, scripts/x-post.mjs sends it.
 //
+// Hashtags (#lka, river, district/town) are added to a combined post only when it holds an Alert+ rise or a bulletin (tagsFor).
+// The daily cap (capBatch) holds only routine posts (storm updates, rain heads-ups); priority events and the reservoir digest are never held by it.
+//
 // Length: X_LONG_POSTS=1 (an X Premium account: up to 25,000 characters through the API) lifts the limit; otherwise the
 // 280 weighted-character limit applies (links = 23, see tweetLength) and, when the lines do not fit, the most severe
 // ones are kept and the post ends "+N more on waterlevels.lk". Never a thread.
 // @ts-ignore node strip-types needs explicit extensions
-import { MAX_TWEET, tweetLength, clock, allowedNumbers, numbersIn, ALWAYS_OK_NUMBERS } from "./xCompose.ts";
+import { MAX_TWEET, tweetLength, clock, allowedNumbers, numbersIn, ALWAYS_OK_NUMBERS, alertTags, withTags } from "./xCompose.ts";
 
 export const LONG_TWEET = 25_000;
 /** Long posts (X_LONG_POSTS=1) stay short and human: aim for 400-700 characters, name at most 10 places. */
@@ -32,6 +35,25 @@ export function isUrgentNow(ev: Ev): boolean {
   if (ev.type === "gauge_rise") return ev.gauges.some((g: any) => lvl(g.tier) >= 3);
   if (ev.type === "warning") return true;
   return false;
+}
+
+/**
+ * Posts a person in the area would care about right now: a gauge rising to Alert or above (or several rivers at once), an all-clear,
+ * a new official bulletin, the summaries and the daily reservoir digest. Everything else (storm updates, rain heads-ups) is routine and
+ * counts against the small daily cap for routine posts (capBatch). Owner decision 4 Nov 2026.
+ */
+export function isPriority(ev: Ev): boolean {
+  return ["gauge_rise", "rivers_rising", "gauge_clear", "warning", "summary", "reservoir_digest"].includes(ev.type);
+}
+
+/** Hashtags for a batch (Alert-and-above rises and bulletins only; none otherwise): from the most important such event. */
+export function tagsFor(events: Ev[]): string[] {
+  const pick = events.filter((e) => e.type === "warning" || e.type === "gauge_rise" || e.type === "rivers_rising").sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
+  if (!pick) return [];
+  if (pick.type === "warning") return alertTags(pick.warning.basins?.[0] ?? null);
+  if (pick.type === "rivers_rising") return alertTags(pick.rivers.gauges[0]?.river);
+  const w = pick.gauges.slice().sort((a: any, b: any) => lvl(b.tier) - lvl(a.tier) || b.level - a.level)[0];
+  return alertTags(pick.river ?? w.river, w.station);
 }
 
 /**
@@ -139,6 +161,9 @@ export function groupsOf(events: Ev[]): Group[] {
     } else if (ev.type === "reservoir_stop") {
       const rs = ev.reservoirs;
       groups.push({ severity: 12, serious: false, entries: rs.length, say: (k) => { const l = rs.slice(0, k); return `${joinList(l.map((r: any) => r.name))} ${l.length === 1 ? "has" : "have"} stopped letting water out.`; } });
+    } else if (ev.type === "reservoir_digest") {
+      const d = ev.digest;
+      groups.push({ severity: 12, serious: false, entries: d.top.length, say: (k) => { const l = d.top.slice(0, k); const more = d.total - l.length; return `Reservoirs letting water out: ${l.map((r: any) => `${r.name} (${int(r.cusecs)} cusecs)`).join(", ")}${more > 0 ? ` and ${more} more` : ""}.`; } });
     } else if (ev.type === "rainwatch") {
       groups.push({ rain: true, severity: 40, serious: false, entries: 1, say: () => `Heavy rain is forecast near ${ev.rainwatch.place}, up to ${int(ev.rainwatch.mm)} mm in the next ${ev.rainwatch.windowH} hours.` });
     } else if (ev.type === "summary") {
@@ -175,6 +200,7 @@ export function composeCombined(events: Ev[], o: { now: number; link?: string; l
   const total = groups.reduce((n, g) => n + g.entries, 0);
   const atRisk = groups.reduce((n, g) => n + (g.river && g.severity >= 70 ? g.entries : 0), 0);
   const keep = groups.map((g) => g.entries);
+  const tags = tagsFor(events);
   const build = () => {
     const kept = keep.reduce((x, y) => x + y, 0);
     const rest = total - kept;
@@ -205,15 +231,17 @@ export function composeCombined(events: Ev[], o: { now: number; link?: string; l
   let cut = 0;
   if (long) { let over = total - LONG_MAX_ITEMS; for (let i = groups.length - 1; i >= 0 && over > 0; i--) { const d = Math.min(keep[i], over); keep[i] -= d; over -= d; } }
   const last = () => { for (let i = groups.length - 1; i >= 0; i--) if (keep[i] > 0) return i; return -1; };
-  while (tweetLength(build()) > softLimit && keep.reduce((a, b) => a + b, 0) > 1) { keep[last()]--; cut++; }
-  return { headAt, text: build(), shown: keep.reduce((a, b) => a + b, 0), total, serious, long };
+  // keep room for at least "#lka" before cutting content; the fuller tag list is added only if it fits (the town/district tag goes first)
+  const room = tags.length ? tags[0].length + 1 : 0;
+  while (tweetLength(build()) + room > softLimit && keep.reduce((a, b) => a + b, 0) > 1) { keep[last()]--; cut++; }
+  return { headAt, text: withTags(build(), tags, limit), shown: keep.reduce((a, b) => a + b, 0), total, serious, long };
 }
 
 /** Why a combined text may not go out; empty = fine. Numbers must come from the events, plus the clock in the heading. */
 export function validateCombined(text: string, events: Ev[], headAt: number, long: boolean): string[] {
   const problems: string[] = [];
   if (tweetLength(text) > (long ? LONG_TWEET : MAX_TWEET)) problems.push(`too long (${tweetLength(text)})`);
-  const ok = allowedNumbers(events.map((e) => e.gauges ?? e.reservoirs ?? e.warning ?? e.summary ?? e.storm ?? e.rivers ?? e.rainwatch));
+  const ok = allowedNumbers(events.map((e) => e.gauges ?? e.reservoirs ?? e.warning ?? e.summary ?? e.storm ?? e.rivers ?? e.rainwatch ?? e.digest));
   for (const n of [...ALWAYS_OK_NUMBERS, ...numbersIn(clock(headAt))]) ok.add(n);
   for (const m of text.matchAll(/and (\d+) more/g)) ok.add(Number(m[1]));
   for (const n of numbersIn(text)) if (!ok.has(n)) problems.push(`number ${n} is not in the data`);
@@ -231,10 +259,16 @@ export function decide(events: Ev[], lastPostMs: number | null, now: number, min
   return "send";
 }
 
-/** Daily-limit check for ONE combined post: routine up to dailyMax posts, urgent up to urgentMax, a summary is exempt. */
-export function capBatch(events: Ev[], usedToday: number, cfg: { dailyMax: number; urgentMax: number }): boolean {
+/**
+ * Daily-limit check for ONE combined post (owner decision 4 Nov 2026):
+ *  - a summary or the reservoir digest is exempt (once a day each by construction);
+ *  - a post with any priority event (Alert+ rise, all-clear, bulletin) is never held by the routine cap, only by the high urgentMax on total posts;
+ *  - a routine-only post (storm update, rain heads-up) stops at cfg.dailyMax routine posts a day (`routineToday` = such posts already made).
+ */
+export function capBatch(events: Ev[], usedToday: number, cfg: { dailyMax: number; urgentMax: number }, routineToday = 0): boolean {
   if (events.some((e) => e.exempt)) return true;
-  return usedToday < (events.some(isUrgentNow) ? cfg.urgentMax : cfg.dailyMax);
+  if (events.some(isPriority)) return usedToday < cfg.urgentMax;
+  return routineToday < cfg.dailyMax && usedToday < cfg.urgentMax;
 }
 
 /** Stable key for a batch: the single event's own key, or a hash of all of them. */

@@ -5,7 +5,7 @@
 // openings; the path used (llm / template) is recorded and shown in the Slack preview. No real OpenAI call is made.
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { tweetLength, sharedWithRecent, composeRiversRising, MODEL_TARGET, composeGaugeRise, composeGaugeClear, composeStorm, composeSummary, composeWarning, lunaFacts, lunaWrite, validateLlmText, LUNA_INSTRUCTIONS, DISCLAIMER } from "../lib/xCompose.ts";
+import { tweetLength, sharedWithRecent, composeRiversRising, MODEL_TARGET, composeGaugeRise, composeGaugeClear, composeReservoirStart, composeStorm, composeSummary, composeWarning, lunaFacts, lunaWrite, validateLlmText, LUNA_INSTRUCTIONS, DISCLAIMER } from "../lib/xCompose.ts";
 import { run, prepare, makeLlm, dryRunMessage, X_SCHEMA } from "./x-post.mjs";
 
 const SITE = "https://waterlevels.lk";
@@ -84,7 +84,19 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("U
   const llm = (answers) => async (instr, input) => { calls.push(JSON.parse(input)); return answers[Math.min(calls.length - 1, answers.length - 1)]; };
 
   let r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm: llm([good]) });
-  assert.equal(r.used, "llm"); assert.equal(r.text, good); assert.equal(r.attempts, 1);
+  assert.equal(r.used, "llm"); assert.equal(r.text, `${good}\n#lka #KaluGanga #Ratnapura`, "an Alert rise: the code appends #lka, the river, the town"); assert.equal(r.attempts, 1);
+  assert.deepEqual(calls[0].allowed_hashtags, [], "the model is never offered hashtags");
+  // a model that writes its own hashtag is rejected and retried; routine posts get none from the code either
+  calls.length = 0;
+  r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm: llm([good + " #KaluGanga", good]) });
+  assert.equal(r.attempts, 2); assert.ok(calls[1].problems_to_fix.some((x) => /hashtag/.test(x)));
+  const clearPost = { kind: "clear", facts: [gf({ tier: "normal" })], ...composeGaugeClear([gf({ tier: "normal" })]) };
+  assert.deepEqual(clearPost.hashtags, []);
+  r = await lunaWrite(clearPost, { type: "gauge_clear", facts: [gf({ tier: "normal" })], withLink: false, llm: llm([good.replace("is rising and just crossed the alert mark", "is back below the alert level").replace(" If you're near the river in Ratnapura, keep an eye on it this evening.", "")]) });
+  assert.ok(!/#/.test(r.text), r.text);
+  assert.ok(!/#/.test(composeGaugeClear([gf({ tier: "normal" })]).text) && !/#/.test(composeReservoirStart([{ name: "Nalanda", river: "Mahaweli", status: "spilling", cusecs: 668, storagePercent: 90, day: "2026-10-26", source: null, url: `${SITE}/r` }]).text), "routine posts: no hashtags");
+  calls.length = 0;
+  await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm: llm([good]) });
   assert.equal(calls[0].facts.gauges[0].level_ft, 21.3); assert.equal(calls[0].facts.gauges[0].time_sri_lanka, "4:10 pm");
   assert.ok(!JSON.stringify(calls[0]).includes("http"), "no URLs go to the model");
 
@@ -104,13 +116,13 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("U
 
   // with a link: the code adds it (the model never writes one) and it counts as 23 characters
   r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: true, llm: llm([good]) });
-  assert.equal(r.used, "llm"); assert.ok(r.text.endsWith(`\n${p.link}`));
+  assert.equal(r.used, "llm"); assert.ok(r.text.replace(/\n#[^\n]*$/, "").endsWith(`\n${p.link}`));
   r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: true, llm: llm([good + " https://evil.example/x"]) });
   assert.equal(r.used, "template"); assert.equal(r.text, p.text);
 
   // a model that wraps the post in quotes still works
   r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm: llm([`"${good}"`]) });
-  assert.equal(r.used, "llm"); assert.equal(r.text, good);
+  assert.equal(r.used, "llm"); assert.equal(r.text, `${good}\n#lka #KaluGanga #Ratnapura`);
 }
 
 // ---- variety: an opening that repeats a recent post is sent back, and the second try is accepted
@@ -120,7 +132,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("U
   const seen = [];
   const llm = async (_i, input) => { seen.push(JSON.parse(input)); return seen.length === 1 ? good : other; };
   const r = await lunaWrite(p, { type: "gauge_rise", facts: [gf()], withLink: false, llm, recent: [good, "Morning! Rivers are calm."] });
-  assert.equal(r.used, "llm"); assert.equal(r.attempts, 2); assert.equal(r.text, other);
+  assert.equal(r.used, "llm"); assert.equal(r.attempts, 2); assert.equal(r.text, `${other}\n#lka #KaluGanga #Ratnapura`);
   assert.match(seen[1].problems_to_fix.join(), /same words as a recent post/);
   assert.equal(seen[0].recent_posts.length, 2);
   // five posts in a row all begin differently
@@ -150,7 +162,7 @@ assert.ok(LUNA_INSTRUCTIONS.includes("MADE UP") && LUNA_INSTRUCTIONS.includes("U
 {
   const e = ev();
   let r = await prepare(e, async () => good, { recent: [] });
-  assert.equal(r.ai, true); assert.equal(r.text, good);
+  assert.equal(r.ai, true); assert.equal(r.text, `${good}\n#lka #KaluGanga #Ratnapura`);
   assert.match(dryRunMessage({ n: 1, of: 1, kind: "alert", text: r.text, ai: r.ai, why: r.why }), /written by gpt-6-luna, every number checked/);
   r = await prepare(e, null, { offReason: "OPENAI_API_KEY is not set in GitHub, so the plain templates are used" });
   assert.equal(r.ai, false);

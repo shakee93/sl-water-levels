@@ -113,6 +113,7 @@ export const si: Dict = {
   "common.callDmcOffice": "{district} ආපදා කළමනාකරණ කාර්යාලය",
   "common.call117": "117 අමතන්න",
   "common.moreHelp": "තව උදව්",
+  "common.followX": "අනතුරු ඇඟවීම් සඳහා X හි අනුගමනය කරන්න", // needs native review
   "common.more": "තව", // needs native review
   "common.less": "අඩුවෙන්", // needs native review
   "common.floodHelpLink": "ගංවතුර උදව් සහ හදිසි අංක",

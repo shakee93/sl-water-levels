@@ -113,6 +113,7 @@ export const ta: Dict = {
   "common.callDmcOffice": "{district} பேரிடர் மேலாண்மை அலுவலகம்",
   "common.call117": "117 ஐ அழைக்கவும்",
   "common.moreHelp": "மேலும் உதவி",
+  "common.followX": "எச்சரிக்கைகளுக்கு X இல் பின்தொடருங்கள்", // needs native review
   "common.more": "மேலும்", // needs native review
   "common.less": "குறைவாக", // needs native review
   "common.floodHelpLink": "வெள்ள உதவியும் அவசர எண்களும்",

@@ -8,6 +8,8 @@
 //   - de-escalation (4 -> 3 -> 2) is silent; an all-clear comes after 2 checks in a row at "watch" or below, and only
 //     for a place we actually posted about.
 // A source that could not be read (null) leaves its part of the memory untouched: unknown is never "calm".
+// evaluate() still reports reservoir_start / reservoir_stop (Instagram shares this engine and keeps its behaviour); the X runner
+// drops them (scripts/x-post.mjs keepWorthPosting) and posts ONE daily reservoirDigest() instead (owner decision 4 Nov 2026).
 import { pushStep } from "../lib/myPlaces.ts";
 import { colomboDay, stormTide } from "../lib/xCompose.ts";
 
@@ -30,6 +32,11 @@ export const DEFAULTS = {
   morningTo: 11 * 60,
   eveningFrom: 18 * 60,
   eveningTo: 21 * 60,
+  // the daily reservoir digest (X only; Instagram does not use it): late morning, after the Irrigation sheet's daily reading is in
+  digestFrom: 10 * 60 + 30,
+  digestTo: 15 * 60,
+  digestShown: 3, // reservoirs named; the rest are "and N more"
+  digestMaxAgeDays: 1, // only today's (or yesterday's) reading is "letting water out today"
 };
 
 const TIER_LEVEL = { normal: 0, watch: 1, alert: 2, minor: 3, major: 4 };
@@ -320,4 +327,41 @@ export function applyCaps(events, used, cfgIn = {}) {
     }
   }
   return { send, held };
+}
+
+/**
+ * The ONE daily reservoir digest for X (owner decision 4 Nov 2026: per-reservoir "started / stopped letting water out" posts were
+ * dropped, they interest few people). Not part of evaluate() (Instagram shares that and keeps its behaviour): scripts/x-post.mjs calls
+ * this after evaluate and discards evaluate's reservoir_start / reservoir_stop events.
+ * Once per Colombo day, inside [digestFrom, digestTo): marks `state.rd = day` (even when nothing is releasing, so the sheet is not
+ * re-read for a post all afternoon) and returns an event listing the reservoirs letting water out now, biggest cusecs first, or null.
+ * `snap.reservoirs` null (could not be read) -> null and the day is NOT marked, so a later run in the window tries again.
+ * The cusec thresholds are evaluate()'s (spill 300, gate release 2,000); "no data" and old readings never count.
+ */
+export function reservoirDigest(snap, state, now, cfgIn = {}) {
+  const cfg = { ...DEFAULTS, ...cfgIn };
+  if (!snap.reservoirs) return null;
+  const { day, minutes } = colomboDay(now);
+  if (state.rd === day || minutes < cfg.digestFrom || minutes >= cfg.digestTo) return null;
+  state.rd = day;
+  const age = (d) => (d ? (Date.parse(day) - Date.parse(d)) / 86_400_000 : null);
+  const active = snap.reservoirs
+    .filter((r) => {
+      if (r.status === "nodata") return false;
+      const a = age(r.readingDay ?? r.flow?.day);
+      const cus = r.flow?.cusecs;
+      if (a == null || a > cfg.digestMaxAgeDays || typeof cus !== "number") return false;
+      return (r.status === "spilling" && cus >= cfg.spillMinCusecs) || (r.status === "releasing" && cus >= cfg.releaseMinCusecs);
+    })
+    .sort((a, c) => c.flow.cusecs - a.flow.cusecs);
+  if (!active.length) return null;
+  const top = active.slice(0, cfg.digestShown);
+  return {
+    type: "reservoir_digest", kind: "reservoir", urgent: false, exempt: true, priority: 8,
+    digest: {
+      at: now, day: active[0].flow?.day ?? active[0].readingDay ?? day, total: active.length, more: active.length - top.length,
+      top: top.map((r) => ({ name: r.name, river: r.river ?? null, cusecs: r.flow.cusecs })), url: top[0].url,
+    },
+    dedupe: `rsvdigest:${day}`,
+  };
 }

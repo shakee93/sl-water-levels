@@ -6,10 +6,16 @@
 //     validatePost() re-reads the finished text and rejects any number that is not in the facts (117 aside).
 //  2. A post is at most 280 characters the way X counts them: a link is always 23 (t.co), most letters 1.
 //  3. A post always carries its page link and the disclaimer; hashtags are dropped first when space is short.
+//     Hashtags (owner decision 4 Nov 2026): ONLY on posts at Alert level or above and on relayed official bulletins, at the end,
+//     at most 3: #lka, the river (#KaluGanga) and the district or, failing that, the gauge's town (#Kalutara). The town/district
+//     tag is dropped first when the post is too long. Routine posts (reservoir digest, summaries, storm updates, all-clears) carry none.
 //  4. The words themselves are written by the language model (gpt-6-luna) from a compact JSON of facts, in a human voice
 //     (lunaWrite below); the template is the fallback. The model's text is accepted only if validateLlmText() passes: every
 //     number is in the facts, <= 280, disclaimer present, no links / @mentions / invented tier words, no low-spot rain talk.
 //     One retry with the problems fed back, then the template. (polish() is the older reword-only path, kept for its tests.)
+
+// @ts-ignore node strip-types needs explicit extensions
+import { DISTRICT_BY_STATION } from "./districts.ts";
 
 export const MAX_TWEET = 280;
 export const TCO_LENGTH = 23;
@@ -141,6 +147,26 @@ export function riverTag(river: string): string {
   return w ? `#${w}` : "";
 }
 
+/** Hashtags of an Alert-or-above post: #lka, the river, the district (or the gauge's town when no district is known); max 3. */
+export function alertTags(river: string | null | undefined, station?: string | null): string[] {
+  const out = ["#lka"];
+  const r = river ? riverTag(river) : "";
+  if (r) out.push(r);
+  const place = (station && DISTRICT_BY_STATION[station]) || station || "";
+  const t = place ? riverTag(place) : "";
+  if (t && !out.includes(t)) out.push(t);
+  return out.slice(0, 3);
+}
+
+/** Appends hashtags on a last line, dropping them from the end (town/district first) until the post fits 280; none if even one does not fit. */
+export function withTags(text: string, tags: string[], limit = MAX_TWEET): string {
+  for (let k = Math.min(tags.length, 3); k > 0; k--) {
+    const t = `${text}\n${tags.slice(0, k).join(" ")}`;
+    if (tweetLength(t) <= limit) return t;
+  }
+  return text;
+}
+
 /** Joins "A, B and C". */
 const listMore = (xs: string[], more: number) => (more > 0 ? `${xs.join(", ")} and ${more} more` : list(xs));
 const dayOf = (d: string) => (/^\d{4}-\d\d-\d\d$/.test(d) ? dayText(Date.parse(`${d}T12:00:00+05:30`)) : d);
@@ -181,7 +207,7 @@ function assemble(parts: Parts[] | Parts, serious = false): Composed {
     for (const p of variants) {
       const disclaimer = p.disclaimer ?? (serious ? DISCLAIMER_SHORT : "");
       for (const body of [p.body, p.short].filter((x): x is string => !!x)) {
-        for (const tags of [p.tags, p.tags.slice(0, 1), []]) {
+        for (const tags of [p.tags, p.tags.slice(0, 2), p.tags.slice(0, 1), []]) {
           const text = `${body}${withLink ? `\n${p.link}` : ""}${disclaimer ? `\n${disclaimer}` : ""}${tags.length ? `\n${tags.join(" ")}` : ""}`;
           last = text;
           pick = p;
@@ -212,8 +238,8 @@ function nextHourLine(g: GaugeFact): string | null {
 export function composeGaugeRise(gs: GaugeFact[]): Composed {
   const river = gs[0].river;
   const time = clock(Math.max(...gs.map((g) => g.at)));
-  const tags = ["#SriLanka", riverTag(river)].filter(Boolean);
   const worst = gs.reduce((a, g) => (rank(g.tier) > rank(a.tier) ? g : a), gs[0]);
+  const tags = alertTags(river, worst.station);
   const link = worst.url;
   const must = [...gs.slice(0, 3).map((g) => g.station), TIER_WORD[worst.tier].split(" ")[0]];
   if (gs.length === 1) {
@@ -250,7 +276,7 @@ const rank = (t: string) => ["normal", "watch", "alert", "minor", "major"].index
 export function composeGaugeClear(gs: GaugeFact[]): Composed {
   const river = gs[0].river;
   const time = clock(Math.max(...gs.map((g) => g.at)));
-  const tags = ["#SriLanka", riverTag(river)].filter(Boolean);
+  const tags: string[] = []; // an all-clear is routine: no hashtags
   const link = gs[0].url;
   if (gs.length === 1) {
     const g = gs[0];
@@ -266,7 +292,7 @@ export function composeGaugeClear(gs: GaugeFact[]): Composed {
 export type ReservoirFact = { name: string; river: string | null; status: "spilling" | "releasing"; cusecs: number; storagePercent: number | null; day: string; source: string | null; url: string };
 
 export function composeReservoirStart(rs: ReservoirFact[]): Composed {
-  const tags = ["#SriLanka", rs[0].river ? riverTag(rs[0].river) : ""].filter(Boolean);
+  const tags: string[] = []; // reservoir posts are routine: no hashtags
   if (rs.length === 1) {
     const r = rs[0];
     const verb = r.status === "spilling" ? "is spilling water over its spillway" : "is releasing water through its gates";
@@ -281,9 +307,26 @@ export function composeReservoirStart(rs: ReservoirFact[]): Composed {
 }
 
 export function composeReservoirStop(rs: { name: string; river: string | null; day: string; url: string }[]): Composed {
-  const tags = ["#SriLanka"];
+  const tags: string[] = [];
   const mk = (k: number) => (rs.length === 1 ? `${rs[0].name} reservoir has stopped letting water out (${dayOf(rs[0].day)}).` : `${listMore(rs.slice(0, k).map((r) => r.name), rs.length - k)}: reservoirs have stopped letting water out (${dayOf(rs[0].day)}).`);
   return assemble([3, 2, 1].map((k) => ({ body: mk(Math.min(k, rs.length)), link: rs[0].url, must: [rs[0].name], tags })));
+}
+
+/** The daily reservoir digest (owner decision 4 Nov 2026): every reservoir letting water out in today's readings, the top few by cusecs. */
+export type ReservoirDigestFact = { at: number; day: string; total: number; more: number; top: { name: string; river: string | null; cusecs: number }[]; url: string };
+
+export function composeReservoirDigest(f: ReservoirDigestFact): Composed {
+  const mk = (k: number) => {
+    const l = f.top.slice(0, k);
+    const more = f.total - l.length;
+    return `${f.total === 1 ? "A reservoir is" : `${f.total} reservoirs are`} letting water out (${dayOf(f.day)} readings): ${l.map((r) => `${r.name} ${int(r.cusecs)} cusecs`).join(", ")}${more > 0 ? ` and ${more} more` : ""}. Daily agency readings, not live.`;
+  };
+  const short = (k: number) => {
+    const l = f.top.slice(0, k);
+    const more = f.total - l.length;
+    return `Reservoirs letting water out: ${l.map((r) => `${r.name} ${int(r.cusecs)} cusecs`).join(", ")}${more > 0 ? ` and ${more} more` : ""}.`;
+  };
+  return assemble([3, 2, 1].map((k) => ({ body: mk(Math.min(k, f.top.length)), short: short(Math.min(k, f.top.length)), link: f.url, must: [f.top[0].name], tags: [] as string[] })));
 }
 
 export type WarningFact = { source: string; severity: string; basins: string[]; issuedAt: number; releaseCusecs: number | null; bulletinUrl: string; url: string };
@@ -297,7 +340,7 @@ export function composeWarning(w: WarningFact): Composed {
   const body = `Official ${what} from the ${w.source} (issued ${clock(w.issuedAt)}): ${basins}.${rel} Follow their instructions.`;
   const short = `${w.source}: ${what} for ${basins} (issued ${clock(w.issuedAt)}).`;
   const first = w.basins[0] ?? "";
-  return assemble({ body, short, link: w.url, must: [w.source.split(" ")[0], first], tags: ["#SriLanka", "#floods"], disclaimer: DISCLAIMER_RELAY, reply: `Bulletin: ${w.bulletinUrl}\nThe bulletin is the official source; this account only passes it on.` });
+  return assemble({ body, short, link: w.url, must: [w.source.split(" ")[0], first], tags: alertTags(w.basins[0] ?? null), disclaimer: DISCLAIMER_RELAY, reply: `Bulletin: ${w.bulletinUrl}\nThe bulletin is the official source; this account only passes it on.` });
 }
 
 export type SummaryFact = {
@@ -339,7 +382,7 @@ export function composeSummary(f: SummaryFact): Composed {
   const must = f.atAlert.slice(0, 1).map((a) => a.station);
   // when both rain clauses do not fit, keep the one that matters more: measured rain beats a forecast unless the forecast is heavy
   const one = (heavy || !fell ? fc : fell) ?? null;
-  return assemble([{ body, short, link: f.url, must, tags: ["#SriLanka"] }, ...(fell && fc && one ? [{ body: [hello, ...parts, one].join(" "), link: f.url, must, tags: ["#SriLanka"] }] : []), { body: [hello, ...parts].join(" "), link: f.url, must, tags: ["#SriLanka"] }]);
+  return assemble([{ body, short, link: f.url, must, tags: [] }, ...(fell && fc && one ? [{ body: [hello, ...parts, one].join(" "), link: f.url, must, tags: [] }] : []), { body: [hello, ...parts].join(" "), link: f.url, must, tags: [] }]);
 }
 
 export type StormFact = { river: string; at: number; gauges: (GaugeFact & { tier: string })[]; url: string; /** next high tides (ms) at the Kelani mouth; only set for the Kelani, where Colombo's canals drain into it */ tide?: number[] };
@@ -364,7 +407,7 @@ export function composeStorm(f: StormFact): Composed {
   const short = `${f.river}, ${clock(f.at)}: ${line(gs[0])}`;
   const reply = f.gauges.map((g) => `${g.station}: ${ft(g.level)}${g.alertMark != null ? ` (alert ${ft(g.alertMark)})` : ""}${trendWord(g.trend)}`).join("\n");
   const must = [f.river, gs[0].station, "forecast"].filter((w, i) => i < 2 || gs[0].nextHour);
-  const tags = ["#SriLanka", riverTag(f.river)].filter(Boolean);
+  const tags: string[] = []; // storm updates are routine: no hashtags
   // Kelani only: when Colombo's canals will drain slowest (they empty into the river, and the tide holds the water back)
   const tideLine = f.tide?.length ? ` High tide around ${f.tide.map(clock).join(" and ")}: Colombo canals drain slowly then.` : "";
   const base = { body, short, link: f.url, must, tags, reply: `${reply}\n${f.url}` };
@@ -375,7 +418,7 @@ export type RainWatchFact = { mm: number; place: string; windowH: number; atAler
 
 export function composeRainWatch(f: RainWatchFact): Composed {
   const body = `Heavy rain forecast (${clock(f.at)}): up to ${int(f.mm)} mm in the next ${f.windowH} hours near ${f.place}. ${f.atAlert === 0 ? "No river gauge is at Alert level yet." : `${f.atAlert} river ${f.atAlert === 1 ? "gauge is" : "gauges are"} at Alert level or higher.`} Forecast, can change.`;
-  return assemble({ body, short: `Heavy rain forecast: up to ${int(f.mm)} mm in the next ${f.windowH} hours near ${f.place}. Forecast, can change.`, link: f.url, must: [f.place, "forecast"], tags: ["#SriLanka", "#floods"] });
+  return assemble({ body, short: `Heavy rain forecast: up to ${int(f.mm)} mm in the next ${f.windowH} hours near ${f.place}. Forecast, can change.`, link: f.url, must: [f.place, "forecast"], tags: [] });
 }
 
 // ---- optional language-model polish -----------------------------------------------------------------------------
@@ -415,7 +458,7 @@ export function composeRiversRising(f: RiversRisingFact): Composed {
   const more = f.count - shown.length;
   const mk = (k: number) => `${f.count} rivers are rising towards or past Alert level at ${time}: ${listMore(shown.slice(0, k).map(one), f.count - Math.min(k, shown.length))}.`;
   const short = `${f.count} rivers are rising towards Alert level: ${listMore(shown.slice(0, 3).map((g) => `${g.river} (${g.station})`), more)}.`;
-  const variants: Parts[] = [{ body: mk(shown.length), short, link: f.url, must: [shown[0].station], tags: ["#SriLanka"] }];
+  const variants: Parts[] = [{ body: mk(shown.length), short, link: f.url, must: [shown[0].station], tags: alertTags(shown[0].river) }];
   return assemble(variants, isSerious(f.gauges));
 }
 
@@ -472,7 +515,7 @@ VOICE
 - You sound like a calm, caring local person who keeps an eye on the rivers. Not a bot, not a news wire, not a government notice.
 - Short, plain English as Sri Lankans write it. Lead with what matters to people, e.g. "Kalu Ganga at Ratnapura is rising and just crossed the alert mark".
 - No hype, no drama, no capital-letter shouting. All clears feel reassuring. Storm updates are concise and steady. The morning post is friendly.
-- No emoji, except at most ONE of the two symbols 🌧️ or ⚠️ in an alert, storm or rain post. At most one hashtag, only from allowed_hashtags, and usually none.
+- No emoji, except at most ONE of the two symbols 🌧️ or ⚠️ in an alert, storm or rain post. Never write a hashtag (the system adds them where they belong).
 - Never say "official" (the account's bio and pinned post already say it is not official), except when relaying a bulletin, to name it.
 
 VARIETY (this account posts many times a day; the posts must not read like copies)
@@ -642,11 +685,11 @@ export async function lunaWrite(post: Post, o: { type: string; facts: unknown; r
   const recent = (o.recent ?? []).slice(0, 5);
   const relay = o.type === "warning";
   const ctx: LunaCtx = {
-    type: o.type, facts: compact, link: post.link, withLink: o.withLink, hashtags: post.hashtags.slice(0, 2), recent, relay, serious: !!post.serious,
+    type: o.type, facts: compact, link: post.link, withLink: o.withLink, hashtags: [], recent, relay, serious: !!post.serious,
     must: (relay ? post.must.slice(1) : post.must).filter((w) => w && !GENERIC_MUST.has(w.toLowerCase())).slice(0, 2),
   };
   const max = MODEL_TARGET - (o.withLink ? TCO_LENGTH + 1 : 0); // told to the model; the checker's hard limit stays 280
-  const input = { kind: post.kind, closing: relay ? 'relay: name the issuer in the post and end with "Emergency: 117." (no "not the source" line)' : post.serious ? 'short: end with "Emergency: 117." or "Unofficial · 117." (no other disclaimer)' : "none: do not add any disclaimer, emergency line or 117", max_characters: max, allowed_hashtags: ctx.hashtags, facts: compact, recent_posts: recent.map((r) => r.replace(URL_RE, "").trim()) };
+  const input = { kind: post.kind, closing: relay ? 'relay: name the issuer in the post and end with "Emergency: 117." (no "not the source" line)' : post.serious ? 'short: end with "Emergency: 117." or "Unofficial · 117." (no other disclaimer)' : "none: do not add any disclaimer, emergency line or 117", max_characters: max, allowed_hashtags: [], facts: compact, recent_posts: recent.map((r) => r.replace(URL_RE, "").trim()) };
   let last = "";
   let problems: string[] = [];
   const seen = new Set<string>(); // every problem found so far, so the 3rd try also avoids what the 1st one did
@@ -664,7 +707,8 @@ export async function lunaWrite(post: Post, o: { type: string; facts: unknown; r
     const full = o.withLink ? `${last}\n${post.link}` : last;
     problems = validateLlmText(full, ctx);
     problems.forEach((x) => seen.add(x));
-    if (!problems.length) return { text: full, used: "llm", attempts: attempt };
+    // the model never writes hashtags: the code appends the post's own (Alert-and-above posts and bulletins only) when they fit
+    if (!problems.length) return { text: withTags(full, post.hashtags), used: "llm", attempts: attempt };
   }
   return { text: fallback, used: "template", why: `model text rejected 3 times: ${problems.join("; ")}`, attempts: 3 };
 }

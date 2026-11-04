@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { tweetLength, MAX_TWEET } from "../lib/xCompose.ts";
-import { refreshEvents, newestReading, groupsOf, composeCombined, validateCombined, decide, capBatch, batchKey, isUrgentNow, MIN_GAP_MS } from "../lib/xAggregate.ts";
+import { refreshEvents, newestReading, groupsOf, composeCombined, validateCombined, decide, capBatch, batchKey, isUrgentNow, isPriority, MIN_GAP_MS } from "../lib/xAggregate.ts";
 import { run, X_SCHEMA } from "./x-post.mjs";
 
 const SITE = "https://waterlevels.lk";
@@ -21,8 +21,8 @@ const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, 
   const evs = [clear, summary, rise("Attanagalu Oya", [gf("Dunamale", "Attanagalu Oya", "alert", 8.3)]), rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6)]), rise("Kelani Ganga", [gf("Hanwella", "Kelani Ganga", "minor", 10.4), gf("Glencourse", "Kelani Ganga", "alert", 8.5)]), warning];
   const c = composeCombined(evs, { now: AT });
   assert.match(c.text, /^6:16 am: The Irrigation Department has issued a minor flood warning for the Kelani\. The Kelani is in minor flood at Hanwella \(10\.4 ft\) and still rising\./, c.text);
-  assert.ok(c.text.endsWith("Near these rivers? Move valuables up. Emergency: 117."), c.text);
-  assert.ok(!/#/.test(c.text));
+  assert.ok(c.text.endsWith("Near these rivers? Move valuables up. Emergency: 117.\n#lka #KelaniGanga"), c.text);
+  assert.deepEqual(c.text.match(/#\w+/g), ["#lka", "#KelaniGanga"], "hashtags at the very end, from the bulletin's river");
   assert.deepEqual(validateCombined(c.text, evs, c.headAt, false), []);
   assert.ok(tweetLength(c.text) <= MAX_TWEET);
   const room = composeCombined(evs.slice(2, 5), { now: AT });
@@ -32,7 +32,7 @@ const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, 
   const c0 = composeCombined([none], { now: AT });
   assert.ok(/Good morning\. All 38 river gauges are below alert level/.test(c0.text) && !/Move valuables|117/.test(c0.text), c0.text);
   const c1 = composeCombined([rise("Maha Oya", [gf("Holombuwa", "Maha Oya", "alert", 8.6)])], { now: AT });
-  assert.ok(/has reached alert level and is still rising\. Near this river\? Move valuables up\.$/.test(c1.text) && !/117/.test(c1.text), c1.text);
+  assert.ok(/has reached alert level and is still rising\. Near this river\? Move valuables up\.\n#lka #MahaOya #Kegalle$/.test(c1.text) && !/117/.test(c1.text), c1.text);
   const cc = composeCombined([clear], { now: AT });
   assert.ok(/The Kelani is back below alert level at Norwood \(4\.2 ft\)/.test(cc.text) && !/Move valuables|117/.test(cc.text), cc.text);
   // what was cut is said: rain only, one river, mixed
@@ -55,7 +55,8 @@ const clear = { type: "gauge_clear", kind: "clear", urgent: false, priority: 5, 
   assert.match(c.text, new RegExp(`${c.total - c.shown} more rivers at alert level on waterlevels.lk\\.`));
   assert.ok(c.text.includes("River 7 Oya is in major flood at Gauge 7 (8.8 ft)"), "the most severe survives the cut: " + c.text);
   assert.equal(c.text.split(SITE).length - 1, 1, "link once");
-  assert.ok(c.text.trimEnd().endsWith(SITE));
+  assert.ok(c.text.replace(/\n#[^\n]*$/, "").trimEnd().endsWith(SITE), "link, then the hashtag line");
+  assert.ok(/\n#lka #River7Oya\b/.test(c.text) || /\n#lka\b/.test(c.text), "hashtags last: " + c.text);
   assert.deepEqual(validateCombined(c.text, many, c.headAt, false), []);
   // long posts (X Premium): short paragraphs, at most 10 rivers named, soft target ~700, "and N more rivers"
   const l = composeCombined(many, { now: AT, link: SITE, long: true });
@@ -102,9 +103,17 @@ assert.ok(validateCombined("6:16 am: The Kelani at X (99.9 ft) has reached alert
   const minor = rise("K", [gf("H", "K", "minor", 10.2)]);
   assert.ok(isUrgentNow(minor) && isUrgentNow(warning) && !isUrgentNow(a) && !isUrgentNow(clear));
   assert.equal(decide([a, minor], AT - 60_000, AT), "send", "urgent goes at once, with the rest");
-  assert.equal(capBatch([a], 15, { dailyMax: 15, urgentMax: 40 }), false);
-  assert.equal(capBatch([a, minor], 15, { dailyMax: 15, urgentMax: 40 }), true);
-  assert.equal(capBatch([a, summary], 99, { dailyMax: 15, urgentMax: 40 }), true, "a summary is exempt");
+  const cfg = { dailyMax: 4, urgentMax: 40 };
+  const storm = { type: "storm", kind: "storm", urgent: true, priority: 25, dedupe: "s1", storm: { river: "Kelani Ganga", at: AT, gauges: [gf("Hanwella", "Kelani Ganga", "alert", 9)], url: "https://waterlevels.lk/x" } };
+  const digest = { type: "reservoir_digest", kind: "reservoir", urgent: false, exempt: true, priority: 8, dedupe: "rsvdigest:d", digest: { at: AT, day: "2026-10-27", total: 5, more: 2, top: [{ name: "Nalanda", river: null, cusecs: 668 }, { name: "Ukuwela", river: null, cusecs: 400 }, { name: "Kotmale", river: null, cusecs: 350 }], url: "https://waterlevels.lk/reservoirs" } };
+  // routine cap: storm updates stop at dailyMax routine posts; Alert+ rises, all-clears, bulletins, summaries and the digest are never held by it
+  assert.equal(capBatch([storm], 30, cfg, 3), true);
+  assert.equal(capBatch([storm], 30, cfg, 4), false, "5th routine post of the day is held");
+  for (const ev of [a, minor, warning, clear]) assert.equal(capBatch([ev], 30, cfg, 99), true, `${ev.type} is not held by the routine cap`);
+  assert.equal(capBatch([storm, a], 30, cfg, 99), true, "a routine update riding with an Alert rise goes");
+  assert.equal(capBatch([a], 40, cfg, 0), false, "everything stops at urgentMax");
+  assert.equal(capBatch([a, summary], 99, cfg), true, "a summary is exempt");
+  assert.equal(capBatch([digest], 99, cfg, 99), true, "the digest is exempt");
   assert.equal(batchKey([a], 1), a.dedupe);
   assert.equal(batchKey([a, minor], 1), batchKey([minor, a], 1));
 }
@@ -143,4 +152,36 @@ assert.ok(validateCombined("6:16 am: The Kelani at X (99.9 ft) has reached alert
   assert.ok(/Minor flood level reached at Hanwella/.test(calls.x[2].text) && calls.x[2].text.includes("Emergency: 117."));
   assert.equal(calls.x.filter((p) => p.reply).length, 0, "never a thread");
 }
+// reservoir digest in a combined post (with a summary), and hashtags rules
+{
+  const digest = { type: "reservoir_digest", kind: "reservoir", urgent: false, exempt: true, priority: 8, dedupe: "rsvdigest:d", digest: { at: AT, day: "2026-10-27", total: 5, more: 2, top: [{ name: "Nalanda", river: null, cusecs: 668 }, { name: "Ukuwela", river: null, cusecs: 400 }, { name: "Kotmale", river: null, cusecs: 350 }], url: "https://waterlevels.lk/reservoirs" } };
+  const c = composeCombined([summary, digest], { now: AT });
+  assert.ok(c.text.includes("Reservoirs letting water out: Nalanda (668 cusecs), Ukuwela (400 cusecs), Kotmale (350 cusecs) and 2 more."), c.text);
+  assert.ok(!/#/.test(c.text), "routine combined post: no hashtags");
+  assert.deepEqual(validateCombined(c.text, [summary, digest], c.headAt, false), []);
+  // an Alert rise: #lka + river + district, last line; town/district tag goes first when short
+  const hw = rise("Kelani Ganga", [gf("Hanwella", "Kelani Ganga", "alert", 9.2)]);
+  const t = composeCombined([hw], { now: AT });
+  assert.ok(t.text.endsWith("\n#lka #KelaniGanga #Colombo"), t.text);
+  assert.ok(tweetLength(t.text) <= MAX_TWEET);
+  assert.ok(!/#/.test(composeCombined([clear], { now: AT }).text), "all-clears carry no hashtags");
+  assert.ok(isPriority(hw) && isPriority(warning) && isPriority(clear) && isPriority(digest) && !isPriority({ type: "storm" }));
+}
+
+// reservoir digest in a combined post (with a summary), and hashtags rules
+{
+  const digest = { type: "reservoir_digest", kind: "reservoir", urgent: false, exempt: true, priority: 8, dedupe: "rsvdigest:d", digest: { at: AT, day: "2026-10-27", total: 5, more: 2, top: [{ name: "Nalanda", river: null, cusecs: 668 }, { name: "Ukuwela", river: null, cusecs: 400 }, { name: "Kotmale", river: null, cusecs: 350 }], url: "https://waterlevels.lk/reservoirs" } };
+  const c = composeCombined([summary, digest], { now: AT });
+  assert.ok(c.text.includes("Reservoirs letting water out: Nalanda (668 cusecs), Ukuwela (400 cusecs), Kotmale (350 cusecs) and 2 more."), c.text);
+  assert.ok(!/#/.test(c.text), "routine combined post: no hashtags");
+  assert.deepEqual(validateCombined(c.text, [summary, digest], c.headAt, false), []);
+  // an Alert rise: #lka + river + district, last line
+  const hw = rise("Kelani Ganga", [gf("Hanwella", "Kelani Ganga", "alert", 9.2)]);
+  const t = composeCombined([hw], { now: AT });
+  assert.ok(t.text.endsWith("\n#lka #KelaniGanga #Colombo"), t.text);
+  assert.ok(tweetLength(t.text) <= MAX_TWEET);
+  assert.ok(!/#/.test(composeCombined([clear], { now: AT }).text), "all-clears carry no hashtags");
+  assert.ok(isPriority(hw) && isPriority(warning) && isPriority(clear) && isPriority(digest) && !isPriority({ type: "storm" }));
+}
+
 console.log("x-aggregate tests passed");

@@ -1491,6 +1491,26 @@ before and after. Answers per month per town: `street_flood_reports`. Watch for:
 
 ## X account
 
+**Post less, only what matters (owner decision 4 Nov 2026).** The account had 4 followers and ~20 posts a day, many of them low-interest ("X reservoir has stopped
+letting water out", "Nalanda (668 cusecs) is letting water out"). The test for every post kind is "would a person in that area care right now?":
+
+| Post kind | Now |
+|---|---|
+| Gauge rises to Alert / Minor / Major (and step-ups), several rivers at once ("rivers rising") | Own post, never held by the routine cap, hashtags |
+| All-clears (only for what we posted about) | Own post, never held by the routine cap, no hashtags |
+| New official DMC / Irrigation bulletins | Own post, urgent, hashtags |
+| Morning summary (evening one only with `X_EVENING=on`) | Own post, exempt from caps, no hashtags |
+| Reservoir "started / stopped letting water out" | **No per-reservoir posts.** ONE daily **reservoir digest** instead |
+| Storm update (hourly river update) | Only when a gauge of that river is at Alert or above (a river merely "rising towards" a mark is no longer posted: the Alert rise itself is). Routine: counts against the daily cap |
+| Heavy-rain heads-up (100 mm forecast) | Kept, routine: counts against the daily cap |
+| "How to use the site" series post (`scripts/x-series.mjs`, 19:30) | Unchanged (one a day, its own budget line); judge after a month |
+
+- **Reservoir digest:** `reservoirDigest()` in `scripts/x-engine.mjs` (not part of `evaluate()`, which Instagram shares and which still reports reservoir starts/stops; `x-post` drops those two types with `keepWorthPosting()`). Once per Colombo day, run between 10:30 am and 3:00 pm (after the Irrigation sheet's daily reading is in), it lists the reservoirs letting water out in today's or yesterday's reading (spill >= 300 cusecs, gate release >= 2,000), biggest first: "5 reservoirs are letting water out (26 Oct readings): Nalanda 668 cusecs, Ukuwela 400 cusecs, Kotmale 350 cusecs and 2 more. Daily agency readings, not live." (`composeReservoirDigest` in `lib/xCompose.ts`; template wording, no model, no hashtags). Nothing releasing, or the sheet unreadable: no post (unreadable leaves the day open for a later run in the window). Exempt from caps (it is once a day by construction); it shares a combined post when a summary or alert is due in the same run (`reservoir_digest` group in `lib/xAggregate.ts`). Memory: `x_state.main.rd` = the day it was decided.
+- **Daily cap for routine posts:** `X_DAILY_MAX` (default **4**, was 15 for everything non-urgent) counts routine posts (storm updates, rain heads-ups: D1 `x_posts.kind = 'storm'`) per Colombo day. `capBatch` in `lib/xAggregate.ts`: a batch with any priority event (`isPriority`: Alert+ rise, rivers rising, all-clear, bulletin, summary, digest) is never held by it, only by the overall `urgentMax` (40). Held posts are logged in D1 as `held` and Slack is told.
+- **Hashtags (`lib/xCompose.ts alertTags / withTags`):** only on Alert-and-above rises and relayed bulletins, on a last line, at most 3: `#lka`, the river in CamelCase (`#KaluGanga`), and the district (`lib/districts.ts`, e.g. `#Kalutara`) or, when the gauge has no district, the gauge's town (`#Ratnapura`). Bulletins: `#lka` + the first basin. Combined posts take them from their most important rise or bulletin. When the post is too long the town/district tag is dropped first, then the river, then (never over 280) all of them; `composeCombined` reserves room for `#lka` before cutting content. The language model is never offered hashtags (it must not write them; the code appends the post's own after the checks), so routine posts (digest, summaries, storm updates, all-clears) carry none. Sinhala/Tamil drafts are unchanged (they are thread replies built from push strings, no hashtags). Tags are English/ASCII only, so X's length count (1 per Latin character) is exact.
+- **Site link:** the gauge page's "Getting ready" card (`app/StationHelpCard.tsx`, shown only at Alert or above) ends with a small "Follow on X for alerts" link (`common.followX` in en / si / ta; si and ta are drafts needing native review) to https://x.com/waterlevelslk, new tab, `rel="noopener noreferrer"`.
+- Tests: `scripts/x-post.test.mts` (digest, `keepWorthPosting`, hashtags, cap end to end), `scripts/x-aggregate.test.mts` (combined digest and tags, `capBatch`), `scripts/x-luna.test.mts` (model never writes tags; code appends them).
+
 **One post per run (aggregation, 27 Oct 2026).** The owner did not want a stream of small posts. Each `x-post` run collects every event that
 would post (river rises, storm updates, reservoirs, warnings, all-clears, the summary) and sends ONE combined post (`lib/xAggregate.ts`): a
 short plain sentences, most severe first ("6:16 am: The Kelani is in minor flood at Hanwella (10.4 ft) and still rising. The Maha Oya at Holombuwa (8.6 ft) and the Attanagalu Oya at Dunamale (8.3 ft) have reached alert level."), rivers at the same step share a sentence, one action line ("Near these rivers? Move valuables up.") when something is Alert or worse, "Emergency: 117." when it is Minor/Major or a warning, and the site link once (only when `X_LINKS` allows, it costs more).
@@ -1525,12 +1545,11 @@ Data read: `/api/levels` (levels, status, next-hour forecast), `/api/reservoirs`
 (current DMC / Irrigation bulletins, new), and `/api/places-state` (rain expected). Heavy rain over a canal town's low spots is never posted. A source that cannot be read leaves its memory unchanged: unknown is never "calm".
 
 Post types: **alert** (a gauge rising to Alert / Minor flood / Major flood; gauges of one river rising together are one post; when 3 or more rivers rise to Alert (or are rising towards it in storm mode) in the same run they become ONE national "rivers rising" post naming the worst 3, while Minor / Major crossings keep their own posts),
-**all-clear** (after 2 calm checks, only for something we posted about), **reservoir** starts or stops letting water out
-(spill from 300 cusecs, gate release from 2,000), **official warning** (a new bulletin
+**all-clear** (after 2 calm checks, only for something we posted about), **reservoir digest** (one post a day listing the reservoirs letting water out: spill from 300 cusecs, gate release from 2,000; there are no per-reservoir start / stop posts any more), **official warning** (a new bulletin
 issued in the last 6 h, passed on once), **storm mode** (3+ gauges at Alert, any Minor/Major, 3+ rising towards a mark, or 100 mm
 forecast: hourly update per affected river, at most 3 rivers, an unchanged update waits 3 h; with its next-hour forecast and range, called
 a forecast) and the **morning summary** (06:30 to 11:00 Colombo, once a day; `X_EVENING=on` adds one at 18:00 to 21:00).
-Limit: 15 routine posts a day (`X_DAILY_MAX`); urgent ones (Minor/Major, storm, official warnings) up to 40.
+Limit: 4 routine posts a day (`X_DAILY_MAX`: storm updates and rain heads-ups); Alert+ rises, all-clears, bulletins, summaries and the digest are not held by it, up to 40 posts a day in all.
 
 Words: **gpt-6-luna writes every post** (all kinds, official-warning relays included) in a calm, caring, local human voice, with the
 deterministic template as the fallback. The model (Responses API, same conventions as `lib/openai.ts`: plain fetch, JSON-schema output,
@@ -1538,8 +1557,7 @@ deterministic template as the fallback. The model (Responses API, same conventio
 trend, next-hour forecast and range, time in Sri Lanka, rain mm, reservoir cusecs, warning summary, post kind) plus the last 5 posts so it
 varies its wording, and a voice guide with a few made-up example posts per kind (`LUNA_INSTRUCTIONS` in `lib/xCompose.ts`). It never writes
 links (the code adds one when `X_LINKS` allows). Its text is accepted only if `validateLlmText()` passes: every number is in the facts
-(formats like 22.0 vs 22 and "4.10pm" are fine; 117 aside), at most 280 characters the way X counts them, no disclaimer on routine posts (the bio and pinned post say "Not official · 117"; summaries, Alert-level rises, all-clears, reservoirs, calm storm updates), the short closing "Emergency: 117." / "Unofficial · 117." only on serious ones (Minor / Major reached, or a forecast that could reach one), "we are only passing it on, not the source" plus 117 on a relayed bulletin, no links, no @mentions, at most one hashtag from the
-template's list, at most one of the emoji 🌧️ / ⚠️ (alerts, storms, rain only), no "official" / "emergency" in a routine post, no "reaching minor flood level" (a crossing is only ever "could reach" / "may reach"), no "major"/"minor",
+(formats like 22.0 vs 22 and "4.10pm" are fine; 117 aside), at most 280 characters the way X counts them, no disclaimer on routine posts (the bio and pinned post say "Not official · 117"; summaries, Alert-level rises, all-clears, reservoirs, calm storm updates), the short closing "Emergency: 117." / "Unofficial · 117." only on serious ones (Minor / Major reached, or a forecast that could reach one), "we are only passing it on, not the source" plus 117 on a relayed bulletin, no links, no @mentions, no hashtag written by the model (the code appends the post's own, Alert-and-above posts and bulletins only), at most one of the emoji 🌧️ / ⚠️ (alerts, storms, rain only), no "official" / "emergency" in a routine post, no "reaching minor flood level" (a crossing is only ever "could reach" / "may reach"), no "major"/"minor",
 "rising"/"falling" or evacuation the facts do not support, no talk of low ground, canals or street flooding, an opening that differs from
 the last posts, no sentence and no run of 6 or more words (names and number lists aside, closing line excluded) shared with any of the last 5 posts, and no certain
 forecast ("expected to reach", "will reach", "will flood"; the model says "could reach" / "may reach"). The model is told the limit is 260 characters (the hard limit stays 280). If it fails, the model gets the list of problems and up to two more tries (at most 3 calls per post; a too-long answer is asked to be shorter); after that the plain template is posted. Which path was
@@ -1602,7 +1620,7 @@ card is smaller in the feed and 9:16 is cropped. Code: `scripts/x-media.mjs` (se
 - Label the account as automated and tie it to a human managing account (step 2); the bio says so.
 - No duplicate or near-duplicate spam: every post is deduplicated (D1 `x_posts.dedupe_key`, claimed before sending), grouped (several gauges of one river = one post), flap-guarded (3 h) and limited per day; X also rejects exact duplicate text (403), which is skipped and reported.
 - No misleading claims: only data from the Department of Irrigation, Mahaweli Authority, DMC and the satellite rain rule, every number checked against the data, forecasts called forecasts, "Not an official warning. Emergency: 117." on every post (relayed bulletins say we are not the source).
-- Replies are the one exception to "own updates only", and only to people who mention us or reply to our posts (see "X replies" below); never unprompted mentions, follows or likes. Reposts only of the listed official accounts (see "X reposts"). No trending-hashtag piggybacking (at most `#SriLanka`, `#floods` and the river name).
+- Replies are the one exception to "own updates only", and only to people who mention us or reply to our posts (see "X replies" below); never unprompted mentions, follows or likes. Reposts only of the listed official accounts (see "X reposts"). No trending-hashtag piggybacking (only `#lka`, the river and its district/town, and only on Alert-and-above rises and bulletins).
 - Respect rate limits: one request per post, 429 and 403 pause the pipeline. Check X's current Automation rules and Developer Agreement when applying.
 
 ## X replies
