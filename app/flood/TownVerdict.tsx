@@ -4,7 +4,7 @@ import { CloudRain, Info, TriangleAlert, Waves, Ruler, Droplets, Landmark, Circl
 import { VerdictCard, type T3, type VerdictTone } from "../ShareButton";
 import { TimeAgo } from "../TimeAgo";
 import { useI18n } from "../LocaleProvider";
-import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, hourReason, withReason } from "../verdict";
+import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, addHourNotes, hourReason, withReason } from "../verdict";
 import { assessTown, type ReasonKind, type TownRisk, type TownRiskInput } from "@/lib/townRisk";
 import { ttFor, type TKey } from "@/lib/i18n/town";
 import { formatKm } from "@/lib/nearby";
@@ -13,7 +13,7 @@ import { markGap, dayOutlook } from "@/lib/townNotes";
 import type { TownPeople } from "@/lib/townPeople";
 import { isTidalStation } from "@/lib/verdictLift";
 import { isShortForecastGauge } from "@/lib/forecastRules.mjs";
-import { formatDelta, formatLevel, type Unit } from "@/lib/units";
+import { formatDelta, formatLevel, readingLooksUnreliable, type Unit } from "@/lib/units";
 import type { Thresholds } from "@/lib/readings";
 import { useMyLevel } from "./useMyLevel";
 
@@ -69,7 +69,8 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
   const elevated = tone === "alert" || tone === "minor" || tone === "major";
   const stale = tone === "stale";
   const verdict = t3(`tone.${r.tone}` as TKey);
-  const level = gauge?.level ?? null;
+  // a reading that looks wrong (negative, stuck zero, datum-fault gauge) is not shown or shared as a level
+  const level = gauge && !readingLooksUnreliable(gauge.station, gauge.level, gauge.unit) ? gauge.level : null;
   const g = r.gauge;
 
   const fill = (vars: Record<string, string | number>) => {
@@ -181,7 +182,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
           g
             ? withReason(
                 t3(r.hourKey),
-                r.hourKey === "dir.falling" || r.hourKey === "dir.steady" || r.hourKey === "dir.rising" || r.hourKey === "dir.slow"
+                addHourNotes(r.hourKey === "dir.falling" || r.hourKey === "dir.steady" || r.hourKey === "dir.rising" || r.hourKey === "dir.slow"
                   ? hourReason({
                       kind: r.hourKey === "dir.falling" ? "falling" : r.hourKey === "dir.steady" ? "steady" : "rising",
                       delta3hM: g.rate3hM != null ? g.rate3hM * 3 : null,
@@ -190,7 +191,7 @@ export function TownVerdict({ townName, input, gauge, office, serverNow, href, p
                       lowRain: input.rain != null && input.rain.past6hMm < 10,
                       release: !!input.release?.confirmed,
                     })
-                  : null,
+                  : null, r.hourTurn ?? null, r.readingAgeMin ?? null),
               )
             : null
         }

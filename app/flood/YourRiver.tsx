@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, ChevronRight, Minus } from "lucide-react";
 import { usableGauge, type GaugeIn, type Tone } from "@/lib/townRisk";
 import type { NationalStation } from "@/lib/arcgis";
 import { stationPath } from "@/lib/slug";
-import { formatDelta, formatLevel } from "@/lib/units";
+import { formatDelta, formatLevel, readingLooksUnreliable } from "@/lib/units";
 import { fallSummary, riseSummary } from "@/lib/levelNotes";
 import { isTidalStation } from "@/lib/verdictLift";
 import { clock, riverName } from "@/lib/i18n/format";
@@ -53,7 +53,7 @@ function Row({ g, nat, lang, t, tt, p, small }: { g: GaugeIn; nat: NationalStati
         <div className="truncate text-xs text-slate-600 dark:text-slate-400">{riverName(g.basin, lang)} · {tt("yr.km", { km: formatKm(g.km, t) })}</div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           <TierPill label={tierLabel(t, g.tier === "watch" ? "normal" : g.tier)} tier={tier} />
-          {g.level != null ? (
+          {g.level != null && !readingLooksUnreliable(g.station, g.level, g.unit) ? (
             <span className="inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">
               {formatLevel(g.level, g.unit)}
               {Trend && <Trend className="size-4 text-slate-500 dark:text-slate-400" aria-label={trendWord} />}

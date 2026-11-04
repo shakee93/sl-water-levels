@@ -62,7 +62,7 @@ import type { Tier } from "./status";
 import { isTidalStation, liftVerdict } from "./verdictLift.ts";
 import type { Unit } from "./units";
 // @ts-ignore node strip-types needs explicit extensions
-import { hasNoForecast, fallingOutlook, nextHourRateM, STEADY_M_PER_H } from "./forecastRules.mjs";
+import { hasNoForecast, fallingOutlook, modelTurn, nextHourRateM, OLD_READING_MIN, STEADY_M_PER_H } from "./forecastRules.mjs";
 // @ts-ignore node strip-types needs explicit extensions
 import { officialReleaseAlert } from "./releaseAlert.ts";
 
@@ -237,6 +237,10 @@ export type TownRisk = {
   reasons: Reason[];
   /** Next-hour line: key into the dictionary. */
   hourKey: "dir.tide" | "dir.rising" | "dir.slow" | "dir.falling" | "dir.steady" | "dir.unknown";
+  /** The model points the other way from the Next hour word (owner decision 4 Nov 2026, option A): "up" = falling now, the forecast expects a turn up; "down" = the reverse. Same as the gauge page. */
+  hourTurn: "up" | "down" | null;
+  /** Minutes since the gauge's reading when it is 45 min to 3 h old (said beside the Next hour word), else null. */
+  readingAgeMin: number | null;
   /** Next-24-hours line. */
   day: { key: string; vars: Record<string, string | number> };
   /** Why the step is what it is, when it comes from an official warning or a confirmed release rather than the gauge's own level. Display only. */
@@ -510,9 +514,11 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
 
   // ---- next hour / next 24 hours
   let hourM: number | null = null;
+  let h1ChangeM: number | null = null;
   if (gauge && forecast && forecast.h1Level != null && forecast.currentLevel != null) {
+    h1ChangeM = (forecast.h1Level - forecast.currentLevel) * forecast.metresPerUnit;
     hourM = nextHourRateM({
-      h1ChangeM: (forecast.h1Level - forecast.currentLevel) * forecast.metresPerUnit, rate3hM: rate, source: forecast.source, method: forecast.method,
+      h1ChangeM, rate3hM: rate, source: forecast.source, method: forecast.method,
       rate1hM: forecast.rate1hM ?? null, tidal: isTidalStation(gauge.station), measuredForAll: forecast.method != null,
     });
   } else if (rate != null) hourM = rate;
@@ -573,6 +579,11 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
     reasons,
     why,
     hourKey: gauge ? hourKey : "dir.unknown",
+    hourTurn: gauge && !isTidalStation(gauge.station) && hourKey !== "dir.unknown" ? modelTurn(h1ChangeM, hourM) : null,
+    readingAgeMin: (() => {
+      const age = gauge?.ts != null ? (input.now - gauge.ts) / 60000 : null;
+      return age != null && age > OLD_READING_MIN && age <= 180 ? Math.round(age) : null;
+    })(),
     day,
     actionKey: final === "alert" ? "a.alert" : final === "minor" ? "a.minor" : final === "major" ? "a.major" : null,
   };

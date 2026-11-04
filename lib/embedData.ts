@@ -7,7 +7,7 @@ import { levelRecord } from "./apiData";
 import { stationDisplayName } from "./displayName";
 import { basinSlug, stationSlug } from "./slug";
 import { SITE } from "./seo";
-import { FT_IN_M, type Unit } from "./units";
+import { FT_IN_M, readingLooksUnreliable, type Unit } from "./units";
 import { localePath, type Locale } from "./i18n/config";
 import { DICTS, getI18n } from "./i18n/server";
 import { clock, colomboParts, dayTick, formatAge, riverName } from "./i18n/format";
@@ -28,8 +28,8 @@ import type { EmbedCfg, Widget } from "./embedConfig";
 import { fetchBasinSnapshot } from "./arcgis";
 import { loadForecast } from "./forecast";
 import { ACTION, TIDE_RISE, dayFact } from "@/app/Forecast";
-import { nextHourRateM } from "@/lib/forecastRules.mjs";
-import { VERDICT, BELOW_ALERT_LEVEL, NORMAL_RISING, NO_FLOOD_FACT, headlineRising, directionFor, STEADY_M_PER_H } from "@/app/verdict";
+import { OLD_READING_MIN, modelTurn, nextHourRateM } from "@/lib/forecastRules.mjs";
+import { VERDICT, BELOW_ALERT_LEVEL, NORMAL_RISING, NO_FLOOD_FACT, headlineRising, directionFor, STEADY_M_PER_H, addHourNotes } from "@/app/verdict";
 import { isTidalStation, liftVerdict, riverRising } from "./verdictLift";
 import { getReleases, releaseAffectingFrom } from "./releases";
 import { officialReleaseAlert } from "./releaseAlert";
@@ -81,9 +81,14 @@ function trendWord(trend: string | null, e: EmbedT): string | null {
   }
 }
 
+/** A word plus the Next hour notes in brackets, in the widget's language. */
+function withNotes(word: string, notes: { en: string; si: string; ta: string } | null, lang: Locale): string {
+  return notes ? `${word} (${notes[lang]})` : word;
+}
+
 function outcomeOf(s: NationalStation, c: Ctx): string | null {
   const lv = s.latest?.water_level;
-  if (lv == null || s.tier === "stale") return null;
+  if (lv == null || s.tier === "stale" || readingLooksUnreliable(s.station, lv, s.unit)) return null;
   const th = sanitizeThresholds(s.thresholds);
   const u = s.unit;
   const { e } = c;
@@ -102,7 +107,7 @@ function marksLine(th: Thresholds, u: Unit, c: Ctx): string | null {
 }
 
 function nextOf(nh: NextHour | null, s: NationalStation, c: Ctx): { next: string | null; arrow: Arrow; cross: string | null } {
-  if (!c.cfg.forecast || !nh || s.tier === "stale" || s.unit == null) return { next: null, arrow: null, cross: null };
+  if (!c.cfg.forecast || !nh || s.tier === "stale" || s.unit == null || readingLooksUnreliable(s.station, s.latest?.water_level, s.unit)) return { next: null, arrow: null, cross: null };
   // nh.level_ft is feet; format in the chosen unit directly
   const val = `${ftTo(nh.level_ft, c.cfg.unit).toFixed(c.cfg.unit === "m" ? 2 : 1)} ${c.cfg.unit}`;
   const e = c.e;
@@ -118,6 +123,8 @@ function rowOf(s: NationalStation, c: Ctx, nh: NextHour | null, o: { withMarks: 
   const ts = s.latest?.ts ?? null;
   const n = nextOf(nh, s, c);
   const trend = stale ? null : rec.trend;
+  // a reading that looks wrong (lib/units.ts) is not shown as a level or a trend; the official step is unchanged
+  const bad = !stale && readingLooksUnreliable(s.station, s.latest?.water_level, s.unit);
   return {
     key: `${basinSlug(s.basin)}/${stationSlug(s.station)}`,
     name: stationDisplayName(s.station),
@@ -125,9 +132,9 @@ function rowOf(s: NationalStation, c: Ctx, nh: NextHour | null, o: { withMarks: 
     href: SITE + localePath(c.lang, s.href),
     tier,
     step: c.t(`tier.${tier === "none" ? "none" : tier}` as "tier.normal"),
-    level: !stale ? fmt(s.latest?.water_level, s.unit, c.cfg.unit) : null,
-    arrow: arrowOf(trend),
-    trend: trendWord(trend, c.e),
+    level: !stale && !bad ? fmt(s.latest?.water_level, s.unit, c.cfg.unit) : null,
+    arrow: bad ? null : arrowOf(trend),
+    trend: bad ? c.e("w.readingOdd") : trendWord(trend, c.e),
     time: ts != null ? timeOf(ts, c) : null,
     age: ts != null ? formatAge(ts, c.now, c.t) : null,
     next: n.next,
@@ -167,7 +174,7 @@ const base = (c: Ctx, widget: Widget, path: string, label: string, resv = false,
 
 function barOf(s: NationalStation, nh: NextHour | null): GaugePayload["bar"] {
   const lv = s.latest?.water_level;
-  if (lv == null || s.tier === "stale") return null;
+  if (lv == null || s.tier === "stale" || readingLooksUnreliable(s.station, lv, s.unit)) return null;
   const th = sanitizeThresholds(s.thresholds);
   const present = MARKS.filter((k) => th[k] != null && th[k]! > 0);
   if (!present.length) return null;
@@ -325,10 +332,10 @@ async function buildTown(slug: string, c: Ctx): Promise<TownPayload | null> {
     title: place.name,
     tier,
     step: tt(`tone.${r.tone}` as TKey),
-    level: g && !stale ? fmt(g.level, g.unit, c.cfg.unit) : null,
+    level: g && !stale && !readingLooksUnreliable(g.station, g.level, g.unit) ? fmt(g.level, g.unit, c.cfg.unit) : null,
     gaugeLine: gg ? c.e("w.townGauge", { gauge: gg.name }) : null,
     hourLabel: tt("label.hour"),
-    hour: c.cfg.forecast && gg && !stale ? tt(r.hourKey) : null,
+    hour: c.cfg.forecast && gg && !stale ? withNotes(tt(r.hourKey), addHourNotes(null, r.hourTurn, r.readingAgeMin), c.lang) : null,
     hourArrow: HOUR_ARROW[r.hourKey] ?? null,
     dayLabel: tt("label.day"),
     day: c.cfg.forecast && !(stale && !r.heavyRain) ? tt(r.day.key as TKey, fill(r.day.vars)) : null,
@@ -483,7 +490,8 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
   const stale = nat.tier === "stale";
   const model = !!f && f.method === "model" && f.status !== "unavailable" && f.horizons.length > 0;
   // RiverNet gauges are 1-minute extras with no fitted model: no forecast is claimed for them
-  const hasForecast = !!f && f.method !== "none" && f.status !== "unavailable" && nat.source !== "rivernet";
+  // A reading that looks wrong (negative, stuck zero, datum-fault gauge) gets no forecast, same as the gauge page
+  const hasForecast = !!f && f.method !== "none" && f.status !== "unavailable" && nat.source !== "rivernet" && !readingLooksUnreliable(station, nat.latest?.water_level, nat.unit);
   const unit = nat.unit;
   const want = c.cfg.unit;
   const rel = await getReleases().catch(() => null);
@@ -519,10 +527,15 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
       const lo = h1?.low != null ? fmt(h1.low, f.unit, want) : null;
       const hi = h1?.high != null ? fmt(h1.high, f.unit, want) : null;
       const time = h1 ? clock(h1.ts, t) : "";
+      // what the model expects when it points the other way, and an older reading's age: the same notes as the gauge page's Next hour tile
+      const h1ChangeM = h1 && f.currentLevel != null ? (h1.level - f.currentLevel) * mpu : null;
+      const oldMin = me.ageMin != null && me.ageMin > OLD_READING_MIN && me.ageMin <= 180 ? Math.round(me.ageMin) : null;
+      const notes = addHourNotes(null, tideOnly ? null : modelTurn(h1ChangeM, r), oldMin);
+      const sub = lvl && f.unit != null ? c.e("w.fcHourSub1", { level: lvl, time }) : null;
       hour = {
         label: c.e("w.fcHourLabel"),
         title: word[L],
-        sub: lvl && f.unit != null ? (c.e("w.fcHourSub1", { level: lvl, time })) : null,
+        sub: notes ? (sub ? `${sub} (${notes[L]})` : notes[L]) : sub,
         arrow: tideOnly || r == null || Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "down" : "up",
       };
     }

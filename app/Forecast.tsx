@@ -28,7 +28,7 @@ import { AdvisoryText, VerdictCard, type T3, type VerdictTone } from "./ShareBut
 import Link from "next/link";
 import { PLACES } from "@/lib/places";
 import { fallSummary, heavyRainAround, nearRain24hClipped, riseSummary, townsNear } from "@/lib/levelNotes";
-import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, NO_FLOOD_BUT_RAIN, NO_FLOOD_FACT, headlineRising, minorFact, noEstimateBeyond, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason } from "./verdict";
+import { BELOW_ALERT_LEVEL, CALL, NORMAL_RISING, NO_FLOOD_BUT_RAIN, NO_FLOOD_FACT, headlineRising, minorFact, noEstimateBeyond, FALL_NOTE, ROSE_NOTE, STEADY_M_PER_H, STREET_RAIN_NOTE, STREET_RAIN_TOWNS, VERDICT, directionFor, hourReason, withReason, addHourNotes } from "./verdict";
 import { chanceWords, isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
 import { OLD_READING_MIN, fallingOutlook, modelTurn, nextHourRateM } from "@/lib/forecastRules.mjs";
 import { getHold } from "@/lib/verdictHoldData";
@@ -50,16 +50,6 @@ function hoursPhrase(n: number): T3 {
     : { en: `~${n} hours`, si: `පැය ${n}ක් පමණ`, ta: `சுமார் ${n} மணி நேரம்` };
 }
 
-/** The reason line of the Next hour tile plus (when they apply) what the model expects and how old the reading is. si / ta: DRAFT translations. */
-function addNotes(reason: T3 | null, turn: "up" | "down" | null, oldMin: number | null): T3 | null {
-  const bits: T3[] = [];
-  if (reason) bits.push(reason);
-  if (turn === "up") bits.push({ en: "the forecast expects it to turn up", si: "පුරෝකථනය නැවත ඉහළ යනු ඇතැයි කියයි", ta: "மீண்டும் உயரும் என முன்னறிவிப்பு கூறுகிறது" });
-  if (turn === "down") bits.push({ en: "the forecast expects it to ease", si: "පුරෝකථනය අඩු වනු ඇතැයි කියයි", ta: "குறையும் என முன்னறிவிப்பு கூறுகிறது" });
-  if (oldMin != null) bits.push({ en: `reading ${oldMin} min old`, si: `කියවීම මිනිත්තු ${oldMin}ක් පැරණියි`, ta: `அளவீடு ${oldMin} நிமிடம் பழையது` });
-  if (!bits.length) return null;
-  return { en: bits.map((b) => b.en).join("; "), si: bits.map((b) => b.si).join("; "), ta: bits.map((b) => b.ta).join("; ") };
-}
 
 /** One forecast fact, or null. Never numbers beyond the ETA, never probabilities. */
 // Render time for the live age label (outside the component so render stays pure).
@@ -187,6 +177,7 @@ export const HELD_NOTE: T3 = {
 };
 
 /** The note under the card for a reading that looks wrong (a negative or stuck level): no level is shown and no distance to a mark. si / ta: DRAFT translations. */
+const SHARE_UNRELIABLE: T3 = { en: "reading looks wrong", si: "කියවීම වැරදි බව පෙනේ", ta: "அளவீடு தவறாகத் தெரிகிறது" };
 export const UNRELIABLE_NOTE: T3 = {
   en: "This gauge's reading looks wrong (a negative or stuck level), so no level is shown. Check the Disaster Management Centre's warnings for this area.",
   si: "මෙම මානයේ කියවීම වැරදි බව පෙනේ (ඍණ හෝ එක තැන ඇලී ඇති මට්ටමක්), එබැවින් මට්ටමක් පෙන්වන්නේ නැත. මෙම ප්‍රදේශය සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානයේ අනතුරු ඇඟවීම් බලන්න.",
@@ -272,7 +263,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
         ? TIDE_RISE
         : withReason(
             directionFor(r),
-            addNotes(hourReason({
+            addHourNotes(hourReason({
               kind: Math.abs(r) < STEADY_M_PER_H ? "steady" : r < 0 ? "falling" : "rising",
               delta3hM: me?.rate3hM != null ? me.rate3hM * 3 : null,
               unit: me?.unit ?? null,
@@ -356,6 +347,9 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
   const normalRising = !stale && headlineRising({ rising, nextHourM: r, tideOnly }) && (tone === "normal" || tone === "watch") && (realTier === "normal" || realTier === "watch");
   const aboveAlertNote: string | null =
     normalRising && !nearNote && !unreliable && unit != null && alertLvl != null && alertLvl > 0 && lvlNow != null && alertLvl > lvlNow ? BELOW_ALERT_LEVEL(formatDelta(alertLvl - lvlNow, unit))[lang] : null;
+  // A reading that looks wrong is never passed on as a number in a share line (it would travel without the note under it).
+  const shareLevel = unreliable ? SHARE_UNRELIABLE[lang] : formatLevel(level, unit);
+  const shareDir = unreliable ? "" : direction ? `, ${direction[lang].replace(/\s*[(（].*$/, "").toLowerCase()}` : "";
   const shareText = stale
     ? t("share.stale", { name, river: rn, last: level != null ? t("share.staleLast", { level: formatLevel(level, unit) }) : "" })
     : // at Alert or above the share line names the official step ("Kalu Ganga at Ratnapura is at Alert, 19.0 ft, river falling")
@@ -364,16 +358,16 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
           name,
           river: rn,
           step: VERDICT[realTier][lang],
-          level: formatLevel(level, unit),
-          dir: direction ? `, ${direction[lang].replace(/\s*[(（].*$/, "").toLowerCase()}` : "",
+          level: shareLevel,
+          dir: shareDir,
           time: latest ? clock(latest.ts, t) : "",
         })
       : t("share.live", {
         name,
         river: rn,
-        level: formatLevel(level, unit),
+        level: shareLevel,
         verdict: VERDICT[tone][lang],
-        dir: direction ? `, ${direction[lang].replace(/\s*[(（].*$/, "").toLowerCase()}` : "",
+        dir: shareDir,
         time: latest ? clock(latest.ts, t) : "",
       });
 

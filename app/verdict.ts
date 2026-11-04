@@ -118,6 +118,17 @@ export function hourReason(o: {
 }
 
 /** Appends a reason as the tile's "(sub-line)" unless the text already has one (the tide line keeps its own). */
+/** The reason line of the Next hour tile plus (when they apply) what the model expects and how old the reading is. si / ta: DRAFT translations. */
+export function addHourNotes(reason: T3 | null, turn: "up" | "down" | null, oldMin: number | null): T3 | null {
+  const bits: T3[] = [];
+  if (reason) bits.push(reason);
+  if (turn === "up") bits.push({ en: "the forecast expects it to turn up", si: "පුරෝකථනය නැවත ඉහළ යනු ඇතැයි කියයි", ta: "மீண்டும் உயரும் என முன்னறிவிப்பு கூறுகிறது" });
+  if (turn === "down") bits.push({ en: "the forecast expects it to ease", si: "පුරෝකථනය අඩු වනු ඇතැයි කියයි", ta: "குறையும் என முன்னறிவிப்பு கூறுகிறது" });
+  if (oldMin != null) bits.push({ en: `reading ${oldMin} min old`, si: `කියවීම මිනිත්තු ${oldMin}ක් පැරණියි`, ta: `அளவீடு ${oldMin} நிமிடம் பழையது` });
+  if (!bits.length) return null;
+  return { en: bits.map((b) => b.en).join("; "), si: bits.map((b) => b.si).join("; "), ta: bits.map((b) => b.ta).join("; ") };
+}
+
 export function withReason(t: T3, reason: T3 | null): T3 {
   if (!reason) return t;
   const f = (x: string, r: string) => (/\)$/.test(x) ? x : `${x} (${r})`);

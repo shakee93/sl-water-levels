@@ -19,6 +19,19 @@ setStreetSignalsRaiseStep(true);
 
 // calm
 assert.equal(assessTown(base()).tone, "normal");
+// Next hour notes (option A, 4 Nov 2026): falling now while the model turns up -> "dir.falling" + hourTurn "up"; an old reading's age; tidal gauges get no turn note
+{
+  const fc = (h1: number) => ({ status: "ok" as const, h1Level: h1, h24Level: h1, maxLevel: h1, currentLevel: 10, metresPerUnit: 0.3048, method: "model", crossings: [] });
+  const up = assessTown(base({ primary: g({ station: "Hanwella", name: "Hanwella", level: 10, rate3hM: -0.05, ts: 0 }), forecast: fc(10.2), now: 60 * 60000 }));
+  assert.equal(up.hourKey, "dir.falling");
+  assert.equal(up.hourTurn, "up");
+  assert.equal(up.readingAgeMin, 60);
+  const agree = assessTown(base({ primary: g({ station: "Hanwella", name: "Hanwella", level: 10, rate3hM: -0.05 }), forecast: fc(9.8) }));
+  assert.equal(agree.hourTurn, null);
+  assert.equal(agree.readingAgeMin, null);
+  const tidal = assessTown(base({ primary: g({ level: 10, rate3hM: -0.05 }), forecast: fc(10.2) }));
+  assert.equal(tidal.hourTurn, null);
+}
 // heavy rain on a calm river: one step
 assert.equal(assessTown(base({ rain: rain({ next6hMm: 60 }) })).tone, "watch");
 assert.equal(assessTown(base({ rain: rain({ past24hMm: 120 }) })).tone, "watch");
