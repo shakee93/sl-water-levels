@@ -417,7 +417,7 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
   const rain: Forecast["rain"] = w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null;
   const grid = weather !== undefined && weather !== null;
   const reason = noModelReason(station, grid);
-  const headline = `${word}: about ${formatLevel(pred, me.unit)} in an hour.`;
+  const headline = `${word}: expected to be about ${formatLevel(pred, me.unit)} an hour from now.`; // the level, not the change ("about 16.7 ft in an hour" read as a 16.7 ft rise)
   const infl = GM_WIDEN * (step && step.missing.length ? 1.3 : 1); // an upstream gauge that is not reporting widens the range
   const low = step ? pred + step.q10 * infl : null;
   const high = step ? pred + step.q90 * infl : null;
