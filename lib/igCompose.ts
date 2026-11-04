@@ -8,7 +8,6 @@
 // Every number printed comes from the facts handed in. A story's caption is never shown by Instagram (API stories take no caption);
 // it is still composed, checked, logged and shown in the Slack dry-run so the words are reviewed once.
 // @ts-ignore node strip-types needs explicit extensions
-import { pushText } from "./i18n/return.ts";
 // @ts-ignore node strip-types needs explicit extensions
 import { nativeGauge } from "./nativeNames.ts";
 
@@ -102,15 +101,29 @@ const TA: Record<string, string> = {
   survey: "உங்கள் தெருவில் தண்ணீர் வந்ததா? வெள்ள ஆய்வில் உங்கள் இடத்தைச் சேர்க்கவும்.",
   embed: "உங்கள் இணையதளத்தில் நேரடி ஆற்று நீர்மட்டத்தைக் காட்ட எங்கள் இலவச விட்ஜெட்டைப் பயன்படுத்துங்கள்.",
 };
+const NATIVE_STEP = {
+  si: { alert: "අනතුරු ඇඟවීම", minor: "සුළු ගංවතුර", major: "ප්‍රධාන ගංවතුර", normal: "සාමාන්‍යයි", watch: "සාමාන්‍යයි" } as Record<string, string>,
+  ta: { alert: "எச்சரிக்கை", minor: "சிறு வெள்ளம்", major: "பெரு வெள்ளம்", normal: "இயல்பு", watch: "இயல்பு" } as Record<string, string>,
+};
+const NATIVE_TREND = {
+  si: { rising: "ඉහළ යයි", falling: "පහළ යයි", steady: "ස්ථාවරයි" } as Record<string, string>,
+  ta: { rising: "உயர்கிறது", falling: "குறைகிறது", steady: "மாற்றமில்லை" } as Record<string, string>,
+};
 const fill = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k) => String(v[k] ?? ""));
 
 function native(it: Item, lang: "si" | "ta"): string | null {
   const D = lang === "si" ? SI : TA;
   switch (it.type) {
     case "gauge_rise": {
+      // the same facts as the English line: station, official step, level, direction, and 117 at Minor and above (si / ta drafts)
       const g = it.gauge;
-      const m = pushText(lang, "rise", [{ name: nativeGauge(g.station, lang) ?? g.station, level: Math.max(2, LEVEL[g.tier] ?? 2), street: null }]);
-      return m.title; // "Ratnapura: Alert" in the reader's language; the push body says "open ... to see what to do", which means nothing in a caption
+      const name = nativeGauge(g.station, lang) ?? g.station;
+      const step = (lang === "si" ? NATIVE_STEP.si : NATIVE_STEP.ta)[g.tier] ?? g.tier;
+      const tr = trendOf(g.trend);
+      const trWord = tr ? (lang === "si" ? NATIVE_TREND.si : NATIVE_TREND.ta)[tr] : null;
+      const level = lang === "si" ? `අඩි ${(Math.round(g.level * 10) / 10).toFixed(1)}` : `${(Math.round(g.level * 10) / 10).toFixed(1)} அடி`;
+      const urgent = (LEVEL[g.tier] ?? 0) >= 3 ? (lang === "si" ? " හදිසි අවස්ථාවක 117 අමතන්න." : " அவசரத்துக்கு 117 ஐ அழைக்கவும்.") : "";
+      return `${name}: ${step}, ${level}${trWord ? `, ${trWord}` : ""}.${urgent}`;
     }
     case "gauge_clear": return fill(D.clear, { station: nativeGauge(it.gauge.station, lang) ?? it.gauge.station });
     case "warning": return fill(D.warning, { basins: it.warning.basins.join(", ") });

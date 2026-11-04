@@ -96,9 +96,10 @@ const en = {
   "pn.riseBody": "Open for the latest and what to do.",
   "pn.riseBody4": "Open for the latest. Call 117 if you need help.",
   "pn.clearTitle": "{place}: back to normal",
-  "pn.clearBody": "Levels and rain have eased. No action needed.",
+  "pn.clearBody": "Back to normal for now. Check the page again if heavy rain continues.",
   "pn.morningTitle": "Your places this morning",
   "pn.morningCalm": "All {n} places are calm.",
+  "pn.morningUnread": "We cannot check {k} of your places right now.",
   "pn.morningCalm1": "{name} is calm.",
   "pn.morningAttn": "{name}: {verdict}.",
   "pn.testTitle": "Alerts are on",
@@ -247,9 +248,10 @@ const si: Dict = {
   "pn.riseBody": "නවතම තොරතුරු සහ කළ යුතු දේ බැලීමට විවෘත කරන්න.",
   "pn.riseBody4": "නවතම තොරතුරු බැලීමට විවෘත කරන්න. උදව් අවශ්‍ය නම් 117 අමතන්න.",
   "pn.clearTitle": "{place}: සාමාන්‍යයට පැමිණියා",
-  "pn.clearBody": "මට්ටම් සහ වැසි අඩු වී ඇත. කිසිවක් කළ යුතු නැත.",
+  "pn.clearBody": "දැනට සාමාන්‍යයට පැමිණ ඇත. අධික වැසි පවතී නම් නැවත පිටුව බලන්න.",
   "pn.morningTitle": "අද උදෑසන ඔබේ ස්ථාන",
   "pn.morningCalm": "ස්ථාන {n}ම සන්සුන්ය.",
+  "pn.morningUnread": "ඔබේ ස්ථාන {k}ක් දැන් පරීක්ෂා කළ නොහැක.",
   "pn.morningCalm1": "{name} සන්සුන්ය.",
   "pn.morningAttn": "{name}: {verdict}.",
   "pn.testTitle": "ඇඟවීම් සක්‍රියයි",
@@ -396,9 +398,10 @@ const ta: Dict = {
   "pn.riseBody": "புதிய தகவலையும் செய்ய வேண்டியதையும் காணத் திறக்கவும்.",
   "pn.riseBody4": "புதிய தகவலைக் காணத் திறக்கவும். உதவி தேவைப்பட்டால் 117 ஐ அழைக்கவும்.",
   "pn.clearTitle": "{place}: இயல்பு நிலைக்குத் திரும்பியது",
-  "pn.clearBody": "மட்டங்களும் மழையும் குறைந்துள்ளன. எதுவும் செய்ய வேண்டியதில்லை.",
+  "pn.clearBody": "இப்போதைக்கு இயல்புக்குத் திரும்பியுள்ளது. கனமழை தொடர்ந்தால் மீண்டும் பக்கத்தைப் பாருங்கள்.",
   "pn.morningTitle": "இன்று காலை உங்கள் இடங்கள்",
   "pn.morningCalm": "{n} இடங்களும் அமைதியாக உள்ளன.",
+  "pn.morningUnread": "உங்கள் இடங்களில் {k} ஐ இப்போது சரிபார்க்க முடியவில்லை.",
   "pn.morningCalm1": "{name} அமைதியாக உள்ளது.",
   "pn.morningAttn": "{name}: {verdict}.",
   "pn.testTitle": "அறிவிப்புகள் இயக்கத்தில் உள்ளன",
@@ -490,7 +493,7 @@ export type PushPlace = {
 export type PushMessage = { title: string; body: string };
 
 /** The wording of a rise ping, an all-clear and the morning summary, in the subscriber's language. */
-export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "release" | "news", places: PushPlace[], extra?: { headline?: string; source?: string; reservoir?: string; confirmed?: boolean; rainRisk?: boolean | "measured" | null }): PushMessage {
+export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "test" | "release" | "news", places: PushPlace[], extra?: { headline?: string; source?: string; reservoir?: string; confirmed?: boolean; rainRisk?: boolean | "measured" | null; unreadable?: number }): PushMessage {
   const rt = rtFor(lang);
   if (kind === "test") return { title: rt("pn.testTitle"), body: rt("pn.testBody") };
   if (kind === "news") return { title: rt("pn.newsTitle", { headline: extra?.headline ?? "" }), body: rt("pn.newsBody", { source: extra?.source ?? "" }) };
@@ -505,7 +508,7 @@ export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "tes
     const verdict = rt(`pn.l${Math.min(4, Math.max(2, p.level))}` as RKey);
     // heavy rain forecast above the gauge (lib/rainRisk.ts): one more plain sentence, so the person knows it may get worse faster
     const more = extra?.rainRisk === "measured" ? ` ${rt("pn.rainMeasured")}` : extra?.rainRisk ? ` ${rt("pn.rainRisk")}` : "";
-    return { title: rt("pn.riseTitle", { place: p.name, verdict }), body: (p.level >= 4 ? rt("pn.riseBody4") : rt("pn.riseBody")) + more };
+    return { title: rt("pn.riseTitle", { place: p.name, verdict }), body: (p.level >= 3 ? rt("pn.riseBody4") : rt("pn.riseBody")) + more };
   }
   if (kind === "clear") return { title: rt("pn.clearTitle", { place: places[0].name }), body: rt("pn.clearBody") };
   // morning: the worst place first, otherwise "all calm"
@@ -516,5 +519,7 @@ export function pushText(lang: Locale, kind: "rise" | "clear" | "morning" | "tes
       : places.length === 1
         ? rt("pn.morningCalm1", { name: places[0].name })
         : rt("pn.morningCalm", { n: places.length });
-  return { title: rt("pn.morningTitle"), body };
+  // pinned places with no readable level are said, not dropped from the count ("All 2 places are calm" with 3 pinned)
+  const unread = extra?.unreadable ?? 0;
+  return { title: rt("pn.morningTitle"), body: unread > 0 ? `${body} ${rt("pn.morningUnread", { k: unread })}` : body };
 }

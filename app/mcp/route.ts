@@ -4,10 +4,12 @@ import {
   fetchStations,
   fetchStationData,
   fetchBasinSnapshot,
+  getNational,
   statusFor,
 } from "@/lib/arcgis";
 import { orderStations } from "@/lib/basinOrder";
 import { ageMinutes } from "@/lib/readings";
+import { detectUnit } from "@/lib/units";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { getReleases } from "@/lib/releases";
 import { WEEKLY_PDF, getWeeklyOutcome, windowState } from "@/lib/wmsWeekly";
@@ -71,8 +73,12 @@ const handler = createMcpHandler(
       },
       async ({ station, days }) => {
         const data = await fetchStationData(station, days ?? 4);
+        // status and age from the same national snapshot as /api/levels (the per-gauge fetch has its own cache and can lag a few minutes)
+        const nat = (await getNational().catch(() => [])).find((x) => x.station === data.station) ?? null;
         const status = statusFor(data.latest?.water_level ?? null, data.thresholds, data.latest?.ts);
-        const nh = await timeBox(getNextHourForBasin(data.basin), 4000);
+        const tier = nat ? nat.tier : status.tier;
+        const nhAll = await timeBox(getNextHourForBasin(data.basin), 4000);
+        const unit = nat?.unit ?? detectUnit(data.thresholds, data.station);
         return {
           content: [
             {
@@ -81,11 +87,14 @@ const handler = createMcpHandler(
                 {
                   station: data.station,
                   basin: data.basin,
-                  next_hour: nh?.[data.station] ?? null,
+                  // always feet; null when the gauge is stale. `unit` is the unit of `readings`, `latest` and `thresholds` (null = unknown, never assume feet)
+                  unit: unit ?? null,
+                  next_hour: tier === "stale" ? null : nhAll?.[data.station] ?? null,
+                  next_hour_unit: "ft",
                   status: status.label,
                   status_note: status.note ?? null,
-                  tier: status.tier,
-                  age_minutes: ageMinutes(data.latest),
+                  tier,
+                  age_minutes: nat?.ageMin ?? ageMinutes(data.latest),
                   thresholds: data.thresholds,
                   latest: data.latest,
                   reading_count: data.readings.length,

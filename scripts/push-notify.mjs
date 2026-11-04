@@ -143,9 +143,11 @@ function morningJobs(subs, glances, now, force) {
     if (!sub.prefs.morning) continue;
     const md = sub.state?.md ?? null;
     if (force ? md === day : !morningDue(sub.prefs, now, md)) continue;
-    const places = sub.places.filter((k) => !sub.prefs.muted.includes(baseKey(k))).map((k) => glances.get(k)).filter(Boolean).map((g) => ({ name: g.name, level: levelOf(g), street: null })).filter((p) => p.level != null);
+    const pinned = sub.places.filter((k) => !sub.prefs.muted.includes(baseKey(k)));
+    const places = pinned.map((k) => glances.get(k)).filter(Boolean).map((g) => ({ name: g.name, level: levelOf(g), street: null })).filter((p) => p.level != null);
     if (places.length === 0) continue; // nothing readable: say nothing rather than "all calm"
-    const m = pushText(sub.lang, "morning", places);
+    // wording only: the message also says how many pinned places could not be read (it used to count only the readable ones)
+    const m = pushText(sub.lang, "morning", places, { unreadable: pinned.length - places.length });
     jobs.push({ sub, kind: "morning", place: null, payload: { title: m.title, body: m.body, url: urlFor(sub, "/"), tag: "morning", lang: sub.lang } });
   }
   return jobs;

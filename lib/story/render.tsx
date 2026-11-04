@@ -227,7 +227,7 @@ function RainCard({ m, d }: { m: StoryModel; d: Dim }) {
         {r.gauge && (
           <div style={{ ...F, fontSize: d.upd, fontWeight: 800, color: "#075985", background: "#e0f2fe", borderRadius: 24, padding: `${d.upd * 0.3}px ${d.upd * 0.7}px`, alignSelf: "flex-start", marginBottom: d.gap * 0.4 }}>{z(`${s.rainGauge}: ${r.gauge.name}, ${r.gauge.mm} ${s.mm}`)}</div>
         )}
-        <div style={{ ...F, fontSize: d.upd, fontWeight: 500, color: MUTED, marginBottom: d.gap * 0.5 }}>{z(`${s.rainSat}${m.updated ? ` · ${m.updated}` : ""}`)}</div>
+        <div style={{ ...F, fontSize: d.upd, fontWeight: 500, color: MUTED, marginBottom: d.gap * 0.5 }}>{z(`${r.corrected ? s.rainSatCorr : s.rainSat}${m.updated ? ` · ${m.updated}` : ""}`)}</div>
         <Footer m={m} d={d} />
       </div>
     </Frame>

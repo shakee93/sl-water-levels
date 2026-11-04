@@ -456,8 +456,10 @@ export function composeRiversRising(f: RiversRisingFact): Composed {
   const one = (g: GaugeFact) => `${g.river} at ${g.station} ${ft(g.level)}`;
   const shown = f.gauges.slice(0, 3);
   const more = f.count - shown.length;
-  const mk = (k: number) => `${f.count} rivers are rising towards or past Alert level at ${time}: ${listMore(shown.slice(0, k).map(one), f.count - Math.min(k, shown.length))}.`;
-  const short = `${f.count} rivers are rising towards Alert level: ${listMore(shown.slice(0, 3).map((g) => `${g.river} (${g.station})`), more)}.`;
+  // "rising" only when every gauge named is rising by its own 3 h trend (a gauge near Alert with measured rain can be steady or falling)
+  const allRising = shown.every((g) => /rising/.test(g.trend ?? ""));
+  const mk = (k: number) => `${f.count} rivers are ${allRising ? "rising towards or past" : "at or near"} Alert level at ${time}: ${listMore(shown.slice(0, k).map(one), f.count - Math.min(k, shown.length))}.`;
+  const short = `${f.count} rivers are ${allRising ? "rising towards" : "at or near"} Alert level: ${listMore(shown.slice(0, 3).map((g) => `${g.river} (${g.station})`), more)}.`;
   const variants: Parts[] = [{ body: mk(shown.length), short, link: f.url, must: [shown[0].station], tags: alertTags(shown[0].river) }];
   return assemble(variants, isSerious(f.gauges));
 }
@@ -485,7 +487,7 @@ const gaugeLuna = (g: GaugeFact) => ({
 export function lunaFacts(type: string, f: any): Record<string, unknown> {
   switch (type) {
     case "gauge_rise": return { post: "river gauge rose to a flood mark", river: f[0].river, gauges: f.slice(0, 4).map(gaugeLuna) };
-    case "rivers_rising": return { post: "several rivers are rising towards or past their alert marks at the same time (one national post, mention at most the rivers listed)", time_sri_lanka: clock(f.at), rivers_rising_total: f.count, other_rivers_not_listed: Math.max(0, f.count - f.gauges.slice(0, 3).length), rivers: f.gauges.slice(0, 3).map(gaugeLuna) };
+    case "rivers_rising": return { post: f.gauges.slice(0, 3).every((g: any) => /rising/.test(g.trend ?? "")) ? "several rivers are rising towards or past their alert marks at the same time (one national post, mention at most the rivers listed)" : "several rivers are at or near their alert marks at the same time; only some of them are going up, so describe a river as going up only when its own trend says so, never the whole group (one national post, mention at most the rivers listed)", time_sri_lanka: clock(f.at), rivers_rising_total: f.count, other_rivers_not_listed: Math.max(0, f.count - f.gauges.slice(0, 3).length), rivers: f.gauges.slice(0, 3).map(gaugeLuna) };
     case "gauge_clear": return { post: "all clear: gauge back below the alert level", river: f[0].river, gauges: f.slice(0, 4).map(gaugeLuna) };
     case "storm": return { post: "storm-time river update", river: f.river, time_sri_lanka: clock(f.at), gauges: f.gauges.slice(0, 3).map(gaugeLuna) };
     case "reservoir_start": return { post: "reservoir started letting water out", reservoirs: f.slice(0, 3).map((r: ReservoirFact) => ({ name: r.name, river: r.river ?? undefined, status: r.status, cusecs: Math.round(r.cusecs), storage_percent: r.storagePercent != null ? Math.round(r.storagePercent) : undefined, reading_date: dayOf(r.day), source: r.source ?? undefined, note: "the agency's daily reading, not live" })) };
@@ -651,7 +653,9 @@ export function validateLlmText(text: string, c: LunaCtx): string[] {
   if (emoji.length && ["gauge_clear", "summary", "reservoir_stop"].includes(c.type)) problems.push("no emoji in this kind of post");
   for (const w of ["major", "minor"]) if (new RegExp(`\\b${w}\\b`, "i").test(body) && !factsLow.includes(w)) problems.push(`says "${w}" but the facts do not`);
   if (/evacuat/i.test(body) && !factsLow.includes("evacuat")) problems.push("mentions evacuation, which the facts do not");
-  if (/\b(rising|rose|risen|climbing|surging|swelling)\b/i.test(body) && !factsLow.includes("rising") && !["gauge_rise", "rivers_rising"].includes(c.type)) problems.push("says the water is rising but the facts do not");
+  // "rose" / "crossed" are fine in a rise post (the gauge did rise to the mark); "is rising / climbing / surging" needs a rising trend in the facts
+  const risingRe = ["gauge_rise", "rivers_rising"].includes(c.type) ? /\b(rising|climbing|surging|swelling)\b/i : /\b(rising|rose|risen|climbing|surging|swelling)\b/i;
+  if (risingRe.test(body) && !factsLow.includes("rising")) problems.push("says the water is rising but the facts do not");
   if (/\b(falling|dropping|receding|easing|going down)\b/i.test(body) && !factsLow.includes("falling") && !["gauge_clear", "reservoir_stop"].includes(c.type)) problems.push("says the water is falling but the facts do not");
   const lowSpot = body.match(/low[- ]?(spots?|ground|lying)|\bcanals?\b|street[- ]flood|flooded (streets|roads)|water on the (streets|roads)|flood(ing)? (on|in) the (streets|roads)/i);
   if (lowSpot && !factsLow.includes(lowSpot[0].toLowerCase())) problems.push(`talks about "${lowSpot[0]}": only rivers, gauges, reservoirs and rain amounts`);

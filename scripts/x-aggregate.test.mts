@@ -184,4 +184,12 @@ assert.ok(validateCombined("6:16 am: The Kelani at X (99.9 ft) has reached alert
   assert.ok(isPriority(hw) && isPriority(warning) && isPriority(clear) && isPriority(digest) && !isPriority({ type: "storm" }));
 }
 
+// "rising" only for a gauge whose own trend rises: one below Alert with a steady trend is "close to alert level"
+{
+  const say = (g) => groupsOf([rise("Kelani Ganga", [g])])[0].say(1);
+  assert.match(say(gf("Hanwella", "Kelani Ganga", "watch", 7, { trend: "steady" })), /close to alert level/);
+  assert.doesNotMatch(say(gf("Hanwella", "Kelani Ganga", "watch", 7, { trend: "steady" })), /rising/);
+  assert.match(say(gf("Hanwella", "Kelani Ganga", "watch", 7, { trend: "rising" })), /is rising/);
+}
+
 console.log("x-aggregate tests passed");

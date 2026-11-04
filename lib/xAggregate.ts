@@ -136,7 +136,9 @@ export function groupsOf(events: Ev[]): Group[] {
     const gs = (byStep.get(step) ?? []).sort((a, b) => b.level / (b.alertMark || 1) - a.level / (a.alertMark || 1));
     if (!gs.length) continue;
     const flood = step >= 3;
-    const word = step === 4 ? "in major flood" : step === 3 ? "in minor flood" : step === 2 ? "reached alert level" : "rising";
+    // below Alert the word is "rising" only for a gauge whose own 3 h trend rises: a gauge admitted by measured rain can be steady or falling ("is close to alert level")
+    const isRising = (g: any) => /rising/.test(g.trend ?? "") && !g.stale;
+    const wordFor = (l: any[]) => (step === 4 ? "in major flood" : step === 3 ? "in minor flood" : step === 2 ? "reached alert level" : l.every(isRising) ? "rising" : "close to alert level");
     groups.push({
       river: true, severity: 50 + step * 10, serious: flood || (step === 2 && crossing), entries: gs.length,
       say: (k) => {
@@ -144,10 +146,11 @@ export function groupsOf(events: Ev[]): Group[] {
         if (l.length === 1) {
           const g = l[0];
           const rising = /rising/.test(g.trend ?? "") && !g.stale;
+          const word = wordFor(l);
           if (flood) return `${cap(riverName(g.river))} is ${word} at ${g.station} (${reading(g)})${rising ? " and still rising" : ""}.`;
           return `${cap(place(g))} ${step === 2 ? "has " : "is "}${word}${step < 2 || !rising ? "" : step === 2 ? " and is still rising" : " and still rising"}.`;
         }
-        return `${cap(joinList(l.map(place)))} ${flood ? "are" : step === 2 ? "have" : "are"} ${word}.`;
+        return `${cap(joinList(l.map(place)))} ${flood ? "are" : step === 2 ? "have" : "are"} ${wordFor(l)}.`;
       },
     });
   }
