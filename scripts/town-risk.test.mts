@@ -418,13 +418,13 @@ assert.equal(PLACES.find((p) => p.name === "Nuwara Eliya").drainage, "upland");
   }
   const coast = PLACES.filter((p) => p.rainZone && p.rainZone !== "colombo-east").map((p) => `${p.name}:${p.rainZone}`).sort();
   assert.deepEqual(coast, ["Chilaw:chilaw", "Dankotuwa:negombo", "Ja-Ela:ja-ela", "Katuneriya:wennappuwa", "Kochchikade:negombo", "Marawila:marawila", "Negombo:negombo", "Wennappuwa:wennappuwa"]);
-  // every coast town sits in (or within 0.03 degrees of) the satellite pixel(s) its zone averages (scripts/gsmap-snapshot.mjs STREET_RAIN_ZONES)
-  const { readFileSync } = await import("node:fs");
-  const snap = readFileSync(new URL("./gsmap-snapshot.mjs", import.meta.url), "utf8");
+  // every coast town sits in (or within 0.08 degrees of) the satellite pixel(s) its zone averages (lib/streetRainZones.mjs, read by
+  // scripts/gsmap-snapshot.mjs and scripts/rain-correct.mjs; the test used to parse the snapshot script, which now imports the table)
+  const { STREET_RAIN_ZONES } = await import("../lib/streetRainZones.mjs");
   for (const p of PLACES.filter((p) => p.rainZone && p.rainZone !== "colombo-east")) {
-    const m = snap.match(new RegExp(`["']?${p.rainZone}["']?: \\{[^\\n]*centres: (\\[\\[[^\\n]*\\]\\])`));
-    assert.ok(m, `${p.name}: zone ${p.rainZone} is defined in the snapshot`);
-    const cells: number[][] = JSON.parse(m![1]);
+    const zone = (STREET_RAIN_ZONES as Record<string, { centres: number[][] }>)[p.rainZone!];
+    assert.ok(zone, `${p.name}: zone ${p.rainZone} is defined in lib/streetRainZones.mjs`);
+    const cells: number[][] = zone.centres;
     assert.ok(cells.some(([la, lo]) => Math.abs(p.lat - la) <= 0.08 && Math.abs(p.lon - lo) <= 0.08), `${p.name} is inside its rain zone`);
     assert.equal(streetCardKind(p), "coast");
   }
