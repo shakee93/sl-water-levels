@@ -54,8 +54,16 @@ export const SEO = {
   "rivers.ldName": { en: "River water levels in Sri Lanka today", si: "අද ශ්‍රී ලංකා ගංගා ජල මට්ටම", ta: "இன்று இலங்கை ஆறுகளின் நீர் மட்டம்" },
 
   // ---- river page ({lead} = "Kelani River", {alt} = "Kelani Ganga")
+  // Title: what searchers type is "status" and "flood level" (Search Console, 1-4 Nov 2026), so they lead. No live number: it goes
+  // stale in a snippet. en falls back to titleNoAlt (the previous wording) when too long; si/ta titles are unchanged for now.
   "river.title": {
-    en: "{lead} Water Level Today (Live, Map)",
+    en: "{lead} Water Level Today – Live Status & Flood Level",
+    si: "අද {native} ජල මට්ටම (සජීවී) – {alt}",
+    ta: "இன்று {native} நீர் மட்டம் (நேரடி) – {alt}",
+  },
+  // {aka}: a one-word spelling people type ("Kaluganga"), only for rivers that have one
+  "river.titleAka": {
+    en: "{lead} ({aka}) Water Level Today – Live Status",
     si: "අද {native} ජල මට්ටම (සජීවී) – {alt}",
     ta: "இன்று {native} நீர் மட்டம் (நேரடி) – {alt}",
   },
@@ -64,10 +72,34 @@ export const SEO = {
     si: "අද {native} ජල මට්ටම (සජීවී)",
     ta: "இன்று {native} நீர் மட்டம் (நேரடி)",
   },
+  // No reading to quote (outage): the generic line. "Updated hourly" is gone: several gauges report every 10 minutes.
   "river.desc": {
-    en: "Live {lead} ({alt}) water level at {gauges}.{now} Alert, minor and major flood levels and a next-hour forecast. Updated hourly.",
+    en: "Live {lead} ({alt}) water level at {gauges}.{now} Alert, minor and major flood levels and a next-hour forecast.",
     si: "අද {native} ජල මට්ටම: {gauges}.{now} වාරිමාර්ග දෙපාර්තමේන්තුවේ නිල අනතුරු ඇඟවීම, සුළු සහ ප්‍රධාන ගංවතුර මට්ටම් සහ ඊළඟ පැය පුරෝකථනය. {rom}",
     ta: "இன்று {native} நீர் மட்டம்: {gauges}.{now} நீர்ப்பாசனத் திணைக்களத்தின் அதிகாரப்பூர்வ எச்சரிக்கை, சிறிய மற்றும் பெரிய வெள்ள மட்டங்கள், அடுத்த மணி நேர முன்னறிவிப்பு. {rom}",
+  },
+  // With a reading: lead with the level (the snippet answers "status of the <river>"). {name} = "Kalu Ganga" or "Kalu Ganga (Kaluganga)".
+  // {worst} = "Kalawellawa 16.7 ft (Alert)", {rep} = " Ratnapura 9.9 ft." (empty when it is the worst gauge), {tail} = the closing words.
+  "river.descFlag": {
+    en: "{name} status now: {worst}; {n} of {m} gauges at or above alert.{rep} {tail}",
+    si: "{native} තත්ත්වය දැන්: {worst}; මාන {m} න් {n} ක් අනතුරු ඇඟවීමේ හෝ ඉහළ මට්ටමේ.{rep} {tail}",
+    ta: "{native} நிலை இப்போது: {worst}; {m} நிலையங்களில் {n} எச்சரிக்கை அல்லது அதற்கு மேல்.{rep} {tail}",
+  },
+  // {rep} = " (Ratnapura 9.9 ft)" or empty
+  "river.descCalm": {
+    en: "{name} status now: all {m} gauges normal{rep}. {tail}",
+    si: "{native} තත්ත්වය දැන්: මාන {m} ම සාමාන්‍යයි{rep}. {tail}",
+    ta: "{native} நிலை இப்போது: {m} நிலையங்களும் இயல்பு{rep}. {tail}",
+  },
+  "river.descTail": {
+    en: "Live water levels, flood levels and next-hour forecast.",
+    si: "සජීවී ජල මට්ටම්, ගංවතුර මට්ටම් සහ ඊළඟ පැය පුරෝකථනය.",
+    ta: "நேரடி நீர் மட்டம், வெள்ள மட்டங்கள், அடுத்த மணி நேர முன்னறிவிப்பு.",
+  },
+  "river.descTailShort": {
+    en: "Live levels, flood levels, forecast.",
+    si: "සජීවී මට්ටම්, ගංවතුර මට්ටම්, පුරෝකථනය.",
+    ta: "நேரடி மட்டங்கள், வெள்ள மட்டங்கள், முன்னறிவிப்பு.",
   },
   "river.h1": { en: "{lead} ({alt}) water level today", si: "අද {native} ජල මට්ටම", ta: "இன்று {native} நீர் மட்டம்" },
   "river.h1NoAlt": { en: "{lead} water level today", si: "අද {native} ජල මට්ටම", ta: "இன்று {native} நீர் மட்டம்" },
@@ -79,21 +111,46 @@ export const SEO = {
 
   // ---- gauge page
   "gauge.title": {
+    en: "{gauge} Water Level Today & Flood Level ({river})",
+    si: "අද {gauge} ජල මට්ටම සහ ගංවතුර මට්ටම – {river}",
+    ta: "இன்று {gauge} நீர் மட்டம் & வெள்ள மட்டம் – {river}",
+  },
+  "gauge.titleShort": {
+    en: "{gauge} Water Level Today & Flood Level",
+    si: "අද {gauge} ජල මට්ටම සහ ගංවතුර මට්ටම",
+    ta: "இன்று {gauge} நீர் மட்டம் & வெள்ள மட்டம்",
+  },
+  // the title before 5 Nov 2026: used when the one above is too long, and kept for Hanwella (it earns 2.3% as it is)
+  "gauge.titleLegacy": {
     en: "{gauge} Water Level Today ({river}, Live)",
     si: "අද {gauge} ජල මට්ටම – {river} (සජීවී)",
     ta: "இன்று {gauge} நீர் மட்டம் – {river} (நேரடி)",
   },
   // a river with one gauge has no river page (it redirects here), so this page carries the river's own query
   "gauge.titleOne": {
+    en: "{river} Water Level Today & Flood Level ({gauge})",
+    si: "අද {river} ජල මට්ටම සහ ගංවතුර මට්ටම – {gauge}",
+    ta: "இன்று {river} நீர் மட்டம் & வெள்ள மட்டம் – {gauge}",
+  },
+  "gauge.titleOneLegacy": {
     en: "{river} Water Level Today ({gauge}, Live)",
     si: "අද {river} ජල මට්ටම – {gauge} (සජීවී)",
     ta: "இன்று {river} நீர் மட்டம் – {gauge} (நேரடி)",
   },
+  // {sp} = " (Alert)" or empty; {marks} = "alert 17.1 ft, minor 24.6 ft, major 31.2 ft" (only the marks that exist)
   "gauge.desc": {
-    en: "Live {gauge} water level on the {river}: {level}, {status}. {gauge} flood level: alert {alert}, minor {minor}, major {major}. Next-hour forecast.",
-    si: "අද {gauge} ජල මට්ටම ({river}): {level}, {status}. {gauge} ගංවතුර මට්ටම්: අනතුරු ඇඟවීම {alert}, සුළු ගංවතුර {minor}, ප්‍රධාන ගංවතුර {major}. ඊළඟ පැය පුරෝකථනය සමඟ.",
-    ta: "இன்று {gauge} நீர் மட்டம் ({river}): {level}, {status}. {gauge} வெள்ள மட்டங்கள்: எச்சரிக்கை {alert}, சிறிய வெள்ளம் {minor}, பெரிய வெள்ளம் {major}. அடுத்த மணி நேர முன்னறிவிப்புடன்.",
+    en: "{gauge} water level now: {level}{sp}. Flood levels: {marks}. {river} gauge with a next-hour forecast.",
+    si: "{gauge} ජල මට්ටම දැන්: {level}{sp}. ගංවතුර මට්ටම්: {marks}. {river} මානය, ඊළඟ පැය පුරෝකථනය සමඟ.",
+    ta: "{gauge} நீர் மட்டம் இப்போது: {level}{sp}. வெள்ள மட்டங்கள்: {marks}. {river} நிலையம், அடுத்த மணி நேர முன்னறிவிப்புடன்.",
   },
+  "gauge.descNoMarks": {
+    en: "{gauge} water level now: {level}{sp}. No official flood levels are published for this gauge. {river} gauge with a next-hour forecast.",
+    si: "{gauge} ජල මට්ටම දැන්: {level}{sp}. මෙම මානයට නිල ගංවතුර මට්ටම් පළ කර නැත. {river} මානය, ඊළඟ පැය පුරෝකථනය සමඟ.",
+    ta: "{gauge} நீர் மட்டம் இப்போது: {level}{sp}. இந்த நிலையத்துக்கு அதிகாரப்பூர்வ வெள்ள மட்டங்கள் வெளியிடப்படவில்லை. {river} நிலையம், அடுத்த மணி நேர முன்னறிவிப்புடன்.",
+  },
+  "gauge.markAlert": { en: "alert {v}", si: "අනතුරු ඇඟවීම {v}", ta: "எச்சரிக்கை {v}" },
+  "gauge.markMinor": { en: "minor {v}", si: "සුළු ගංවතුර {v}", ta: "சிறிய வெள்ளம் {v}" },
+  "gauge.markMajor": { en: "major {v}", si: "ප්‍රධාන ගංවතුර {v}", ta: "பெரிய வெள்ளம் {v}" },
   "gauge.descNone": {
     en: "Live {gauge} water level on the {river}, Sri Lanka, with the Department of Irrigation's alert, minor flood and major flood levels and a next-hour forecast.",
     si: "අද {gauge} ජල මට්ටම ({river}), වාරිමාර්ග දෙපාර්තමේන්තුවේ අනතුරු ඇඟවීම, සුළු සහ ප්‍රධාන ගංවතුර මට්ටම් සහ ඊළඟ පැය පුරෝකථනය සමඟ.",

@@ -15,6 +15,7 @@ import type { TFn } from "./i18n/translate";
 import { shownNumber, type Unit } from "./units";
 import type { NextHour } from "./nextHour";
 import { rainRiskLine } from "./rainRisk";
+import { byGaugeDemand } from "./seoNames";
 
 type L3 = Record<Locale, string>;
 type Vars = Record<string, string | number>;
@@ -173,9 +174,15 @@ const R = {
     ta: "{asOf}, {river} இல் தகவல் தரும் {m} அளவீடுகளில் {n} எச்சரிக்கை அல்லது அதற்கு மேல் மட்டத்தில் உள்ளன: {names}.",
   },
   calm: {
-    en: "{asOf}, all {m} reporting gauges on the {river} are below their alert levels.",
-    si: "{asOf}, {river} හි වාර්තා කරන මාන {m} ම අනතුරු ඇඟවීමේ මට්ටමට පහළයි.",
-    ta: "{asOf}, {river} இல் தகவல் தரும் {m} அளவீடுகளும் எச்சரிக்கை மட்டத்திற்குக் கீழே உள்ளன.",
+    en: "{asOf}, all {m} reporting gauges on the {river} are below their alert levels{list}.",
+    si: "{asOf}, {river} හි වාර්තා කරන මාන {m} ම අනතුරු ඇඟවීමේ මට්ටමට පහළයි{list}.",
+    ta: "{asOf}, {river} இல் தகவல் தரும் {m} அளவீடுகளும் எச்சரிக்கை மட்டத்திற்குக் கீழே உள்ளன{list}.",
+  },
+  // the best-known gauges' levels, so the opening sentence carries numbers even when nothing is flagged (si/ta drafts)
+  also: {
+    en: " Other gauges: {list}.",
+    si: " වෙනත් මාන: {list}.",
+    ta: " மற்ற நிலையங்கள்: {list}.",
   },
   none: {
     en: "None of the {total} gauges on the {river} is reporting a current level right now.",
@@ -191,9 +198,19 @@ export function riverAnswer(lang: Locale, t: TFn, basin: string, snap: NationalS
   if (!reporting.length || newest == null) return W(R.none, lang, { river, total: snap.length });
   const asOf = W(D.asOf, lang, { stamp: fullStamp(newest, t) });
   const flagged = reporting.filter((s) => ["major", "minor", "alert"].includes(s.tier));
-  if (!flagged.length) return W(R.calm, lang, { asOf, river, m: reporting.length });
+  const lv = (s: NationalStation) => `${stationDisplayName(s.station)} ${lvText(s.latest!.water_level!, s.unit)}`;
+  // the three best-known gauges (Hanwella, Ratnapura ...): their levels go in the sentence even when the river is calm
+  const top = topGauges(reporting);
+  if (!flagged.length) return W(R.calm, lang, { asOf, river, m: reporting.length, list: top.length ? ` (${top.map(lv).join(", ")})` : "" });
   const names = flagged.map((s) => `${stationDisplayName(s.station)} (${lvText(s.latest!.water_level!, s.unit)})`).join(", ");
-  return W(R.flagged, lang, { asOf, river, n: flagged.length, m: reporting.length, names });
+  const others = flagged.length < 3 ? top.filter((s) => !flagged.includes(s)).slice(0, 3 - flagged.length) : [];
+  return W(R.flagged, lang, { asOf, river, n: flagged.length, m: reporting.length, names }) + (others.length ? W(R.also, lang, { list: others.map(lv).join(", ") }) : "");
+}
+
+/** Up to three reporting gauges, the ones people search by name first (lib/seoNames.ts byGaugeDemand), then upstream order. */
+function topGauges(reporting: NationalStation[]): NationalStation[] {
+  const order = byGaugeDemand(reporting.map((s) => stationDisplayName(s.station)));
+  return order.slice(0, 3).map((n) => reporting.find((s) => stationDisplayName(s.station) === n)!).filter((s) => s.latest?.water_level != null);
 }
 
 // ---- FAQ ------------------------------------------------------------------------------------------
@@ -210,6 +227,13 @@ const Q = {
     ta: "இந்த அளவீட்டின் அதிகாரப்பூர்வ மட்டங்கள்: {list}. எச்சரிக்கை என்பது தயாராக இருப்பது, சிறிய வெள்ளம் என்பது தாழ்ந்த நிலங்களில் நீர் புகுவது, பெரிய வெள்ளம் என்பது பாதுகாப்பான இடத்திற்குச் செல்வது.",
   },
   marksNone: { en: "No flood levels are published for this gauge, so it cannot be compared with an alert level.", si: "මෙම මානය සඳහා ගංවතුර මට්ටම් පළ කර නැත.", ta: "இந்த அளவீட்டுக்கு வெள்ள மட்டங்கள் வெளியிடப்படவில்லை." },
+  riverMarks: { en: "What is the flood level on the {river}?", si: "{river} හි ගංවතුර මට්ටම කීයද?", ta: "{river} இல் வெள்ள மட்டம் என்ன?" },
+  riverMarksA: {
+    en: "Each gauge has its own official marks from the Department of Irrigation. {list}. Alert means the river has reached the alert mark: move valuables up and charge your phone. Minor flood means water is spilling over low ground, and major flood means move to safety.",
+    si: "සෑම මානයකටම ජල සම්පාදන දෙපාර්තමේන්තුවේ තමන්ගේම නිල මට්ටම් ඇත. {list}. අනතුරු ඇඟවීම යනු සූදානම් වීම, සුළු ගංවතුර යනු පහත් බිම්වලට ජලය පැමිණීම, ප්‍රධාන ගංවතුර යනු ආරක්ෂිත ස්ථානයකට යාම.",
+    ta: "ஒவ்வொரு அளவீட்டு நிலையத்துக்கும் நீர்ப்பாசனத் திணைக்களத்தின் சொந்த அதிகாரப்பூர்வ மட்டங்கள் உள்ளன. {list}. எச்சரிக்கை என்பது தயாராக இருப்பது, சிறிய வெள்ளம் என்பது தாழ்ந்த நிலங்களில் நீர் புகுவது, பெரிய வெள்ளம் என்பது பாதுகாப்பான இடத்துக்குச் செல்வது.",
+  },
+  riverStatus: { en: "What is the status of the {river}?", si: "{river} හි තත්ත්වය කුමක්ද?", ta: "{river} இன் நிலை என்ன?" },
   alertWord: { en: "alert {v}", si: "අනතුරු ඇඟවීම {v}", ta: "எச்சரிக்கை {v}" },
   minorWord: { en: "minor flood {v}", si: "සුළු ගංවතුර {v}", ta: "சிறிய வெள்ளம் {v}" },
   majorWord: { en: "major flood {v}", si: "ප්‍රධාන ගංවතුර {v}", ta: "பெரிய வெள்ளம் {v}" },
@@ -272,6 +296,17 @@ const Q = {
 
 export const faqHeading = (lang: Locale) => Q.heading[lang];
 
+/** "alert 17.1 ft, minor flood 24.6 ft, major flood 31.2 ft": the marks a gauge has, in the page language. */
+function marksText(lang: Locale, s: NationalStation): string {
+  const th = s.thresholds;
+  const parts: string[] = [];
+  const add = (d: L3, v: number | null) => v != null && parts.push(W(d, lang, { v: lvText(v, s.unit) }));
+  add(Q.alertWord, th.alert);
+  add(Q.minorWord, th.minor);
+  add(Q.majorWord, th.major);
+  return parts.join(", ");
+}
+
 export function stationFaq(lang: Locale, s: NationalStation, answer: string, nh: NextHour | null = null): Faq[] {
   const name = stationDisplayName(s.station);
   const th = s.thresholds;
@@ -304,8 +339,14 @@ export function riverFaq(
   next: { station: string; nh: NextHour | null }[] = [],
   /** Gauges on the river by the 3-hour direction of the level (null when no gauge has a trend). */
   trend: { up: number; down: number; same: number } | null = null,
+  /** The river's gauge snapshot: the flood-level answer lists the best-known gauges' own marks. */
+  snap: NationalStation[] = [],
 ): Faq[] {
   const river = riverName(basin, lang);
+  const markGauges = topGauges(snap.filter((s) => s.tier !== "stale" && s.latest)).filter((s) => s.thresholds.alert != null || s.thresholds.minor != null || s.thresholds.major != null);
+  const marksItem: Faq[] = markGauges.length
+    ? [{ q: W(Q.riverMarks, lang, { river }), a: W(Q.riverMarksA, lang, { list: markGauges.map((s) => `${stationDisplayName(s.station)}: ${marksText(lang, s)}`).join("; ") }) }]
+    : [];
   const tm = trend ? trend.up + trend.down + trend.same : 0;
   const trendItem: Faq[] = trend && tm
     ? [{ q: W(Q.rising, lang, { name: river }), a: W(Q.risingRiverA, lang, { m: tm, river, parts: [trend.up && W(Q.nhUp, lang, { n: trend.up }), trend.same && W(Q.nhSame, lang, { n: trend.same }), trend.down && W(Q.nhDown, lang, { n: trend.down })].filter(Boolean).join(", ") }) }]
@@ -322,6 +363,8 @@ export function riverFaq(
     : [];
   return [
     { q: W(Q.now, lang, { name: river }), a: answer },
+    { q: W(Q.riverStatus, lang, { river }), a: answer },
+    ...marksItem,
     ...trendItem,
     ...nhItem,
     { q: W(Q.gauges, lang, { river }), a: W(Q.gaugesA, lang, { list: orderedStationNames.join(", ") }) },

@@ -679,6 +679,7 @@ live data and from alias tables.
   from `lib/places.ts`. A new spelling people search = one line here and every page of that kind has it.
 - `lib/i18n/seo.ts`: every title / H1 / meta description template in en, si, ta (si/ta are drafts that need native review).
 - `lib/seoMeta.ts`: `riverMeta`, `gaugeMeta`, `reservoirMeta`, `shortList`, `ogBase`. Pages call these; they never build a title themselves.
+- River / gauge snippets (5 Nov 2026): river titles lead with "Live Status & Flood Level" (Kalu Ganga adds "(Kaluganga)"); the river description leads with a real level from the page's own snapshot (`riverFacts`, quoted gauge from `representativeGauge` in `lib/seoNames.ts`, capped at `DESC_MAX` 155); the gauge description reads `getNational()` (same cache as the body) and its marks straight from the gauge's thresholds. Hanwella keeps its old title. One-gauge rivers 308 to their gauge in `proxy.ts` (list = `single` in `/api/slugs`). Test: `node --experimental-strip-types --no-warnings scripts/seo-meta.test.mts`.
 - `lib/seo.ts`: JSON-LD builders (WebPage, BreadcrumbList, FAQPage, Place, Dataset). `lib/i18n/config.ts` `pageAlternates()`: canonical + hreflang.
 
 **Templates (English)**

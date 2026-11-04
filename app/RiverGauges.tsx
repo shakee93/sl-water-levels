@@ -76,6 +76,23 @@ function ThresholdBar({ t, s, bar }: { t: TFn; s: NationalStation; bar: string }
   );
 }
 
+/** "Alert 17.1 ft · Minor flood 24.6 ft · Major flood 31.2 ft": the gauge's own marks as text (not only in the bar's label); a mark that does not exist is left out. */
+function MarkLine({ t, s }: { t: TFn; s: NationalStation }) {
+  const { alert, minor, major } = s.thresholds;
+  const marks = ([[t("mark.alert"), alert], [t("mark.minor"), minor], [t("mark.major"), major]] as const).filter(([, v]) => v != null);
+  if (!marks.length) return null;
+  return (
+    <p className="mt-1.5 flex flex-wrap gap-x-2 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+      {marks.map(([label, v], i) => (
+        <span key={label}>
+          {i > 0 && <span aria-hidden className="mr-2">·</span>}
+          {label} {formatLevel(v, s.unit, 1)}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 function Trend({ t, s }: { t: TFn; s: NationalStation }) {
   if (s.rate3hM == null) return null;
   if (Math.abs(s.rate3hM) < STEADY_M_PER_H) {
@@ -153,6 +170,7 @@ function Row({ t, p, s, serverNow }: { t: TFn; p: (path: string) => string; s: N
           </div>
           <div className={`mt-2 ${stale ? "opacity-60" : ""}`}>
             <ThresholdBar t={t} s={s} bar={muted ? "bg-slate-400" : st.bar} />
+            <MarkLine t={t} s={s} />
           </div>
         </>
       )}

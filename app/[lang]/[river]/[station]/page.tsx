@@ -16,14 +16,12 @@ import { stationAnswer, stationFaq } from "@/lib/answers";
 import { breadcrumbLd, placeLd, publisherLd, webPageLd, DATA_BRANCH } from "@/lib/seo";
 import {
   fetchStations,
-  fetchStationData,
   getNational,
-  statusFor,
   type Station,
   type NationalStation,
 } from "@/lib/arcgis";
 import { basinPath, resolveStation, stationPath, stationSlug } from "@/lib/slug";
-import { detectUnit, formatLevel } from "@/lib/units";
+import { formatLevel } from "@/lib/units";
 import { EmbedLink } from "@/app/EmbedLink";
 import { StationPicker } from "@/app/StationPicker";
 import { StationFinder } from "@/app/StationFinder";
@@ -97,27 +95,32 @@ export async function generateMetadata({
   const canonical = alternates.canonical;
 
   try {
-    const data = await fetchStationData(resolved.station, 1);
-    const level = data.latest?.water_level;
-    const status = statusFor(level ?? null, data.thresholds, data.latest?.ts);
-    const unit = detectUnit(data.thresholds, resolved.station);
-    const markText = (v: number | null) => (v == null ? "—" : formatLevel(v, unit));
+    // The same cached national snapshot the page body and its answer line read (getNational), not a second fetch of this
+    // gauge: two caches gave 10.2 ft in the snippet against 9.9 ft on the page (audit, 4 Nov 2026).
+    const nat = (await getNational()).find((x) => x.station === resolved.station) ?? null;
+    if (!nat) throw new Error("gauge not in the national snapshot");
+    const level = nat.tier !== "stale" ? nat.latest?.water_level : null;
+    const unit = nat.unit;
+    // Marks come straight from the gauge's own thresholds; a mark that does not exist is left out, never invented.
+    const markText = (v: number | null) => (v == null ? "—" : formatLevel(v, unit, 1));
+    // official steps only: near alert is Normal
+    const tier = nat.tier === "watch" ? "normal" : nat.tier;
 
     const name = stationDisplayName(resolved.station);
     // No live number in the title: it goes stale in search snippets.
-    const oneGauge = stations.filter((x) => x.basin.trim() === (data.basin || resolved.basin).trim()).length === 1;
+    const oneGauge = stations.filter((x) => x.basin.trim() === (nat.basin || resolved.basin).trim()).length === 1;
     const gm = gaugeMeta(lang, {
       gauge: name,
-      basin: data.basin || resolved.basin || "Sri Lanka",
+      basin: nat.basin || resolved.basin || "Sri Lanka",
       oneGauge,
       ...(level != null
         ? {
             // Feet like the page itself (metre gauges converted); a gauge of unknown unit stays unitless.
-            level: formatLevel(level, unit),
-            status: t(`tier.${status.tier}` as "tier.alert"),
-            alert: markText(data.thresholds.alert),
-            minor: markText(data.thresholds.minor),
-            major: markText(data.thresholds.major),
+            level: formatLevel(level, unit, 1),
+            status: tier === "none" ? "" : t(`tier.${tier}` as "tier.alert"),
+            alert: markText(nat.thresholds.alert),
+            minor: markText(nat.thresholds.minor),
+            major: markText(nat.thresholds.major),
           }
         : {}),
     });
@@ -408,7 +411,8 @@ const GAUGE_SOURCE = {
 function datasetLd(station: string, basin: string, stations: Station[], canonical: string, lang: Locale, modified?: number | null, source?: "arcgis" | "hmis" | "rivernet") {
   const src = GAUGE_SOURCE[source ?? "arcgis"];
   const s = stations.find((x) => x.station === station);
-  const end = new Date();
+  // the window ends at the newest reading, not at render time
+  const end = modified ? new Date(modified) : new Date();
   const start = new Date(end.getTime() - 7 * 86_400_000);
   const day = (d: Date) => d.toISOString().slice(0, 10);
   const name = stationDisplayName(station);

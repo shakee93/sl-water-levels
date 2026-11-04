@@ -18,12 +18,14 @@ export type RiverNames = {
   also: string[];
   /** Romanised Sinhala people type ("kalu gage jala mattama"): meta description of the Sinhala page only. */
   rom: string[];
+  /** A one-word spelling worth ONE mention in the English title and description (Search Console: "kaluganga" 1,300 impressions). */
+  aka: string | null;
 };
 
 /** Basin keys are the TRIMMED `hydrostations.basin` values. Anything missing falls back to deriveRiver(). */
 const RIVER_NAMES: Record<string, Partial<RiverNames>> = {
   "Kelani Ganga": { lead: "Kelani River", alt: "Kelani Ganga", also: ["Kelaniya River", "Kelani Gaga"], rom: ["kelani gange jala mattama", "kalani gage jala mattama"] },
-  "Kalu Ganga": { lead: "Kalu Ganga", alt: "Kalu River", also: ["Kaluganga", "Kuru Ganga"], rom: ["kalu gage jala mattama", "kaluganga jala mattama"] },
+  "Kalu Ganga": { lead: "Kalu Ganga", alt: "Kalu River", aka: "Kaluganga", also: ["Kaluganga", "Kuru Ganga"], rom: ["kalu gage jala mattama", "kaluganga jala mattama"] },
   "Gin Ganga": { lead: "Gin Ganga", alt: "Gin River", also: ["Ging Ganga"], rom: ["gin gage jala mattama"] },
   "Nilwala Ganga": { lead: "Nilwala Ganga", alt: "Nilwala River", also: ["Nilwalaganga"], rom: ["nilwala gage jala mattama"] },
   "Mahaweli Ganga": { lead: "Mahaweli Ganga", alt: "Mahaweli River", also: ["Mahaveli", "Mahawali"], rom: ["mahaweli gange jala mattama"] },
@@ -51,7 +53,7 @@ export function deriveRiver(basin: string): RiverNames {
   const b = basin.trim();
   const alt = /Ganga$/.test(b) ? b.replace(/Ganga$/, "River") : /Oya$/.test(b) ? `${b.replace(/ Oya$/, "")} River` : null;
   const lower = b.toLowerCase().replace(/ganga$/, "gage");
-  return { lead: b, alt, also: [], rom: [`${lower} jala mattama`] };
+  return { lead: b, alt, also: [], rom: [`${lower} jala mattama`], aka: null };
 }
 
 export function riverNames(basin: string): RiverNames {
@@ -66,7 +68,7 @@ export function riverNames(basin: string): RiverNames {
     const k = a.toLowerCase();
     if (!seen.has(k)) { seen.add(k); also.push(a); }
   }
-  return { lead, alt: alt && alt.toLowerCase() !== lead.toLowerCase() ? alt : null, also: also.slice(0, 4), rom: t.rom ?? base.rom };
+  return { lead, alt: alt && alt.toLowerCase() !== lead.toLowerCase() ? alt : null, also: also.slice(0, 4), rom: t.rom ?? base.rom, aka: t.aka ?? null };
 }
 
 const SI_RE = /[඀-෿]/;
@@ -135,6 +137,7 @@ const GAUGE_ALIASES: Record<string, string[]> = {
   "Nagalagam Street": ["Nagalam Street", "Mattakkuliya", "Mill Road"],
   Kithulgala: ["Kitulgala"],
   Ratnapura: ["Rathnapura"],
+  Rathnapura: ["Ratnapura"], // the Irrigation Dept's spelling (the URL slug), in case a raw station name is passed
   Thaldena: ["Thaldena Mahaweli"],
 };
 export const gaugeAliases = (gauge: string): string[] => GAUGE_ALIASES[gauge] ?? [];
@@ -145,3 +148,22 @@ export const byGaugeDemand = (names: string[]): string[] => {
   const rank = (n: string) => { const i = GAUGE_PRIORITY.indexOf(n); return i < 0 ? 99 : i; };
   return names.map((n, i) => ({ n, i })).sort((a, b) => rank(a.n) - rank(b.n) || a.i - b.i).map((x) => x.n);
 };
+
+/**
+ * The gauge whose level a river's search snippet quotes, per river (the one people search by name, Search Console Oct 2026).
+ * Basin keys are trimmed `hydrostations.basin` values; gauge names are display names. A river not listed, or whose gauge is not
+ * reporting, falls back to the most searched reporting gauge (GAUGE_PRIORITY) and then to the first one.
+ */
+const REP_GAUGE: Record<string, string> = {
+  "Kelani Ganga": "Hanwella",
+  "Kalu Ganga": "Ratnapura",
+  "Gin Ganga": "Baddegama",
+  "Mahaweli Ganga": "Peradeniya",
+};
+export function representativeGauge(basin: string, reporting: string[]): string | null {
+  if (!reporting.length) return null;
+  const want = REP_GAUGE[basin.trim()];
+  if (want && reporting.includes(want)) return want;
+  const ranked = byGaugeDemand(reporting);
+  return ranked.find((n) => GAUGE_PRIORITY.includes(n)) ?? reporting[0];
+}

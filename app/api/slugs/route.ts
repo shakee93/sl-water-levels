@@ -14,6 +14,8 @@ export type SlugList = {
   rivers: string[];
   /** "river/gauge" */
   gauges: string[];
+  /** River slug -> its only gauge's slug, for rivers with exactly one gauge (proxy.ts sends /<river> straight to the gauge page). */
+  single: Record<string, string>;
   reservoirs: string[];
   historyRivers: string[];
   /** "river/gauge" */
@@ -27,7 +29,16 @@ export async function GET() {
     getReservoirs().catch(() => null),
     getHistory().catch(() => null),
   ]);
+  // Counted on the same list the river page counts (fetchStations), so the proxy and the page's own redirect agree.
+  const perRiver = new Map<string, string[]>();
+  for (const st of stations) {
+    const r = basinSlug(st.basin);
+    perRiver.set(r, [...(perRiver.get(r) ?? []), stationSlug(st.station)]);
+  }
+  const single: Record<string, string> = {};
+  for (const [r, g] of perRiver) if (g.length === 1) single[r] = g[0];
   const body: SlugList = {
+    single,
     rivers: [...new Set(stations.map((s) => basinSlug(s.basin)))],
     gauges: stations.map((s) => `${basinSlug(s.basin)}/${stationSlug(s.station)}`),
     reservoirs: (rsv?.items ?? []).map((r) => r.slug),

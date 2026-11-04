@@ -22,7 +22,8 @@ const IMAGE = /\/(opengraph|twitter)-image(-[\w]+)?$/;
 // use; towns are static). The list is kept in memory; a miss refetches it (at most once a minute),
 // so a brand-new gauge or reservoir works within a minute. If the list can't be read the page decides, as before.
 const SLUG_RECHECK_MS = 60_000;
-type Slugs = { at: number; rivers: Set<string>; gauges: Set<string>; reservoirs: Set<string>; historyRivers: Set<string>; historyGauges: Set<string> };
+const SLUG_MAX_AGE_MS = 600_000;
+type Slugs = { at: number; rivers: Set<string>; gauges: Set<string>; single: Map<string, string>; reservoirs: Set<string>; historyRivers: Set<string>; historyGauges: Set<string> };
 let slugs: Slugs | null = null;
 let lastAttempt = 0;
 let slugsPending: Promise<Slugs | null> | null = null;
@@ -35,7 +36,7 @@ async function loadSlugs(origin: string): Promise<Slugs | null> {
       const j = (await res.json()) as SlugList;
       // a source that was down gives an empty list: don't judge by it
       if (!j.rivers.length || !j.reservoirs.length || !j.historyRivers.length) return null;
-      return { at: Date.now(), rivers: new Set(j.rivers), gauges: new Set(j.gauges), reservoirs: new Set(j.reservoirs), historyRivers: new Set(j.historyRivers), historyGauges: new Set(j.historyGauges) };
+      return { at: Date.now(), rivers: new Set(j.rivers), gauges: new Set(j.gauges), single: new Map(Object.entries(j.single ?? {})), reservoirs: new Set(j.reservoirs), historyRivers: new Set(j.historyRivers), historyGauges: new Set(j.historyGauges) };
     } catch {
       return null;
     } finally {
@@ -65,6 +66,12 @@ function aliasOf(segs: string[]): string | null {
       return to(["flood"]);
     case "dams": case "dam": case "reservoir":
       return to(["reservoirs"]);
+    // Two spellings of one town: the Irrigation Dept's gauge URL is /kalu-ganga/rathnapura (kept), the town page is /flood/ratnapura (kept).
+    // Only the other spelling is redirected; nothing is renamed. The target is still checked, so a missing page stays a 404.
+    case "kalu-ganga":
+      return rest.length === 1 && rest[0] === "ratnapura" ? "/kalu-ganga/rathnapura" : null;
+    case "flood":
+      return rest.length === 1 && rest[0] === "rathnapura" ? "/flood/ratnapura" : null;
     default:
       return null;
   }
@@ -104,12 +111,29 @@ function judge(segs: string[], s: Slugs | null): Verdict {
 
 async function verdictFor(segs: string[], origin: string): Promise<Verdict> {
   const first = judge(segs, slugs);
-  if (first === "ok") return first;
-  // Not in the list we hold (or no list yet): refresh it, at most once a minute, before saying no / giving up.
   const now = Date.now();
+  if (first === "ok") {
+    // The held list also decides the one-gauge redirect, and a hit never refreshes it: re-read it in the background every
+    // 10 minutes so a river that gains (or loses) a gauge is noticed. Nothing waits for this.
+    if (slugs && now - slugs.at > SLUG_MAX_AGE_MS && now - lastAttempt >= SLUG_RECHECK_MS) {
+      lastAttempt = now;
+      void loadSlugs(origin);
+    }
+    return first;
+  }
+  // Not in the list we hold (or no list yet): refresh it, at most once a minute, before saying no / giving up.
   if (now - lastAttempt < SLUG_RECHECK_MS) return first;
   lastAttempt = now;
   return judge(segs, await loadSlugs(origin));
+}
+
+/** The gauge a one-segment /<river> path belongs to when that river has exactly one gauge (its page has nothing to list). */
+function onlyGauge(segs: string[]): string | null {
+  if (segs.length !== 1) return null;
+  const [a] = segs;
+  if (SINGLE.has(a) || a === "lab") return null; // site pages, not rivers
+  const g = slugs?.single.get(a);
+  return g ? `/${a}/${g}` : null;
 }
 
 const lowerKeepingEscapes = (p: string) => p.replace(/%[0-9A-Fa-f]{2}|[A-Z]+/g, (x) => (x[0] === "%" ? x : x.toLowerCase()));
@@ -138,9 +162,12 @@ export async function proxy(req: NextRequest) {
       to.pathname = `/${lang}/page-not-found`;
       return NextResponse.rewrite(to, { status: 404 });
     }
-    if (alias || hadUpper) {
+    // A river with one gauge: a real 308 to its gauge page. The river page used to answer 200 and redirect in JavaScript
+    // (permanentRedirect inside a streamed page), so Google indexed both addresses. The page keeps that redirect as a fallback.
+    const only = isImage || v !== "ok" ? null : onlyGauge(target);
+    if (only || alias || hadUpper) {
       const to = url.clone();
-      const dest = alias ?? lowered;
+      const dest = only ?? alias ?? lowered;
       to.pathname = localePath(lang, dest === "" ? "/" : dest);
       return NextResponse.redirect(to, 308); // query string is kept by clone()
     }

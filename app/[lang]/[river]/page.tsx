@@ -6,7 +6,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { AlertTriangle, ChevronRight, Clock, TriangleAlert } from "lucide-react";
-import { fetchBasinSnapshot, fetchStations, type Station, type Tier } from "@/lib/arcgis";
+import { fetchBasinSnapshot, fetchStations, type Station } from "@/lib/arcgis";
 import { getOfficialWarnings, warningsForBasin } from "@/lib/warnings";
 import { stationDisplayName } from "@/lib/displayName";
 import { orderStations } from "@/lib/basinOrder";
@@ -32,31 +32,13 @@ import { breadcrumbLd, webPageLd } from "@/lib/seo";
 import { isLocale, pageAlternates, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
 import { riverName } from "@/lib/i18n/format";
-import { riverMeta, ogBase, ogImages } from "@/lib/seoMeta";
-import type { TFn } from "@/lib/i18n/translate";
+import { riverFacts, riverMeta, ogBase, ogImages } from "@/lib/seoMeta";
 
 const nowMs = () => Date.now();
 
 import { SITE } from "@/lib/seo";
 import { ShareControl } from "@/app/StoryShare";
 import { STEADY_M_PER_H } from "@/lib/forecastRules.mjs";
-
-const TIER_RANK: Record<Tier, number> = {
-  major: 6, minor: 5, alert: 4, watch: 3, normal: 2, none: 1, stale: 0,
-};
-
-/** Worst current tier across a basin's gauges, as a short phrase; null if unknown. */
-async function worstStatus(basin: string, t: TFn): Promise<string | null> {
-  try {
-    const snap = await fetchBasinSnapshot(basin);
-    if (!snap.length) return null;
-    const worst = snap.reduce((a, b) => (TIER_RANK[b.tier] > TIER_RANK[a.tier] ? b : a));
-    // near alert is Normal: official steps only
-    return t(`phrase.${worst.tier === "watch" ? "normal" : worst.tier}` as "phrase.alert");
-  } catch {
-    return null;
-  }
-}
 
 /** How many reporting gauges are rising, falling or steady over the last 3 hours (same threshold as the arrows). */
 function trendCounts(list: { rate3hM: number | null }[]) {
@@ -86,8 +68,6 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang, river } = await params;
   if (!isLocale(lang)) return {};
-  const { t } = getI18n(lang);
-
   let stations: Station[] = [];
   try {
     stations = await fetchStations();
@@ -102,8 +82,14 @@ export async function generateMetadata({
     stations.filter((s) => s.basin === basin),
   );
   const names = onBasin.map((s) => stationDisplayName(s.station));
-  const worst = await worstStatus(basin, t);
-  const { title, description } = riverMeta(lang, basin, { gauges: names, now: worst ? t("river.metaNow", { phrase: worst }) : "" });
+  // The same cached gauge snapshot the page body reads (fetchBasinSnapshot -> getNational), so the snippet and the page agree.
+  let snap: Awaited<ReturnType<typeof fetchBasinSnapshot>> = [];
+  try {
+    snap = await fetchBasinSnapshot(basin);
+  } catch {
+    snap = [];
+  }
+  const { title, description } = riverMeta(lang, basin, { gauges: names, facts: riverFacts(lang, basin, snap) });
   const alternates = pageAlternates(lang, `/${river}`);
 
   return {
@@ -338,7 +324,7 @@ export default async function BasinPage({
               lang={lang}
               basin={basin}
               build={(m) =>
-                riverFaq(lang, basin, answer, names, snap.filter((s) => s.tier !== "stale").map((s) => ({ station: s.station, nh: m?.[s.station] ?? null })), trendCounts(reporting))
+                riverFaq(lang, basin, answer, names, snap.filter((s) => s.tier !== "stale").map((s) => ({ station: s.station, nh: m?.[s.station] ?? null })), trendCounts(reporting), snap)
               }
               note={mt}
             />
