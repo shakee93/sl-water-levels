@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-03T23:43:40.481Z",
-  "asOf": "2026-11-04",
+  "updatedAt": "2026-11-04T18:50:56.378Z",
+  "asOf": "2026-11-05",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 123,
-    "people": 119,
+    "answers": 124,
+    "people": 120,
     "streetReports": 12,
-    "days": 9
+    "days": 10
   },
   "stations": {
     "Badalgama": {
@@ -46,19 +46,17 @@
         "days": 1,
         "yes": 1,
         "worse": 0,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.47
+        "better": 0
       }
     },
     "Hanwella": {
       "answers": {
-        "n": 39,
-        "days": 5,
+        "n": 40,
+        "days": 6,
         "yes": 24,
         "worse": 7,
         "better": 1,
-        "unsure": 7
+        "unsure": 8
       },
       "seen": {
         "n": 6,
@@ -81,8 +79,8 @@
         "yes": 8,
         "worse": 2,
         "better": 1,
-        "errN": 11,
-        "meanErrFt": -0.03
+        "errN": 6,
+        "meanErrFt": -0.06
       }
     },
     "Holombuwa": {
@@ -130,8 +128,8 @@
         "yes": 6,
         "worse": 4,
         "better": 2,
-        "errN": 9,
-        "meanErrFt": 0.12
+        "errN": 5,
+        "meanErrFt": 0.18
       },
       "falling": {
         "n": 10,
@@ -139,12 +137,12 @@
         "yes": 4,
         "worse": 5,
         "better": 1,
-        "errN": 10,
-        "meanErrFt": -0.1
+        "errN": 7,
+        "meanErrFt": -0.07
       },
       "streetLevel": {
         "ft": 3,
-        "n": 5,
+        "n": 4,
         "days": 3,
         "defaultFt": 5,
         "clamped": true,
@@ -188,9 +186,7 @@
         "days": 2,
         "yes": 7,
         "worse": 0,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.04
+        "better": 0
       },
       "falling": {
         "n": 1,
@@ -272,9 +268,7 @@
         "days": 1,
         "yes": 2,
         "worse": 0,
-        "better": 0,
-        "errN": 2,
-        "meanErrFt": -0.1
+        "better": 0
       }
     },
     "Giriulla": {
@@ -328,9 +322,7 @@
         "days": 1,
         "yes": 0,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -1.25
+        "better": 0
       }
     },
     "Panadugama": {
@@ -356,9 +348,7 @@
         "days": 1,
         "yes": 0,
         "worse": 1,
-        "better": 1,
-        "errN": 2,
-        "meanErrFt": 0
+        "better": 1
       }
     },
     "Glencourse": {
@@ -376,8 +366,8 @@
         "yes": 0,
         "worse": 2,
         "better": 1,
-        "errN": 2,
-        "meanErrFt": 0.32
+        "errN": 1,
+        "meanErrFt": -0.14
       }
     },
     "Kalawellawa (Millakanda)": {
@@ -556,37 +546,37 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-10-26",
+      "from": "2026-10-27",
       "to": "2026-11-04",
-      "points": 15775
+      "points": 15710
     },
     "horizons": {
       "1": {
-        "n": 4699,
-        "maeBase": 0.13,
-        "maeFit": 0.13,
+        "n": 4559,
+        "maeBase": 0.14,
+        "maeFit": 0.14,
         "gainPct": 0,
-        "maePooled": 0.13,
+        "maePooled": 0.14,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 4649,
-        "maeBase": 0.31,
-        "maeFit": 0.31,
+        "n": 5186,
+        "maeBase": 0.32,
+        "maeFit": 0.32,
         "gainPct": 0,
-        "maePooled": 0.32,
+        "maePooled": 0.33,
         "pooledGainPct": -2
       },
       "6": {
-        "n": 5257,
-        "maeBase": 0.54,
-        "maeFit": 0.53,
-        "gainPct": 1,
-        "maePooled": 0.54,
-        "pooledGainPct": 0
+        "n": 5103,
+        "maeBase": 0.55,
+        "maeFit": 0.55,
+        "gainPct": 0,
+        "maePooled": 0.56,
+        "pooledGainPct": -1
       }
     },
-    "gaugesPassingOwnTest": 5,
+    "gaugesPassingOwnTest": 2,
     "useful": false,
     "wired": false
   }
