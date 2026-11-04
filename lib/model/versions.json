@@ -46,7 +46,7 @@
     {
       "id": "measured-wins",
       "name": "Next hour follows what was measured",
-      "from": "2026-11-04T10:00:00Z",
+      "from": "2026-11-04T07:30:00Z",
       "what": "When the forecast points the other way from the river's last 3 hours (for example it fell but the model expects a turn up), the \"Next hour\" word now follows what was measured and a short note says what the forecast expects."
     }
   ]
