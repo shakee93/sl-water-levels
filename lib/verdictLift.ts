@@ -131,6 +131,8 @@ export function liftVerdict(i: LiftInput): LiftResult {
 
 /** "about 4 in 10": a probability as words (never a percentage on the main card). */
 export function chanceWords(p: number): { en: string; si: string; ta: string } {
-  const n = Math.min(10, Math.max(1, Math.floor(p * 10 + 1e-9))); // rounded down: never overstate
+  // under 1 in 10 is said as such: the old floor of 1 turned a 2% chance into "about 1 in 10" (4 Nov 2026 sweep). Si / ta: DRAFT.
+  if (p < 0.1 - 1e-9) return { en: "under 1 in 10", si: "10 න් 1කට අඩු", ta: "10 இல் 1 க்கும் குறைவு" };
+  const n = Math.min(10, Math.floor(p * 10 + 1e-9)); // rounded down: never overstate
   return { en: `about ${n} in 10`, si: `10 න් ${n}ක් පමණ`, ta: `10 இல் சுமார் ${n}` };
 }

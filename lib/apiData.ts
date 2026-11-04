@@ -20,6 +20,9 @@ export function levelRecord(s: NationalStation, now = Date.now()) {
   const st = statusFor(lvl, s.thresholds, s.latest?.ts, now);
   const rate = s.rate3hM;
   // a rise on a tidal gauge that is only the tide (level vs one tide cycle ago) is not "rising": X posts and answers read this field
+  // A zero with no known unit (Ampara's stuck 0.00) or a negative level (Weraganthota, Katharagama: datum faults) is not a reading to trust:
+  // "null means unknown, never zero", so the level, trend and change are null and a note says why. The official step is unchanged.
+  const unreliable = lvl != null && (lvl < 0 || (lvl === 0 && u == null));
   const tideOnly = rate != null && rate >= STEADY_M_PER_H && isTidalStation(s.station) && !riverRising(s.station, s.trend24h, s.metresPerUnit, rate);
   const trend = rate == null ? null : tideOnly || Math.abs(rate) < STEADY_M_PER_H ? "steady" : rate < 0 ? "falling" : rate < 0.05 ? "rising slowly" : "rising";
   return {
@@ -28,15 +31,15 @@ export function levelRecord(s: NationalStation, now = Date.now()) {
     river: s.basin.trim(),
     latitude: s.latitude,
     longitude: s.longitude,
-    level: shown(lvl),
+    level: unreliable && lvl === 0 ? null : shown(lvl),
     unit: u ? "ft" : null,
     published: { level: lvl, unit: u ?? "unknown" },
     marks: { alert: shown(s.thresholds.alert), minor: shown(s.thresholds.minor), major: shown(s.thresholds.major) },
     status: st.tier,
     statusLabel: st.label,
-    statusNote: st.note ?? null,
-    trend,
-    changePerHour3h: rate == null ? null : r2(rate / FT_IN_M),
+    statusNote: unreliable ? "This gauge's reading looks unreliable (a zero or negative level): do not use it as a river level." : st.note ?? null,
+    trend: unreliable && lvl === 0 ? null : trend,
+    changePerHour3h: rate == null || (unreliable && lvl === 0) ? null : r2(rate / FT_IN_M),
     observedAt: s.latest ? new Date(s.latest.ts).toISOString() : null,
     ageMinutes: s.ageMin,
     url: SITE + s.href,

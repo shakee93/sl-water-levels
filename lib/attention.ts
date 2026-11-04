@@ -56,6 +56,8 @@ export type StationAttention = {
   tier: AttentionTier;
   level: number;
   thresholds: Thresholds;
+  /** The gauge's own unit (NationalStation.unit): the card prints it so a level never shows as a bare number. null = unknown. */
+  unit: NationalStation["unit"];
   /** level / alert. Used for ordering within a tier. */
   ratio: number;
   /** Signed distance to the nearest meaningful threshold, and which one. */
@@ -97,6 +99,7 @@ function toAttention(s: NationalStation, tier: AttentionTier): StationAttention 
     tier,
     level,
     thresholds: s.thresholds,
+    unit: s.unit,
     ratio: level / alert,
     gap: thresholdGap(level, s.thresholds),
     ratePerHour: s.rate3h,

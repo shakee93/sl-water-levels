@@ -65,7 +65,7 @@ const gaugeIn = (s: NationalStation | undefined, place: Place, holdWatch = false
 
 const SEV_RANK: WarningIn["severity"][] = ["none", "advisory", "alert", "minor flood", "major flood", "evacuation"];
 
-function forecastIn(f: Forecast, mpu: number): ForecastIn {
+function forecastIn(f: Forecast, mpu: number, st: NationalStation): ForecastIn {
   const at = (h: number) => f.horizons.find((x) => x.h === h)?.level ?? null;
   const highs = f.horizons.map((x) => x.high ?? x.level);
   return {
@@ -75,6 +75,7 @@ function forecastIn(f: Forecast, mpu: number): ForecastIn {
     maxLevel: highs.length ? Math.max(...highs) : null,
     currentLevel: f.currentLevel,
     metresPerUnit: mpu,
+    method: f.method, source: st.source ?? null, rate1hM: st.rate1hM ?? null,
     crossings: f.crossings.map((c) => ({ threshold: c.threshold, wording: c.wording, etaTs: c.etaTs, level: c.level, probability: c.probability })),
     horizons: f.horizons.map((x) => ({ h: x.h, level: x.level })),
   };
@@ -161,7 +162,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
     drainage: place.drainage,
     primary,
     secondary,
-    forecast: forecast && effStation ? forecastIn(forecast, effStation.metresPerUnit) : null,
+    forecast: forecast && effStation ? forecastIn(forecast, effStation.metresPerUnit, effStation) : null,
     rain: rainR.ok
       ? {
           past6hMm: rainR.data.past6hMm, past24hMm: rainR.data.past24hMm,

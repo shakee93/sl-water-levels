@@ -53,7 +53,9 @@ function hoursPhrase(n: number): T3 {
 // Render time for the live age label (outside the component so render stays pure).
 const renderedAt = () => Date.now();
 
-export function forecastFact(f: ForecastT, tier: string, now: number): { fact: T3 | null; target: number; likely?: boolean } {
+export function forecastFact(f: ForecastT, tier: string, readingNow: number): { fact: T3 | null; target: number; likely?: boolean } {
+  // "in N hours" counts from NOW, not from the reading time: a reading 70 minutes old said "~2 hours" for a crossing 50 minutes away (4 Nov 2026 sweep)
+  const now = Math.max(readingNow, Date.now());
   const c = f.crossings
     .filter((x) => x.wording === "likely" || x.wording === "possible")
     .sort((a, b) => (a.etaTs ?? Infinity) - (b.etaTs ?? Infinity))[0];

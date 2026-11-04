@@ -83,7 +83,13 @@ export function hourReason(o: {
   const num = ft != null && ft >= 0.05 && sameWay ? `${ft.toFixed(ft < 0.1 ? 2 : 1)} ft` : null;
   const up = o.upstreamPerH ?? null;
   let lead: T3;
-  if (kind === "steady") lead = { en: "Little change in the last 3 hours", si: "පසුගිය පැය 3 තුළ වෙනසක් අල්පයි", ta: "கடந்த 3 மணி நேரத்தில் சிறிய மாற்றம்" };
+  if (kind === "steady" && ft != null && ft >= 0.1) {
+    // the next hour is expected to hold, but the gauge did move: say so instead of "Little change" (4 Nov 2026 sweep)
+    const fell = d! < 0;
+    lead = fell
+      ? { en: `Expected to hold; it fell ${ft.toFixed(1)} ft in the last 3 hours`, si: `තත්ත්වය එසේම පවතිනු ඇත; පසුගිය පැය 3 තුළ ${ft.toFixed(1)} ft කින් පහත වැටී ඇත`, ta: `அப்படியே இருக்கும்; கடந்த 3 மணி நேரத்தில் ${ft.toFixed(1)} ft குறைந்தது` }
+      : { en: `Expected to hold; it rose ${ft.toFixed(1)} ft in the last 3 hours`, si: `තත්ත්වය එසේම පවතිනු ඇත; පසුගිය පැය 3 තුළ ${ft.toFixed(1)} ft කින් ඉහළ ගොස් ඇත`, ta: `அப்படியே இருக்கும்; கடந்த 3 மணி நேரத்தில் ${ft.toFixed(1)} ft உயர்ந்தது` };
+  } else if (kind === "steady") lead = { en: "Little change in the last 3 hours", si: "පසුගිය පැය 3 තුළ වෙනසක් අල්පයි", ta: "கடந்த 3 மணி நேரத்தில் சிறிய மாற்றம்" };
   else if (!sameWay) return null;
   else if (kind === "rising")
     lead = num

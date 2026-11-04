@@ -2,6 +2,8 @@ import type { BasinStation } from "./arcgis";
 import { orderStations, isRn } from "./basinOrder";
 import { formatDelta } from "./units";
 import { isStale, rainTotal, rate } from "./readings";
+import { cleanReadings } from "./readingQc.mjs";
+import { isFalling3h } from "./forecastRules.mjs";
 
 export type AnomalyDetection = {
   status: "normal" | "possible_release" | "likely_release";
@@ -62,7 +64,11 @@ export function detectAnomaly(
     message: null,
   };
   if (snapshot.length === 0) return empty;
-  const ordered = orderStations(basin, snapshot.filter((s) => s.station === selectedStation || (!isRn(snapshot, selectedStation) && s.source !== "hmis" && s.source !== "rivernet")));
+  // A one- or two-reading sensor spike must not read as a release (Rathnapura 4 Nov: "+1.3 ft/h" under a Falling tile): same glitch filter as the forecast inputs.
+  const ordered = orderStations(basin, snapshot.filter((s) => s.station === selectedStation || (!isRn(snapshot, selectedStation) && s.source !== "hmis" && s.source !== "rivernet"))).map((s) => {
+    const c = cleanReadings(s.trend24h, { unit: s.unit });
+    return c.flags.length ? { ...s, trend24h: c.readings } : s;
+  });
   const myIdx = ordered.findIndex((s) => s.station === selectedStation);
   if (myIdx < 0) return empty;
   const me = ordered[myIdx];
@@ -82,6 +88,8 @@ export function detectAnomaly(
   if (!me.latest || isStale(me.latest)) return base;
   const observedM = rate(me.trend24h, { hours: RATE_WINDOW_H, anchor: me.latest.ts });
   if (observedM == null) return base;
+  // The page's own 3 h reading says the river is falling: a rise banner would contradict the Next hour tile and the headline.
+  if (isFalling3h(me.rate3hM)) return base;
   const observedMetres = observedM * mpu;
   const observed = observedM; // station units
 

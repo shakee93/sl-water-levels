@@ -205,6 +205,11 @@ assert.equal(assessTown(base({ drainage: "upland", primary: g({ tier: "normal" }
   assert.equal(assessTown(base({ forecast: fc({ h1Level: 2.4 }) })).hourKey, "dir.tide");
   assert.equal(assessTown(base({ forecast: fc({ h1Level: 2.01 }) })).hourKey, "dir.steady");
   assert.equal(assessTown(base({ forecast: fc({ h1Level: 1.7 }) })).hourKey, "dir.falling");
+  // no fitted model (method "trend"): the town reads the measured 3 h rate like the gauge page, so "level stays" never says Steady under a rising/falling river
+  const H = (o = {}) => g({ station: "Hanwella", ...o });
+  assert.equal(assessTown(base({ primary: H({ rate3hM: 0.04 }), forecast: fc({ h1Level: 2, method: "trend", source: "arcgis" }) })).hourKey, "dir.slow");
+  assert.equal(assessTown(base({ primary: H({ rate3hM: -0.05 }), forecast: fc({ h1Level: 2, method: "trend", source: "arcgis" }) })).hourKey, "dir.falling");
+  assert.equal(assessTown(base({ primary: H({ rate3hM: -0.05 }), forecast: fc({ h1Level: 2, method: "model", source: "arcgis" }) })).hourKey, "dir.steady", "a fitted model keeps its own figure");
 }
 
 // -- releases

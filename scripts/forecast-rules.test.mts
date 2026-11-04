@@ -103,7 +103,9 @@ assert.deepEqual(offenders, [], "private copies of the steady threshold: " + off
 // the card tile and the sentence agree on a RiverNet / HMIS gauge: with no model the tile reads the measured 3 h rate
 assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "rivernet", method: "trend" }), -0.02);
 assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "hmis", method: "trend" }), -0.02);
-assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "arcgis", method: "trend" }), 0, "an ArcGIS gauge keeps its own next-hour figure");
+assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "arcgis", method: "trend" }), -0.02, "an ArcGIS gauge with no fitted model reads the measured 3 h rate too (tile = sentence)");
+assert.equal(nextHourRateM({ h1ChangeM: 0, rate3hM: -0.02, source: "arcgis", method: "trend", measuredForAll: false }), 0, "the KPI scorer keeps the old figure for runs before the change");
+assert.equal(nextHourRateM({ h1ChangeM: 0.02, rate3hM: -0.02, source: "arcgis", method: "model" }), 0.02, "a fitted model keeps its own 1 h change");
 assert.equal(nextHourRateM({ h1ChangeM: -0.01, rate3hM: 0.05, source: "rivernet", method: "model" }), -0.01);
 assert.equal(nextHourRateM({ h1ChangeM: null, rate3hM: 0.03, source: "arcgis", method: "none" }), 0.03);
 
@@ -229,3 +231,18 @@ console.log("forecast-rules tests passed");
   for (const l of ["si", "ta"]) assert.ok(minorFact({ f: F({ wording: "possible", probability: 0.3 }), tier: "normal", fact: calm })[l].includes("3"));
   console.log("minor-line tests passed");
 }
+
+// ---- Next hour reason line: "Little change" only when the gauge really did not move (4 Nov 2026 sweep)
+{
+  const { hourReason } = await import("../app/verdict.ts");
+  const base = { unit: "ft" as const, heavyRain: null };
+  assert.equal(hourReason({ ...base, kind: "steady", delta3hM: 0.003 })!.en, "Little change in the last 3 hours");
+  assert.equal(hourReason({ ...base, kind: "steady", delta3hM: -0.3048 })!.en, "Expected to hold; it fell 1.0 ft in the last 3 hours");
+  assert.equal(hourReason({ ...base, kind: "steady", delta3hM: 0.1524 })!.en, "Expected to hold; it rose 0.5 ft in the last 3 hours");
+  assert.equal(hourReason({ ...base, kind: "steady", delta3hM: null })!.en, "Little change in the last 3 hours", "no 3 h figure: nothing to contradict");
+}
+
+// ---- "about 1 in 10" is not a floor for a smaller chance
+assert.equal(chanceWords(0.02).en, "under 1 in 10");
+assert.equal(chanceWords(0.1).en, "about 1 in 10");
+console.log("direction-consistency tests passed");

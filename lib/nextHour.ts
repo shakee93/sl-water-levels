@@ -10,7 +10,8 @@ import { fetchBasinSnapshot, getNational } from "./arcgis";
 import { loadForecast, type Forecast } from "./forecast";
 import { rainRiskLine, type RainRisk } from "./rainRisk";
 import { FT_IN_M, toShown, type Unit } from "./units";
-import { STEADY_M_PER_H } from "./forecastRules.mjs";
+import { STEADY_M_PER_H, nextHourRateM } from "./forecastRules.mjs";
+import { isTidalStation, riverRising } from "./verdictLift";
 
 const SLOW_M_PER_H = 0.05;
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -24,7 +25,7 @@ export type NextHour = {
   /** Expected change over the hour, feet. */
   change_ft: number;
   direction: "rising" | "falling" | "steady";
-  /** True when the rise is gentle (under about 0.16 ft an hour). */
+  /** True only for a gentle RISE (rising, under about 0.16 ft an hour): the page says "Rising slowly". False for steady and falling. */
   slow: boolean;
   /** "may reach alert level" etc., only when the range reaches a flood mark within the hour; else null. */
   crossing: string | null;
@@ -55,14 +56,23 @@ export type NextHour = {
 
 const MARK: Record<string, string> = { alert: "alert level", minor: "minor flood level", major: "major flood level" };
 
+/** What the gauge measured, so `direction` is the same word as the page's Next hour tile (nextHourRateM): optional, a missing field falls back to the forecast alone. */
+export type NextHourReading = { rate1hM?: number | null; rate3hM?: number | null; source?: string | null; trend24h?: Parameters<typeof riverRising>[1]; metresPerUnit?: number };
+
 /** The 1 h point of a forecast in feet, or null when there is none (stale gauge, unknown unit, no forecast). */
-export function nextHourOf(f: Forecast): NextHour | null {
+export function nextHourOf(f: Forecast, me?: NextHourReading): NextHour | null {
   const h1 = f.horizons.find((h) => h.h === 1);
   const unit: Unit = f.unit;
   if (!h1 || f.currentLevel == null || f.asOfTs == null || f.status === "unavailable" || f.method === "none" || unit == null) return null;
   const mpu = unit === "m" ? 1 : FT_IN_M;
   const dM = (h1.level - f.currentLevel) * mpu;
-  const direction = Math.abs(dM) < STEADY_M_PER_H ? "steady" : dM < 0 ? "falling" : "rising";
+  // The tile's rule: the model's 1 h change, but the measured 3 h rate for a gauge with no fitted model and the last-hour rise override.
+  const tidal = isTidalStation(f.station);
+  const rate3hM = me?.rate3hM ?? (f.signals.localRatePerH != null && Number.isFinite(f.signals.localRatePerH) ? f.signals.localRatePerH * mpu : null);
+  const rM = nextHourRateM({ h1ChangeM: dM, rate3hM, source: me?.source, method: f.method, rate1hM: me?.rate1hM ?? null, tidal }) ?? dM;
+  // a rise on a tidal gauge that is only the tide is not a rising river (the page says "Tide rising"; the API says steady, like `trend`)
+  const tideOnly = tidal && rM > STEADY_M_PER_H && me?.trend24h != null && !riverRising(f.station, me.trend24h, me.metresPerUnit ?? mpu, rate3hM);
+  const direction = tideOnly || Math.abs(rM) < STEADY_M_PER_H ? "steady" : rM < 0 ? "falling" : "rising";
   const hi = h1.high ?? h1.level;
   let crossing: string | null = null;
   for (const c of [...f.crossings].sort((a, b) => a.level - b.level)) {
@@ -78,7 +88,7 @@ export function nextHourOf(f: Forecast): NextHour | null {
     high_ft: h1.high == null ? null : r2(toShown(h1.high, unit)),
     change_ft: r2(toShown(h1.level - f.currentLevel, unit)),
     direction,
-    slow: direction === "steady" || Math.abs(dM) < SLOW_M_PER_H,
+    slow: direction === "rising" && Math.abs(rM) < SLOW_M_PER_H,
     crossing,
     issuedAt: new Date(f.asOfTs).toISOString(),
     method: f.method,
@@ -105,7 +115,7 @@ const cachedBasin = unstable_cache(
     await Promise.all(
       snap.map(async (s) => {
         try {
-          out[s.station] = s.latest ? nextHourOf(await loadForecast(basin, snap, s.station)) : null;
+          out[s.station] = s.latest ? nextHourOf(await loadForecast(basin, snap, s.station), s) : null;
         } catch {
           out[s.station] = null;
         }
@@ -113,7 +123,7 @@ const cachedBasin = unstable_cache(
     );
     return out;
   },
-  ["next-hour-basin-v2"],
+  ["next-hour-basin-v3"],
   { revalidate: 300 },
 );
 

@@ -393,10 +393,11 @@ export function measuredAt(snapshot: Pick<BasinStation, "station" | "trend24h">[
 }
 
 /** Why this gauge has no fitted model, in words that name what is missing (never a vague "inputs missing"). */
-function noModelReason(station: string, hasGrid: boolean): string {
+function noModelReason(station: string, hasGrid: boolean, hasMarks = false): string {
   const measured = UNFITTED[station];
   if (measured) return measured;
-  if (!hasGrid) return "this gauge has no published flood levels or catchment rain grid, so no model was fitted";
+  // "no published flood levels" is only true for a gauge with no marks; Alert-status gauges have them (4 Nov 2026 sweep)
+  if (!hasGrid) return hasMarks ? "this gauge has no catchment rain grid, so no model was fitted" : "this gauge has no published flood levels or catchment rain grid, so no model was fitted";
   return "no model has been fitted for this gauge yet";
 }
 
@@ -415,17 +416,23 @@ function fromTrend(station: string, me: BasinStation, t: TrendResult, L0: number
   // like the Next hour tile (nextHourRateM). Before, these gauges said "Steady" while visibly falling (Denawaka Ganga, 4 Nov: -0.08 ft/h).
   const rate3h = t.localRatePerH != null && Number.isFinite(t.localRatePerH) ? t.localRatePerH : null; // gauge unit per hour
   const rate3hM = rate3h == null ? null : rate3h * mpu;
-  const dir: Forecast["direction"] = step
-    ? (step.delta > steadyBand ? "rising" : step.delta < -steadyBand ? "falling" : "steady")
-    : rate3hM == null || Math.abs(rate3hM) < STEADY_M_PER_H ? "steady" : rate3hM > 0 ? "rising" : "falling";
+  // The measured 3 h change decides the word whenever there is one (the Next hour tile does the same, nextHourRateM); the gauge-only model's
+  // own step is used only when there is no measured rate. Neither: "unknown", never "Steady" (no data is not a steady river).
+  const dir: Forecast["direction"] = rate3hM != null
+    ? (Math.abs(rate3hM) < STEADY_M_PER_H ? "steady" : rate3hM > 0 ? "rising" : "falling")
+    : step
+      ? (step.delta > steadyBand ? "rising" : step.delta < -steadyBand ? "falling" : "steady")
+      : "unknown";
   const word = dir === "rising" ? "Rising" : dir === "falling" ? "Falling" : dir === "steady" ? "Steady" : "Unclear";
   const w = weather && weather.ok ? weather.data : null;
   const rain: Forecast["rain"] = w ? { cells: w.cells.det, past6hMm: w.past6hMm, past24hMm: w.past24hMm, next24hMm: w.next24hMm } : null;
   const grid = weather !== undefined && weather !== null;
-  const reason = noModelReason(station, grid);
-  const headline = step || dir === "steady" || rate3h == null
-    ? `${word}: expected to be about ${formatLevel(pred, me.unit)} an hour from now.`
-    : `${word}: about ${formatLevel(L0, me.unit)} now, ${dir === "rising" ? "up" : "down"} about ${formatLevel(Math.abs(rate3h), me.unit)} an hour over the last 3 hours.`; // the level, not the change ("about 16.7 ft in an hour" read as a 16.7 ft rise)
+  const reason = noModelReason(station, grid, me.thresholds.alert != null || me.thresholds.minor != null || me.thresholds.major != null);
+  const headline = dir === "unknown"
+    ? "Unclear: there are not enough recent readings to say which way the river is going."
+    : dir === "steady" || rate3h == null
+      ? `${word}: expected to be about ${formatLevel(pred, me.unit)} an hour from now.`
+      : `${word}: about ${formatLevel(L0, me.unit)} now, ${dir === "rising" ? "up" : "down"} about ${formatDelta(Math.abs(rate3h), me.unit)} an hour over the last 3 hours.`; // the level, not the change ("about 16.7 ft in an hour" read as a 16.7 ft rise); formatDelta keeps 0.05 from printing as 0.0
   const infl = GM_WIDEN * (step && step.missing.length ? 1.3 : 1); // an upstream gauge that is not reporting widens the range
   const low = step ? pred + step.q10 * infl : null;
   const high = step ? pred + step.q90 * infl : null;

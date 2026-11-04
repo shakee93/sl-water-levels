@@ -224,10 +224,13 @@ async function liveChart(
 function riverSummary(list: NationalStation[], c: Ctx): string {
   const live = list.filter((s) => s.tier !== "stale");
   if (!live.length) return c.e("w.noneReporting");
-  const above = live.filter((s) => ["alert", "minor", "major"].includes(s.tier));
-  if (!above.length) return c.e("w.allNormal", { n: live.length });
+  // Only gauges with published flood levels can be "at Normal": a Level-only gauge (tier none) says nothing about the step
+  const rated = live.filter((s) => ["normal", "watch", "alert", "minor", "major"].includes(s.tier));
+  if (!rated.length) return c.e("w.noMarksRiver");
+  const above = rated.filter((s) => ["alert", "minor", "major"].includes(s.tier));
+  if (!above.length) return rated.length === 1 ? c.e("w.allNormal1") : c.e("w.allNormal", { n: rated.length });
   const worst = above.reduce((a, b) => (TIER_ORDER[b.tier] > TIER_ORDER[a.tier] ? b : a));
-  return `${c.e("w.someAbove", { n: above.length, m: live.length })} ${c.e("w.worst", { step: c.t(`tier.${worst.tier}` as "tier.alert") })}`;
+  return `${c.e("w.someAbove", { n: above.length, m: rated.length })} ${c.e("w.worst", { step: c.t(`tier.${worst.tier}` as "tier.alert") })}`;
 }
 
 async function nhFor(basins: string[]) {

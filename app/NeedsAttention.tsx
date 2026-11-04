@@ -167,7 +167,7 @@ function BasinCard({
   rain: ReturnType<typeof heavyMeasuredOnRiver>;
 }) {
   const style = TIER_STYLE[b.tier];
-  const unit: Unit = detectUnit(b.lead.thresholds);
+  const unit: Unit = b.lead.unit ?? detectUnit(b.lead.thresholds);
   const others = b.stations.slice(1);
   // One flagged gauge: skip the basin page and go straight to that station.
   const single = b.stations.length === 1;

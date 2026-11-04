@@ -62,7 +62,7 @@ import type { Tier } from "./status";
 import { isTidalStation, liftVerdict } from "./verdictLift.ts";
 import type { Unit } from "./units";
 // @ts-ignore node strip-types needs explicit extensions
-import { hasNoForecast, fallingOutlook, STEADY_M_PER_H } from "./forecastRules.mjs";
+import { hasNoForecast, fallingOutlook, nextHourRateM, STEADY_M_PER_H } from "./forecastRules.mjs";
 // @ts-ignore node strip-types needs explicit extensions
 import { officialReleaseAlert } from "./releaseAlert.ts";
 
@@ -143,6 +143,10 @@ export type ForecastIn = {
   currentLevel: number | null;
   /** Metres per gauge unit, to turn the 1 h change into metres. */
   metresPerUnit: number;
+  /** How the forecast was made ("model" | "trend" | "none") and the gauge's source / last-hour rise (metres), so the town says the same Next hour word as the gauge page (nextHourRateM). Missing = the 1 h change alone. */
+  method?: string | null;
+  source?: string | null;
+  rate1hM?: number | null;
   crossings: { threshold: "alert" | "minor" | "major"; wording: "likely" | "possible" | "unlikely" | "already"; etaTs: number | null; level?: number; probability?: number }[];
   /** Central forecast levels by hours ahead (not the band): the "close to the mark" test of lib/verdictLift.ts. */
   horizons?: { h: number; level: number }[];
@@ -506,8 +510,12 @@ export function assessTown(input: TownRiskInput, rawMyLevel: number | null = nul
 
   // ---- next hour / next 24 hours
   let hourM: number | null = null;
-  if (gauge && forecast && forecast.h1Level != null && forecast.currentLevel != null) hourM = (forecast.h1Level - forecast.currentLevel) * forecast.metresPerUnit;
-  else if (rate != null) hourM = rate;
+  if (gauge && forecast && forecast.h1Level != null && forecast.currentLevel != null) {
+    hourM = nextHourRateM({
+      h1ChangeM: (forecast.h1Level - forecast.currentLevel) * forecast.metresPerUnit, rate3hM: rate, source: forecast.source, method: forecast.method,
+      rate1hM: forecast.rate1hM ?? null, tidal: isTidalStation(gauge.station), measuredForAll: forecast.method != null,
+    });
+  } else if (rate != null) hourM = rate;
   const hourKey: TownRisk["hourKey"] =
     hourM == null ? "dir.unknown" : Math.abs(hourM) < RISING_M_PER_H ? "dir.steady" : hourM < 0 ? "dir.falling" : gauge && isTidalStation(gauge.station) && !liftRising ? "dir.tide" : hourM < 0.05 ? "dir.slow" : "dir.rising";
 
