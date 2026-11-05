@@ -70,7 +70,13 @@ export type StationAttention = {
   stale: boolean;
   ageMin: number | null;
   href: string;
+  /** An official release directly above this gauge (home card reason line). Set by the caller through buildAttention's `releases`. */
+  release?: ReleaseNote;
+  /** Flagged only because of the release above it: its own level is neither near alert nor at a step. */
+  releaseOnly?: boolean;
 };
+
+export type ReleaseNote = { reservoir: string; cusecs: number; gates: number | null; eta: [number, number] | null };
 
 export type BasinAttention = {
   basin: string;
@@ -88,7 +94,7 @@ function attentionTier(s: NationalStation): AttentionTier | null {
   return t === "major" || t === "minor" || t === "alert" || t === "watch" ? t : null;
 }
 
-function toAttention(s: NationalStation, tier: AttentionTier): StationAttention | null {
+export function toAttention(s: NationalStation, tier: AttentionTier): StationAttention | null {
   const level = s.latest?.water_level;
   const alert = s.thresholds.alert;
   if (!s.latest || level == null || alert == null) return null;
@@ -148,7 +154,11 @@ export type AttentionSummary = {
  * NationalStation already has a canonical, trimmed hydrostations basin, and
  * basin-less stations never reach here, so every card links to a real page.
  */
-export function buildAttention(snapshot: NationalStation[]): AttentionSummary {
+export function buildAttention(
+  snapshot: NationalStation[],
+  /** Gauges with an official release directly above them (station -> note, plus the tier a release lifts them to: "alert", or null = stays calm). Listed even when their own level is far below alert. */
+  releases: Record<string, { note: ReleaseNote; tier: AttentionTier | null }> = {},
+): AttentionSummary {
   const flagged: StationAttention[] = [];
   const gaugesPerBasin = new Map<string, number>();
   let reporting = 0;
@@ -165,7 +175,12 @@ export function buildAttention(snapshot: NationalStation[]): AttentionSummary {
       notReporting += 1;
     }
 
-    const hit = classifyStation(s);
+    const own = classifyStation(s);
+    const rel = releases[s.station];
+    const hit = own ? (rel ? { ...own, release: rel.note, tier: own.tier === "watch" && rel.tier === "alert" ? ("alert" as const) : own.tier } : own) : rel ? (() => {
+      const lifted = toAttention(s, rel.tier ?? "watch");
+      return lifted ? { ...lifted, release: rel.note, releaseOnly: true } : null;
+    })() : null;
     if (hit) flagged.push(hit);
 
     const alert = s.thresholds.alert;

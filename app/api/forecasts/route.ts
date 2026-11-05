@@ -68,7 +68,7 @@ export async function GET(request: Request) {
               });
         const forecastVerdict = lift?.verdict === "alert" ? "alert" : lift?.verdict === "watch" && s.tier === "normal" ? "watch" : s.tier;
         // a confirmed 5,000+ cusec release from the Irrigation Department directly above the gauge is at least Alert (lib/releaseAlert.ts)
-        const relAlert = releases && (forecastVerdict === "normal" || forecastVerdict === "watch") ? officialReleaseAlert(releaseAffectingFrom(releases, s.station)) : null;
+        const relAlert = releases && (forecastVerdict === "normal" || forecastVerdict === "watch") ? officialReleaseAlert(releaseAffectingFrom(releases, s.station), s) : null;
         const verdict = relAlert ? "alert" : forecastVerdict;
         const run: Record<string, unknown> = {
           station: s.station,

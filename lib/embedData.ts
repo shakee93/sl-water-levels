@@ -511,7 +511,7 @@ async function buildForecast(slug: string, c: Ctx): Promise<ForecastPayload | nu
     const rising = riverRising(station, me.trend24h, mpu, me.rate3hM ?? null);
     const tideOnly = isTidalStation(station) && r != null && r > STEADY_M_PER_H && !rising;
     const lift = liftVerdict({ tier: nat.tier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
-    const relAlert = nat.tier === "normal" || nat.tier === "watch" ? officialReleaseAlert(release) : null;
+    const relAlert = nat.tier === "normal" || nat.tier === "watch" ? officialReleaseAlert(release, me) : null;
     const alertLvl = me.thresholds.alert;
     const lvlNow = me.latest?.water_level ?? null;
     const gapM = alertLvl != null && lvlNow != null ? (alertLvl - lvlNow) * mpu : null;

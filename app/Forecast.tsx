@@ -287,7 +287,7 @@ export async function Forecast({ lang, basin, selectedStation }: { lang: Locale;
     : liftVerdict({ tier: realTier, crossings: f.crossings, horizons: f.horizons, currentLevel: f.currentLevel, rising, now });
   // A confirmed release of 5,000+ cusecs by the Irrigation Department's own figures, directly above this gauge, is at least Alert
   // (lib/releaseAlert.ts; 26 Oct 2026: Moragaswewa read Normal at 14.9 ft while Deduru Oya spilled 10,400 cusecs through 8 gates).
-  const releaseAlert = !stale && (realTier === "normal" || realTier === "watch") ? officialReleaseAlert(release) : null;
+  const releaseAlert = !stale && (realTier === "normal" || realTier === "watch") ? officialReleaseAlert(release, me) : null;
   const toneNow: VerdictTone = stale
     ? "stale"
     : releaseAlert

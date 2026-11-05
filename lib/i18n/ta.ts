@@ -138,8 +138,14 @@ export const ta: Dict = {
   "err.stationsTitle": "நிலையங்களை ஏற்ற முடியவில்லை",
   "err.stationsHelp": "தரவு மூலம் தற்காலிகமாக இயங்காமல் இருக்கலாம். ஒரு நிமிடம் கழித்து மீண்டும் முயலுங்கள்.",
   "needs.heading": "கவனம் தேவை",
-  "needs.count": "{m} நிலையங்களில் {n}",
+  "needs.count": "{n} எச்சரிக்கை நிலையில்",
   "needs.countNear": "{n} எச்சரிக்கை மட்டத்தை நெருங்குகிறது",
+  "needs.countRelease": "{n} நீர் திறப்புக்குக் கீழே", // needs native review
+  "needs.releaseUp": "{name} மேலே நீரைத் திறக்கிறது", // needs native review
+  "needs.releaseEta": "இங்கு சுமார் {a}–{b} மணி நேரத்தில் வரும்", // needs native review
+  "needs.alsoNear": "{name} உம் எச்சரிக்கை மட்டத்துக்கு அருகில்", // needs native review
+  "needs.alsoTier": "{name} உம் {tier} நிலையில்", // needs native review
+  "needs.alsoRelease": "{name} உம் நீர் திறப்புக்குக் கீழே", // needs native review
   "needs.unavailable": "சமீபத்திய தரவு இல்லை",
   "needs.unavailableHelp": "— எந்த ஆறு ஆபத்தில் உள்ளது என்று சொல்ல முடியவில்லை. சிறிது நேரம் கழித்து முயலுங்கள்.",
   "needs.allClear": "ஆபத்து இல்லை",
@@ -652,13 +658,20 @@ export const ta: Dict = {
   "release.lead": "{name} நீர்த்தேக்கம் நீரை வெளியேற்றுகிறது", // needs native review
   "release.leadReported": "{name} நீர்த்தேக்கம்: வான் கதவுகள் திறக்கப்பட்டதாக செய்தி", // needs native review
   "release.size.small": "சிறியது", // needs native review
+  "release.size.moderate": "நடுத்தரம்", // needs native review
   "release.size.large": "பெரியது", // needs native review
-  "release.size.veryLarge": "மிகப் பெரியது", // needs native review
   "release.sizeChip": "{size} · ~{n} லி/வி", // needs native review
-  "release.flow": "~{n} லி/வி", // needs native review
   "release.tile.title": "நீரை வெளியேற்றும் நீர்த்தேக்கங்கள்", // needs native review
   "release.tile.releasing": "நீரை வெளியேற்றுகிறது", // needs native review
   "release.tile.reported": "வான் கதவுகள் திறப்பு எனச் செய்தி", // needs native review
+  "release.tile.raise": "~{a}–{b} மணி நேரத்தில் {places} உயரக்கூடும்", // needs native review
+  "release.tile.raiseSoon": "அடுத்த சில மணி நேரத்தில் {places} உயரக்கூடும்", // needs native review
+  "release.tile.and": "{a} மற்றும் {b}", // needs native review
+  "release.tile.noGauge": "கீழே ஆற்று அளவி இல்லை", // needs native review
+  "release.tile.gates": "{n} மதகுகள்", // needs native review
+  "release.tile.gate1": "1 மதகு", // needs native review
+  "release.tile.down": "நேற்று {n} இலிருந்து குறைவு", // needs native review
+  "release.tile.up": "நேற்று {n} இலிருந்து அதிகம்", // needs native review
   "release.cusecs": "{n} கியூசெக்", // needs native review
   "release.cusecHelp": "கியூசெக் என்றால் என்ன?", // needs native review
   "release.cusecExplain": "1 கியூசெக் = ஒரு வினாடிக்கு ஒரு கன அடி நீர், சுமார் 28 லிட்டர்.", // needs native review

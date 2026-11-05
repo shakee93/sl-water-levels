@@ -8,6 +8,7 @@ import { loadForecast, measuredAt, type Forecast } from "./forecast";
 import { getGsmapZone } from "./gsmap";
 import { getTownRain, type TownRain } from "./townWeather";
 import { getReleases, releaseAffecting, releaseAffectingFrom } from "./releases";
+import { releaseGaugeNear } from "./releaseAlert";
 import { getOfficialWarnings } from "./warnings";
 import { soft } from "./soft";
 
@@ -171,7 +172,7 @@ export async function loadTown(place: Place, now = Date.now(), opts: { budgetMs?
         }
       : null,
     release: release?.active && release.reservoir
-      ? { confirmed: release.confirmed, reservoir: release.reservoir, cusecs: release.cusecs, etaHours: release.etaHours, source: release.source, gatesOpen: release.gatesOpen ?? null, direct: release.direct }
+      ? { confirmed: release.confirmed, reservoir: release.reservoir, cusecs: release.cusecs, etaHours: release.etaHours, source: release.source, gatesOpen: release.gatesOpen ?? null, direct: release.direct, near: releaseGaugeNear(effStation) }
       : null,
     warning,
     measured: measuredIn,
@@ -233,7 +234,7 @@ export async function loadTownStates(places: Place[]): Promise<Map<string, TownS
     const ra = rel && eff ? releaseAffectingFrom(rel, eff.station) : null;
     const r = assessTown({
       drainage: p.drainage, primary, secondary, forecast: null, rain: null,
-      release: ra?.active && ra.reservoir ? { confirmed: ra.confirmed, reservoir: ra.reservoir, cusecs: ra.cusecs, etaHours: ra.etaHours, source: ra.source, gatesOpen: ra.gatesOpen ?? null, direct: ra.direct } : null,
+      release: ra?.active && ra.reservoir ? { confirmed: ra.confirmed, reservoir: ra.reservoir, cusecs: ra.cusecs, etaHours: ra.etaHours, source: ra.source, gatesOpen: ra.gatesOpen ?? null, direct: ra.direct, near: releaseGaugeNear(eff ? byName.get(eff.station) : null) } : null,
       warning: null, now,
       streetRiver: p.rainZone === "colombo-east" ? streetRiverIn(byName, now) : undefined,
     });

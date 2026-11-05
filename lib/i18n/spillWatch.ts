@@ -13,8 +13,8 @@ const en = {
   "tip.range": "Window: {range}.",
   "source": "Mahaweli Authority weekly meeting, {date}",
   "pdf": "Open the weekly PDF",
-  "home.lead": "May spill soon (Mahaweli water managers' weekly plan, not a flood warning)",
-  "home.item": "{name}: {range}",
+  "home.item": "{name} may spill {range}",
+  "home.note": "(Mahaweli weekly plan, not a warning)",
   "watch.lead": "{name}: reservoir watch",
   "watch.tag": "Reservoir watch",
   "watch.note": "Gates reported open. Its water goes into another reservoir, not straight into a river. Not a flood warning.",
@@ -33,8 +33,8 @@ const si: Record<K, string> = {
   "tip.range": "කාලය: {range}.", // needs native review
   "source": "මහවැලි අධිකාරියේ සතිපතා රැස්වීම, {date}", // needs native review
   "pdf": "සතිපතා PDF එක විවෘත කරන්න", // needs native review
-  "home.lead": "ඉක්මනින් පිටාර ගැලිය හැක (මහවැලි ජල කළමනාකරුවන්ගේ සතිපතා සැලසුම, ගංවතුර අනතුරු ඇඟවීමක් නොවේ)", // needs native review
-  "home.item": "{name}: {range}", // needs native review
+  "home.item": "{name} {range} අතර පිටාර ගැලිය හැක", // needs native review
+  "home.note": "(මහවැලි සතිපතා සැලසුම, අනතුරු ඇඟවීමක් නොවේ)", // needs native review
   "watch.lead": "{name}: ජලාශ නිරීක්ෂණය", // needs native review
   "watch.tag": "ජලාශ නිරීක්ෂණය", // needs native review
   "watch.note": "වාන් දොරටු විවෘත වූ බව වාර්තා වේ. එහි ජලය ගංගාවකට නොව වෙනත් ජලාශයකට ගලා යයි. ගංවතුර අනතුරු ඇඟවීමක් නොවේ.", // needs native review
@@ -52,8 +52,8 @@ const ta: Record<K, string> = {
   "tip.range": "காலம்: {range}.", // needs native review
   "source": "மகாவலி அதிகாரசபையின் வாராந்தரக் கூட்டம், {date}", // needs native review
   "pdf": "வாராந்தர PDF ஐத் திறக்கவும்", // needs native review
-  "home.lead": "விரைவில் நிரம்பி வழியக்கூடும் (மகாவலி நீர் மேலாளர்களின் வாராந்தரத் திட்டம், வெள்ள எச்சரிக்கை அல்ல)", // needs native review
-  "home.item": "{name}: {range}", // needs native review
+  "home.item": "{name} {range} இடையே நிரம்பி வழியக்கூடும்", // needs native review
+  "home.note": "(மகாவலி வாராந்தரத் திட்டம், எச்சரிக்கை அல்ல)", // needs native review
   "watch.lead": "{name}: நீர்த்தேக்க கண்காணிப்பு", // needs native review
   "watch.tag": "நீர்த்தேக்க கண்காணிப்பு", // needs native review
   "watch.note": "வான்கதவுகள் திறக்கப்பட்டதாக அறிவிக்கப்பட்டுள்ளது. இதன் நீர் ஆற்றுக்கு அல்ல, மற்றொரு நீர்த்தேக்கத்துக்குச் செல்கிறது. இது வெள்ள எச்சரிக்கை அல்ல.", // needs native review

@@ -138,8 +138,14 @@ export const si: Dict = {
   "err.stationsTitle": "ස්ථාන පූරණය කළ නොහැකි විය",
   "err.stationsHelp": "දත්ත මූලාශ්‍රය තාවකාලිකව අක්‍රිය විය හැක. විනාඩියකින් නැවත උත්සාහ කරන්න.",
   "needs.heading": "අවධානය අවශ්‍යයි",
-  "needs.count": "මාන {m}න් {n}ක්",
+  "needs.count": "{n}ක් අනතුරු මට්ටමේ",
   "needs.countNear": "{n}ක් අනතුරු මට්ටමට ආසන්නයි",
+  "needs.countRelease": "{n}ක් ජලාශ මුදාහැරීමකට පහළින්", // needs native review
+  "needs.releaseUp": "{name} ඉහළින් ජලය මුදාහරිනවා", // needs native review
+  "needs.releaseEta": "මෙහි ළඟා වන්නේ පැය ~{a}–{b} කින්", // needs native review
+  "needs.alsoNear": "{name} ද අනතුරු මට්ටමට ආසන්නයි", // needs native review
+  "needs.alsoTier": "{name} ද {tier} මට්ටමේ", // needs native review
+  "needs.alsoRelease": "{name} ද මුදාහැරීමට පහළින්", // needs native review
   "needs.unavailable": "අලුත්ම දත්ත නොමැත",
   "needs.unavailableHelp": "— කිසිම ගඟක් අවදානමේ ඇත්දැයි කිව නොහැක. ටිකකින් නැවත උත්සාහ කරන්න.",
   "needs.allClear": "කිසිදු අවදානමක් නැත",
@@ -652,13 +658,20 @@ export const si: Dict = {
   "release.lead": "{name} ජලාශයෙන් ජලය මුදාහරිනවා", // needs native review
   "release.leadReported": "{name} ජලාශය: වාන් දොරටු විවෘත කළ බව වාර්තා වේ", // needs native review
   "release.size.small": "කුඩා", // needs native review
+  "release.size.moderate": "මධ්‍යම", // needs native review
   "release.size.large": "විශාල", // needs native review
-  "release.size.veryLarge": "ඉතා විශාල", // needs native review
   "release.sizeChip": "{size} · ලීටර් {n}/තත්. පමණ", // needs native review
-  "release.flow": "ලීටර් {n}/තත්. පමණ", // needs native review
   "release.tile.title": "ජලය මුදාහරින ජලාශ", // needs native review
   "release.tile.releasing": "ජලය මුදාහරිනවා", // needs native review
   "release.tile.reported": "වාන් දොරටු විවෘත බව වාර්තා වේ", // needs native review
+  "release.tile.raise": "පැය ~{a}–{b} කින් {places} ඉහළ යා හැක", // needs native review
+  "release.tile.raiseSoon": "ඉදිරි පැය කිහිපය තුළ {places} ඉහළ යා හැක", // needs native review
+  "release.tile.and": "{a} සහ {b}", // needs native review
+  "release.tile.noGauge": "පහළින් ගඟේ මානයක් නැත", // needs native review
+  "release.tile.gates": "දොරටු {n}", // needs native review
+  "release.tile.gate1": "දොරටු 1", // needs native review
+  "release.tile.down": "ඊයේ {n} සිට පහළට", // needs native review
+  "release.tile.up": "ඊයේ {n} සිට ඉහළට", // needs native review
   "release.cusecs": "කියුසෙක් {n}", // needs native review
   "release.cusecHelp": "කියුසෙක් යනු කුමක්ද?", // needs native review
   "release.cusecExplain": "කියුසෙක් 1 = තත්පරයකට ඝන අඩියක ජලය, ලීටර් 28ක් පමණ.", // needs native review

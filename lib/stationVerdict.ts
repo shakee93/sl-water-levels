@@ -13,14 +13,21 @@ import { officialReleaseAlert } from "./releaseAlert";
 
 type Tier = NationalStation["tier"];
 /** v = the page's verdict tier; th / h = the forecast crossing behind a lift (mark and hours ahead), when there is one. */
-export type StationVerdict = { v: Tier; th?: "alert" | "minor" | "major"; h?: number | null; /** set when v is Alert because of a confirmed big release above the gauge (lib/releaseAlert.ts) */ release?: { reservoir: string; cusecs: number; gates: number | null } };
+export type StationVerdict = { v: Tier; th?: "alert" | "minor" | "major"; h?: number | null; /** set when v is Alert because of a confirmed big release above the gauge (lib/releaseAlert.ts) */ release?: { reservoir: string; cusecs: number; gates: number | null };
+  /** An official release (same 5,000+ cusec bar) directly above this gauge, whether or not it lifts the step: the home "Needs attention" card names it. eta = measured hours to reach the gauge. */
+  relNote?: { reservoir: string; cusecs: number; gates: number | null; eta: [number, number] | null } };
 
 async function liftOne(s: NationalStation, rel: ReleasesResult | null): Promise<StationVerdict> {
   const base = await liftForecast(s);
   // A confirmed release of 5,000+ cusecs from the Irrigation Department's own figures, directly above this gauge, is at least Alert
   // (26 Oct 2026: Moragaswewa read Normal at 14.9 ft while Deduru Oya spilled 10,400 cusecs). Only calm gauges move; a real Alert or worse stays.
-  const ra = rel && s.latest && (base.v === "normal" || base.v === "watch") ? officialReleaseAlert(releaseAffectingFrom(rel, s.station)) : null;
-  return ra ? { ...base, v: "alert", release: ra } : base;
+  const aff = rel && s.latest ? releaseAffectingFrom(rel, s.station) : null;
+  const ra = aff && (base.v === "normal" || base.v === "watch") ? officialReleaseAlert(aff, s) : null;
+  // Below the near-alert bar the release is only a note: same release, no gauge state asked.
+  const note = aff ? officialReleaseAlert(aff) : null;
+  const relNote = note ? { ...note, eta: aff!.etaRange } : undefined;
+  const out = relNote ? { ...base, relNote } : base;
+  return ra ? { ...out, v: "alert", release: ra } : out;
 }
 
 async function liftForecast(s: NationalStation): Promise<StationVerdict> {
@@ -54,6 +61,6 @@ export const getStationVerdicts = unstable_cache(
     await Promise.all(national.map(async (s) => (out[s.station] = await liftOne(s, rel).catch(() => ({ v: s.tier })))));
     return out;
   },
-  ["station-verdicts-v4"],
+  ["station-verdicts-v5"],
   { revalidate: 120 },
 );

@@ -64,6 +64,13 @@ export function directionFor(rateMPerH: number): T3 {
           : DIR.rising;
 }
 
+/** Home "Needs attention" card: plain words only, no rate. Like directionFor but a slow fall says so ("Falling slowly"). */
+export const FALLING_SLOW: T3 = { en: "Falling slowly", si: "සෙමින් පහළ යයි", ta: "மெதுவாகக் குறைகிறது" };
+export function cardDirection(rateMPerH: number): { dir: "up" | "down" | "flat"; words: T3 } {
+  const words = rateMPerH < 0 && rateMPerH > -SLOW_M_PER_H && Math.abs(rateMPerH) >= STEADY_M_PER_H ? FALLING_SLOW : directionFor(rateMPerH);
+  return { dir: Math.abs(rateMPerH) < STEADY_M_PER_H ? "flat" : rateMPerH > 0 ? "up" : "down", words };
+}
+
 /**
  * The short reason under "Next hour" ("Down 0.4 ft in 3 hours; upstream is falling too"): the 3 h change plus the single strongest
  * driver we already hold. Same rate source as the tile, so it never contradicts the headline; a change that points the other way

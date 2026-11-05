@@ -131,8 +131,8 @@ export function SizeMeter({ size, t, compact = false }: { size: ReleaseSize; t: 
         {[1, 2, 3].map((i) => <span key={i} className={`h-2.5 flex-1 rounded-full ${seg(i)}`} />)}
       </div>
       <div className="mt-1 flex gap-1 text-[11px] leading-tight" aria-hidden>
-        {(["small", "large", "veryLarge"] as const).map((s) => (
-          <span key={s} className={`flex-1 ${s === "small" ? "text-left" : s === "large" ? "text-center" : "text-right"} ${s === size ? "font-semibold text-amber-900 dark:text-amber-200" : "text-slate-400 dark:text-slate-500"}`}>
+        {(["small", "moderate", "large"] as const).map((s) => (
+          <span key={s} className={`flex-1 ${s === "small" ? "text-left" : s === "moderate" ? "text-center" : "text-right"} ${s === size ? "font-semibold text-amber-900 dark:text-amber-200" : "text-slate-400 dark:text-slate-500"}`}>
             {t(`release.size.${s}`)}
           </span>
         ))}

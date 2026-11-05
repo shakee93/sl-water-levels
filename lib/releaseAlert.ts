@@ -23,6 +23,30 @@
 
 export const RELEASE_ALERT_CUSECS = 5000;
 
+// NARROWED 5 Nov 2026 (owner decision): a release lifts a gauge to Alert only when the gauge is CLOSE to its alert mark (within
+// RELEASE_NEAR_FT) or RISING over the last 3 h. Moragaswewa showed "Alert: reservoir release upstream" at 11.5 ft, falling, 4.1 ft
+// below its 15.6 ft mark, while its own page said Normal; on 26 Oct (the event behind the rule) it was at 14.9 ft, 0.7 ft below.
+// Below the bar the release is a note (shown on the gauge and in the reservoir card), never a step. Unknown gauge state = lifted as before.
+export const RELEASE_NEAR_FT = 3;
+const RISING_M_PER_H = 0.006; // same as lib/forecastRules.mjs STEADY_M_PER_H (kept literal: this file stays dependency-free)
+
+export type ReleaseGauge = {
+  latest?: { water_level: number | null } | null;
+  thresholds?: { alert: number | null } | null;
+  /** Metres per gauge unit (1 for metres, 0.3048 for feet). */
+  metresPerUnit?: number | null;
+  rate3hM?: number | null;
+} | null | undefined;
+
+/** true = the gauge is within RELEASE_NEAR_FT of its alert mark or rising; false = far below and not rising; null = cannot tell. */
+export function releaseGaugeNear(g: ReleaseGauge): boolean | null {
+  if (!g) return null;
+  if (g.rate3hM != null && Number.isFinite(g.rate3hM) && g.rate3hM > RISING_M_PER_H) return true;
+  const lv = g.latest?.water_level, al = g.thresholds?.alert, mpu = g.metresPerUnit;
+  if (lv == null || al == null || al <= 0 || mpu == null || !Number.isFinite(lv)) return null;
+  return ((al - lv) * mpu) / 0.3048 <= RELEASE_NEAR_FT;
+}
+
 export type ReleaseFacts = {
   active?: boolean;
   /** Official numbers back it (false = a news report only). */
@@ -34,21 +58,24 @@ export type ReleaseFacts = {
   /** Who published the figure ("Irrigation Department", "Mahaweli Authority" or a news outlet). */
   source?: string | null;
   gatesOpen?: number | null;
+  /** releaseGaugeNear() of the gauge below, worked out by the caller (false = far below alert and not rising: no lift). */
+  near?: boolean | null;
 };
 
 export type ReleaseAlert = { reservoir: string; cusecs: number; gates: number | null };
 
 /** The release that makes this gauge/town at least Alert, or null. */
-export function officialReleaseAlert(r: ReleaseFacts | null | undefined): ReleaseAlert | null {
+export function officialReleaseAlert(r: ReleaseFacts | null | undefined, gauge?: ReleaseGauge): ReleaseAlert | null {
   if (!r || r.active === false || !r.confirmed || r.direct === false) return null;
+  if (r.near === false || (gauge !== undefined && releaseGaugeNear(gauge) === false)) return null; // far below alert and not rising: a note, not a step
   if (r.source !== "Irrigation Department") return null; // fail safe: an unknown source never lifts
   if (r.cusecs == null || !Number.isFinite(r.cusecs) || r.cusecs < RELEASE_ALERT_CUSECS || !r.reservoir) return null;
   return { reservoir: r.reservoir, cusecs: r.cusecs, gates: r.gatesOpen != null && r.gatesOpen > 0 ? r.gatesOpen : null };
 }
 
 /** A calm tier (normal or watch) becomes alert; anything else, including an unknown tier, is left alone. */
-export function tierWithRelease<T extends string>(tier: T, r: ReleaseFacts | null | undefined): T | "alert" {
-  return (tier === "normal" || tier === "watch") && officialReleaseAlert(r) ? "alert" : tier;
+export function tierWithRelease<T extends string>(tier: T, r: ReleaseFacts | null | undefined, gauge?: ReleaseGauge): T | "alert" {
+  return (tier === "normal" || tier === "watch") && officialReleaseAlert(r, gauge) ? "alert" : tier;
 }
 
 /** "Deduru Oya reservoir is releasing 10,400 cusecs through 8 gates" (gates left out when the source gives none). */

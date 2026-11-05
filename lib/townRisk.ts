@@ -171,6 +171,8 @@ export type ReleaseIn = {
   gatesOpen?: number | null;
   /** The reservoir is linked directly above the gauge (lib/reservoirs.ts). Missing = yes. */
   direct?: boolean;
+  /** The gauge is within 3 ft of its alert mark or rising (lib/releaseAlert.ts releaseGaugeNear). false = no Alert from the release. Missing = unknown. */
+  near?: boolean | null;
 };
 export type WarningIn = { severity: "none" | "advisory" | "alert" | "minor flood" | "major flood" | "evacuation"; source: string; area: string; /** The bulletin (shown as a link), when known. */ url?: string; /** ISO 8601 issue time, when known. */ issuedAt?: string | null };
 

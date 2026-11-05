@@ -26,8 +26,9 @@ export async function SpillWatchLine({ lang }: { lang: Locale }) {
     <div className="mb-5 flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-800 px-3 py-2 text-sm text-amber-900 dark:text-amber-200" role="status">
       <CalendarClock className="size-4 mt-0.5 shrink-0" aria-hidden />
       <div className="min-w-0">
-        {soon.length > 0 && <p className="font-medium">{sw("home.lead")}</p>}
-        <ul className="mt-0.5 flex flex-wrap gap-x-4 gap-y-0">
+        {/* "Laxapana may spill 3–12 Nov (Mahaweli weekly plan, not a warning)": one plain sentence per reservoir, the caveat once after them. */}
+        {soon.length > 0 && (
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-0">
           {soon.map((w) => {
             const text = sw("home.item", { name: w.name, range: windowLabel(w.spillWindow, t) });
             return (
@@ -44,7 +45,9 @@ export async function SpillWatchLine({ lang }: { lang: Locale }) {
               </li>
             );
           })}
+          <li className="text-xs opacity-80">{sw("home.note")}</li>
         </ul>
+        )}
         {reported.length > 0 && (
           <>
             <p className={`font-medium ${soon.length > 0 ? "mt-1" : ""}`}>{sw("warn.lead")}</p>

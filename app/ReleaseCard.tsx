@@ -215,18 +215,29 @@ export async function ReleaseCard({ lang, station, basin }: { lang: Locale; stat
   );
 }
 
-/** Three-step size bar under the flow figure: filled steps = how big the release is. */
-function SizeBar({ step }: { step: 1 | 2 | 3 }) {
+const tileChip = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+
+/**
+ * The one small fact line under a tile's headline: "9,500 cusecs · 6 gates · down from 12,600 yesterday".
+ * The "?" opens the cusec explanation (no JavaScript needed).
+ */
+function FactLine({ t, rel, trend }: { t: TFn; rel: Release; trend: Trend | null }) {
+  const parts = [
+    t("release.cusecs", { n: fmt(roundCusecs(rel.cusecs ?? 0)) }),
+    rel.gatesOpen ? t(rel.gatesOpen === 1 ? "release.tile.gate1" : "release.tile.gates", { n: rel.gatesOpen }) : null,
+    trend ? t(trend.dir === "down" ? "release.tile.down" : "release.tile.up", { n: fmt(roundCusecs(trend.from)) }) : null,
+  ].filter(Boolean);
   return (
-    <div className="flex gap-1" aria-hidden>
-      {[1, 2, 3].map((i) => (
-        <span key={i} className={`h-1.5 flex-1 rounded-full ${i <= step ? "bg-gradient-to-r from-amber-300 to-amber-500 dark:from-amber-700 dark:to-amber-400" : "bg-slate-200 dark:bg-slate-800"}`} />
-      ))}
-    </div>
+    <details className="group text-xs text-slate-600 dark:text-slate-300">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 min-h-11 sm:min-h-6 [&::-webkit-details-marker]:hidden">
+        <span className="tabular-nums">{parts.join(" · ")}</span>
+        <CircleHelp className="size-3.5 shrink-0" aria-hidden />
+        <span className="sr-only">{t("release.cusecHelp")}</span>
+      </summary>
+      <span className="block pb-1">{t("release.cusecExplain")}</span>
+    </details>
   );
 }
-
-const tileChip = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap";
 
 /** Home: one compact card per active release, in a grid inside one amber container (same look as "Forecast to reach alert level"). */
 function ReleaseTile({ t, lang, p, rel, trend }: { t: TFn; lang: Locale; p: (path: string) => string; rel: Release; trend: Trend | null }) {
@@ -240,10 +251,11 @@ function ReleaseTile({ t, lang, p, rel, trend }: { t: TFn; lang: Locale; p: (pat
   const size = confirmed && rel.cusecs ? releaseSize(rel.cusecs) : null;
   const gauge = link ? stationDisplayName(link.station) : null;
   const town = link?.town && link.town !== gauge ? link.town : null;
+  const places = gauge ? (town ? t("release.tile.and", { a: gauge, b: town }) : gauge) : null;
   const status = rel.watch ? sw("watch.tag") : t(confirmed ? "release.tile.releasing" : "release.tile.reported");
   const nameCls = "block font-medium text-slate-900 dark:text-slate-100";
   return (
-    <li className="flex h-full flex-col gap-2 rounded-lg border border-amber-200/80 dark:border-amber-900/50 bg-white/80 dark:bg-slate-900/60 p-3">
+    <li className={`flex h-full flex-col gap-2 rounded-lg border border-amber-200/80 dark:border-amber-900/50 bg-white/80 dark:bg-slate-900/60 p-3 ${places ? "" : "opacity-80"}`}>
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0">
           {resHref ? <Link href={resHref} className={`${nameCls} hover:underline underline-offset-2`}>{rel.name}</Link> : <span className={nameCls}>{rel.name}</span>}
@@ -251,56 +263,18 @@ function ReleaseTile({ t, lang, p, rel, trend }: { t: TFn; lang: Locale; p: (pat
         </span>
         {size && <span className={`${tileChip} shrink-0 bg-amber-100 dark:bg-amber-900/50 font-semibold text-amber-900 dark:text-amber-100`}>{t(`release.size.${size}`)}</span>}
       </div>
-      {size && rel.cusecs ? (
-        <div className="space-y-1.5">
-          <p className="text-lg font-semibold leading-tight tabular-nums text-slate-900 dark:text-slate-100">{t("release.flow", { n: fmt(litresPerSecond(rel.cusecs)) })}</p>
-          <SizeBar step={SIZE_STEP[size]} />
-        </div>
-      ) : null}
-      {(trend || (confirmed && rel.gatesOpen)) && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {trend && (
-            <span className={`${tileChip} ${trend.dir === "down" ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200" : "bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-200"}`}>
-              {trend.dir === "down" ? <TrendingDown className="size-3.5" aria-hidden /> : <TrendingUp className="size-3.5" aria-hidden />}
-              {t(trend.dir === "down" ? "release.trendDown" : "release.trendUp", { n: fmt(roundCusecs(trend.from)) })}
-            </span>
-          )}
-          {confirmed && rel.gatesOpen ? <span className={`${tileChip} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300`}>{t("release.gatesOpen", { n: rel.gatesOpen })}</span> : null}
-        </div>
-      )}
-      {confirmed && rel.cusecs ? <CusecFigure t={t} cusecs={rel.cusecs} /> : null}
+      {/* The headline says what it means downstream; the flow figure is the small line under it. */}
+      <p className={places ? "text-base font-semibold leading-snug text-slate-900 dark:text-slate-100" : "text-sm text-slate-500 dark:text-slate-400"}>
+        {places ? (link?.eta ? t("release.tile.raise", { places, a: link.eta[0], b: link.eta[1] }) : t("release.tile.raiseSoon", { places })) : t("release.tile.noGauge")}
+      </p>
+      {confirmed && rel.cusecs ? <FactLine t={t} rel={rel} trend={trend} /> : null}
       {rel.watch && <p className="text-xs text-slate-600 dark:text-slate-300">{sw("watch.note")}</p>}
       {rel.reported && <ReportedFigureLine t={t} rep={rel.reported} className="text-xs text-amber-800 dark:text-amber-300" />}
-      {link && gauge && (
-        <div className="mt-auto rounded-md bg-amber-50 dark:bg-amber-950/30 px-2 py-1.5 text-xs text-slate-700 dark:text-slate-300">
-          <p className="flex flex-wrap items-center gap-x-1 gap-y-0.5" aria-label={t("release.chainLabel", { a: rel.name, b: gauge })}>
-            <Waves className="size-3.5 shrink-0" aria-hidden />
-            <span>{rel.name}</span>
-            <ChevronRight className="size-3 shrink-0 opacity-60" aria-hidden />
-            <Gauge className="size-3.5 shrink-0" aria-hidden />
-            <span>{gauge}</span>
-            {town && (
-              <>
-                <ChevronRight className="size-3 shrink-0 opacity-60" aria-hidden />
-                <MapPin className="size-3.5 shrink-0" aria-hidden />
-                <span>{town}</span>
-              </>
-            )}
-          </p>
-          <span className={`${tileChip} mt-1 bg-amber-100 text-amber-900 dark:bg-amber-900/50 dark:text-amber-100`}>
-            <Clock className="size-3" aria-hidden />
-            {link.eta ? t("release.eta", { a: link.eta[0], b: link.eta[1] }) : t("release.etaSoon")}
-          </span>
-        </div>
-      )}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 text-xs">
-        <Link href={p(href)} className="inline-flex items-center gap-1 min-h-11 sm:min-h-6 font-medium text-amber-900 dark:text-amber-200 hover:underline underline-offset-2">
+      <div className="mt-auto">
+        <Link href={p(href)} className="inline-flex items-center gap-1 min-h-11 sm:min-h-6 text-xs font-medium text-amber-900 dark:text-amber-200 hover:underline underline-offset-2">
           {first ? t("release.homeView", { gauge: stationDisplayName(first) }) : t("release.homeViewRiver")}
           <ArrowRight className="size-3" aria-hidden />
         </Link>
-        <a href="#how-it-works" className="inline-flex items-center min-h-11 sm:min-h-6 text-slate-500 dark:text-slate-400 hover:underline underline-offset-2">
-          {t("release.howLink")}
-        </a>
       </div>
     </li>
   );
@@ -311,16 +285,23 @@ export async function ReleaseLines({ lang }: { lang: Locale }) {
   const { t, p } = getI18n(lang);
   const all = await getReleases().catch(() => null);
   if (!all || all.releases.length === 0) return null;
-  const trends = await Promise.all(all.releases.map((r) => releaseTrend(r.reservoirId, r.cusecs)));
+  const trendOf = await Promise.all(all.releases.map((r) => releaseTrend(r.reservoirId, r.cusecs)));
+  // Releases with a gauge below them first (what matters downstream); reservoirs with no river gauge below sort last. Stable otherwise.
+  const rows = all.releases
+    .map((rel, i) => ({ rel, trend: trendOf[i], below: pickLink(reservoirById(rel.reservoirId)) ? 0 : 1 }))
+    .sort((a, b) => a.below - b.below);
   return (
     <section className="mb-5 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 p-3 sm:p-4" aria-label={t("needs.heading")} lang={lang}>
       <h3 className="flex items-center gap-1.5 text-sm font-semibold text-amber-900 dark:text-amber-200">
         <Waves className="size-4" aria-hidden /> {t("release.tile.title")}
-        <span className="ml-auto rounded-full bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 text-xs font-medium tabular-nums">{all.releases.length}</span>
+        <a href="#how-it-works" className="ml-auto inline-flex items-center min-h-11 sm:min-h-6 text-xs font-normal text-slate-500 dark:text-slate-400 hover:underline underline-offset-2">
+          {t("release.howLink")}
+        </a>
+        <span className="rounded-full bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 text-xs font-medium tabular-nums">{all.releases.length}</span>
       </h3>
       <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {all.releases.map((rel, i) => (
-          <ReleaseTile key={rel.reservoirId} t={t} lang={lang} p={p} rel={rel} trend={trends[i]} />
+        {rows.map(({ rel, trend }) => (
+          <ReleaseTile key={rel.reservoirId} t={t} lang={lang} p={p} rel={rel} trend={trend} />
         ))}
       </ul>
     </section>

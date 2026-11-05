@@ -12,12 +12,12 @@ import {
 } from "lucide-react";
 import type { NationalStation } from "@/lib/arcgis";
 import type { StationVerdict } from "@/lib/stationVerdict";
-import { releaseAlertLine } from "@/lib/releaseAlert";
+import { cardDirection } from "./verdict";
 import {
   buildAttention,
-  RISING_M_PER_H,
   type AttentionTier,
   type BasinAttention,
+  type ReleaseNote,
   type StationAttention,
 } from "@/lib/attention";
 import { basinPath } from "@/lib/slug";
@@ -77,28 +77,28 @@ const TIER_STYLE: Record<AttentionTier, TierStyle> = {
   },
 };
 
-// Direction comes from the metre-normalised 3h rate so feet and metre gauges
-// share one "steady" cut-off; the printed number is in feet like every other level.
-function Trend({ t, rateM, rate, unit }: { t: TFn; rateM: number | null; rate: number | null; unit: Unit }) {
-  if (rateM == null || rate == null) return null;
-  if (Math.abs(rateM) < RISING_M_PER_H) {
+// Plain direction words, no rate (the number stays on the gauge page): Steady / Falling slowly / Falling / Rising / Rising fast.
+// The steady cut-off is the metre-normalised 3 h rate (STEADY_M_PER_H) so feet and metre gauges agree.
+function Trend({ lang, rateM }: { lang: Locale; rateM: number | null }) {
+  if (rateM == null) return null;
+  const { dir, words } = cardDirection(rateM);
+  if (dir === "flat") {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
         <Minus className="size-3" aria-hidden />
-        {t("trend.steady")}
+        {words[lang]}
       </span>
     );
   }
-  const text = `${formatDelta(rate, unit, { sign: true })}/h`;
-  return rateM > 0 ? (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400 tabular-nums">
+  return dir === "up" ? (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 dark:text-orange-400">
       <ArrowUp className="size-3" aria-hidden />
-      {t("trend.rising")} {text}
+      {words[lang]}
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 tabular-nums">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
       <ArrowDown className="size-3" aria-hidden />
-      {t("trend.falling")} {text}
+      {words[lang]}
     </span>
   );
 }
@@ -146,6 +146,12 @@ function ThresholdBar({ t, s, style }: { t: TFn; s: StationAttention; style: Tie
       ))}
     </div>
   );
+}
+
+/** "Deduru Oya is releasing upstream · reaches here in ~4–5 h" (the eta only when measured). */
+function ReleaseReason({ t, r }: { t: TFn; r: ReleaseNote }) {
+  const text = [t("needs.releaseUp", { name: r.reservoir }), r.eta ? t("needs.releaseEta", { a: r.eta[0], b: r.eta[1] }) : null].filter(Boolean).join(" · ");
+  return <div className="mt-1 text-xs font-medium text-slate-700 dark:text-slate-200">{text}</div>;
 }
 
 function BasinCard({
@@ -204,9 +210,11 @@ function BasinCard({
           </span>
         </div>
 
+        {b.lead.release && <ReleaseReason t={t} r={b.lead.release} />}
+
         {b.lead.gap && (
-          <div data-verdict-note={b.tier === "watch" ? "" : undefined} className={`mt-0.5 text-xs tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
-            {b.tier === "watch" && !b.lead.gap.crossed
+          <div data-verdict-note={b.tier === "watch" && !b.lead.releaseOnly ? "" : undefined} className={`mt-0.5 text-xs tabular-nums ${b.lead.gap.crossed ? style.gap : "text-slate-500 dark:text-slate-400"}`}>
+            {b.tier === "watch" && !b.lead.gap.crossed && !b.lead.releaseOnly
               ? t("needs.nearNote", { amount: formatDelta(b.lead.gap.amount, unit) })
               : b.lead.gap.crossed
               ? t("gap.above", { amount: formatDelta(b.lead.gap.amount, unit), mark: markText(t, b.lead.gap.label) })
@@ -222,7 +230,7 @@ function BasinCard({
           {b.lead.stale ? (
             <span className="text-xs text-slate-500 dark:text-slate-400">{t("needs.lastKnown")}</span>
           ) : (
-            <Trend t={t} rateM={rateM} rate={b.lead.ratePerHour} unit={unit} />
+            <Trend lang={lang} rateM={rateM} />
           )}
           {rain && (
             <span
@@ -236,20 +244,28 @@ function BasinCard({
           )}
         </div>
 
+        {/* Every other flagged gauge on this river gets its own labelled row (a bare dot left Thalgahagoda unexplained). */}
         {others.length > 0 && (
-          <ul className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-            {others.map((o) => (
-              <li key={o.station} className="inline-flex items-center gap-1 min-w-0">
-                {/* Per-gauge dot: a basin can hold an at-alert gauge and a
-                    watch-tier one at once, and the card headline only shows the
-                    worst. Without this the list reads as "all at Alert". */}
-                <span
-                  className={`size-1.5 rounded-full shrink-0 ${TIER_STYLE[o.tier].dot}`}
-                  title={tierText(t, o.tier)}
-                />
-                <span className="truncate">{stationDisplayName(o.station)}</span>
-              </li>
-            ))}
+          <ul className="mt-2 space-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+            {others.map((o) => {
+              const ou: Unit = o.unit ?? detectUnit(o.thresholds);
+              const name = stationDisplayName(o.station);
+              const label =
+                o.tier !== "watch"
+                  ? t("needs.alsoTier", { name, tier: tierText(t, o.tier) })
+                  : o.releaseOnly
+                  ? t("needs.alsoRelease", { name })
+                  : t("needs.alsoNear", { name });
+              return (
+                <li key={o.station} className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                    <span className={`size-1.5 rounded-full shrink-0 ${TIER_STYLE[o.tier].dot}`} aria-hidden />
+                    <span className="truncate">{label}</span>
+                  </span>
+                  <span className="tabular-nums shrink-0">{formatLevel(o.level, ou)}</span>
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -293,25 +309,29 @@ export function NeedsAttention({
     );
   }
 
-  const { basins, flagged, reporting } = buildAttention(snapshot);
-  // Near-alert gauges read Normal: only the gauges at Alert or above are counted as such, the rest are "near alert".
+  // Gauges with an official release directly above them are cards too, whatever their own level (lib/releaseAlert.ts decides who is lifted to Alert).
+  const releases: Record<string, { note: ReleaseNote; tier: AttentionTier | null }> = {};
+  for (const s of snapshot) {
+    const v = verdicts[s.station];
+    if (v?.relNote) releases[s.station] = { note: v.relNote, tier: v.release ? "alert" : null };
+  }
+  const { basins, flagged, reporting } = buildAttention(snapshot, releases);
+  // The header counts what the cards show: gauges at Alert or above, near-alert gauges (read Normal), and gauges that only sit below a release.
   const aboveN = flagged.filter((f) => f.tier !== "watch").length;
-  const nearN = flagged.length - aboveN;
-  const countText = [aboveN > 0 ? t("needs.count", { n: aboveN, m: reporting }) : null, nearN > 0 ? t("needs.countNear", { n: nearN }) : null].filter(Boolean).join(" · ");
+  const nearN = flagged.filter((f) => f.tier === "watch" && !f.releaseOnly).length;
+  const relN = flagged.filter((f) => f.tier === "watch" && f.releaseOnly).length;
+  const countText = [
+    aboveN > 0 ? t("needs.count", { n: aboveN }) : null,
+    nearN > 0 ? t("needs.countNear", { n: nearN }) : null,
+    relN > 0 ? t("needs.countRelease", { n: relN }) : null,
+  ].filter(Boolean).join(" · ");
   const rateByHref = new Map(snapshot.map((s) => [s.href, s.rate3hM] as const));
 
-  const soon = (
-    <>
-      <ReleaseAlerts lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />
-      <ForecastSoon lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />
-    </>
-  );
-  const releaseOn = snapshot.some((s) => verdicts[s.station]?.release);
+  const soon = <ForecastSoon lang={lang} p={p} snapshot={snapshot} verdicts={verdicts} />;
 
   if (basins.length === 0) {
     return (
       <section className="mb-6">
-        {!releaseOn && (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/25 px-4 py-3">
           <ShieldCheck className="size-5 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
           <div className="text-sm text-emerald-900 dark:text-emerald-200">
@@ -321,7 +341,6 @@ export function NeedsAttention({
             </span>
           </div>
         </div>
-        )}
         {soon}
       </section>
     );
@@ -367,36 +386,6 @@ const SOON = {
   si: { title: "අනතුරු ඇඟවීමේ මට්ටමට ළඟා වීමට පුරෝකථනය", alert: "අනතුරු ඇඟවීමේ මට්ටම", minor: "සුළු ගංවතුර මට්ටම", major: "ප්‍රධාන ගංවතුර මට්ටම", line: "පැය {h} කින් පමණ {mark} කරා ළඟා විය හැක", day: "පැය 24 ක් තුළ {mark} කරා ළඟා විය හැක", now: "දැන්", toGo: "තව {d}", perH: "පැයට {d}", sub: "පුරෝකථනයක් පමණි: මිනුම මට්ටමට ළඟා වූ විට තත්ත්වය වෙනස් වේ." },
   ta: { title: "எச்சரிக்கை மட்டத்தை அடையும் என முன்னறிவிப்பு", alert: "எச்சரிக்கை மட்டம்", minor: "சிறு வெள்ள மட்டம்", major: "பெரு வெள்ள மட்டம்", line: "சுமார் {h} மணி நேரத்தில் {mark} அடையலாம்", day: "24 மணி நேரத்திற்குள் {mark} அடையலாம்", now: "இப்போது", toGo: "இன்னும் {d}", perH: "மணிக்கு {d}", sub: "முன்னறிவிப்பு மட்டுமே: அளவி அந்த மட்டத்தை அடைந்ததும் நிலை மாறும்." },
 } as const;
-
-// Gauges the Irrigation Department's own figures put at Alert because a big reservoir release (5,000+ cusecs) is coming down to them
-// (lib/releaseAlert.ts, lib/stationVerdict.ts). si/ta are drafts.
-const REL_TITLE = { en: "Alert: reservoir release upstream", si: "අනතුරු ඇඟවීම: ඉහළ ජලාශයකින් ජලය මුදා හැරීම", ta: "எச்சரிக்கை: மேலே உள்ள நீர்த்தேக்கத்திலிருந்து நீர் திறப்பு" } as const;
-
-function ReleaseAlerts({ lang, p, snapshot, verdicts }: { lang: Locale; p: (path: string) => string; snapshot: NationalStation[]; verdicts: Record<string, StationVerdict> }) {
-  const rows = snapshot.filter((s) => verdicts[s.station]?.release).map((s) => ({ s, a: verdicts[s.station].release! }));
-  if (rows.length === 0) return null;
-  return (
-    <div className="mt-3 rounded-xl border border-orange-300 dark:border-orange-900/70 bg-orange-50/70 dark:bg-orange-950/25 px-4 py-3" lang={lang}>
-      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-orange-900 dark:text-orange-200">
-        <TriangleAlert className="size-4" aria-hidden /> {REL_TITLE[lang]}
-      </h3>
-      <ul className="mt-2 grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
-        {rows.map(({ s, a }) => (
-          <li key={s.href}>
-            <Link href={p(s.href)} className="group flex items-baseline justify-between gap-3 text-sm hover:underline underline-offset-2">
-              <span className="min-w-0">
-                <span className="font-medium text-slate-900 dark:text-slate-100">{stationDisplayName(s.station)}</span>
-                <span className="text-slate-500 dark:text-slate-400"> · {riverName(s.basin, lang)}</span>
-                <span className="block text-xs text-orange-900/90 dark:text-orange-200/90">{releaseAlertLine(a, lang)}</span>
-              </span>
-              {s.latest?.water_level != null && <span className="shrink-0 tabular-nums text-xs text-slate-600 dark:text-slate-300">{formatLevel(s.latest.water_level, s.unit)}</span>}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 function ForecastSoon({ lang, p, snapshot, verdicts }: { lang: Locale; p: (path: string) => string; snapshot: NationalStation[]; verdicts: Record<string, StationVerdict> }) {
   const c = SOON[lang];
