@@ -13,6 +13,8 @@
 //                 RECESSION_MIN_FALL_FT_PER_H over the last 3 h, lower the 12 h / 24 h level (and its band) by
 //                 RECESSION_FRACTION x fall rate x horizon, capped at RECESSION_RANGE_SHARE of the gauge's own last-24 h range and at
 //                 RECESSION_MAX_FT. Rising or steady gauges and the 1-6 h steps are copied unchanged.
+//   (recession-v2 and recession-v2-slow were shadows here from 30 Oct to 5 Nov 2026: v2 is now LIVE inside lib/forecast.ts fromModel, so `copy`
+//    includes it; v2-slow was dropped, worse than v2 on skill and 12 h error. Old rows keep their names in D1 for the record.)
 //   recession-v2  per-gauge recession LAW (lib/recessionV2.mjs, lib/model/recession-params.json) at 3 / 6 / 12 / 24 h when the 3 h rate is <= -0.1 ft/h,
 //                 with a rain gate (storm flag off, rain forecast known and light; unknown rain = no correction), glitch-filtered readings and
 //                 a guard list of gauges where the law lost to "no change". Levels and the 80% range move; crossing chances are NOT recomputed:
@@ -23,8 +25,7 @@
 //                 51 mm, the 12 h forecast 2.82 m vs 3.19 m. Raises level and range together, never lowers; a copy whenever the core is not active.
 
 import type { Forecast } from "./forecast";
-import { TRIGGER_FT_PER_H, TRIGGER_SLOW_FT_PER_H, VARIANT as RECESSION_V2, VARIANT_SLOW as RECESSION_V2_SLOW, recessionV2, type RV2Params, type RV2Rain } from "./recessionV2.mjs";
-import recessionParams from "./model/recession-params.json" with { type: "json" };
+import type { RV2Rain } from "./recessionV2.mjs";
 import { VARIANT as WET_CORE, applyWetCore } from "./model/wetCore.mjs";
 
 export type ShadowHorizon = { h: number; ts: number; level: number; low: number | null; high: number | null };
@@ -62,7 +63,7 @@ export function recessionCorrectionFt(unit: "ft" | "m" | null, currentLevel: num
  * `rain` = the run's rain inputs for the recession-v2 gate (storm flag, 6 h forecast rain, 24 h p90); omitted or null = unknown, and then the v2 variants are
  * plain copies. `station` is needed for the per-gauge law (omitted: v2 variants are copies).
  */
-export function shadowVariants(f: Pick<Forecast, "unit" | "currentLevel" | "asOfTs" | "horizons" | "method" | "wetCore"> & { station?: string }, observations: Obs[], rain?: RV2Rain | null): ShadowVariant[] {
+export function shadowVariants(f: Pick<Forecast, "unit" | "currentLevel" | "asOfTs" | "horizons" | "method" | "wetCore"> & { station?: string }, observations: Obs[], _rain?: RV2Rain | null): ShadowVariant[] {
   if (!f.horizons.length) return [];
   const copy = f.horizons.map((p) => ({ ...p }));
   const corr = f.method === "model" ? recessionCorrectionFt(f.unit, f.currentLevel, f.asOfTs, observations) : null;
@@ -71,15 +72,9 @@ export function shadowVariants(f: Pick<Forecast, "unit" | "currentLevel" | "asOf
     const c = (corr?.[p.h] ?? 0) * back;
     return c > 0 ? { ...p, level: p.level - c, low: p.low == null ? null : p.low - c, high: p.high == null ? null : p.high - c } : { ...p };
   });
-  const v2 = (trigger: number) => {
-    const g = f.station ? { station: f.station, unit: f.unit, currentLevel: f.currentLevel, asOfTs: f.asOfTs, method: f.method, horizons: f.horizons } : null;
-    return g ? recessionV2(g, observations, rain, recessionParams as unknown as RV2Params, { trigger }).horizons : f.horizons.map((p) => ({ ...p }));
-  };
   return [
     { variant: "copy", horizons: copy },
     { variant: RECESSION_VARIANT, horizons: rec },
-    { variant: RECESSION_V2, horizons: v2(TRIGGER_FT_PER_H) },
-    { variant: RECESSION_V2_SLOW, horizons: v2(TRIGGER_SLOW_FT_PER_H) },
     { variant: WET_CORE, horizons: f.method === "model" && f.wetCore ? applyWetCore(f.horizons, f.wetCore.base0, f.wetCore.rise) : f.horizons.map((p) => ({ ...p })) },
   ];
 }

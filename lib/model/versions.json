@@ -48,6 +48,12 @@
       "name": "Next hour follows what was measured",
       "from": "2026-11-04T07:30:00Z",
       "what": "When the forecast points the other way from the river's last 3 hours (for example it fell but the model expects a turn up), the \"Next hour\" word now follows what was measured and a short note says what the forecast expects."
+    },
+    {
+      "id": "recession-v2",
+      "name": "Falling rivers follow their own recession",
+      "from": "2026-11-05T00:00:00Z",
+      "what": "When a river is falling and little rain is forecast, the 3 to 24 hour levels now follow how that gauge has fallen after past high water, instead of holding the level too high."
     }
   ]
 }

@@ -46,6 +46,8 @@ import stormV4Json from "./model/storm-model-v4.json";
 import type { GsmapFile, GsmapGauge } from "./gsmap";
 import { rainRiskOf, withMeasured, type RainRisk } from "./rainRisk";
 import { STEADY_M_PER_H, fallingOutlook, hasNoForecast, maxForecastHours, shownChance, shownWording } from "./forecastRules.mjs";
+import { recessionV2, type RV2Params } from "./recessionV2.mjs";
+import recessionParamsJson from "./model/recession-params.json" with { type: "json" };
 import { cleanReadings } from "./readingQc.mjs";
 import { isTidalStation } from "./verdictLift";
 import { rainTriggersFor } from "./rainTriggers";
@@ -602,6 +604,45 @@ function fromModel(
   }
   if (!hs.length) return emptyResult(station, me.unit, "No forecast: the model has no usable horizons.", [], trend, L0, anchor);
 
+  // ---- falling river: recession law (recession-v2, a shadow from 30 Oct, LIVE since 5 Nov 2026 by owner decision; lib/recessionV2.mjs has the
+  // evidence and the gates). On a river falling 0.1 ft/h or more with calm rain known ahead, the 3-24 h levels follow how this gauge has fallen
+  // before (the model held a falling river too high: +1.4 ft at 12 h). Applied BEFORE the crossings, so the chances below are worked out from the
+  // lowered levels; it only ever lowers, the 1 h step is never touched, and unknown rain / storm / a glitchy latest reading = no change.
+  // Shadow week 22 Oct - 3 Nov vs live: fast rises called 74 -> 77%, Rising right 67.5 -> 69%, skill 18.6 -> 19%, 12 h error 0.19 ft.
+  const recApplied = new Set<number>();
+  if (!ownOdd && w) {
+    const sumAhead = (r: RainSeries | undefined, hours: number): number | null => {
+      if (!r) return null;
+      let t = 0;
+      for (let k = 1; k <= hours; k++) { const v = r[w.nowHour + k * HOUR_MS]; if (v == null) return null; t += v; }
+      return t;
+    };
+    const rainGate = {
+      storm: stormH.size > 0 || measuredHeavy || rainRiskOf({ det: w.next24hMm.det, p90: w.next24hMm.p90 }) != null,
+      next6hMm: sumAhead(w.rain, 6),
+      next24hP90Mm: w.next24hMm.p90,
+    };
+    const rec = recessionV2(
+      { station, unit: me.unit, currentLevel: L0, asOfTs: anchor, method: "model", horizons: hs.map((x) => ({ h: x.h, ts: anchor + x.h * HOUR_MS, level: x.level, low: x.low, high: x.high })) },
+      me.trend24h.map((r) => ({ ts: r.ts, level: r.water_level })),
+      rainGate,
+      recessionParamsJson as unknown as RV2Params,
+    );
+    if (rec.applied) {
+      hs.forEach((x, j) => {
+        const n = rec.horizons[j];
+        const dn = x.level - n.level;
+        if (!(dn > 0)) return;
+        // the same shift on the distribution the chances are read from; its lower spread grows so the 10% edge lands on the law's (widened) low
+        const below = x.level - x.low;
+        const k = below > 0 && n.low != null ? (n.level - n.low) / below : 1;
+        const mix = x.mix.map((c) => ({ ...c, mu: c.mu - dn, sd: c.sd * Math.max(1, k) }));
+        hs[j] = { ...x, mix, level: n.level, low: n.low ?? x.low - dn, high: n.high ?? x.high - dn };
+        recApplied.add(x.h);
+      });
+    }
+  }
+
   // ---- threshold crossings
   const th: Record<ThresholdName, number | null> = { alert: me.thresholds.alert, minor: me.thresholds.minor, major: me.thresholds.major };
   // Every horizon from the 11-month v3 fit: no longer "experimental" (that label was about the 8-day rain fit).
@@ -741,6 +782,7 @@ function fromModel(
   }
   if (v2h.size) basis.push(`The ${[...v2h].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b).join(", ")} hour steps use this gauge's own recent changes and the other gauges on the river (fitted to about 11 months of hourly readings, including the November 2025 Ditwah floods); where this was tested against 'level stays the same' it missed by less.`);
   const shownH = (set: Set<number>) => [...set].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b);
+  if (recApplied.size && shownH(recApplied).length) basis.push(`The river is falling and little rain is forecast, so the ${shownH(recApplied).join(", ")} hour steps follow how ${station} has fallen after past high water (fitted on 11 months of readings, the Ditwah floods included); the level is only ever lowered, never raised.`);
   const satM = new Set([...stormM].filter((h) => !stormG.has(h)));
   const gaugeM = new Set([...stormM].filter((h) => stormG.has(h)));
   const groundUsed = gsteps?.groundUsed ?? [];

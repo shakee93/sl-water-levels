@@ -99,6 +99,8 @@ const en = {
   "ver.gauge-first-rain.what": "In storms the forecast reads the rain measured by the rain gauges inside the catchment first, and the satellite only where no gauge is reporting.",
   "ver.measured-wins.name": "Next hour follows what was measured",
   "ver.measured-wins.what": "When the forecast points the other way from the river's last 3 hours (for example it fell but the model expects a turn up), the \"Next hour\" word now follows what was measured and a short note says what the forecast expects.",
+  "ver.recession-v2.name": "Falling rivers follow their own recession",
+  "ver.recession-v2.what": "When a river is falling and little rain is forecast, the 3 to 24 hour levels now follow how that gauge has fallen after past high water, instead of holding the level too high.",
   "link": "How accurate has this been? See forecast accuracy",
 } as const;
 
@@ -199,6 +201,8 @@ const si: Record<ForecastKpiKey, string> = {
   "ver.gauge-first-rain.what": "කුණාටු වලදී පුරෝකථනය මුලින්ම ජල පෝෂක ප්‍රදේශය තුළ ඇති වැසි මාන මැනූ වැසි කියවයි; කිසිදු මානයක් වාර්තා නොකරන තැන්වල පමණක් චන්ද්‍රිකා දත්ත භාවිත කරයි.",
   "ver.measured-wins.name": "ඊළඟ පැය මනින ලද දෙයට අනුව",
   "ver.measured-wins.what": "පුරෝකථනය ගඟේ පසුගිය පැය 3 ට පටහැනි නම් (උදා: පහළ ගියත් ආකෘතිය නැවත ඉහළ යාමක් බලාපොරොත්තු වේ), \"ඊළඟ පැය\" වචනය දැන් මනින ලද දෙයට අනුව වන අතර පුරෝකථනය බලාපොරොත්තු වන දේ කෙටි සටහනකින් දැක්වේ.",
+  "ver.recession-v2.name": "බසින ගංගා තමන්ගේම බැසීමේ රටාව අනුගමනය කරයි",
+  "ver.recession-v2.what": "ගඟක් බසිමින් පවතින අතර වැඩි වැසි පුරෝකථනය කර නැති විට, පැය 3 සිට 24 දක්වා මට්ටම් දැන් එම මානය පෙර ඉහළ ජලයෙන් පසු බැස ගිය ආකාරය අනුගමනය කරයි; මට්ටම ඕනෑවට වඩා ඉහළින් තබා නොගනී.",
   "link": "මෙය කොතරම් නිවැරදිද? පුරෝකථන නිරවද්‍යතාව බලන්න",
 };
 
@@ -297,6 +301,8 @@ const ta: Record<ForecastKpiKey, string> = {
   "ver.gauge-first-rain.what": "புயல்களில் முன்னறிவிப்பு முதலில் நீர்ப்பிடிப்புப் பகுதிக்குள் உள்ள மழைமானிகள் அளந்த மழையைப் படிக்கிறது; எந்த மானியும் அறிவிக்காத இடங்களில் மட்டுமே செயற்கைக்கோள் தரவைப் பயன்படுத்துகிறது.",
   "ver.measured-wins.name": "அடுத்த மணி நேரம் அளவிட்டதைப் பின்பற்றும்",
   "ver.measured-wins.what": "முன்னறிவிப்பு ஆற்றின் கடந்த 3 மணி நேரத்துக்கு எதிர்த்திசையில் இருந்தால் (எ.கா. குறைந்தும் மாதிரி மீண்டும் உயரும் என்றால்), \"அடுத்த மணி நேரம்\" சொல் இப்போது அளவிட்டதைப் பின்பற்றுகிறது, முன்னறிவிப்பு எதிர்பார்ப்பதை ஒரு சிறு குறிப்பு சொல்கிறது.",
+  "ver.recession-v2.name": "குறையும் ஆறுகள் தங்கள் சொந்த இறக்க முறையைப் பின்பற்றும்",
+  "ver.recession-v2.what": "ஆறு குறைந்து கொண்டிருக்கும்போதும் குறைந்த மழை மட்டுமே முன்னறிவிக்கப்படும்போதும், 3 முதல் 24 மணி நேர மட்டங்கள் இப்போது அந்த அளவீடு முன்பு உயர் நீருக்குப் பின் இறங்கிய விதத்தைப் பின்பற்றுகின்றன; மட்டத்தை அளவுக்கு மீறி உயரமாக வைத்திருக்காது.",
   "link": "இது எவ்வளவு துல்லியமாக இருந்தது? முன்னறிவிப்புத் துல்லியத்தைப் பார்க்கவும்",
 };
 

@@ -79,18 +79,13 @@ for (let n = 0; n < 300; n++) {
   y.horizons.forEach((p, i) => { assert.ok(p.level <= ff.horizons[i].level + 1e-9, `${st} never raised`); assert.ok(p.h !== 1 || p.level === ff.horizons[i].level); });
 }
 
-// 4. the slow-fall variant: a gentle fall is copied by v2 and lowered by v2-slow; both are in shadowVariants and the rain gate applies
+// 4. live since 5 Nov 2026 (lib/forecast.ts): v2 is no longer a shadow and v2-slow was dropped. The gates, called the way the live forecast calls them:
 const gentle = mkObs(0.05);
-const sv = shadowVariants(f, gentle, OK_RAIN);
-assert.deepEqual(sv.map((v) => v.variant), ["copy", "recession-v1", "recession-v2", "recession-v2-slow", "wet-core"]);
-assert.deepEqual(sv[2].horizons, f.horizons, "v2: 0.05 ft/h is not falling enough");
-assert.ok(sv[3].horizons.some((p, i) => p.level < f.horizons[i].level), "v2-slow lowers a gentle fall");
-const sv2 = shadowVariants(f, obs, OK_RAIN);
-assert.ok(sv2[2].horizons[3].level < f.horizons[3].level && sv2[3].horizons[3].level <= f.horizons[3].level, "falling: v2 lowers");
-const sv3 = shadowVariants(f, obs, null);
-assert.deepEqual(sv3[2].horizons, f.horizons, "shadowVariants: unknown rain = v2 copy");
-assert.deepEqual(sv3[3].horizons, f.horizons, "shadowVariants: unknown rain = v2-slow copy");
-assert.deepEqual(shadowVariants(f, obs, { ...OK_RAIN, storm: true })[2].horizons, f.horizons, "shadowVariants: storm = copy");
+assert.deepEqual(shadowVariants(f, gentle, OK_RAIN).map((v) => v.variant), ["copy", "recession-v1", "wet-core"]);
+assert.equal(recessionV2(f, gentle, OK_RAIN, params).applied, false, "0.05 ft/h is not falling enough");
+assert.ok(recessionV2(f, obs, OK_RAIN, params).horizons[3].level < f.horizons[3].level, "falling: lowered");
+assert.deepEqual(recessionV2(f, obs, null, params).horizons, f.horizons, "unknown rain = unchanged");
+assert.deepEqual(recessionV2(f, obs, { ...OK_RAIN, storm: true }, params).horizons, f.horizons, "storm = unchanged");
 assert.ok(ratesFt("m", toM(36), T0, obs).r3 < -0.49 && ratesFt("m", toM(36), T0, obs).r3 > -0.51, "rate in ft/h from a metre gauge");
 
 console.log("recession-v2 tests passed");
