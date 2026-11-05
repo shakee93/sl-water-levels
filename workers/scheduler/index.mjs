@@ -7,7 +7,7 @@ const BY_CRON = {
   // new gauge reading has arrived (see freshReading), so river alerts reach X within ~5 min.
   "*/5 * * * *": ["releases-snapshot.yml", "curw-snapshot.yml", "x-replies.yml"], // x-replies: answers to people who write to the X account; curw: private CUrW canal-level archive, all day (no night filter)
   "25 * * * *": ["store-forecasts.yml", "rivernet-snapshot.yml"], // rivernet: 1-minute sensor archive, every 2 h (filtered in wanted()); GitHub's own cron ran it 3 times in 2 days
-  "7,37 * * * *": ["health-check.yml", "gsmap-snapshot.yml", "x-reposts.yml", "hmis-snapshot.yml"], // JAXA publishes at :01/:31
+  "7,37 * * * *": ["health-check.yml", "gsmap-snapshot.yml", "x-reposts.yml", "hmis-snapshot.yml", "feedback-digest.yml"], // JAXA publishes at :01/:31; feedback-digest: urgent catch-up + the 08:00 Colombo digest (GitHub's cron ran it 42 times in 10 days, the 08:00 digest arrived ~13:00)
   "17,47 * * * *": ["rain-correct.yml"], // after the :07/:37 snapshots (gsmap, hmis) have pushed
   "30 7,19 * * *": ["snapshot.yml"],
   "0 1 1 * *": ["export-predictions.yml"],
