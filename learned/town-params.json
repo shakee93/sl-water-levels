@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-05T18:50:55.287Z",
+  "updatedAt": "2026-11-05T23:51:58.714Z",
   "asOf": "2026-11-06",
   "minimums": {
     "answers": 3,
@@ -193,9 +193,7 @@
         "days": 1,
         "yes": 0,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": 0.07
+        "better": 0
       }
     },
     "Peradeniya": {
@@ -545,32 +543,32 @@
   "forecast": {
     "window": {
       "from": "2026-10-28",
-      "to": "2026-11-05",
-      "points": 15658
+      "to": "2026-11-06",
+      "points": 15486
     },
     "horizons": {
       "1": {
-        "n": 5221,
-        "maeBase": 0.14,
-        "maeFit": 0.14,
+        "n": 4623,
+        "maeBase": 0.15,
+        "maeFit": 0.15,
         "gainPct": 0,
-        "maePooled": 0.14,
+        "maePooled": 0.15,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 5169,
-        "maeBase": 0.33,
-        "maeFit": 0.33,
+        "n": 4585,
+        "maeBase": 0.35,
+        "maeFit": 0.35,
         "gainPct": 0,
-        "maePooled": 0.33,
-        "pooledGainPct": -2
+        "maePooled": 0.35,
+        "pooledGainPct": 0
       },
       "6": {
-        "n": 5077,
+        "n": 5153,
         "maeBase": 0.57,
-        "maeFit": 0.57,
+        "maeFit": 0.56,
         "gainPct": 0,
-        "maePooled": 0.57,
+        "maePooled": 0.56,
         "pooledGainPct": 0
       }
     },
