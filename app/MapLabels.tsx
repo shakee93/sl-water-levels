@@ -209,7 +209,11 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
     cancelAnimationFrame(raf.current);
     raf.current = requestAnimationFrame(compute);
   }, [compute]);
-  useMapEvents({ move: schedule, zoom: schedule, resize: schedule });
+  // The label layer sits above Leaflet's panes (z 620 > the map pane's 400 stacking context), so a hover tooltip would be drawn UNDER
+  // the place and river names around it (5 Nov 2026: "Deduru Oya · Spilling" unreadable under "Kala Wewa" and "Mee Oya"). While a
+  // tooltip is open the names fade back, and come back when it closes.
+  const [tipOpen, setTipOpen] = useState(false);
+  useMapEvents({ move: schedule, zoom: schedule, resize: schedule, tooltipopen: () => setTipOpen(true), tooltipclose: () => setTipOpen(false) });
   useEffect(() => {
     schedule();
     // the key opens and closes: place the labels again around it
@@ -228,7 +232,7 @@ export function MapLabels({ stations, lakes, scheme, user }: { stations: HomeSta
   );
 
   return createPortal(
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 620, fontSize: 11, lineHeight: "13px" }}>
+    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 620, fontSize: 11, lineHeight: "13px", opacity: tipOpen ? 0.12 : 1, transition: "opacity 120ms" }}>
       {items.map((it) => (
         <div key={it.key}>
           {it.dot && <span className="absolute size-[5px] rounded-full border border-slate-400 dark:border-slate-500" style={{ left: it.dot.x - 2.5, top: it.dot.y - 2.5 }} />}
