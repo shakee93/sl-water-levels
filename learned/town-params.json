@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-06T18:50:54.775Z",
+  "updatedAt": "2026-11-06T23:33:43.450Z",
   "asOf": "2026-11-07",
   "minimums": {
     "answers": 3,
@@ -126,8 +126,8 @@
         "yes": 6,
         "worse": 4,
         "better": 2,
-        "errN": 3,
-        "meanErrFt": 0.09
+        "errN": 2,
+        "meanErrFt": 0
       },
       "falling": {
         "n": 10,
@@ -543,36 +543,36 @@
   "forecast": {
     "window": {
       "from": "2026-10-29",
-      "to": "2026-11-06",
-      "points": 15453
+      "to": "2026-11-07",
+      "points": 15507
     },
     "horizons": {
       "1": {
-        "n": 5152,
-        "maeBase": 0.15,
-        "maeFit": 0.15,
+        "n": 4631,
+        "maeBase": 0.17,
+        "maeFit": 0.17,
         "gainPct": 0,
-        "maePooled": 0.15,
+        "maePooled": 0.17,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 5108,
-        "maeBase": 0.35,
-        "maeFit": 0.35,
+        "n": 4587,
+        "maeBase": 0.38,
+        "maeFit": 0.38,
         "gainPct": 0,
-        "maePooled": 0.35,
-        "pooledGainPct": -1
+        "maePooled": 0.39,
+        "pooledGainPct": 0
       },
       "6": {
-        "n": 5022,
-        "maeBase": 0.6,
-        "maeFit": 0.61,
-        "gainPct": -1,
-        "maePooled": 0.6,
+        "n": 5144,
+        "maeBase": 0.62,
+        "maeFit": 0.62,
+        "gainPct": 0,
+        "maePooled": 0.62,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 1,
+    "gaugesPassingOwnTest": 2,
     "useful": false,
     "wired": false
   }
