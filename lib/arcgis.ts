@@ -20,6 +20,7 @@ import { levelTier, statusFor, type Tier } from "./status";
 import { basinPath, basinSlug, stationPath } from "./slug";
 import { detectUnit, type Unit } from "./units";
 import { getHmisLevels, HMIS_GAUGES, HMIS_GAUGE_BY_STATION, type HmisDevice, type HmisGaugeDef } from "./hmis";
+import { getArchivedPoints, mergeArchive } from "./gaugeArchive";
 import { getRivernetDevice, getRivernetLevels, RIVERNET_NEW, RIVERNET_TRIBUTARIES, RIVERNET_NEW_BY_STATION, type RivernetDevice, type RnNewDef } from "./rivernet";
 
 export { statusFor } from "./status";
@@ -280,16 +281,20 @@ export async function fetchStationData(stationName: string, days = 4): Promise<S
     const dev = await getRivernetDevice(rdef.key, 6000);
     if (!dev) throw new Error(`RiverNet has no reading for ${stationName} right now`);
     const n = buildRivernetNational(rdef, dev);
-    return { station: stationName, basin: rdef.basin, thresholds: n.thresholds, readings: rivernetRows(rdef, dev).map(toReading).sort((a, b) => a.ts - b.ts), latest: n.latest };
+    // Older days from our own archive (lib/gaugeArchive.ts): RiverNet serves only 24 h.
+    const old = await getArchivedPoints("rivernet", rdef.key, days);
+    const series = mergeArchive(old, dev.series, Date.now() - days * 86_400_000);
+    return { station: stationName, basin: rdef.basin, thresholds: n.thresholds, readings: rivernetRows(rdef, { ...dev, series }).map(toReading).sort((a, b) => a.ts - b.ts), latest: n.latest };
   }
   const hdef = HMIS_GAUGE_BY_STATION.get(stationName);
   if (hdef) {
-    // HMIS gauge: its last 24 h (HMIS keeps no more), metres.
-    const hm = await getHmisLevels(4000);
+    // HMIS gauge: HMIS serves its last 24 h only; older days come from our own archive (lib/gaugeArchive.ts). Metres.
+    const [hm, old] = await Promise.all([getHmisLevels(4000), getArchivedPoints("hmis", hdef.device, days)]);
     const dev = hm?.devices.find((d) => d.device === hdef.device);
     if (!dev) throw new Error(`HMIS has no reading for ${stationName} right now`);
     const n = buildHmisNational(hdef, dev);
-    return { station: stationName, basin: hdef.basin, thresholds: n.thresholds, readings: hmisRows(hdef, dev).map(toReading).sort((a, b) => a.ts - b.ts), latest: n.latest };
+    const series = mergeArchive(old, dev.series, Date.now() - days * 86_400_000);
+    return { station: stationName, basin: hdef.basin, thresholds: n.thresholds, readings: hmisRows(hdef, { ...dev, series }).map(toReading).sort((a, b) => a.ts - b.ts), latest: n.latest };
   }
   let features: ArcgisPage["features"];
   try {
