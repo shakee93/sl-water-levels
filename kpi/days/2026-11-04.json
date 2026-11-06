@@ -101,14 +101,14 @@
    "unit": "%",
    "target": 10,
    "met": false,
-   "n": 1628,
+   "n": 1607,
    "parts": [
     {
      "key": "0-10",
      "value": 0,
      "shown": 0.1,
      "target": 10,
-     "n": 1540,
+     "n": 1519,
      "met": true
     },
     {
@@ -165,7 +165,7 @@
      {
       "from": 0,
       "to": 0.1,
-      "n": 1540,
+      "n": 1519,
       "shownPct": 0.1,
       "observedPct": 0,
       "met": true
@@ -231,7 +231,7 @@
    "unit": "%",
    "target": 30,
    "met": false,
-   "n": 2793,
+   "n": 2784,
    "parts": [
     {
      "key": "h1",
@@ -265,14 +265,14 @@
      "key": "h24",
      "value": 1.2,
      "target": 10,
-     "n": 413,
+     "n": 404,
      "met": false
     },
     {
      "key": "worstPhase",
-     "value": 5.8,
+     "value": 5.7,
      "target": 0,
-     "n": 2714,
+     "n": 2705,
      "met": true
     }
    ],
@@ -289,17 +289,17 @@
       "horizons": 5
      },
      "calm": {
-      "n": 236,
-      "skill": 5.8,
+      "n": 234,
+      "skill": 5.7,
       "horizons": 5
      },
      "slow fall": {
-      "n": 770,
+      "n": 766,
       "skill": 6.1,
       "horizons": 5
      },
      "falling": {
-      "n": 903,
+      "n": 900,
       "skill": 23.8,
       "horizons": 5
      }
@@ -362,7 +362,7 @@
    "unit": "%",
    "target": "75-85",
    "met": false,
-   "n": 2793,
+   "n": 2784,
    "parts": [
     {
      "key": "h1",
@@ -396,7 +396,7 @@
      "key": "h24",
      "value": 77.2,
      "target": "75-85",
-     "n": 413,
+     "n": 404,
      "met": true
     }
    ],
@@ -516,7 +516,7 @@
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -550,14 +550,14 @@
       "key": "h24",
       "value": 1.2,
       "target": 10,
-      "n": 413,
+      "n": 404,
       "met": false
      },
      {
       "key": "worstPhase",
-      "value": 5.8,
+      "value": 5.7,
       "target": 0,
-      "n": 2714,
+      "n": 2705,
       "met": true
      }
     ],
@@ -574,17 +574,17 @@
        "horizons": 5
       },
       "calm": {
-       "n": 236,
-       "skill": 5.8,
+       "n": 234,
+       "skill": 5.7,
        "horizons": 5
       },
       "slow fall": {
-       "n": 770,
+       "n": 766,
        "skill": 6.1,
        "horizons": 5
       },
       "falling": {
-       "n": 903,
+       "n": 900,
        "skill": 23.8,
        "horizons": 5
       }
@@ -647,7 +647,7 @@
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -681,7 +681,7 @@
       "key": "h24",
       "value": 77.2,
       "target": "75-85",
-      "n": 413,
+      "n": 404,
       "met": true
      }
     ],
@@ -894,14 +894,14 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 1628,
+    "n": 1607,
     "parts": [
      {
       "key": "0-10",
       "value": 0,
       "shown": 0.1,
       "target": 10,
-      "n": 1540,
+      "n": 1519,
       "met": true
      },
      {
@@ -958,7 +958,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 1540,
+       "n": 1519,
        "shownPct": 0.1,
        "observedPct": 0,
        "met": true
@@ -1018,13 +1018,13 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 33.3,
-     "n": 1628,
+     "n": 1607,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0,
-       "n": 1540,
+       "n": 1519,
        "met": true
       },
       {
@@ -1069,7 +1069,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 1540,
+        "n": 1519,
         "shownPct": 0.1,
         "observedPct": 0,
         "met": true
@@ -1295,14 +1295,14 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 1628,
+    "n": 1607,
     "parts": [
      {
       "key": "0-10",
       "value": 0,
       "shown": 0.1,
       "target": 10,
-      "n": 1540,
+      "n": 1519,
       "met": true
      },
      {
@@ -1359,7 +1359,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 1540,
+       "n": 1519,
        "shownPct": 0.1,
        "observedPct": 0,
        "met": true
@@ -1419,13 +1419,13 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 33.3,
-     "n": 1628,
+     "n": 1607,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0,
-       "n": 1540,
+       "n": 1519,
        "met": true
       },
       {
@@ -1470,7 +1470,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 1540,
+        "n": 1519,
         "shownPct": 0.1,
         "observedPct": 0,
         "met": true
@@ -1696,14 +1696,14 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 1628,
+    "n": 1607,
     "parts": [
      {
       "key": "0-10",
       "value": 0,
       "shown": 0.1,
       "target": 10,
-      "n": 1540,
+      "n": 1519,
       "met": true
      },
      {
@@ -1760,7 +1760,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 1540,
+       "n": 1519,
        "shownPct": 0.1,
        "observedPct": 0,
        "met": true
@@ -1820,13 +1820,13 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 33.3,
-     "n": 1628,
+     "n": 1607,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0,
-       "n": 1540,
+       "n": 1519,
        "met": true
       },
       {
@@ -1871,7 +1871,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 1540,
+        "n": 1519,
         "shownPct": 0.1,
         "observedPct": 0,
         "met": true
@@ -1940,7 +1940,7 @@
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -1972,16 +1972,16 @@
      },
      {
       "key": "h24",
-      "value": -9.8,
+      "value": -10.4,
       "target": 10,
-      "n": 413,
+      "n": 404,
       "met": false
      },
      {
       "key": "worstPhase",
-      "value": 5.8,
+      "value": 5.7,
       "target": 0,
-      "n": 2714,
+      "n": 2705,
       "met": true
      }
     ],
@@ -1998,18 +1998,18 @@
        "horizons": 5
       },
       "calm": {
-       "n": 236,
-       "skill": 5.8,
+       "n": 234,
+       "skill": 5.7,
        "horizons": 5
       },
       "slow fall": {
-       "n": 770,
-       "skill": 6.4,
+       "n": 766,
+       "skill": 6.2,
        "horizons": 5
       },
       "falling": {
-       "n": 903,
-       "skill": 14.9,
+       "n": 900,
+       "skill": 14.6,
        "horizons": 5
       }
      }
@@ -2071,7 +2071,7 @@
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -2105,7 +2105,7 @@
       "key": "h24",
       "value": 77,
       "target": "75-85",
-      "n": 413,
+      "n": 404,
       "met": true
      }
     ],
@@ -2161,7 +2161,7 @@
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -2193,16 +2193,16 @@
      },
      {
       "key": "h24",
-      "value": -10.3,
+      "value": -10.9,
       "target": 10,
-      "n": 413,
+      "n": 404,
       "met": false
      },
      {
       "key": "worstPhase",
-      "value": 5.8,
+      "value": 5.7,
       "target": 0,
-      "n": 2714,
+      "n": 2705,
       "met": true
      }
     ],
@@ -2219,18 +2219,18 @@
        "horizons": 5
       },
       "calm": {
-       "n": 236,
-       "skill": 5.8,
+       "n": 234,
+       "skill": 5.7,
        "horizons": 5
       },
       "slow fall": {
-       "n": 770,
-       "skill": 6.1,
+       "n": 766,
+       "skill": 6.2,
        "horizons": 5
       },
       "falling": {
-       "n": 903,
-       "skill": 16.9,
+       "n": 900,
+       "skill": 16.5,
        "horizons": 5
       }
      }
@@ -2292,7 +2292,7 @@
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -2324,9 +2324,9 @@
      },
      {
       "key": "h24",
-      "value": 75.8,
+      "value": 75.7,
       "target": "75-85",
-      "n": 413,
+      "n": 404,
       "met": true
      }
     ],
@@ -2382,7 +2382,7 @@
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -2414,16 +2414,16 @@
      },
      {
       "key": "h24",
-      "value": -9.8,
+      "value": -10.9,
       "target": 10,
-      "n": 413,
+      "n": 404,
       "met": false
      },
      {
       "key": "worstPhase",
-      "value": 4,
+      "value": 3.6,
       "target": 0,
-      "n": 2714,
+      "n": 2705,
       "met": true
      }
     ],
@@ -2440,18 +2440,18 @@
        "horizons": 5
       },
       "calm": {
-       "n": 236,
-       "skill": 5.8,
+       "n": 234,
+       "skill": 5.7,
        "horizons": 5
       },
       "slow fall": {
-       "n": 770,
-       "skill": 4,
+       "n": 766,
+       "skill": 3.6,
        "horizons": 5
       },
       "falling": {
-       "n": 903,
-       "skill": 16.9,
+       "n": 900,
+       "skill": 16.5,
        "horizons": 5
       }
      }
@@ -2513,7 +2513,7 @@
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -2547,7 +2547,7 @@
       "key": "h24",
       "value": 76.5,
       "target": "75-85",
-      "n": 413,
+      "n": 404,
       "met": true
      }
     ],
@@ -2603,7 +2603,7 @@
     "unit": "%",
     "target": 30,
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -2637,14 +2637,14 @@
       "key": "h24",
       "value": 1.2,
       "target": 10,
-      "n": 413,
+      "n": 404,
       "met": false
      },
      {
       "key": "worstPhase",
-      "value": 5.8,
+      "value": 5.7,
       "target": 0,
-      "n": 2714,
+      "n": 2705,
       "met": true
      }
     ],
@@ -2661,17 +2661,17 @@
        "horizons": 5
       },
       "calm": {
-       "n": 236,
-       "skill": 5.8,
+       "n": 234,
+       "skill": 5.7,
        "horizons": 5
       },
       "slow fall": {
-       "n": 770,
+       "n": 766,
        "skill": 6.1,
        "horizons": 5
       },
       "falling": {
-       "n": 903,
+       "n": 900,
        "skill": 23.8,
        "horizons": 5
       }
@@ -2734,7 +2734,7 @@
     "unit": "%",
     "target": "75-85",
     "met": false,
-    "n": 2793,
+    "n": 2784,
     "parts": [
      {
       "key": "h1",
@@ -2768,7 +2768,7 @@
       "key": "h24",
       "value": 77.2,
       "target": "75-85",
-      "n": 413,
+      "n": 404,
       "met": true
      }
     ],
