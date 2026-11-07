@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-07T18:50:51.394Z",
+  "updatedAt": "2026-11-07T22:23:07.739Z",
   "asOf": "2026-11-08",
   "minimums": {
     "answers": 3,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 136,
-    "people": 131,
+    "answers": 137,
+    "people": 132,
     "streetReports": 14,
-    "days": 13
+    "days": 14
   },
   "stations": {
     "Badalgama": {
@@ -454,6 +454,25 @@
         "errN": 1,
         "meanErrFt": -0.73
       }
+    },
+    "Moraketiya": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.22
+      }
     }
   },
   "zones": {},
@@ -568,36 +587,36 @@
   "forecast": {
     "window": {
       "from": "2026-10-30",
-      "to": "2026-11-07",
+      "to": "2026-11-08",
       "points": 15442
     },
     "horizons": {
       "1": {
-        "n": 4501,
+        "n": 4573,
         "maeBase": 0.19,
         "maeFit": 0.19,
-        "gainPct": -1,
+        "gainPct": 0,
         "maePooled": 0.19,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 5105,
-        "maeBase": 0.4,
-        "maeFit": 0.4,
+        "n": 4522,
+        "maeBase": 0.44,
+        "maeFit": 0.44,
         "gainPct": 0,
-        "maePooled": 0.4,
+        "maePooled": 0.44,
         "pooledGainPct": -1
       },
       "6": {
-        "n": 5009,
-        "maeBase": 0.68,
-        "maeFit": 0.68,
+        "n": 5088,
+        "maeBase": 0.7,
+        "maeFit": 0.7,
         "gainPct": 0,
-        "maePooled": 0.68,
+        "maePooled": 0.7,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 2,
+    "gaugesPassingOwnTest": 3,
     "useful": false,
     "wired": false
   }
