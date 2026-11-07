@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-06T23:33:43.450Z",
-  "asOf": "2026-11-07",
+  "updatedAt": "2026-11-07T18:50:51.394Z",
+  "asOf": "2026-11-08",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 159,
-    "feedback": 137,
-    "street": 14,
+    "total": 167,
+    "feedback": 144,
+    "street": 15,
     "flood3d": 8,
-    "newTonight": 0,
+    "newTonight": 8,
     "trusted": 8,
     "flagged": 0
   },
@@ -19,14 +19,14 @@
       "days": 3,
       "defaultFt": 5,
       "clamped": true,
-      "dryBelowN": 4
+      "dryBelowN": 5
     }
   },
   "groundRain": {
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 378,
+      "steps": 402,
       "stepDays": 12,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 379,
+      "steps": 403,
       "stepDays": 12,
       "events": 6,
       "eventDays": 4,
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 378,
+      "steps": 402,
       "stepDays": 12,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 378,
+      "steps": 402,
       "stepDays": 12,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 378,
+      "steps": 402,
       "stepDays": 12,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 378,
+      "steps": 402,
       "stepDays": 12,
       "events": 0,
       "eventDays": 0,
@@ -159,34 +159,34 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-10-29",
+      "from": "2026-10-30",
       "to": "2026-11-07",
-      "points": 15507
+      "points": 15442
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4631,
-          "maeBase": 0.17,
-          "maeFit": 0.17,
-          "gainPct": 0,
-          "maePooled": 0.17,
+          "n": 4501,
+          "maeBase": 0.19,
+          "maeFit": 0.19,
+          "gainPct": -1,
+          "maePooled": 0.19,
           "pooledGainPct": -2
         },
         "3": {
-          "n": 4587,
-          "maeBase": 0.38,
-          "maeFit": 0.38,
+          "n": 5105,
+          "maeBase": 0.4,
+          "maeFit": 0.4,
           "gainPct": 0,
-          "maePooled": 0.39,
-          "pooledGainPct": 0
+          "maePooled": 0.4,
+          "pooledGainPct": -1
         },
         "6": {
-          "n": 5144,
-          "maeBase": 0.62,
-          "maeFit": 0.62,
+          "n": 5009,
+          "maeBase": 0.68,
+          "maeFit": 0.68,
           "gainPct": 0,
-          "maePooled": 0.62,
+          "maePooled": 0.68,
           "pooledGainPct": 0
         }
       },
@@ -345,14 +345,14 @@
     },
     {
       "kind": "streetLevel",
-      "name": "Moragaswewa",
+      "name": "Hanwella",
       "have": 1,
       "need": 3,
       "missing": 2
     },
     {
       "kind": "streetLevel",
-      "name": "Kalawellawa (Millakanda)",
+      "name": "Moragaswewa",
       "have": 1,
       "need": 3,
       "missing": 2

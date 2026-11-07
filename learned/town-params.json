@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-06T23:33:43.450Z",
-  "asOf": "2026-11-07",
+  "updatedAt": "2026-11-07T18:50:51.394Z",
+  "asOf": "2026-11-08",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 129,
-    "people": 125,
-    "streetReports": 12,
-    "days": 12
+    "answers": 136,
+    "people": 131,
+    "streetReports": 14,
+    "days": 13
   },
   "stations": {
     "Badalgama": {
@@ -51,17 +51,17 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 40,
-        "days": 6,
-        "yes": 24,
+        "n": 41,
+        "days": 7,
+        "yes": 25,
         "worse": 7,
         "better": 1,
         "unsure": 8
       },
       "seen": {
-        "n": 6,
+        "n": 7,
         "higher": 1,
-        "same": 4,
+        "same": 5,
         "lower": 1
       },
       "rising": {
@@ -74,11 +74,13 @@
         "meanErrFt": 0.6
       },
       "falling": {
-        "n": 11,
-        "days": 3,
-        "yes": 8,
+        "n": 12,
+        "days": 4,
+        "yes": 9,
         "worse": 2,
-        "better": 1
+        "better": 1,
+        "errN": 1,
+        "meanErrFt": -0.03
       }
     },
     "Holombuwa": {
@@ -107,36 +109,36 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 31,
-        "days": 10,
-        "yes": 13,
-        "worse": 10,
+        "n": 35,
+        "days": 11,
+        "yes": 14,
+        "worse": 12,
         "better": 4,
-        "unsure": 4
+        "unsure": 5
       },
       "seen": {
-        "n": 6,
-        "higher": 5,
-        "same": 1,
+        "n": 8,
+        "higher": 6,
+        "same": 2,
         "lower": 0
       },
       "rising": {
-        "n": 12,
-        "days": 7,
+        "n": 13,
+        "days": 8,
         "yes": 6,
-        "worse": 4,
+        "worse": 5,
         "better": 2,
-        "errN": 2,
-        "meanErrFt": 0
+        "errN": 3,
+        "meanErrFt": -0.02
       },
       "falling": {
-        "n": 10,
-        "days": 6,
-        "yes": 4,
+        "n": 11,
+        "days": 7,
+        "yes": 5,
         "worse": 5,
         "better": 1,
         "errN": 5,
-        "meanErrFt": -0.1
+        "meanErrFt": -0.12
       },
       "streetLevel": {
         "ft": 3,
@@ -144,7 +146,7 @@
         "days": 3,
         "defaultFt": 5,
         "clamped": true,
-        "dryBelowN": 4
+        "dryBelowN": 5
       }
     },
     "Norwood": {
@@ -166,9 +168,9 @@
     },
     "Dunamale": {
       "answers": {
-        "n": 11,
-        "days": 4,
-        "yes": 9,
+        "n": 13,
+        "days": 5,
+        "yes": 11,
         "worse": 1,
         "better": 1,
         "unsure": 0
@@ -189,11 +191,13 @@
         "meanErrFt": 0.78
       },
       "falling": {
-        "n": 1,
-        "days": 1,
-        "yes": 0,
+        "n": 2,
+        "days": 2,
+        "yes": 1,
         "worse": 1,
-        "better": 0
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.22
       }
     },
     "Peradeniya": {
@@ -361,9 +365,7 @@
         "days": 3,
         "yes": 0,
         "worse": 2,
-        "better": 1,
-        "errN": 1,
-        "meanErrFt": -0.14
+        "better": 1
       }
     },
     "Kalawellawa (Millakanda)": {
@@ -471,10 +473,10 @@
       "dry": 1
     },
     "kaduwela": {
-      "reports": 1,
-      "days": 1,
+      "reports": 2,
+      "days": 2,
       "deep": 0,
-      "little": 0,
+      "little": 1,
       "dry": 1
     },
     "gampaha": {
@@ -504,6 +506,13 @@
       "deep": 0,
       "little": 1,
       "dry": 0
+    },
+    "akurana": {
+      "reports": 1,
+      "days": 1,
+      "deep": 1,
+      "little": 0,
+      "dry": 0
     }
   },
   "pending": [
@@ -525,7 +534,23 @@
     },
     {
       "kind": "streetLevel",
+      "station": "Hanwella",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
       "station": "Moragaswewa",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
+      "station": "Peradeniya",
       "n": 1,
       "days": 1,
       "needN": 3,
@@ -542,33 +567,33 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-10-29",
+      "from": "2026-10-30",
       "to": "2026-11-07",
-      "points": 15507
+      "points": 15442
     },
     "horizons": {
       "1": {
-        "n": 4631,
-        "maeBase": 0.17,
-        "maeFit": 0.17,
-        "gainPct": 0,
-        "maePooled": 0.17,
+        "n": 4501,
+        "maeBase": 0.19,
+        "maeFit": 0.19,
+        "gainPct": -1,
+        "maePooled": 0.19,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 4587,
-        "maeBase": 0.38,
-        "maeFit": 0.38,
+        "n": 5105,
+        "maeBase": 0.4,
+        "maeFit": 0.4,
         "gainPct": 0,
-        "maePooled": 0.39,
-        "pooledGainPct": 0
+        "maePooled": 0.4,
+        "pooledGainPct": -1
       },
       "6": {
-        "n": 5144,
-        "maeBase": 0.62,
-        "maeFit": 0.62,
+        "n": 5009,
+        "maeBase": 0.68,
+        "maeFit": 0.68,
         "gainPct": 0,
-        "maePooled": 0.62,
+        "maePooled": 0.68,
         "pooledGainPct": 0
       }
     },
