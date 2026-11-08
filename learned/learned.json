@@ -1,25 +1,25 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-07T22:23:07.739Z",
-  "asOf": "2026-11-08",
+  "updatedAt": "2026-11-08T18:50:52.422Z",
+  "asOf": "2026-11-09",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 169,
-    "feedback": 145,
-    "street": 16,
+    "total": 188,
+    "feedback": 161,
+    "street": 19,
     "flood3d": 8,
-    "newTonight": 2,
+    "newTonight": 19,
     "trusted": 8,
     "flagged": 0
   },
   "streetLevel": {
     "Nagalagam Street": {
       "ft": 3,
-      "n": 4,
-      "days": 3,
+      "n": 5,
+      "days": 4,
       "defaultFt": 5,
       "clamped": true,
-      "dryBelowN": 5
+      "dryBelowN": 6
     }
   },
   "groundRain": {
@@ -159,34 +159,34 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-10-30",
+      "from": "2026-10-31",
       "to": "2026-11-08",
-      "points": 15442
+      "points": 15437
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4573,
+          "n": 5156,
           "maeBase": 0.19,
-          "maeFit": 0.19,
-          "gainPct": 0,
-          "maePooled": 0.19,
+          "maeFit": 0.2,
+          "gainPct": -1,
+          "maePooled": 0.2,
           "pooledGainPct": -2
         },
         "3": {
-          "n": 4522,
-          "maeBase": 0.44,
-          "maeFit": 0.44,
+          "n": 5100,
+          "maeBase": 0.47,
+          "maeFit": 0.47,
           "gainPct": 0,
-          "maePooled": 0.44,
-          "pooledGainPct": -1
+          "maePooled": 0.47,
+          "pooledGainPct": 0
         },
         "6": {
-          "n": 5088,
-          "maeBase": 0.7,
-          "maeFit": 0.7,
+          "n": 5004,
+          "maeBase": 0.81,
+          "maeFit": 0.8,
           "gainPct": 0,
-          "maePooled": 0.7,
+          "maePooled": 0.81,
           "pooledGainPct": 0
         }
       },

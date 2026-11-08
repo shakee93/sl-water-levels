@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-07T22:23:07.739Z",
-  "asOf": "2026-11-08",
+  "updatedAt": "2026-11-08T18:50:52.422Z",
+  "asOf": "2026-11-09",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,18 +13,18 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 137,
-    "people": 132,
-    "streetReports": 14,
+    "answers": 149,
+    "people": 144,
+    "streetReports": 16,
     "days": 14
   },
   "stations": {
     "Badalgama": {
       "answers": {
-        "n": 7,
-        "days": 2,
+        "n": 8,
+        "days": 3,
         "yes": 3,
-        "worse": 1,
+        "worse": 2,
         "better": 1,
         "unsure": 2
       },
@@ -42,21 +42,23 @@
         "better": 1
       },
       "falling": {
-        "n": 1,
-        "days": 1,
+        "n": 2,
+        "days": 2,
         "yes": 1,
-        "worse": 0,
-        "better": 0
+        "worse": 1,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.01
       }
     },
     "Hanwella": {
       "answers": {
-        "n": 41,
-        "days": 7,
-        "yes": 25,
-        "worse": 7,
+        "n": 45,
+        "days": 8,
+        "yes": 27,
+        "worse": 8,
         "better": 1,
-        "unsure": 8
+        "unsure": 9
       },
       "seen": {
         "n": 7,
@@ -65,39 +67,41 @@
         "lower": 1
       },
       "rising": {
-        "n": 21,
-        "days": 2,
-        "yes": 16,
+        "n": 22,
+        "days": 3,
+        "yes": 17,
         "worse": 5,
         "better": 0,
-        "errN": 1,
-        "meanErrFt": 0.6
+        "errN": 2,
+        "meanErrFt": 1.56
       },
       "falling": {
-        "n": 12,
-        "days": 4,
-        "yes": 9,
-        "worse": 2,
+        "n": 14,
+        "days": 5,
+        "yes": 10,
+        "worse": 3,
         "better": 1,
-        "errN": 1,
-        "meanErrFt": -0.03
+        "errN": 3,
+        "meanErrFt": 0.16
       }
     },
     "Holombuwa": {
       "answers": {
-        "n": 2,
-        "days": 1,
-        "yes": 1,
+        "n": 4,
+        "days": 2,
+        "yes": 3,
         "worse": 0,
         "better": 1,
         "unsure": 0
       },
       "rising": {
-        "n": 1,
-        "days": 1,
-        "yes": 1,
+        "n": 3,
+        "days": 2,
+        "yes": 3,
         "worse": 0,
-        "better": 0
+        "better": 0,
+        "errN": 2,
+        "meanErrFt": -1.2
       },
       "falling": {
         "n": 1,
@@ -109,16 +113,16 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 35,
-        "days": 11,
-        "yes": 14,
-        "worse": 12,
+        "n": 39,
+        "days": 12,
+        "yes": 15,
+        "worse": 15,
         "better": 4,
         "unsure": 5
       },
       "seen": {
-        "n": 8,
-        "higher": 6,
+        "n": 9,
+        "higher": 7,
         "same": 2,
         "lower": 0
       },
@@ -132,21 +136,21 @@
         "meanErrFt": -0.02
       },
       "falling": {
-        "n": 11,
-        "days": 7,
-        "yes": 5,
-        "worse": 5,
+        "n": 13,
+        "days": 8,
+        "yes": 6,
+        "worse": 6,
         "better": 1,
-        "errN": 5,
-        "meanErrFt": -0.12
+        "errN": 6,
+        "meanErrFt": -0.09
       },
       "streetLevel": {
         "ft": 3,
-        "n": 4,
-        "days": 3,
+        "n": 5,
+        "days": 4,
         "defaultFt": 5,
         "clamped": true,
-        "dryBelowN": 5
+        "dryBelowN": 6
       }
     },
     "Norwood": {
@@ -251,12 +255,12 @@
     },
     "Rathnapura": {
       "answers": {
-        "n": 3,
-        "days": 2,
+        "n": 4,
+        "days": 3,
         "yes": 3,
         "worse": 0,
         "better": 0,
-        "unsure": 0
+        "unsure": 1
       },
       "rising": {
         "n": 1,
@@ -520,13 +524,20 @@
       "dry": 0
     },
     "dehiwala": {
-      "reports": 1,
-      "days": 1,
+      "reports": 2,
+      "days": 2,
       "deep": 0,
       "little": 1,
-      "dry": 0
+      "dry": 1
     },
     "akurana": {
+      "reports": 1,
+      "days": 1,
+      "deep": 1,
+      "little": 0,
+      "dry": 0
+    },
+    "malabe": {
       "reports": 1,
       "days": 1,
       "deep": 1,
@@ -586,33 +597,33 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-10-30",
+      "from": "2026-10-31",
       "to": "2026-11-08",
-      "points": 15442
+      "points": 15437
     },
     "horizons": {
       "1": {
-        "n": 4573,
+        "n": 5156,
         "maeBase": 0.19,
-        "maeFit": 0.19,
-        "gainPct": 0,
-        "maePooled": 0.19,
+        "maeFit": 0.2,
+        "gainPct": -1,
+        "maePooled": 0.2,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 4522,
-        "maeBase": 0.44,
-        "maeFit": 0.44,
+        "n": 5100,
+        "maeBase": 0.47,
+        "maeFit": 0.47,
         "gainPct": 0,
-        "maePooled": 0.44,
-        "pooledGainPct": -1
+        "maePooled": 0.47,
+        "pooledGainPct": 0
       },
       "6": {
-        "n": 5088,
-        "maeBase": 0.7,
-        "maeFit": 0.7,
+        "n": 5004,
+        "maeBase": 0.81,
+        "maeFit": 0.8,
         "gainPct": 0,
-        "maePooled": 0.7,
+        "maePooled": 0.81,
         "pooledGainPct": 0
       }
     },
