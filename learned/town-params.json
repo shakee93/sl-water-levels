@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-08T22:32:55.039Z",
-  "asOf": "2026-11-09",
+  "updatedAt": "2026-11-09T18:50:54.177Z",
+  "asOf": "2026-11-10",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 149,
-    "people": 144,
+    "answers": 161,
+    "people": 156,
     "streetReports": 16,
-    "days": 14
+    "days": 15
   },
   "stations": {
     "Badalgama": {
@@ -53,9 +53,9 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 45,
-        "days": 8,
-        "yes": 27,
+        "n": 47,
+        "days": 9,
+        "yes": 29,
         "worse": 8,
         "better": 1,
         "unsure": 9
@@ -67,22 +67,22 @@
         "lower": 1
       },
       "rising": {
-        "n": 22,
-        "days": 3,
-        "yes": 17,
+        "n": 23,
+        "days": 4,
+        "yes": 18,
         "worse": 5,
         "better": 0,
         "errN": 2,
-        "meanErrFt": 1.56
+        "meanErrFt": 2.51
       },
       "falling": {
-        "n": 14,
-        "days": 5,
-        "yes": 10,
+        "n": 15,
+        "days": 6,
+        "yes": 11,
         "worse": 3,
         "better": 1,
-        "errN": 3,
-        "meanErrFt": 0.16
+        "errN": 4,
+        "meanErrFt": 0.1
       }
     },
     "Holombuwa": {
@@ -113,10 +113,10 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 39,
-        "days": 12,
+        "n": 42,
+        "days": 13,
         "yes": 15,
-        "worse": 15,
+        "worse": 18,
         "better": 4,
         "unsure": 5
       },
@@ -132,16 +132,16 @@
         "yes": 6,
         "worse": 5,
         "better": 2,
-        "errN": 3,
-        "meanErrFt": -0.02
+        "errN": 2,
+        "meanErrFt": 0.05
       },
       "falling": {
-        "n": 13,
-        "days": 8,
+        "n": 15,
+        "days": 9,
         "yes": 6,
-        "worse": 6,
+        "worse": 8,
         "better": 1,
-        "errN": 6,
+        "errN": 8,
         "meanErrFt": -0.09
       },
       "streetLevel": {
@@ -172,9 +172,9 @@
     },
     "Dunamale": {
       "answers": {
-        "n": 13,
-        "days": 5,
-        "yes": 11,
+        "n": 14,
+        "days": 6,
+        "yes": 12,
         "worse": 1,
         "better": 1,
         "unsure": 0
@@ -186,13 +186,13 @@
         "lower": 1
       },
       "rising": {
-        "n": 8,
-        "days": 3,
-        "yes": 8,
+        "n": 9,
+        "days": 4,
+        "yes": 9,
         "worse": 0,
         "better": 0,
-        "errN": 1,
-        "meanErrFt": 0.78
+        "errN": 2,
+        "meanErrFt": 0.59
       },
       "falling": {
         "n": 2,
@@ -206,27 +206,27 @@
     },
     "Peradeniya": {
       "answers": {
-        "n": 3,
-        "days": 2,
-        "yes": 3,
+        "n": 5,
+        "days": 3,
+        "yes": 4,
         "worse": 0,
         "better": 0,
-        "unsure": 0
+        "unsure": 1
       },
       "seen": {
-        "n": 1,
-        "higher": 0,
+        "n": 2,
+        "higher": 1,
         "same": 0,
         "lower": 1
       },
       "rising": {
-        "n": 2,
-        "days": 2,
-        "yes": 2,
+        "n": 3,
+        "days": 3,
+        "yes": 3,
         "worse": 0,
         "better": 0,
-        "errN": 1,
-        "meanErrFt": 1.41
+        "errN": 2,
+        "meanErrFt": 0.44
       },
       "falling": {
         "n": 1,
@@ -238,9 +238,9 @@
     },
     "Moragaswewa": {
       "answers": {
-        "n": 2,
-        "days": 1,
-        "yes": 1,
+        "n": 3,
+        "days": 2,
+        "yes": 2,
         "worse": 1,
         "better": 0,
         "unsure": 0
@@ -251,6 +251,15 @@
         "yes": 0,
         "worse": 1,
         "better": 0
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.04
       }
     },
     "Rathnapura": {
@@ -279,9 +288,9 @@
     },
     "Giriulla": {
       "answers": {
-        "n": 3,
-        "days": 2,
-        "yes": 2,
+        "n": 4,
+        "days": 3,
+        "yes": 3,
         "worse": 0,
         "better": 0,
         "unsure": 1
@@ -294,9 +303,9 @@
         "better": 0
       },
       "falling": {
-        "n": 1,
-        "days": 1,
-        "yes": 1,
+        "n": 2,
+        "days": 2,
+        "yes": 2,
         "worse": 0,
         "better": 0
       }
@@ -461,6 +470,25 @@
     },
     "Moraketiya": {
       "answers": {
+        "n": 2,
+        "days": 2,
+        "yes": 2,
+        "worse": 0,
+        "better": 0,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 2,
+        "days": 2,
+        "yes": 2,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": 0.22
+      }
+    },
+    "Nawalapitiya": {
+      "answers": {
         "n": 1,
         "days": 1,
         "yes": 1,
@@ -475,7 +503,7 @@
         "worse": 0,
         "better": 0,
         "errN": 1,
-        "meanErrFt": 0.22
+        "meanErrFt": 2.14
       }
     }
   },
@@ -597,37 +625,37 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-10-31",
+      "from": "2026-11-01",
       "to": "2026-11-09",
-      "points": 15476
+      "points": 15298
     },
     "horizons": {
       "1": {
-        "n": 4586,
-        "maeBase": 0.2,
+        "n": 5111,
+        "maeBase": 0.21,
         "maeFit": 0.21,
         "gainPct": 0,
         "maePooled": 0.21,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 4541,
-        "maeBase": 0.49,
-        "maeFit": 0.5,
+        "n": 5055,
+        "maeBase": 0.52,
+        "maeFit": 0.51,
         "gainPct": 0,
-        "maePooled": 0.5,
+        "maePooled": 0.52,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 5104,
-        "maeBase": 0.81,
-        "maeFit": 0.81,
+        "n": 4954,
+        "maeBase": 0.9,
+        "maeFit": 0.89,
         "gainPct": 0,
-        "maePooled": 0.81,
+        "maePooled": 0.9,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 2,
+    "gaugesPassingOwnTest": 3,
     "useful": false,
     "wired": false
   }
