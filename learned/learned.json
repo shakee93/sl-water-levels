@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-10T18:50:50.865Z",
+  "updatedAt": "2026-11-10T23:47:04.499Z",
   "asOf": "2026-11-11",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 212,
-    "feedback": 184,
+    "total": 217,
+    "feedback": 189,
     "street": 20,
     "flood3d": 8,
-    "newTonight": 9,
-    "trusted": 8,
+    "newTonight": 5,
+    "trusted": 9,
     "flagged": 0
   },
   "streetLevel": {
@@ -26,8 +26,8 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 466,
-      "stepDays": 14,
+      "steps": 474,
+      "stepDays": 15,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -35,8 +35,8 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 468,
-      "stepDays": 14,
+      "steps": 476,
+      "stepDays": 15,
       "events": 6,
       "eventDays": 4,
       "metrics": {
@@ -123,8 +123,8 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 466,
-      "stepDays": 14,
+      "steps": 474,
+      "stepDays": 15,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -132,8 +132,8 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 466,
-      "stepDays": 14,
+      "steps": 474,
+      "stepDays": 15,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -141,8 +141,8 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 466,
-      "stepDays": 14,
+      "steps": 474,
+      "stepDays": 15,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -150,8 +150,8 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 466,
-      "stepDays": 14,
+      "steps": 474,
+      "stepDays": 15,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -160,29 +160,29 @@
   "forecast": {
     "window": {
       "from": "2026-11-02",
-      "to": "2026-11-10",
-      "points": 15223
+      "to": "2026-11-11",
+      "points": 15250
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 5087,
-          "maeBase": 0.22,
-          "maeFit": 0.22,
+          "n": 4558,
+          "maeBase": 0.21,
+          "maeFit": 0.21,
           "gainPct": 0,
           "maePooled": 0.22,
-          "pooledGainPct": -2
+          "pooledGainPct": -3
         },
         "3": {
-          "n": 5039,
-          "maeBase": 0.55,
-          "maeFit": 0.54,
+          "n": 4504,
+          "maeBase": 0.53,
+          "maeFit": 0.53,
           "gainPct": 0,
-          "maePooled": 0.54,
+          "maePooled": 0.53,
           "pooledGainPct": 0
         },
         "6": {
-          "n": 4924,
+          "n": 5057,
           "maeBase": 0.96,
           "maeFit": 0.95,
           "gainPct": 1,
@@ -206,12 +206,12 @@
           "beta": 0
         },
         "3": {
-          "rowsWithReports": 5,
-          "testN": 2,
-          "testDays": 1,
-          "maeBase": 1.84,
-          "maeFit": 1.84,
-          "gainPct": 0,
+          "rowsWithReports": 3,
+          "testN": 0,
+          "testDays": 0,
+          "maeBase": null,
+          "maeFit": null,
+          "gainPct": null,
           "beta": 0
         }
       },
@@ -230,9 +230,9 @@
       "due": false
     },
     "Biyagama and Kaduwela": {
-      "trusted": 0,
-      "newTrusted": 0,
-      "newPeople": 0,
+      "trusted": 1,
+      "newTrusted": 1,
+      "newPeople": 1,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -296,13 +296,6 @@
     },
     {
       "kind": "map",
-      "name": "Biyagama and Kaduwela",
-      "have": 0,
-      "need": 10,
-      "missing": 10
-    },
-    {
-      "kind": "map",
       "name": "Hanwella",
       "have": 0,
       "need": 10,
@@ -321,6 +314,13 @@
       "have": 0,
       "need": 10,
       "missing": 10
+    },
+    {
+      "kind": "map",
+      "name": "Biyagama and Kaduwela",
+      "have": 1,
+      "need": 10,
+      "missing": 9
     },
     {
       "kind": "map",

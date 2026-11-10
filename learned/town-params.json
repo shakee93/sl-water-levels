@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-10T18:50:50.865Z",
+  "updatedAt": "2026-11-10T23:47:04.499Z",
   "asOf": "2026-11-11",
   "minimums": {
     "answers": 3,
@@ -13,8 +13,8 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 177,
-    "people": 172,
+    "answers": 178,
+    "people": 173,
     "streetReports": 16,
     "days": 17
   },
@@ -113,9 +113,9 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 45,
+        "n": 46,
         "days": 15,
-        "yes": 15,
+        "yes": 16,
         "worse": 20,
         "better": 4,
         "unsure": 6
@@ -136,9 +136,9 @@
         "meanErrFt": 0.05
       },
       "falling": {
-        "n": 16,
-        "days": 10,
-        "yes": 6,
+        "n": 17,
+        "days": 11,
+        "yes": 7,
         "worse": 9,
         "better": 1,
         "errN": 8,
@@ -645,28 +645,28 @@
   "forecast": {
     "window": {
       "from": "2026-11-02",
-      "to": "2026-11-10",
-      "points": 15223
+      "to": "2026-11-11",
+      "points": 15250
     },
     "horizons": {
       "1": {
-        "n": 5087,
-        "maeBase": 0.22,
-        "maeFit": 0.22,
+        "n": 4558,
+        "maeBase": 0.21,
+        "maeFit": 0.21,
         "gainPct": 0,
         "maePooled": 0.22,
-        "pooledGainPct": -2
+        "pooledGainPct": -3
       },
       "3": {
-        "n": 5039,
-        "maeBase": 0.55,
-        "maeFit": 0.54,
+        "n": 4504,
+        "maeBase": 0.53,
+        "maeFit": 0.53,
         "gainPct": 0,
-        "maePooled": 0.54,
+        "maePooled": 0.53,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 4924,
+        "n": 5057,
         "maeBase": 0.96,
         "maeFit": 0.95,
         "gainPct": 1,
