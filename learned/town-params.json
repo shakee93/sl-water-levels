@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-10T01:47:34.171Z",
-  "asOf": "2026-11-10",
+  "updatedAt": "2026-11-10T18:50:50.865Z",
+  "asOf": "2026-11-11",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 164,
-    "people": 159,
+    "answers": 177,
+    "people": 172,
     "streetReports": 16,
-    "days": 16
+    "days": 17
   },
   "stations": {
     "Badalgama": {
@@ -53,12 +53,12 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 47,
-        "days": 9,
-        "yes": 29,
+        "n": 50,
+        "days": 10,
+        "yes": 31,
         "worse": 8,
         "better": 1,
-        "unsure": 9
+        "unsure": 10
       },
       "seen": {
         "n": 7,
@@ -76,13 +76,13 @@
         "meanErrFt": 2.51
       },
       "falling": {
-        "n": 15,
-        "days": 6,
-        "yes": 11,
+        "n": 17,
+        "days": 7,
+        "yes": 13,
         "worse": 3,
         "better": 1,
-        "errN": 4,
-        "meanErrFt": 0.1
+        "errN": 6,
+        "meanErrFt": 0.11
       }
     },
     "Holombuwa": {
@@ -113,12 +113,12 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 43,
-        "days": 14,
+        "n": 45,
+        "days": 15,
         "yes": 15,
-        "worse": 19,
+        "worse": 20,
         "better": 4,
-        "unsure": 5
+        "unsure": 6
       },
       "seen": {
         "n": 9,
@@ -136,13 +136,13 @@
         "meanErrFt": 0.05
       },
       "falling": {
-        "n": 15,
-        "days": 9,
+        "n": 16,
+        "days": 10,
         "yes": 6,
-        "worse": 8,
+        "worse": 9,
         "better": 1,
         "errN": 8,
-        "meanErrFt": -0.09
+        "meanErrFt": -0.08
       },
       "streetLevel": {
         "ft": 3,
@@ -172,11 +172,11 @@
     },
     "Dunamale": {
       "answers": {
-        "n": 16,
+        "n": 17,
         "days": 7,
         "yes": 13,
         "worse": 1,
-        "better": 2,
+        "better": 3,
         "unsure": 0
       },
       "seen": {
@@ -206,16 +206,16 @@
     },
     "Peradeniya": {
       "answers": {
-        "n": 5,
-        "days": 3,
-        "yes": 4,
-        "worse": 0,
+        "n": 7,
+        "days": 4,
+        "yes": 5,
+        "worse": 1,
         "better": 0,
         "unsure": 1
       },
       "seen": {
-        "n": 2,
-        "higher": 1,
+        "n": 3,
+        "higher": 2,
         "same": 0,
         "lower": 1
       },
@@ -225,15 +225,17 @@
         "yes": 3,
         "worse": 0,
         "better": 0,
-        "errN": 2,
-        "meanErrFt": 0.44
+        "errN": 1,
+        "meanErrFt": -0.52
       },
       "falling": {
-        "n": 1,
-        "days": 1,
-        "yes": 1,
+        "n": 2,
+        "days": 2,
+        "yes": 2,
         "worse": 0,
-        "better": 0
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.25
       }
     },
     "Moragaswewa": {
@@ -463,31 +465,57 @@
         "days": 1,
         "yes": 0,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.73
+        "better": 0
       }
     },
     "Moraketiya": {
       "answers": {
-        "n": 2,
-        "days": 2,
-        "yes": 2,
+        "n": 4,
+        "days": 3,
+        "yes": 4,
         "worse": 0,
         "better": 0,
         "unsure": 0
       },
       "rising": {
-        "n": 2,
-        "days": 2,
-        "yes": 2,
+        "n": 3,
+        "days": 3,
+        "yes": 3,
         "worse": 0,
         "better": 0,
-        "errN": 2,
-        "meanErrFt": 1.1
+        "errN": 3,
+        "meanErrFt": 0.74
+      },
+      "falling": {
+        "n": 1,
+        "days": 1,
+        "yes": 1,
+        "worse": 0,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.58
       }
     },
     "Nawalapitiya": {
+      "answers": {
+        "n": 3,
+        "days": 2,
+        "yes": 2,
+        "worse": 0,
+        "better": 1,
+        "unsure": 0
+      },
+      "rising": {
+        "n": 3,
+        "days": 2,
+        "yes": 2,
+        "worse": 0,
+        "better": 1,
+        "errN": 3,
+        "meanErrFt": 0.45
+      }
+    },
+    "Kuru Ganga (Kuruvita)": {
       "answers": {
         "n": 1,
         "days": 1,
@@ -495,15 +523,6 @@
         "worse": 0,
         "better": 0,
         "unsure": 0
-      },
-      "rising": {
-        "n": 1,
-        "days": 1,
-        "yes": 1,
-        "worse": 0,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": 2.14
       }
     }
   },
@@ -627,11 +646,11 @@
     "window": {
       "from": "2026-11-02",
       "to": "2026-11-10",
-      "points": 15281
+      "points": 15223
     },
     "horizons": {
       "1": {
-        "n": 4617,
+        "n": 5087,
         "maeBase": 0.22,
         "maeFit": 0.22,
         "gainPct": 0,
@@ -639,23 +658,23 @@
         "pooledGainPct": -2
       },
       "3": {
-        "n": 4575,
-        "maeBase": 0.54,
+        "n": 5039,
+        "maeBase": 0.55,
         "maeFit": 0.54,
         "gainPct": 0,
         "maePooled": 0.54,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 4476,
-        "maeBase": 0.95,
+        "n": 4924,
+        "maeBase": 0.96,
         "maeFit": 0.95,
-        "gainPct": 0,
-        "maePooled": 0.95,
+        "gainPct": 1,
+        "maePooled": 0.96,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 5,
+    "gaugesPassingOwnTest": 3,
     "useful": false,
     "wired": false
   }
