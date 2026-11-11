@@ -63,12 +63,30 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install tesseract
+      # tesseract must not depend on one Ubuntu server: on 11 Nov 2026 security.ubuntu.com stopped resolving from the runners and every
+      # 15-minute run spent 13 minutes in apt retries and failed, for hours. The packages are now kept between runs (actions/cache,
+      # keyed by the runner image) and scripts/install-tesseract.sh falls back to other mirrors, verifying each file against the hash
+      # in apt's own signed index. A failed install still fails the run (the "pipe-curw" health check watches that), in about 3 minutes.
+      - name: Runner image (key for the kept packages)
+        id: img
         if: steps.gap.outputs.go == 'true'
         run: |
-          # The runner image's package index is usually good enough; 'apt-get update' alone takes ~2.5 minutes there.
-          time (sudo apt-get install -y -qq --no-install-recommends tesseract-ocr tesseract-ocr-eng || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends tesseract-ocr tesseract-ocr-eng))
-          tesseract --version | head -1
+          echo "os=${ImageOS:-ubuntu}" >> "$GITHUB_OUTPUT"
+          echo "ver=${ImageVersion:-0}" >> "$GITHUB_OUTPUT"
+
+      - name: Packages kept from an earlier run
+        if: steps.gap.outputs.go == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/tesseract-debs
+          key: tesseract-debs-${{ steps.img.outputs.os }}-${{ steps.img.outputs.ver }}
+          restore-keys: |
+            tesseract-debs-${{ steps.img.outputs.os }}-
+
+      - name: Install tesseract
+        if: steps.gap.outputs.go == 'true'
+        timeout-minutes: 8
+        run: time bash scripts/install-tesseract.sh
 
       - name: Read the charts
         id: read
