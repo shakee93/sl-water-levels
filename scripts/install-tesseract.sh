@@ -17,8 +17,10 @@ set -u
 
 PKGS=${TESSERACT_PKGS:-"tesseract-ocr tesseract-ocr-eng"}
 DEBS=${DEBS:-"$HOME/tesseract-debs"}
-# Tried in order for step 3. Each must serve the Ubuntu archive layout (.../pool/<component>/...).
-MIRRORS=${TESSERACT_MIRRORS:-"http://azure.archive.ubuntu.com/ubuntu http://archive.ubuntu.com/ubuntu https://mirrors.edge.kernel.org/ubuntu"}
+# Tried in order for step 3. Each must serve the Ubuntu archive layout (.../pool/<component>/...). Mirrors outside ubuntu.com come
+# first: step 3 only runs when apt's own servers failed, and on 11 Nov 2026 no *.ubuntu.com host resolved from the runners (the
+# first run with this script got every file from kernel.org after 20 s of timeouts per file on the two ubuntu.com mirrors).
+MIRRORS=${TESSERACT_MIRRORS:-"https://mirrors.edge.kernel.org/ubuntu https://ftp.osuosl.org/pub/ubuntu http://azure.archive.ubuntu.com/ubuntu http://archive.ubuntu.com/ubuntu"}
 APT_OPTS="-o Acquire::Retries=0 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o DPkg::Lock::Timeout=60"
 SUDO=${SUDO-sudo}
 
