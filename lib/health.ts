@@ -20,6 +20,7 @@ import { NEWSWIRE_UA } from "./newsFeeds";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
 import { d1Query, d1Configured } from "./d1";
 import { getHmisLevels, getHmisRain, getHmisWarnings, hmisDirect, RAIN_MAX_AGE_MIN } from "./hmis";
+import { newestRowProblem } from "./sheetFreshness.mjs";
 import { colomboDay as archiveDay, newestRainLive, newestDayPts, judgeArchive, LIMITS as ARCHIVE_LIMITS } from "./archiveFreshness.mjs";
 import { getRivernetLevels, rivernetDirect, RIVERNET_READ, type RivernetDevice } from "./rivernet";
 
@@ -238,7 +239,11 @@ async function checkSheet(deep: boolean): Promise<HealthCheck> {
       const problems: string[] = [];
       if (failure) problems.push(layoutBroken ? `${failure} (columns changed?)` : failure);
       if (rows.length < 100) problems.push(`${rows.length} rows parsed (need 100)`);
-      if (rows.length > 0 && (!newest || (newest !== colomboDay(now) && newest !== colomboDay(now - 24 * HOUR)))) problems.push(`newest row is dated ${newest ?? "none"}, not today or yesterday`);
+      // The sheet is often typed a day ahead (false alarm 8 Nov 2026): today, yesterday and tomorrow pass; further ahead is a fault.
+      if (rows.length > 0) {
+        const dateProblem = newestRowProblem(newest, now);
+        if (dateProblem) problems.push(dateProblem);
+      }
       const broken = rows.length === 0 || layoutBroken;
       const lastMs = newest ? Date.parse(`${newest}T12:00:00+05:30`) : null;
       return {

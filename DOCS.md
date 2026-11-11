@@ -750,7 +750,7 @@ the site watches itself and tells the owner.
   read `ok` per check. Plain mode reuses the cached fetchers; `?deep=1` bypasses the caches so a stale
   cache can't hide a dead source (only the monitor uses it). Checks:
   - gauges (critical): >= 35 of the 42 stations have a reading under 3 h old and the newest is under 2 h.
-  - Irrigation reservoir sheet: >= 100 rows, newest row dated today or yesterday (Colombo), expected
+  - Irrigation reservoir sheet: >= 100 rows, newest row dated today, yesterday or tomorrow (Colombo; the sheet is typed by hand and is often dated a day ahead, which raised a false alarm on 8 Nov 2026; rule in `lib/sheetFreshness.mjs`, test `scripts/sheet-freshness.test.mts`), expected
     columns present. Warn; **critical** when 0 rows parse or the columns changed.
   - Mahaweli WMS PDF (reachable, >= 30 rows, Last-Modified under 48 h), DMC bulletin list, OpenAI key
     (a free `GET /v1/models`, cached 24 h, so at most one call a day), Open-Meteo rain / ensemble /
