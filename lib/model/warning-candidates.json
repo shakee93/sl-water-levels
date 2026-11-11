@@ -1,5 +1,5 @@
 {
- "note": "Warning-rule candidates, LOGGED ONLY (lib/warningCandidates.mjs). rainOnset and upstream fitted 29 Oct 2026 on 23 Nov 2025 - 28 Oct 2026 with Ditwah (24 Nov - 8 Dec 2025) excluded; evidence in DOCS.md Forecast KPIs.",
+ "note": "Warning-rule candidates, LOGGED ONLY (lib/warningCandidates.mjs). rainOnset and upstream fitted 29 Oct 2026 on 23 Nov 2025 - 28 Oct 2026 with Ditwah (24 Nov - 8 Dec 2025) excluded; evidence in DOCS.md Forecast KPIs. 11 Nov 2026: the hidden variants dry-hold and rain-onset are RETIRED (failed the improvement gate 5 and 10 Nov) and no longer logged; this rainOnset block stays because the ground-rain rules read its gauge lists and marks (params.rainOnset.gauges / rules[].gauges).",
  "rainOnset": {
   "rules": [
    {

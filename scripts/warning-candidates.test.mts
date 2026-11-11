@@ -1,10 +1,10 @@
 // @ts-nocheck (node strip-types test)
 // node --experimental-strip-types --no-warnings scripts/warning-candidates.test.mts
-// Warning-rule candidates (lib/warningCandidates.mjs): each rule fires / does not fire, dry-hold never raises, the add rules never lower,
-// heavy rain blocks dry-hold, and lib/forecastKpi.mjs scores KPI 1-3 per variant from the archive `candidates` field.
+// Warning-rule candidates (lib/warningCandidates.mjs): each rule fires / does not fire, the add rules never lower, dry-hold and rain-onset are retired (not emitted by warningCandidates(); the pure functions are kept
+// for re-scoring archived days), and lib/forecastKpi.mjs scores KPI 1-3 per variant from the archive `candidates` field.
 import assert from "node:assert/strict";
 import { DRY_HOLD, POSSIBLE_P, shownChance } from "../lib/forecastRules.mjs";
-import { PARAMS, VARIANTS, catchmentContains, dryHold, dryHoldApplies, groundRain, rainOnset, upstreamTrigger, warningCandidates } from "../lib/warningCandidates.mjs";
+import { PARAMS, RETIRED_VARIANTS, VARIANTS, catchmentContains, dryHold, dryHoldApplies, groundRain, rainOnset, upstreamTrigger, warningCandidates } from "../lib/warningCandidates.mjs";
 import { HOUR, buildArchiveLines, buildReadings, dayStart } from "../lib/forecastScoreboard.mjs";
 import { buildContext, kpiSet, mergeReadings, variantsOf } from "../lib/forecastKpi.mjs";
 
@@ -199,33 +199,36 @@ const RAIN = (n6, n12 = null) => ({ ts: T0, next: { 6: n6, 12: n12 } });
   assert.deepEqual(warningCandidates({ ...wbase, ground: [] }), {}, "no ground gauge: no row");
 }
 
-// ---- warningCandidates(): output shape, "only where it differs", add rules never lower, dry-hold never raises
+// ---- warningCandidates(): output shape, "only where it differs"; dry-hold and rain-onset are RETIRED (11 Nov 2026): never emitted any more
 {
+  assert.deepEqual(VARIANTS, ["upstream", "ground-rain", "ground-rain-wide"], "only the live-logged variants");
+  assert.deepEqual(RETIRED_VARIANTS, ["dry-hold", "rain-onset"]);
+  for (const v of RETIRED_VARIANTS) assert.ok(!VARIANTS.includes(v), `${v} is not logged any more`);
   const base = {
     station: "Holombuwa", method: "model", currentLevel: 6 * FT, asOfTs: T0,
     crossings: [{ threshold: "alert", level: 9.843 * FT, probability: 0.1 }, { threshold: "minor", level: 13.123 * FT, probability: 0.02 }, { threshold: "major", level: 20 * FT, probability: 0 }],
     rate3hM: 0.6, rain: { past6hMm: 6, next24hMm: 50, next24hP90Mm: 90, storm: true, rainRisk: true },
     rainBy: [RAIN(20)], snapshot: snap("Holombuwa", "m", 6, 4),
   };
-  const out = warningCandidates(base);
-  assert.deepEqual(Object.keys(out), ["rain-onset"], "heavy rain: only the add rule fires, dry-hold is blocked");
-  assert.deepEqual(out["rain-onset"], [{ threshold: "alert", shown: 0.45, etaHours: 2 }]);
-  // live already shows more: no row (add rules never lower, and a candidate equal to live is not logged)
-  assert.deepEqual(warningCandidates({ ...base, crossings: [{ ...base.crossings[0], probability: 0.6 }] }), {});
-  assert.deepEqual(warningCandidates({ ...base, crossings: [{ ...base.crossings[0], probability: 0.45 }] }), {});
-  // a step missing from the live crossings counts as 0 shown
-  assert.deepEqual(warningCandidates({ ...base, crossings: [] })["rain-onset"].length, 1);
+  // the old rain-onset trigger still holds in the pure function (kept for re-scoring archived days) but warningCandidates() no longer logs it
+  assert.deepEqual(Object.keys(rainOnset(base.snapshot, T0, { Holombuwa: base.rainBy })), ["Holombuwa"]);
+  assert.deepEqual(warningCandidates(base), {}, "heavy rain forecast, river rising: rain-onset used to fire here, now nothing is logged");
+  // a dry calm day with a leftover 55% alert: dry-hold used to lower it; now nothing is logged either
+  const dryRun = { ...base, crossings: [{ threshold: "alert", level: 9.843 * FT, probability: 0.55 }], rate3hM: 0, rain: { past6hMm: 0, next24hMm: 3, next24hP90Mm: 9, storm: false, rainRisk: false }, rainBy: [RAIN(1)], snapshot: snap("Holombuwa", "m", 6, 6) };
+  assert.equal(dryHold(dryRun.rain && { rainPast6hMm: 0, rate3hM: 0, rainNext24hMm: 3, rainNext24hP90Mm: 9, storm: false, rainRisk: false }, dryRun.crossings, dryRun.currentLevel).length, 1, "the pure function still works");
+  assert.deepEqual(warningCandidates(dryRun), {});
+  // whatever the inputs, no retired key can appear
+  for (const p of [0, 0.1, 0.3, 0.44, 0.5, 0.9]) {
+    for (const r of [base, dryRun]) {
+      const o = warningCandidates({ ...r, crossings: [{ ...r.crossings[0], probability: p }] });
+      for (const k of Object.keys(o)) assert.ok(VARIANTS.includes(k), `unexpected variant ${k}`);
+    }
+  }
   // not a fitted-model run, or a gauge with no forecast: nothing
   assert.deepEqual(warningCandidates({ ...base, method: "persistence" }), {});
   assert.deepEqual(warningCandidates({ ...base, station: "Ampara" }), {});
-  // a dry calm day with a leftover 55% alert: dry-hold lowers it; the add rules stay quiet
-  const dry = warningCandidates({ ...base, crossings: [{ threshold: "alert", level: 9.843 * FT, probability: 0.55 }], rate3hM: 0, rain: { past6hMm: 0, next24hMm: 3, next24hP90Mm: 9, storm: false, rainRisk: false }, rainBy: [RAIN(1)], snapshot: snap("Holombuwa", "m", 6, 6) });
-  assert.deepEqual(dry, { "dry-hold": [{ threshold: "alert", shown: DRY_HOLD.CAP, etaHours: null }] });
-  // every add-rule row beats live; every dry-hold row is below live
-  for (const p of [0, 0.1, 0.3, 0.44, 0.5, 0.9]) {
-    const o = warningCandidates({ ...base, crossings: [{ ...base.crossings[0], probability: p }] });
-    for (const row of o["rain-onset"] ?? []) assert.ok(row.shown > shownChance("alert", p));
-  }
+  // the ground-rain rules still read the rain-onset parameter block (gauge list, marks), so it must stay in the parameter file
+  assert.ok(PARAMS.rainOnset.gauges.Holombuwa && PARAMS.rainOnset.rules.find((r) => r.name === "fast-rain-onset").gauges.includes("Holombuwa"));
 }
 
 // ---- KPI 1-3 per variant from the archive `candidates`
