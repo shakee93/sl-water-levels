@@ -20,6 +20,7 @@ import { NEWSWIRE_UA } from "./newsFeeds";
 import { WEEKLY_PDF, getWeeklyOutcome } from "./wmsWeekly";
 import { d1Query, d1Configured } from "./d1";
 import { getHmisLevels, getHmisRain, getHmisWarnings, hmisDirect, RAIN_MAX_AGE_MIN } from "./hmis";
+import { colomboDay as archiveDay, newestRainLive, newestDayPts, judgeArchive, LIMITS as ARCHIVE_LIMITS } from "./archiveFreshness.mjs";
 import { getRivernetLevels, rivernetDirect, RIVERNET_READ, type RivernetDevice } from "./rivernet";
 
 /** Hours since `fromMs`, not counting Saturdays and Sundays in Sri Lanka time. */
@@ -600,6 +601,65 @@ async function checkGsmap(deep: boolean): Promise<HealthCheck> {
   });
 }
 
+// How old is the newest RECORD in our own HMIS / RiverNet snapshot archives on the data branch? The workflow checks above ("pipe-hmis",
+// "pipe-rivernet") only prove a run finished: on 7-9 Nov 2026 HMIS was unreachable for 37.5 h, the job logged "fetch failed", exited 0 and
+// ran green 73 times, so the archive, the live ground-rain input (hmis/rain-live.json) and the 10 HMIS-fed forecast gauges went dark with no
+// check on THIS side failing. This reads the files themselves (raw.githubusercontent.com, 5 min CDN cache) and fails when the newest record is
+// over 3 h old (RiverNet 4 h: it runs every 2 h). Pure logic and limits: lib/archiveFreshness.mjs (test scripts/archive-freshness.test.mts).
+async function rawJson(path: string, deep: boolean): Promise<{ status: "ok"; json: unknown } | { status: "missing" } | { status: "error"; why: string }> {
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/${REPO}/data/${path}`, fetchOpts(deep, 300, 20_000));
+    if (res.status === 404) return { status: "missing" };
+    if (!res.ok) return { status: "error", why: `raw.githubusercontent.com HTTP ${res.status}` };
+    return { status: "ok", json: await res.json() };
+  } catch (e) {
+    return { status: "error", why: errText(e) };
+  }
+}
+
+/** Newest point in today's (Colombo) daily file, or yesterday's when today's has none yet (just after midnight). */
+async function newestInDayFiles(dir: string, deep: boolean): Promise<{ ms: number | null } | { why: string }> {
+  const now = Date.now();
+  for (const day of [archiveDay(now), archiveDay(now - 24 * HOUR)]) {
+    const r = await rawJson(`${dir}/${day.slice(0, 4)}/${day}.json`, deep);
+    if (r.status === "error") return { why: r.why };
+    if (r.status === "ok") {
+      const ms = newestDayPts(r.json);
+      if (ms != null) return { ms };
+    }
+  }
+  return { ms: null };
+}
+
+async function checkHmisArchiveFresh(deep: boolean): Promise<HealthCheck> {
+  return run("pipe-hmis-fresh", "HMIS archive: newest record (data branch)", "Ground-rain notes and the street-water rain input fall back to satellite rain, the 10 HMIS-fed gauges (east-coast bridges, Karawanella, Mahiyangana) lose their forecast, the gauge-first forecast rain falls back to the satellite, and the history for backtests gets a hole that cannot be filled afterwards (HMIS rain is a rolling 24 h sum).", async () => {
+    const now = Date.now();
+    const [live, levels] = await Promise.all([rawJson("hmis/rain-live.json", deep), newestInDayFiles("hmis/levels", deep)]);
+    if (live.status === "error") return unchecked(live.why);
+    if ("why" in levels) return unchecked(levels.why);
+    const rain = judgeArchive("ground rain (hmis/rain-live.json)", live.status === "ok" ? newestRainLive(live.json) : null, now, ARCHIVE_LIMITS.hmisRain);
+    const lv = judgeArchive("water levels (hmis/levels)", levels.ms, now, ARCHIVE_LIMITS.hmisLevels);
+    const bad = [rain, lv].filter((x) => !x.ok);
+    const newest = Math.max(rain.newestMs ?? 0, lv.newestMs ?? 0) || null;
+    return {
+      ok: bad.length === 0,
+      detail: bad.length
+        ? `${bad.map((x) => x.text).join("; ")}. Check the HMIS check above (the API unreachable from our hosts?), then hmis-snapshot.yml runs and the Cloudflare scheduler`
+        : `${rain.text}; ${lv.text}`,
+      ...fresh(newest),
+    };
+  });
+}
+
+async function checkRivernetArchiveFresh(deep: boolean): Promise<HealthCheck> {
+  return run("pipe-rivernet-fresh", "RiverNet archive: newest record (data branch)", "Nothing visible; the minute-level history for tributary travel times has a hole (each run re-reads 24 h, so a gap under a day heals itself once RiverNet answers).", async () => {
+    const r = await newestInDayFiles("rivernet", deep);
+    if ("why" in r) return unchecked(r.why);
+    const j = judgeArchive("RiverNet levels (rivernet/)", r.ms, Date.now(), ARCHIVE_LIMITS.rivernet);
+    return { ok: j.ok, detail: j.ok ? j.text : `${j.text}. Check rivernet-snapshot.yml runs (every 2 h) and RiverNet itself`, ...fresh(r.ms) };
+  });
+}
+
 // Colombo canal gauges (CUrW public charts), archived privately for calibration by curw-snapshot.yml. The
 // data is never shown on the site (CUrW has not given permission), so this reports only counts. A gauge that
 // is offline at the source is normal (several have been for weeks) and never fails the check; only a
@@ -719,6 +779,8 @@ async function checkPipelines(deep: boolean): Promise<HealthCheck[]> {
     checkDeploy(),
     checkGaugeArchive(),
     checkGsmap(deep),
+    checkHmisArchiveFresh(deep),
+    checkRivernetArchiveFresh(deep),
     checkScheduler(),
     checkWorkflow("pipe-gsmap-runs", "Satellite rain snapshot runs", "gsmap-snapshot.yml", "The 'Satellite rain' figures and the street-water rule go quiet once the newest rain is 3 h old; the rain log has gaps.", () => 75 * MIN),
     checkCurwGauges(deep),

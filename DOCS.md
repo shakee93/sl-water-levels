@@ -788,6 +788,18 @@ the site watches itself and tells the owner.
   <run url>". Everything is skipped silently when the secret is empty, and the URL is never printed.
   Manual runs of the health workflow (`gh workflow run health-check.yml`) first send one test message
   (untick `slack_test` to skip).
+- **HMIS / RiverNet archive freshness (11 Nov 2026).** The workflow-success checks (`pipe-hmis`, `pipe-rivernet`) only prove a run finished. On 7-9 Nov 2026
+  hmis.gov.lk was unreachable from both the GitHub runner and Vercel for 37.5 h (and 7.5 h on 4 Nov): `scripts/hmis-snapshot.mjs` logged "fetch failed" on both
+  endpoints in 73 consecutive runs, found nothing to commit and ended green. Two checks now read the archive itself (`lib/health.ts`, pure logic in
+  `lib/archiveFreshness.mjs`, test `node --experimental-strip-types --no-warnings scripts/archive-freshness.test.mts`): **`pipe-hmis-fresh`** fails when the
+  newest record in `data:hmis/rain-live.json` or in today's `data:hmis/levels` file is over 3 h old; **`pipe-rivernet-fresh`** when the newest point in
+  `data:rivernet/` is over 4 h old (that job runs every 2 h). Both are `warn`: after two failing health runs in a row the alert script opens a `data-health`
+  issue and posts to Slack. What stalls when HMIS is down: the 10 HMIS-fed gauges (east-coast bridges, Karawanella, Mahiyangana, Galodaya) have no forecast
+  runs, ground-rain notes and the gauge-first forecast rain fall back to satellite rain, the rain-correction log stops, and `hmis/rain` gets a hole that never
+  heals (HMIS rain is a rolling 24 h sum; levels heal from the 24 h endpoint). The snapshot script now retries transient fetch errors 3 times, logs the real
+  error cause (the 7-9 Nov cause could not be established afterwards) and writes `::warning` annotations; the workflow retries a rejected data-branch push
+  with a rebase. It still exits 0 when HMIS is down (a red run every 30 min would bury the signal). The Irrigation Department rain gauges that are also river
+  gauges can be rebuilt afterwards from ArcGIS `rain_fall` (24 h sum to each reading, mean error 0.34 mm against the real archive); other institutes cannot.
 - **Optional Telegram** (not wired up): to add it, create a bot with @BotFather, add secrets
   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, and POST to
   `https://api.telegram.org/bot<token>/sendMessage` from the `slack()` helper in

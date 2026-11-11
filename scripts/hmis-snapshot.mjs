@@ -21,10 +21,37 @@ const UA = "sl-water-levels (+https://waterlevels.lk; shakee.zats@gmail.com)";
 const LK = 5.5 * 3_600_000;
 const dayOf = (ms) => new Date(ms + LK).toISOString().slice(0, 10);
 
+/** The real reason behind undici's bare "fetch failed" (ECONNRESET, ENOTFOUND, UND_ERR_CONNECT_TIMEOUT, certificate errors...). Before 9 Nov 2026 only
+ * "fetch failed" was logged, so the 37.5 h outage of 7-9 Nov could not be diagnosed afterwards. */
+function why(e) {
+  if (!(e instanceof Error)) return String(e);
+  const c = e.cause;
+  const bits = c && typeof c === "object" ? [c.code, c.errno, c.syscall, c.hostname, c.message].filter(Boolean) : [];
+  return bits.length ? `${e.message} (${[...new Set(bits)].join(" ")})` : e.message;
+}
+
+// A transient network error is retried inside the run: 3 attempts, 5 s then 15 s apart (30 s timeout
+// of one attempt: at most about 2 min per endpoint, 4 min a run; an instant connection failure costs 40 s). HTTP 4xx is not retried.
+const DELAYS_MS = [5_000, 15_000];
 async function get(p) {
-  const res = await fetch(`https://hmis.gov.lk/api/v1/${p}`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) throw new Error(`${p} HTTP ${res.status}`);
-  return (await res.json()).data;
+  let last;
+  for (let i = 0; i <= DELAYS_MS.length; i++) {
+    try {
+      const res = await fetch(`https://hmis.gov.lk/api/v1/${p}`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(30_000) });
+      if (!res.ok) {
+        const err = new Error(`${p} HTTP ${res.status}`);
+        if (res.status < 500 && res.status !== 429) throw Object.assign(err, { final: true });
+        throw err;
+      }
+      return (await res.json()).data;
+    } catch (e) {
+      last = e;
+      if (e?.final || i === DELAYS_MS.length) break;
+      console.warn(`${p}: attempt ${i + 1} failed: ${why(e)}; retrying in ${DELAYS_MS[i] / 1000} s`);
+      await new Promise((r) => setTimeout(r, DELAYS_MS[i]));
+    }
+  }
+  throw new Error(`${p}: ${why(last)}`);
 }
 
 async function merge(kind, entries) {
@@ -92,6 +119,7 @@ try {
 } catch (e) {
   failed++;
   console.warn(`levels failed: ${e instanceof Error ? e.message : e}`);
+  console.log(`::warning title=HMIS levels not archived::${e instanceof Error ? e.message : e}`);
 }
 try {
   const rain = normaliseRain(await get("getrainfalldevices"));
@@ -108,6 +136,11 @@ try {
 } catch (e) {
   failed++;
   console.warn(`rain failed: ${e instanceof Error ? e.message : e}`);
+  console.log(`::warning title=HMIS rain not archived::${e instanceof Error ? e.message : e}`);
 }
-// Non-fatal like the other snapshots: the next run heals a gap (HMIS returns the last 24 h each time).
+// Non-fatal like the other snapshots: the next run heals a LEVEL gap (HMIS returns the last 24 h each time). It does NOT heal a RAIN gap
+// (a rolling 24 h sum, see the header), so a failed run is made loud in other ways: the ::warning annotations above, and the data-health check
+// "pipe-hmis-fresh" (lib/health.ts), which fails when the newest archived record is over 3 h old. Exit stays 0 on purpose: a red run every 30 min
+// for the length of an upstream outage would bury the real signal and send a Slack message per run (the 7-9 Nov 2026 outage lasted 37.5 h).
+if (failed === 2) console.warn("HMIS answered neither endpoint: nothing archived this run");
 process.exit(0);
