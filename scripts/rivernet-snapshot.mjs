@@ -24,15 +24,30 @@ const now = Date.now();
 const hourEnd = Math.floor(now / 3_600_000) * 3_600_000;
 const W = `${hourEnd - 86_400_000}/${hourEnd}`;
 
-async function get(p) {
+// Real cause in the message ("fetch failed" alone hid the reason on 7-9 Nov for HMIS): timeout, DNS, reset or HTTP status.
+const why = (err) => `${err?.name === "TimeoutError" ? "timeout after 30 s" : err?.message}${err?.cause?.code ? ` (${err.cause.code})` : ""}`;
+async function get1(p) {
   const res = await fetch(`https://api.rivernet.lk/cache-api.php?path=${encodeURIComponent(p)}`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) throw new Error(`${p.split("?")[0]} HTTP ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(`${p.split("?")[0]} HTTP ${res.status}`), { status: res.status });
   return res.json();
+}
+// One retry after a pause for a timeout, network error or 5xx (never for 4xx), still one request at a time: a single slow device
+// no longer costs a device's data, and an outage costs at most two requests per call.
+async function get(p) {
+  try { return await get1(p); } catch (err) {
+    if (err.status && err.status < 500) throw err;
+    await sleep(5000);
+    return get1(p);
+  }
 }
 
 const byDay = new Map(); // day -> Map<unit, { meta, pts }>
 let failed = 0;
+let streak = 0; // consecutive failed devices
+let aborted = false;
 for (const e of RIVERNET_CATALOG) {
+  // RiverNet is down: stop asking (politeness), keep what was read, and fail the run below.
+  if (streak >= 6) { aborted = true; break; }
   try {
     const q = `keys=${e.key}&last24HoursData=1&isPublic=1`;
     const title = await get(`api/reports/river-level/title/minute/${W}?${q}`);
@@ -41,6 +56,7 @@ for (const e of RIVERNET_CATALOG) {
     await sleep(1300);
     const d = buildDevice(e.key, title, chart, now);
     if (!d) throw new Error("unexpected shape");
+    streak = 0;
     for (const p of downsample(d.series, 5 * MIN)) {
       const day = dayOf(p.ts);
       if (!byDay.has(day)) byDay.set(day, new Map());
@@ -50,7 +66,8 @@ for (const e of RIVERNET_CATALOG) {
     }
   } catch (err) {
     failed++;
-    console.error(`RiverNet ${e.unit} ${e.name}: ${err.message}`);
+    streak++;
+    console.error(`RiverNet ${e.unit} ${e.name}: ${why(err)}`);
     await sleep(1300);
   }
 }
@@ -91,8 +108,8 @@ if (new Date(now + LK).getUTCHours() < 2) {
   } catch (err) { console.error(`RiverNet device lists: ${err.message}`); }
 }
 
-if (failed > RIVERNET_CATALOG.length / 2) {
-  console.error(`RiverNet: ${failed} of ${RIVERNET_CATALOG.length} devices failed`);
+if (aborted || failed > RIVERNET_CATALOG.length / 2) {
+  console.error(`RiverNet: ${aborted ? `stopped after ${streak} devices in a row failed, ` : ""}${failed} of ${RIVERNET_CATALOG.length} devices failed (what was read is saved)`);
   process.exit(1);
 }
 console.log(`RiverNet snapshot: ${RIVERNET_CATALOG.length - failed} devices, ${failed} failed`);
