@@ -17,6 +17,7 @@ import { getMe, getMentions, getDms, sendDm } from "../lib/xRead.ts";
 import { colomboDay, tweetLength, MAX_TWEET } from "../lib/xCompose.ts";
 import { OPENAI_MODEL } from "../lib/openai.ts";
 import { PLACES, RIVERS } from "../lib/places.ts";
+import { notify } from "../lib/notify.mjs";
 import {
   REPLIES_SCHEMA, SHARED_SCHEMA, REPLY_INTENTS, DEFAULT_LIMITS, FIXED_VARIANTS, classify, cleanText, looksLikeBot, directedAtUs, makeResolver, resolveTarget,
   buildAnswer, fixedReply, validateFixed, writeReply, mayReply, seedOf, scriptOf, mentionsIn,
@@ -122,19 +123,14 @@ export async function planReply(item, ctx) {
 
 // ---- Slack ---------------------------------------------------------------------------------------------------------
 
-async function slack(text, { env, doFetch }) {
+// Every message also goes into the in-house notification log (lib/notify.mjs) so recurring problems get one tracked issue.
+async function slack(text, { env, doFetch, kind, severity }) {
   const hook = env.SLACK_X_WEBHOOK_URL || env.SLACK_WEBHOOK_URL;
-  if (!hook) {
-    log(`[no Slack webhook] ${text}`);
-    return false;
-  }
-  try {
-    const res = await doFetch(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(20_000) });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  if (!hook) log(`[no Slack webhook] ${text}`);
+  return (await notify(text, { source: "x-replies", kind, severity, env, doFetch, webhook: hook })).slackOk;
 }
+// the pipeline context `x` carries noteAs (kind + severity); a hand-built one in a test may only have note
+const noteOf = (x, kind, severity) => (x.noteAs ? x.noteAs(kind, severity) : x.note);
 const quote = (t) => String(t).split("\n").map((l) => `> ${l}`).join("\n");
 
 /**
@@ -223,7 +219,7 @@ export async function handleItem(item, x) {
   const isSelf = item.authorId === x.me.id || (user.username ?? "").toLowerCase() === handle.toLowerCase();
   const plan = await planReply(item, { ...x, handle });
   const intent = plan.intent;
-  const feed = (outcome, why, reply) => x.note(feedMessage({ item, plan, user, outcome, why, reply, reason: x.reason }));
+  const feed = (outcome, why, reply) => noteOf(x, `reply-${outcome}`, outcome === "failed" ? "error" : "info")(feedMessage({ item, plan, user, outcome, why, reply, reason: x.reason }));
   if (item.source === "mention" && !directedAtUs({ text: item.text, inReplyToUserId: item.inReplyToUserId }, x.me.id, handle)) { await write(intent, "skipped", { error: "not addressed to us" }); await feed("skipped", "not addressed to us (only tagged in someone else's thread)"); return { status: "skipped", why: "not addressed to us", plan }; }
   const wantsReply = REPLY_INTENTS.includes(intent) || !!plan.reply;
   if (!wantsReply || !plan.reply) {
@@ -246,15 +242,15 @@ export async function handleItem(item, x) {
     await write(intent, "skipped", { target: plan.target?.label, error: verdict.why });
     await feed("skipped", verdict.why);
     // an emergency we may not answer is still a human's problem
-    if (intent === "emergency") await slack(`${x.cfg.critical} :rotating_light: *EMERGENCY message NOT answered automatically (${verdict.why})* from @${user.username ?? "?"}:\n${quote(text)}\nhttps://x.com/i/status/${item.id}`, x);
+    if (intent === "emergency") await slack(`${x.cfg.critical} :rotating_light: *EMERGENCY message NOT answered automatically (${verdict.why})* from @${user.username ?? "?"}:\n${quote(text)}\nhttps://x.com/i/status/${item.id}`, { ...x, kind: "emergency", severity: "critical" });
     return { status: "skipped", why: verdict.why, plan };
   }
 
   // owner pings (always, dry or live): reports, corrections, emergencies
   const link = item.source === "dm" ? "(direct message)" : `https://x.com/i/status/${item.id}`;
-  if (intent === "emergency") await slack(`${x.cfg.critical} :rotating_light: *HIGH PRIORITY: someone says they need help* (@${user.username ?? "?"}). ${x.mode === "live" ? "The reply with 117 and the emergency numbers is being sent." : "DRY RUN: no reply is going out, please check it yourself."}\n${quote(text)}\n${link}`, x);
-  else if (intent === "report") await slack(`:speech_balloon: Report from @${user.username ?? "?"}${plan.place ? ` (${plan.place})` : ""}: not confirmed, from one person. ${link}\n${quote(text)}`, x);
-  else if (intent === "correction") await slack(`:warning: @${user.username ?? "?"} says something looks wrong. ${link}\n${quote(text)}`, x);
+  if (intent === "emergency") await slack(`${x.cfg.critical} :rotating_light: *HIGH PRIORITY: someone says they need help* (@${user.username ?? "?"}). ${x.mode === "live" ? "The reply with 117 and the emergency numbers is being sent." : "DRY RUN: no reply is going out, please check it yourself."}\n${quote(text)}\n${link}`, { ...x, kind: "emergency", severity: "critical" });
+  else if (intent === "report") await slack(`:speech_balloon: Report from @${user.username ?? "?"}${plan.place ? ` (${plan.place})` : ""}: not confirmed, from one person. ${link}\n${quote(text)}`, { ...x, kind: "report", severity: "info" });
+  else if (intent === "correction") await slack(`:warning: @${user.username ?? "?"} says something looks wrong. ${link}\n${quote(text)}`, { ...x, kind: "correction", severity: "warn" });
 
   let reply = plan.reply;
   const cost = x.cfg.costPost;
@@ -288,8 +284,8 @@ export async function handleItem(item, x) {
       x.meta.pauseUntil = r.retryAfterMs ?? now + 3_600_000;
       x.meta.pauseWhy = r.detail;
       x.paused = true;
-      await x.note(`:rotating_light: X reply failed (${r.detail}). Posting and replies are paused until ${new Date(x.meta.pauseUntil).toISOString()}.`);
-    } else if (intent === "emergency") await x.note(`${x.cfg.critical} :rotating_light: The emergency reply to @${user.username ?? "?"} FAILED (${r.detail}). Please answer by hand: ${link}`);
+      await noteOf(x, "post-failed", "error")(`:rotating_light: X reply failed (${r.detail}). Posting and replies are paused until ${new Date(x.meta.pauseUntil).toISOString()}.`);
+    } else if (intent === "emergency") await noteOf(x, "emergency-reply-failed", "critical")(`${x.cfg.critical} :rotating_light: The emergency reply to @${user.username ?? "?"} FAILED (${r.detail}). Please answer by hand: ${link}`);
     await feed("failed", r.detail, reply);
     return { status: "failed", plan, detail: r.detail };
   }
@@ -318,6 +314,7 @@ export async function run(o = {}) {
   for (const s of [...SHARED_SCHEMA, ...REPLIES_SCHEMA]) await query(s);
   const day = colomboDay(now).day;
   const note = (t) => slack(t, { env, doFetch });
+  const noteAs = (kind, severity) => (t) => slack(t, { env, doFetch, kind, severity });
   const meta = (await loadValue("meta", query)) ?? {};
   if (mode === "live" && meta.pauseUntil && now < meta.pauseUntil) {
     log(`paused until ${new Date(meta.pauseUntil).toISOString()} (${meta.pauseWhy ?? ""})`);
@@ -332,7 +329,7 @@ export async function run(o = {}) {
       log(`could not read our own account: ${r.detail}`);
       if (r.status === 402 || r.status === 403 || r.status === 401) {
         const st = (await loadValue("replies_note", query)) ?? {};
-        if (st.day !== day) { await note(`:warning: X replies: could not read the account (${r.detail}). Check the API credits and keys.`); await saveValue("replies_note", { day }, now, query); }
+        if (st.day !== day) { await noteAs("read-failed", "warn")(`:warning: X replies: could not read the account (${r.detail}). Check the API credits and keys.`); await saveValue("replies_note", { day }, now, query); }
       }
       return { mode, handled: 0, error: r.detail };
     }
@@ -363,7 +360,7 @@ export async function run(o = {}) {
   const repliesToday = await sum("SELECT COUNT(*) AS c FROM x_replies WHERE day = ? AND mode = ? AND status IN ('posted','dry')", [day, mode]);
   let recent = [];
   try { recent = (await query("SELECT reply_text FROM x_replies WHERE reply_text IS NOT NULL AND ai = 1 AND status IN ('posted','dry') ORDER BY ts DESC LIMIT 5")).map((r) => String(r.reply_text)); } catch { /* fresh table */ }
-  const x = { env, mode, reason, keys, query, doFetch, now, cfg, data, llm, offReason, me, meta, spent, repliesToday, recent, note, paused: false, handle: cfg.handle };
+  const x = { env, mode, reason, keys, query, doFetch, now, cfg, data, llm, offReason, me, meta, spent, repliesToday, recent, note, noteAs, paused: false, handle: cfg.handle };
 
   let handled = 0;
   const counts = {};
@@ -377,7 +374,7 @@ export async function run(o = {}) {
     log(`could not read mentions: ${mr.detail}`);
     if (mr.status === 429 || mr.status === 401 || mr.status === 402 || mr.status === 403) {
       const st = (await loadValue("replies_note", query)) ?? {};
-      if (st.day !== day) { await note(`:warning: X replies: could not read mentions (${mr.detail}).`); await saveValue("replies_note", { day }, now, query); }
+      if (st.day !== day) { await noteAs("read-failed", "warn")(`:warning: X replies: could not read mentions (${mr.detail}).`); await saveValue("replies_note", { day }, now, query); }
     }
   } else {
     used += mr.reads;
@@ -398,7 +395,7 @@ export async function run(o = {}) {
     if (!dr.ok) {
       log(`could not read direct messages: ${dr.detail}`);
       const st = (await loadValue("replies_note", query)) ?? {};
-      if (st.dmDay !== day) { await note(`:warning: X replies: direct messages could not be read (${dr.detail}). X_DM=on needs the app permission "Read and write and Direct message" and a regenerated access token. See DOCS.md "X replies".`); await saveValue("replies_note", { ...st, dmDay: day }, now, query); }
+      if (st.dmDay !== day) { await noteAs("read-failed", "warn")(`:warning: X replies: direct messages could not be read (${dr.detail}). X_DM=on needs the app permission "Read and write and Direct message" and a regenerated access token. See DOCS.md "X replies".`); await saveValue("replies_note", { ...st, dmDay: day }, now, query); }
     } else {
       used += dr.reads;
       const first = (await loadValue("replies_dm_since", query)) == null;
@@ -418,7 +415,7 @@ export async function run(o = {}) {
 
   if (used) {
     await saveValue("replies_reads", { day, n: todayReads + used }, now, query);
-    if (todayReads + used >= cfg.readCap) await note(`:information_source: X replies: reached today's read cap (${cfg.readCap} posts); reading resumes tomorrow. Raise it with: gh variable set X_REPLY_READ_CAP --body <n>`);
+    if (todayReads + used >= cfg.readCap) await noteAs("budget", "info")(`:information_source: X replies: reached today's read cap (${cfg.readCap} posts); reading resumes tomorrow. Raise it with: gh variable set X_REPLY_READ_CAP --body <n>`);
   }
   if (x.paused) await saveValue("meta", meta, now, query);
   // old mention text is not kept for long

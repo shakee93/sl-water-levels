@@ -30,6 +30,7 @@ import { evalNews, areasOf, fetchNewsItems, shortHeadline, newsWorthy, NEWS_PER_
 import { newsTier } from "../lib/newsClassify.ts";
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
+import { notify } from "../lib/notify.mjs";
 
 const SITE = process.env.SITE_URL || "https://waterlevels.lk";
 const CHUNK = 10;
@@ -179,9 +180,8 @@ export async function stats({ dry = false, now = Date.now(), post = null } = {})
   console.log(text);
   const hook = process.env.SLACK_WEBHOOK_URL;
   if (dry || !hook) return { text, posted: false };
-  const res = await (post ?? fetch)(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(20_000) });
-  if (!res.ok) console.warn(`Slack post failed: HTTP ${res.status}`);
-  return { text, posted: res.ok };
+  const { slackOk } = await notify(text, { source: "push-notify", kind: "digest", severity: "info", env: process.env, doFetch: post ?? fetch, webhook: hook });
+  return { text, posted: slackOk };
 }
 
 export async function main({ mode = "check", dry = false, test = null, now = Date.now(), send = null, doFetch = fetch, force = false, broadcast = null } = {}) {

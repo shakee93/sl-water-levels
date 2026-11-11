@@ -29,6 +29,7 @@
 // No Slack or push of its own: only a "(Shadow rule: x.)" tail on a ping the live rule already sends, when they disagree.
 // shadow_state is NULL (unknown, never "none") when the answer depends on a gauge week we could not compute.
 import { readFileSync } from "node:fs";
+import { notify } from "../lib/notify.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { streetState, shadowStreetState, stateChange, isReportable, noticeFor, riverTrigger, STREET_POSSIBLE_MM_24H, STREET_LIKELY_MM_24H, STREET_HOURLY_CAP_MM } from "../lib/streetRainLog.ts";
@@ -212,17 +213,11 @@ function textLive(n) {
   }
   return `Heavy rain, low spots may get water: ${area} (24 h rain at or above ${STREET_POSSIBLE_MM_24H} mm; often wrong${n.zone === "colombo-east" ? ", about 8 times a year with no recorded flood" : "; not backtested here yet"}). Town pages show the street-water card; no push. Satellite rain: ${nums}. Did your street flood? ${link}`;
 }
-async function slack(msg) {
+// Every message also goes into the in-house notification log (lib/notify.mjs); the ground-gauge shadow passes its own source.
+async function slack(msg, { source = "street-rain-log", kind = "street-water", severity = "info" } = {}) {
   if (DRY) return console.log(`[dry-run] Slack: ${msg}`), true;
   if (!SLACK) return false;
-  try {
-    const res = await fetch(SLACK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: msg }), signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) console.warn(`Slack post failed: HTTP ${res.status}`);
-    return res.ok;
-  } catch (e) {
-    console.warn(`Slack post failed: ${e instanceof Error ? e.name : "error"}`);
-    return false;
-  }
+  return (await notify(msg, { source, kind, severity, webhook: SLACK, timeoutMs: 15_000 })).slackOk;
 }
 const updates = [];
 for (const n of notices) {
@@ -230,7 +225,7 @@ for (const n of notices) {
     updates.push(`UPDATE street_rain_changes SET notified = 2, notified_ms = ${NOW} WHERE zone = ${q(n.zone)} AND changed_ms = ${n.changedMs} AND notified = 0;`);
     continue;
   }
-  if (await slack(text(n))) updates.push(`UPDATE street_rain_changes SET notified = 1, notified_ms = ${NOW} WHERE zone = ${q(n.zone)} AND changed_ms = ${n.changedMs};`);
+  if (await slack(text(n), { kind: n.kind === "clear" ? "street-water-clear" : "street-water", severity: "info" })) updates.push(`UPDATE street_rain_changes SET notified = 1, notified_ms = ${NOW} WHERE zone = ${q(n.zone)} AND changed_ms = ${n.changedMs};`);
 }
 if (updates.length && !DRY) {
   try {

@@ -130,6 +130,15 @@ lib/
   `data-health` GitHub issue per check failing twice in a row, Slack via the `SLACK_WEBHOOK_URL`
   secret (open, every 6 h, recovered; also on scheduled-workflow failures). When a source
   changes shape, expect an issue titled "Data source down: ..."; see DOCS.md "Monitoring".
+  **Ops loop** (11 Nov 2026, DOCS.md "Ops loop (in-house notification log)"): every Slack message is also a row in D1 `notifications` (`lib/notify.mjs`,
+  `fingerprint` = the problem); `scripts/ops-triage.mjs` (workflow `ops-triage.yml`, after each health run + every 3 h) applies the pure rules of
+  `lib/opsTriage.mjs` and raises ONE public GitHub issue per recurring problem, label `ops-loop`: **open `ops-loop` issues are the to-do list**; check
+  them first, fix the cause, the issue closes itself on recovery or after 48 h quiet. Label `ops-ignore` (or `ops_issues.status = 'ignored'`) stops one
+  for good. Issue text is sanitised (public repo): never put visitor text, names, handles or URLs with queries into a Slack message you expect it to sample.
+  Silence ("has gone quiet") is only for the explicit `HEARTBEATS` table in `lib/opsTriage.mjs` (daily digests); event-driven families are never quiet.
+  Failed workflow runs are read from the GitHub API each pass (`actions: read`; nothing stored): a frequent job opens at 3 failures in 2 h or a 1 h failure
+  streak, a daily job at 2 in a row, a later success closes it (DOCS.md "Failed workflow runs").
+  Tests: `node --experimental-strip-types --no-warnings scripts/ops-triage.test.mts`; dry run: `node scripts/ops-triage.mjs --dry-run`.
 
 - **CUrW Colombo canal gauges** (pub.curwsl.org/dyn/*.png, 7 chart pages, 33 gauges, m MSL, 15-min):
   PUBLIC with credit since 26 Oct 2026 (owner decision: the charts are published on a public site, we emailed

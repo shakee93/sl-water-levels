@@ -23,6 +23,7 @@
 // No dependencies.
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { notify } from "../lib/notify.mjs";
 
 const args = process.argv.slice(2);
 const flag = (f) => args.includes(f);
@@ -52,20 +53,12 @@ function span(ms) {
   return r ? `${h} h ${r} min` : `${h} h`;
 }
 
-async function slack(text) {
+// Every message also goes into the in-house notification log (lib/notify.mjs); `key` names the problem (one data source) so
+// "down", "still down" and "recovered" rows share one fingerprint.
+async function slack(text, { kind, severity, key } = {}) {
   if (DRY) return log(`[dry-run] Slack message: ${text}`);
   if (!SLACK) return;
-  try {
-    const res = await fetch(SLACK, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, blocks: [{ type: "section", text: { type: "mrkdwn", text } }] }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!res.ok) log(`Slack post failed: HTTP ${res.status}`);
-  } catch (e) {
-    log(`Slack post failed: ${e instanceof Error ? e.name : "error"}`);
-  }
+  await notify(text, { source: "health-alert", kind, severity, key, webhook: SLACK, timeoutMs: 15_000, blocks: [{ type: "section", text: { type: "mrkdwn", text } }] });
 }
 
 async function gh(method, path, body) {
@@ -146,7 +139,7 @@ async function findOpenIssue(c) {
 
 async function main() {
   if (flag("--slack-test")) {
-    await slack("Sri Lanka Water Levels monitoring is connected ✅");
+    await slack("Sri Lanka Water Levels monitoring is connected ✅", { kind: "test", severity: "info" });
     log(SLACK || DRY ? "Slack test message sent." : "SLACK_WEBHOOK_URL is empty; nothing sent.");
     return 0;
   }
@@ -207,14 +200,14 @@ async function main() {
             log(`[dry-run] would open issue "${titleOf(c)}" labelled ${LABEL}:\n${issueBody(c, cur.since).replace(/^/gm, "    ")}`);
           } else cur.issue = (await gh("POST", "/issues", { title: titleOf(c), body: issueBody(c, cur.since), labels: [LABEL] })).number;
           cur.lastNotified = now;
-          await slack(`🔴 Data source down: ${c.name} — ${c.detail}. Since ${clock(cur.since)}. Users see: ${c.userImpact}. Status: ${SITE}/status · Issue: ${link(cur.issue)}`);
+          await slack(`🔴 Data source down: ${c.name} — ${c.detail}. Since ${clock(cur.since)}. Users see: ${c.userImpact}. Status: ${SITE}/status · Issue: ${link(cur.issue)}`, { kind: "data-source-down", severity: c.severity === "critical" ? "critical" : "error", key: `health:${c.id}` });
         }
       } else if (now - (cur.lastNotified || 0) >= REMIND_MS) {
         const text = `Still failing after ${span(now - cur.since)}: ${c.detail}`;
         if (DRY) log(`[dry-run] would comment on #${cur.issue}: ${text}`);
         else await gh("POST", `/issues/${cur.issue}/comments`, { body: text });
         cur.lastNotified = now;
-        await slack(`🔴 Still down: ${c.name} — ${c.detail}. Down for ${span(now - cur.since)}. Users see: ${c.userImpact}. Status: ${SITE}/status · Issue: ${link(cur.issue)}`);
+        await slack(`🔴 Still down: ${c.name} — ${c.detail}. Down for ${span(now - cur.since)}. Users see: ${c.userImpact}. Status: ${SITE}/status · Issue: ${link(cur.issue)}`, { kind: "data-source-down", severity: c.severity === "critical" ? "critical" : "error", key: `health:${c.id}` });
       }
     } else if (s) {
       delete state.checks[c.id];
@@ -226,7 +219,7 @@ async function main() {
           await gh("POST", `/issues/${s.issue}/comments`, { body: text });
           await gh("PATCH", `/issues/${s.issue}`, { state: "closed", state_reason: "completed" });
         }
-        await slack(`✅ Recovered: ${c.name} (down ${span(now - s.since)})`);
+        await slack(`✅ Recovered: ${c.name} (down ${span(now - s.since)})`, { kind: "data-source-recovered", severity: "info", key: `health:${c.id}` });
       } else log(`ok again ${c.id} (blip, nothing had been opened)`);
     }
   }

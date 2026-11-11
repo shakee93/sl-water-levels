@@ -805,6 +805,127 @@ the site watches itself and tells the owner.
   `https://api.telegram.org/bot<token>/sendMessage` from the `slack()` helper in
   `scripts/health-alert.mjs`.
 
+## Ops loop (in-house notification log)
+
+Slack is a stream nobody triages (X "paused" every 6 h for four days, "Data source down: HMIS" for 37 h, 7-11 Nov 2026). The loop turns the
+log of everything the jobs say (next section, "Notification log") into a short list of tracked problems: **open GitHub issues labelled
+`ops-loop` are the to-do list.**
+
+- **What is logged**: every Slack message, as a row of D1 table `notifications` (`ts, source, kind, severity, text, fingerprint, run_url, slack_ok,
+  meta`), by `lib/notify.mjs`. The `fingerprint` names the PROBLEM (source + kind + the words, with times, numbers, ids, URLs and quoted lines removed),
+  so repeats of one problem share it. Triage state is `ops_issues` (`fingerprint` primary key, `title, source, kind, severity, first_ts, last_ts, count,
+  status open | resolved | ignored, github_issue, opened_ts, resolved_ts, note`); rows whose fingerprint starts with `_state:` are the job's own
+  bookkeeping (last full pass, last daily summary). Both tables are created on first use; `d1/0021_notifications.sql` is the record.
+- **Pure rules**: `lib/opsTriage.mjs` (`triage({notifications, issues, now})` returns actions and the next state; thresholds in `RULES`,
+  tests `node --experimental-strip-types --no-warnings scripts/ops-triage.test.mts`). A problem is only raised while it is CURRENT (its newest
+  message is under 48 h old and is not a recovery). OPEN when any of:
+  1. **repeat**: the same fingerprint 3 times within 24 h (a single blip never opens an issue);
+  2. **two days**: on 2 consecutive Sri Lanka days (00:00 +05:30, not UTC);
+  3. **persists**: an error / critical still repeated 3 h or more after it first appeared, no recovery message between, and no gap over 12 h between
+     messages (reminders come every 6 h; two failures of a workflow two days apart stay two blips). A "Still down" reminder 6 h after "Data source down"
+     therefore opens it;
+  4. **workflow**: a workflow failed twice in 24 h (a "failed N runs in a row" line, which the frequent jobs send only from the 3rd failure on,
+     counts as 3);
+  5. **paused**: a "paused" state announced twice in 24 h;
+  6. **flaky**: 3 separate outages (each with a recovery message) within 7 days. This issue is not closed by a recovery (it would flap) but after 7 days
+     without a new outage.
+  UPDATE (count, last seen; silent) while an open issue keeps getting messages; a COMMENT only when it comes back after 24 h of quiet. RESOLVE
+  (comment + close) when a recovery message for the same problem arrives or it has not been seen for 48 h. A resolved problem reopens the SAME
+  GitHub issue, but only on fresh messages (after the resolve) that satisfy a rule again. NEVER raised: severity `info`, digests, summaries,
+  dry-run samples, held-by-limit notes, street-water and shadow notes, visitor feedback, reply reports, and the loop's own messages (source
+  `ops-triage`, kind `ops-loop`); one-off warnings. **Silence** is EXPLICIT: only a (source, kind) named in the small `HEARTBEATS` table of
+  `lib/opsTriage.mjs` can ever be "quiet" (the truly scheduled daily messages, each with its expected gap: `push-notify/digest`, `learn-all/digest`,
+  `feedback-digest/digest`, 24 h each), only after twice that gap, and only once the log holds that pair on at least 5 different days; then an issue
+  "<source> has gone quiet" opens and closes when it speaks again. Everything else (rain-driven street-water and shadow notes, held / dropped / budget
+  lines, feedback and reply reports) is event-driven: not speaking is normal, and good news after a fix, so it is never "quiet" (the first build
+  derived heartbeats from the data and raised "has gone quiet" for a rain streak followed by a dry spell). Add a pair to `HEARTBEATS` only after
+  checking in the code that the job sends it on every run.
+- **Failed workflow runs** (the canal job `curw-snapshot.yml` failed every 15 min for hours on 11 Nov 2026; it has no Slack step, so the only signal
+  was one GitHub e-mail per run). The triage job now reads the runs itself: with the built-in token (`actions: read` in `ops-triage.yml`, the repo is
+  public) it lists runs that completed with `failure` or `timed_out` in the last 48 h for EVERY workflow (`GET /actions/runs?status=failure`), then
+  the last 40 completed runs of each failing workflow (`/actions/workflows/<id>/runs`, at most 25 workflows). `workflowRunRows()` turns them into
+  synthetic notifications: source `workflow:<name>`, kind `run-failed`, severity error, `run_url`, the SAME fingerprint as the workflow's own
+  "Tell Slack the workflow failed" row (so one issue per workflow); a failed run whose id is already in a logged `workflow-failed` row's `run_url`
+  is skipped (one failed run counts once); a later successful run is a `run-recovered` row, so it closes the issue. **Nothing about runs is stored**:
+  the GitHub API is the record (a run older than 48 h is forgotten, as are runs when the API is down; the log alone is then used with the old
+  rule "2 failure alerts in 24 h"). For a workflow WITH run data, its logged `workflow-failed` rows older than 48 h are ignored (no recovery row can end their episode, so an isolated failure days ago would merge with a new one into a false streak). **What opens an issue**, by the workflow's own cadence (median gap between the starts of its recent runs):
+  a **frequent** job (at most 6 h apart): 3 failed runs within 2 h with no success between, OR at least 2 failures with no success for 1 h;
+  a **daily** job (more than 6 h apart, or fewer than 3 runs known): 2 failed runs in a row. A single failure never opens one. For these workflows
+  this rule alone decides (the generic repeat rules above are skipped). Because the pass gate is 3 h, a NEW failed run inside the gate (one cheap
+  `status=failure&created>=<last pass>` call) earns an early pass, at most every 25 min, so a canal job failing every 15 min gets its issue at the next
+  half-hourly trigger instead of up to 3 h later. A failure of the workflow whose file did not even parse shows up named by its path
+  (`.github/workflows/...yml`); it is treated like any other.
+- **Related health issue**: when the problem is a data source and `health-alert` already has an open `data-health` issue naming the same source, the
+  ops-loop issue links it ("the live status issue #N already tracks this data source") instead of repeating the diagnosis.
+- **Visible failures of the loop itself**: after 3 passes in a row in which a GitHub call failed (listing issues, creating or updating one, listing
+  runs; state `_state:gh-trouble`), ONE Slack line per Sri Lanka day goes through `notify` (source `ops-triage`); a good pass resets the count.
+  The daily summary is only sent when something is open, was opened or resolved in the last 24 h, or a heartbeat is quiet (no "0 open problems" line).
+  Issue titles and the summary keep the workflow name (`Workflow: X replies keeps failing ...`).
+- **The job**: `scripts/ops-triage.mjs` reads the last 14 days (info rows without their text) and `ops_issues` (reads retried, `lib/d1Sql.mjs`), applies the
+  rules, writes `ops_issues` (one idempotent upsert per change), and uses GITHUB_TOKEN with the REST API: one issue per problem, label `ops-loop`
+  (created if missing), body = what it is, since when, how often, the latest sanitised sample, up to 5 run links, the likely source file, and a checklist
+  (diagnosis / fix / verified). A hidden marker `<!-- ops-loop:<fingerprint> -->` in the body lets a later pass adopt an issue whose D1 row was lost
+  (no duplicate). Then ONE Slack line per newly opened (or reopened) issue and one short summary per Sri Lanka day (first pass after 08:00), sent
+  through `notify` with source `ops-triage`, kind `ops-loop`, so they are logged but never triaged. Retention: notifications older than 180 days are
+  deleted in slices of 500 (at most 10 slices a pass).
+  **Cap per pass** (`RULES.maxOpenPerPass` = 5): opens and reopens are ordered by severity, then count, then last seen; only the first 5 go through, plus
+  ONE extra Slack line "N more problems waiting". The deferred ones are not saved, so the next pass (3 h gate) picks them up: a mass event (15 workflows
+  failing in an outage) cannot open 15 issues at once.
+- **The repository is public**: `sanitise()` removes URLs (any link can carry a token or a query), emails, @handles, quoted lines and quoted spans
+  (post text, visitor words), everything after "They wrote:", emoji codes, long numbers and secrets; only Actions run URLs without a query go in as
+  links; issue titles are built from the family, never from one message. Names written in free text cannot be detected, which is why only the system's own
+  problem messages are ever sampled (visitor feedback and replies are informational and never sampled).
+- **Schedule**: `.github/workflows/ops-triage.yml` runs after each "Data health check" run and on manual dispatch, plus a cron every 3 hours; the script
+  does a full pass at most once every 2 h 50 min (state `_state:last-run`), so extra triggers cost one small read. D1 or GitHub down: a `::warning::`
+  and a green run. It ends with the standard "Tell Slack the workflow failed" step. The data-source rules overlap with `health-alert`'s own `data-health`
+  issues on purpose: that one is the live status of one source, this one is the pattern ("keeps going down", "still down 6 h later").
+- **Ignore / resolve by hand**: put the label `ops-ignore` on the issue (it is read on the next pass and the problem is ignored for ever), or in D1
+  `UPDATE ops_issues SET status = 'ignored' WHERE fingerprint = '<fp>'` (the fingerprint is in the issue body marker). Closing the issue yourself marks it
+  resolved; the same problem reopens it only on fresh messages. To resolve a silence issue for a source you switched off, ignore it.
+- **Dry run**: `node scripts/ops-triage.mjs --dry-run` (needs CLOUDFLARE_API_TOKEN to read D1; or `--input file.json` with
+  `{"notifications": [...], "issues": {...}}` for no services at all) prints the issues it would open, update or close and touches nothing. `--force`
+  skips the 3-hour gate. In Actions: run "Ops triage" with `dry_run`.
+- **Owner must set**: nothing new if `CLOUDFLARE_API_TOKEN` and `SLACK_WEBHOOK_URL` already exist (the workflow uses `github.token` for issues). Push to
+  main. The first useful pass comes after the log has rows (jobs write them as they run); silence detection needs 5 days of rows.
+- **Replay on the real history** (23 Oct - 11 Nov 2026, rebuilt from `research/ops/slack-history-2026-11-11.md`; counts of the chattiest families are
+  approximate): the loop raises 11 issues, 9 of them real problems (precision 82%): the X pause loop (opened 8 Nov 19:00, the second pause message) and
+  the 280-character refusal (11 Nov 14:30), the 26 Oct workflow storm (X replies / account / reposts / GSMaP, each at its second message, about an hour
+  in, not 16 h later), HMIS (4 Nov 20:00, closed by recovery 21:30, reopened 8 Nov 02:30, closed 9 Nov 09:30), RiverNet flaky (4 Nov 09:30), the
+  Irrigation-sheet false alarm that was our bug (9 Nov 03:00). The two it should not have: the Mahaweli weekend staleness (25 Oct 20:00, a publication
+  gap, not a fault) and ArcGIS rate limits (3 one-hour outages in 3 days, 26 Oct 21:30; arguably worth one issue). Nothing informational, no one-off
+  warning and none of the single workflow failures was raised; a second run changes nothing.
+
+## Notification log (11 Nov 2026)
+
+Slack is a stream nobody triages: on 7-11 Nov 2026 "X post failed ... Posting is paused" reached Slack every 6 h for four days and
+"Data source down: HMIS" for 37 h, and nobody acted. So every message a job sends to Slack is also written to a log we own, and a
+triage job reads the log and raises ONE tracked issue per recurring problem (the loop that fixes issues).
+
+- **`lib/notify.mjs`**: `notify(text, { source, kind, severity, meta, env, doFetch, now, webhook, blocks, timeoutMs, key })` posts to Slack
+  exactly as each sender always did (same JSON body, webhook choice, timeout, errors swallowed) and then writes ONE row to D1 table
+  `notifications` (`d1/0021_notifications.sql`; also created on first use when the INSERT says "no such table").
+  Columns: `ts` (epoch ms), `source` (x-post, x-replies, x-reposts, x-series, ig-post, health-alert, push-notify, feedback-digest,
+  feedback-route, learn-all, feedback-learn, street-rain-log, ground-rain-shadow, `workflow:<name>` for a failed run), `kind`
+  (post-failed, paused is carried by post-failed + text, data-source-down, data-source-recovered, workflow-failed, held, budget,
+  digest, dry-run, ...), `severity` (info | warn | error | critical), `text` (as sent, secrets scrubbed, <= 4,000 chars),
+  `fingerprint`, `run_url`, `slack_ok` (1 / 0 / NULL when nothing was posted), `meta`. `ops_issues` (one row per fingerprint:
+  status open / resolved / ignored, github_issue, counts) is the triage job's state.
+- **`fingerprint(text, source, kind, key?)`** identifies the PROBLEM: a hash of source + kind + the text with times, dates, numbers,
+  ids, URLs, @names, :emoji: codes, quoted lines (other people's words, post text) and "quoted" spans removed. `key` names the problem
+  outright (kind then left out): health-alert uses `health:<check id>` so "down", "still down" and "recovered" share one fingerprint;
+  workflow failures use the source, so "failed" and "failed 3 runs in a row" do too.
+- **Fail soft, time-boxed.** One small INSERT through the D1 HTTP /query endpoint (never wrangler), 5 s for the id lookup and the
+  insert together (one AbortSignal), not retried (a retry of a write that timed out could land twice), a console warning on any
+  failure, skipped (warned once) without `CLOUDFLARE_API_TOKEN`. Slack is posted first and never waits for the log.
+- **Workflows**: the "Tell Slack the workflow failed" steps call `node scripts/notify-cli.mjs --source "workflow:<name>" --kind
+  workflow-failed --severity error "<text>"` when the checkout exists and fall back to the old curl when it does not (a failed
+  checkout still reaches Slack). The "3 in a row" rule is unchanged. Jobs that notify pass `CLOUDFLARE_API_TOKEN` (optional).
+- **Not logged**: `--dry-run` runs of the scripts (nothing is sent), and the feedback route's ping when no webhook is set on Vercel
+  (feedback-digest sends and logs it later).
+- **Tests**: `node --experimental-strip-types --no-warnings scripts/notify.test.mts` (fingerprints from the real message shapes,
+  classifier, scrubber, fake D1 server down / slow / erroring, per-sender proof that the Slack request is byte-identical to the
+  old helper's).
+
 ## Gauge-corrected satellite rain (27 Oct 2026)
 
 **What.** The satellite (GSMaP_NOW) reads far from the ground gauges in places: on 27 Oct 2026 it read 169 mm in 24 h at Baddegama against

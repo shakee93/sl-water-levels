@@ -39,6 +39,7 @@ import { mediaMode, pickMedia, mediaCost, fetchImage, attachMedia } from "./x-me
 import { evaluate, emptyState, summaryEvent, reservoirDigest, tierLevel, DEFAULTS } from "./x-engine.mjs";
 import { refreshEvents, composeCombined, validateCombined, decide, capBatch, batchKey, MIN_GAP_MS, DEFER_MAX_AGE_MS } from "../lib/xAggregate.ts";
 import { PLACES } from "../lib/places.ts";
+import { notify } from "../lib/notify.mjs";
 import { pushText } from "../lib/i18n/return.ts";
 import { localePath } from "../lib/i18n/config.ts";
 
@@ -245,20 +246,11 @@ export async function prepare(ev, llm, { links = "off", replies = false, recent 
 
 // ---- Slack ---------------------------------------------------------------------------------------------------------
 
-async function slack(text, { env = process.env, doFetch = fetch } = {}) {
+// Every message also goes into the in-house notification log (lib/notify.mjs) so recurring problems get one tracked issue.
+async function slack(text, { env = process.env, doFetch = fetch, kind, severity, meta } = {}) {
   const hook = env.SLACK_WEBHOOK_URL;
-  if (!hook) {
-    log(`[no Slack webhook] ${text}`);
-    return false;
-  }
-  try {
-    const res = await doFetch(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(20_000) });
-    if (!res.ok) console.warn(`Slack post failed: HTTP ${res.status}`);
-    return res.ok;
-  } catch {
-    console.warn("Slack post failed");
-    return false;
-  }
+  if (!hook) log(`[no Slack webhook] ${text}`);
+  return (await notify(text, { source: "x-post", kind, severity, meta, env, doFetch, webhook: hook })).slackOk;
 }
 
 const quote = (t) => t.split("\n").map((l) => `> ${l}`).join("\n");
@@ -337,7 +329,7 @@ export async function run(o = {}) {
   const langs = (replies ? (env.X_LANGS ?? "en") : "en").split(",").map((s) => s.trim()).filter((s) => s === "si" || s === "ta");
   const meta = (await loadValue("meta", query)) ?? {};
   const live = g.mode === "live";
-  const note = (t) => slack(t, { env, doFetch });
+  const noteAs = (kind, severity) => (t) => slack(t, { env, doFetch, kind, severity });
   let metaDirty = false;
   // One-time: pauses set before the too-long handling existed (HTTP 403 on a long post) end now; the first run sends the short form.
   if (live && !meta.pauseFixDone) {
@@ -356,7 +348,7 @@ export async function run(o = {}) {
     return { mode: "live", paused: true, posted: 0 };
   }
   if (g.reason.includes("staying in dry-run") && meta.noteDay !== day) {
-    await note(`:warning: X posting: ${g.reason}. Posts are going to this channel only. See DOCS.md "X account".`);
+    await noteAs("config", "warn")(`:warning: X posting: ${g.reason}. Posts are going to this channel only. See DOCS.md "X account".`);
     meta.noteDay = day;
     await saveValue("meta", meta, now, query);
   }
@@ -382,7 +374,7 @@ export async function run(o = {}) {
   const held = [];
   const seen = new Set(fresh.map((e) => e.dedupe));
   for (const d of prev.deferred ?? []) {
-    if (now - d.at > DEFER_MAX_AGE_MS) await note(`:warning: X account: dropped a held update that is now too old to send (${d.ev.type}).`);
+    if (now - d.at > DEFER_MAX_AGE_MS) await noteAs("held-dropped", "warn")(`:warning: X account: dropped a held update that is now too old to send (${d.ev.type}).`);
     else if (!seen.has(d.ev.dedupe)) held.push(d.ev);
   }
   held.splice(0, held.length, ...keepWorthPosting(held)); // updates held under the old rules (per-reservoir posts) are dropped
@@ -413,7 +405,7 @@ export async function run(o = {}) {
     log(`held by the daily limit: ${e.type} ${e.dedupe}`);
     await query("INSERT OR IGNORE INTO x_posts (ts, day, kind, dedupe_key, mode, status, text) VALUES (?, ?, ?, ?, ?, 'held', ?)", [now, day, e.kind, `held:${e.dedupe}:${now}`, g.mode, `(held by daily limit) ${e.type}`]);
   }
-  if (heldByCap.length) await note(`:information_source: X account: ${heldByCap.length} update(s) held back by the daily limit (routine ${cfg.dailyMax}/day, all ${DEFAULTS.urgentMax}/day).`);
+  if (heldByCap.length) await noteAs("held", "info")(`:information_source: X account: ${heldByCap.length} update(s) held back by the daily limit (routine ${cfg.dailyMax}/day, all ${DEFAULTS.urgentMax}/day).`);
 
   const month = day.slice(0, 7);
   let spent = Number((await query("SELECT COALESCE(SUM(cost_usd), 0) AS c FROM x_posts WHERE day LIKE ? AND mode = ? AND status IN ('posted','dry')", [`${month}%`, g.mode]))[0]?.c ?? 0);
@@ -448,7 +440,7 @@ export async function run(o = {}) {
   if (batch.length) {
     let r = await build(batch);
     if (r.error) {
-      await note(`:warning: X account: a post was NOT sent because it failed its own checks: ${r.error}`);
+      await noteAs("post-failed", "warn")(`:warning: X account: a post was NOT sent because it failed its own checks: ${r.error}`);
       batch = [];
     } else if (!batch.some(isCritical) && spent + r.cost > budget * 0.8) {
       log("over 80% of the monthly budget: not posted");
@@ -456,7 +448,7 @@ export async function run(o = {}) {
       if (meta.budgetNote !== month) {
         meta.budgetNote = month;
         await saveValue("meta", meta, now, query);
-        await note(`:moneybag: X account: estimated spend this month is $${spent.toFixed(2)} of the $${budget} budget (80% limit reached). Routine updates (summaries, storm updates, reservoirs) are paused until next month; Major-flood rises and all-clears still go out. Raise it with: gh variable set X_MONTHLY_BUDGET_USD --body <dollars>`);
+        await noteAs("budget", "warn")(`:moneybag: X account: estimated spend this month is $${spent.toFixed(2)} of the $${budget} budget (80% limit reached). Routine updates (summaries, storm updates, reservoirs) are paused until next month; Major-flood rises and all-clears still go out. Raise it with: gh variable set X_MONTHLY_BUDGET_USD --body <dollars>`);
       }
       batch = [];
     } else {
@@ -486,7 +478,7 @@ export async function run(o = {}) {
           await query("UPDATE x_posts SET cost_usd = ? WHERE dedupe_key = ?", [item.cost, item.dedupe]);
         }
       }
-      await note(dryRunMessage({ n: i + 1, of: total, kind: item.kind, text: item.text, reply: item.reply, extra: item.extra, ai: item.ai, why: item.why, reason: g.reason, cost: item.cost, media: item.media, mediaCheck }));
+      await noteAs("dry-run", "info")(dryRunMessage({ n: i + 1, of: total, kind: item.kind, text: item.text, reply: item.reply, extra: item.extra, ai: item.ai, why: item.why, reason: g.reason, cost: item.cost, media: item.media, mediaCheck }));
       await query("UPDATE x_posts SET status = 'dry' WHERE dedupe_key = ?", [item.dedupe]);
       posted++;
       continue;
@@ -500,7 +492,7 @@ export async function run(o = {}) {
         log(`no picture: ${m.why}`);
         item.cost = Math.max(0, item.cost - mediaCost(rates));
         await query("UPDATE x_posts SET cost_usd = ? WHERE dedupe_key = ?", [item.cost, item.dedupe]);
-        await note(`:information_source: X post went out without its picture: ${m.why}.`);
+        await noteAs("media-missing", "info")(`:information_source: X post went out without its picture: ${m.why}.`);
       }
     }
     let r = await postTweet(g.keys, item.text, { doFetch, now, mediaIds });
@@ -525,7 +517,7 @@ export async function run(o = {}) {
           await query("UPDATE x_posts SET text = ?, cost_usd = ? WHERE dedupe_key = ?", [item.text, item.cost, item.dedupe]);
           if (meta.longNoteDay !== day) {
             meta.longNoteDay = day;
-            await note(`:information_source: X refused a long post (${first}). The short version went out instead and posting goes on. Long posts need X Premium: unless the account has it, switch them off with: gh variable set X_LONG_POSTS --body 0. Until then runs compose short posts for 24 h.`);
+            await noteAs("long-post-refused", "warn")(`:information_source: X refused a long post (${first}). The short version went out instead and posting goes on. Long posts need X Premium: unless the account has it, switch them off with: gh variable set X_LONG_POSTS --body 0. Until then runs compose short posts for 24 h.`);
           }
         }
       }
@@ -536,14 +528,14 @@ export async function run(o = {}) {
       // text = the text last attempted (the short form after a refused long post), so the row and the Slack alert agree
       await query("UPDATE x_posts SET status = 'failed', cost_usd = 0, error = ?, dedupe_key = ?, text = ? WHERE dedupe_key = ?", [r.detail, fail, item.text, item.dedupe]);
       if (r.duplicate) {
-        await note(`:warning: X rejected a post as a duplicate, skipped: ${item.text.split("\n")[0]}`);
+        await noteAs("duplicate-rejected", "warn")(`:warning: X rejected a post as a duplicate, skipped: ${item.text.split("\n")[0]}`);
         continue;
       }
       blocked = true;
       meta.pauseUntil = r.retryAfterMs ?? now + 3_600_000;
       meta.pauseWhy = r.detail;
       metaDirty = true;
-      await note(`:rotating_light: X post failed (${r.detail}). Posting is paused until ${new Date(meta.pauseUntil).toISOString()}; its updates are kept for the next post (for up to ${DEFER_MAX_AGE_MS / 3_600_000} h). Not retrying in a loop.\n${quote(item.text)}`);
+      await noteAs("post-failed", "error")(`:rotating_light: X post failed (${r.detail}). Posting is paused until ${new Date(meta.pauseUntil).toISOString()}; its updates are kept for the next post (for up to ${DEFER_MAX_AGE_MS / 3_600_000} h). Not retrying in a loop.\n${quote(item.text)}`);
       defer(item.events);
       continue;
     }
@@ -553,7 +545,7 @@ export async function run(o = {}) {
     for (const t of thread) {
       const rr = await postTweet(g.keys, t, { doFetch, now, replyTo: parent });
       if (!rr.ok) {
-        await note(`:warning: X thread reply failed (${rr.detail}); the main post is up. Pausing.`);
+        await noteAs("reply-failed", "warn")(`:warning: X thread reply failed (${rr.detail}); the main post is up. Pausing.`);
         meta.pauseUntil = rr.retryAfterMs ?? now + 3_600_000;
         meta.pauseWhy = rr.detail;
         metaDirty = true;
@@ -604,7 +596,7 @@ export async function sample(o = {}) {
     recent.unshift(r.text);
     const msg = dryRunMessage({ n: i + 1, of: Math.min(3, evs.length), kind: ev.kind, text: r.text, reply: r.reply, ai: r.ai, why: r.why, sample: true, media, mediaCheck, cost: costOf(r.text, [], { post: 0.015, link: 0.2, media: 0, alt: 0.005 }, !!media), reason: "Sample from today's real data to show the wording. The real account posts only when something changes." });
     out.push({ ev, ...r, msg });
-    await slack(msg, { env, doFetch });
+    await slack(msg, { env, doFetch, kind: "dry-run", severity: "info" });
   }
   return out;
 }

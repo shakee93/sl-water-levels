@@ -66,6 +66,7 @@ jobs:
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }} # lets the step also write the notification log (lib/notify.mjs); optional
           GH_TOKEN: ${{ github.token }}
         run: |
           [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
@@ -80,6 +81,10 @@ jobs:
             echo "Failed run #$streak in a row: not alerting Slack until the 3rd."
             exit 0
           fi
+          MSG="⚠️ Workflow failed $streak runs in a row: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Through the notification log (lib/notify.mjs) when the checkout exists: same Slack text, plus one row in D1.
+          # A failed checkout, a missing node or a refused post falls back to the plain request, so Slack still hears it.
+          if [ -f scripts/notify-cli.mjs ] && node scripts/notify-cli.mjs --source "workflow:${{ github.workflow }}" --kind workflow-failed --severity error "$MSG"; then exit 0; fi
           curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
-            --data "{\"text\":\"⚠️ Workflow failed $streak runs in a row: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            --data "{\"text\":\"$MSG\"}" \
             "$SLACK_WEBHOOK_URL" || true

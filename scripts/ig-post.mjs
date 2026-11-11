@@ -22,6 +22,7 @@ import { colomboDay } from "../lib/xCompose.ts";
 import { buildSnapshot } from "./x-post.mjs";
 import { planIg, emptyIgState, imageUrl, IG_DEFAULTS, releasingCount } from "./ig-engine.mjs";
 import { tierLevel } from "./x-engine.mjs";
+import { notify } from "../lib/notify.mjs";
 
 export const IG_SCHEMA = [
   "CREATE TABLE IF NOT EXISTS ig_posts (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, day TEXT NOT NULL, kind TEXT NOT NULL, format TEXT NOT NULL, situation TEXT NOT NULL, dedupe_key TEXT NOT NULL UNIQUE, mode TEXT NOT NULL, status TEXT NOT NULL, caption TEXT NOT NULL, image_url TEXT, container_id TEXT, media_id TEXT, error TEXT)",
@@ -35,20 +36,11 @@ const log = (...a) => console.log(...a);
 
 // ---- Slack ---------------------------------------------------------------------------------------------------------
 
-async function slack(text, { env = process.env, doFetch = fetch } = {}) {
+// Every message also goes into the in-house notification log (lib/notify.mjs) so recurring problems get one tracked issue.
+async function slack(text, { env = process.env, doFetch = fetch, kind, severity, meta } = {}) {
   const hook = env.SLACK_WEBHOOK_URL;
-  if (!hook) {
-    log(`[no Slack webhook] ${text}`);
-    return false;
-  }
-  try {
-    const res = await doFetch(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(20_000) });
-    if (!res.ok) console.warn(`Slack post failed: HTTP ${res.status}`);
-    return res.ok;
-  } catch {
-    console.warn("Slack post failed");
-    return false;
-  }
+  if (!hook) log(`[no Slack webhook] ${text}`);
+  return (await notify(text, { source: "ig-post", kind, severity, meta, env, doFetch, webhook: hook })).slackOk;
 }
 const quote = (t) => t.split("\n").map((l) => `> ${l}`).join("\n");
 
@@ -120,7 +112,7 @@ export async function run(o = {}) {
   const day = colomboDay(now).day;
   const live = g.mode === "live";
   const site = env.SITE_URL || SITE_DEFAULT;
-  const note = (t) => slack(t, { env, doFetch });
+  const noteAs = (kind, severity) => (t) => slack(t, { env, doFetch, kind, severity });
   const meta = (await loadValue("meta", query)) ?? {};
 
   if (live && meta.pauseUntil && now < meta.pauseUntil) {
@@ -128,7 +120,7 @@ export async function run(o = {}) {
     return { mode: "live", paused: true, posted: 0 };
   }
   if (g.missing.length && meta.noteDay !== day) {
-    await note(`:warning: Instagram posting: ${g.reason}. Posts are shown in this channel only (DRY RUN). To go live: add the GitHub secrets ${g.missing.join(", ")}, then set IG_MODE=live. See DOCS.md "Instagram". (This note comes once a day.)`);
+    await noteAs("config", "warn")(`:warning: Instagram posting: ${g.reason}. Posts are shown in this channel only (DRY RUN). To go live: add the GitHub secrets ${g.missing.join(", ")}, then set IG_MODE=live. See DOCS.md "Instagram". (This note comes once a day.)`);
     meta.noteDay = day;
     await saveValue("meta", meta, now, query);
   }
@@ -151,7 +143,7 @@ export async function run(o = {}) {
   }
   // once a day: the same held post is planned again every 30-min run, and a note per run flooded Slack (owner, 3 Nov 2026)
   if (held.length && meta.heldNoteDay !== day) {
-    await note(`:information_source: Instagram: ${held.length} post(s) held back by the daily limit (${situation.mode === "disaster" ? `${cfg.storiesMax} stories + ${cfg.feedMaxDisaster} feed posts` : "1 post"} a day). (This note comes once a day.)`);
+    await noteAs("held", "info")(`:information_source: Instagram: ${held.length} post(s) held back by the daily limit (${situation.mode === "disaster" ? `${cfg.storiesMax} stories + ${cfg.feedMaxDisaster} feed posts` : "1 post"} a day). (This note comes once a day.)`);
     meta.heldNoteDay = day;
     await saveValue("meta", meta, now, query);
   }
@@ -161,7 +153,7 @@ export async function run(o = {}) {
   if (live && items.length) {
     const usage = await publishingUsage(g.keys, { doFetch, now, env });
     if (usage != null && usage + items.length > IG_LIMIT_24H) {
-      await note(`:warning: Instagram says ${usage} of its 50 API posts in 24 h are used: nothing posted this run.`);
+      await noteAs("budget", "warn")(`:warning: Instagram says ${usage} of its 50 API posts in 24 h are used: nothing posted this run.`);
       blocked = true;
     }
   }
@@ -175,7 +167,7 @@ export async function run(o = {}) {
     const c = composeCaption(item.cap, { feed, langs });
     const bad = validateCaption(c.text, { feed });
     if (bad.length) {
-      await note(`:warning: Instagram: a ${item.kind} post was NOT sent because its caption failed its own checks: ${bad.join("; ")}`);
+      await noteAs("post-failed", "warn")(`:warning: Instagram: a ${item.kind} post was NOT sent because its caption failed its own checks: ${bad.join("; ")}`);
       continue;
     }
     const url = imageUrl(site, item);
@@ -187,7 +179,7 @@ export async function run(o = {}) {
     const pic = await fetchJpeg(url, doFetch);
     if (!live) {
       const check = pic.ok ? `fetched, JPEG, ${Math.round(pic.bytes.length / 1024)} KB` : `NOT available (${pic.why}): a live run would skip this post`;
-      await note(dryRunMessage({ n: i + 1, of: total, item, caption: c.text, url, check, situation, reason: g.reason }));
+      await noteAs("dry-run", "info")(dryRunMessage({ n: i + 1, of: total, item, caption: c.text, url, check, situation, reason: g.reason }));
       await query("UPDATE ig_posts SET status = 'dry' WHERE dedupe_key = ?", [item.dedupe]);
       posted++;
       continue;
@@ -195,14 +187,14 @@ export async function run(o = {}) {
     if (!pic.ok) {
       failed++;
       await query("UPDATE ig_posts SET status = 'failed', error = ?, dedupe_key = ? WHERE dedupe_key = ?", [`picture: ${pic.why}`, `${item.dedupe}#failed${now}`, item.dedupe]);
-      await note(`:warning: Instagram post skipped: its picture could not be fetched (${pic.why}): ${url}`);
+      await noteAs("media-missing", "warn")(`:warning: Instagram post skipped: its picture could not be fetched (${pic.why}): ${url}`);
       continue;
     }
     const r = await publishImage(g.keys, { imageUrl: url, format: item.format, caption: feed ? c.text : undefined }, { doFetch, now, env });
     if (!r.ok) {
       failed++;
       await query("UPDATE ig_posts SET status = 'failed', error = ?, container_id = ?, dedupe_key = ? WHERE dedupe_key = ?", [`${r.stage}: ${r.detail}`, r.containerId, `${item.dedupe}#failed${now}`, item.dedupe]);
-      await note(`:rotating_light: Instagram post failed at ${r.stage} (${r.detail}); skipped, not retried.${r.pauseUntilMs ? ` Posting is paused until ${new Date(r.pauseUntilMs).toISOString()}.` : ""}\n${quote(c.en)}`);
+      await noteAs("post-failed", "error")(`:rotating_light: Instagram post failed at ${r.stage} (${r.detail}); skipped, not retried.${r.pauseUntilMs ? ` Posting is paused until ${new Date(r.pauseUntilMs).toISOString()}.` : ""}\n${quote(c.en)}`);
       if (r.pauseUntilMs) {
         meta.pauseUntil = r.pauseUntilMs;
         meta.pauseWhy = r.detail;
@@ -251,7 +243,7 @@ export async function sample(o = {}) {
     const check = pic.ok ? `fetched, JPEG, ${Math.round(pic.bytes.length / 1024)} KB` : `NOT available (${pic.why})`;
     const msg = dryRunMessage({ n: i + 1, of: items.length, item, caption: c.text, url, check, situation: { mode: "sample", why: "one example of each kind of post, from today's real data" }, sample: true, reason: "Sample to show the wording and pictures. The real account posts only by the mode rules." });
     out.push({ item, caption: c.text, msg });
-    await slack(msg, { env, doFetch });
+    await slack(msg, { env, doFetch, kind: "dry-run", severity: "info" });
   }
   return out;
 }
@@ -317,24 +309,24 @@ export async function seed(o = {}) {
     }
     const pic = await fetchJpeg(url, doFetch);
     if (g.mode !== "live") {
-      await slack(dryRunMessage({ n: i + 1, of: items.length, item, caption: c.text, url, check: pic.ok ? `fetched, JPEG, ${Math.round(pic.bytes.length / 1024)} KB` : `NOT available (${pic.why})`, situation: { mode: "seed", why: "the account's first posts" }, reason: g.reason }), { env, doFetch });
+      await slack(dryRunMessage({ n: i + 1, of: items.length, item, caption: c.text, url, check: pic.ok ? `fetched, JPEG, ${Math.round(pic.bytes.length / 1024)} KB` : `NOT available (${pic.why})`, situation: { mode: "seed", why: "the account's first posts" }, reason: g.reason }), { env, doFetch, kind: "dry-run", severity: "info" });
       await query("UPDATE ig_posts SET status = 'dry' WHERE dedupe_key = ?", [dedupe]);
       continue;
     }
     if (!pic.ok) {
       await query("UPDATE ig_posts SET status = 'failed', error = ?, dedupe_key = ? WHERE dedupe_key = ?", [`picture: ${pic.why}`, `${dedupe}#failed${now}`, dedupe]);
-      await slack(`:warning: Instagram first post skipped: its picture could not be fetched (${pic.why}): ${url}`, { env, doFetch });
+      await slack(`:warning: Instagram first post skipped: its picture could not be fetched (${pic.why}): ${url}`, { env, doFetch, kind: "media-missing", severity: "warn" });
       continue;
     }
     const r = await publishImage(g.keys, { imageUrl: url, format: "feed", caption: c.text }, { doFetch, now, env });
     if (!r.ok) {
       await query("UPDATE ig_posts SET status = 'failed', error = ?, container_id = ?, dedupe_key = ? WHERE dedupe_key = ?", [`${r.stage}: ${r.detail}`, r.containerId, `${dedupe}#failed${now}`, dedupe]);
-      await slack(`:rotating_light: Instagram first post failed at ${r.stage} (${r.detail}); the rest are not tried.`, { env, doFetch });
+      await slack(`:rotating_light: Instagram first post failed at ${r.stage} (${r.detail}); the rest are not tried.`, { env, doFetch, kind: "post-failed", severity: "error" });
       break;
     }
     await query("UPDATE ig_posts SET status = 'posted', container_id = ?, media_id = ? WHERE dedupe_key = ?", [r.containerId, r.mediaId, dedupe]);
     log(`posted ${item.label} (${r.mediaId})`);
-    await slack(`:camera: Instagram: posted "${item.label}" (first posts ${i + 1}/${items.length}).`, { env, doFetch });
+    await slack(`:camera: Instagram: posted "${item.label}" (first posts ${i + 1}/${items.length}).`, { env, doFetch, kind: "post-sent", severity: "info" });
   }
   return out;
 }

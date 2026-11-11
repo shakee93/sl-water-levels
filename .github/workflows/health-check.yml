@@ -32,6 +32,7 @@ jobs:
     env:
       SITE_URL: https://waterlevels.lk
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }} # lets health-alert.mjs write the notification log (lib/notify.mjs); optional
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4

@@ -1,0 +1,71 @@
+name: Ops triage
+
+# The ops loop (DOCS.md "Ops loop (in-house notification log)"): reads the notification log in D1 (every message the jobs send to Slack,
+# written by lib/notify.mjs), applies the rules of lib/opsTriage.mjs and raises / updates / closes ONE GitHub issue labelled `ops-loop` per
+# recurring problem. Open issues with that label are the to-do list.
+#
+# It also reads the repository's FAILED WORKFLOW RUNS of the last 48 h from the GitHub API (built-in token, actions: read), for every workflow, so a
+# job without a Slack step (the canal job failed every 15 min for hours with only one e-mail per run) is still seen; the same rules and issue apply.
+#
+# Runs after every "Data health check" run (every 30 min) and on manual dispatch, plus a cron every 3 hours as a backup. The script itself
+# does a full pass at most once every ~3 hours (state in D1), so the frequent triggers cost one small read. D1 or GitHub down is a warning and
+# a green run (the next trigger does the same work).
+# Manual run: tick dry_run to print what it would do and touch nothing; force skips the 3-hour gate.
+
+on:
+  workflow_run:
+    workflows: ["Data health check"]
+    types: [completed]
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print what it would do, change nothing (no D1 write, no issue, no Slack)"
+        type: boolean
+        default: false
+      force:
+        description: "Skip the once-every-3-hours gate"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: read # lists failed workflow runs of every workflow (read-only), see DOCS.md "Ops loop"
+
+concurrency:
+  group: ops-triage
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      OPS_FORCE: ${{ inputs.force && '1' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Triage the notification log
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then node scripts/ops-triage.mjs --dry-run; else node scripts/ops-triage.mjs; fi
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }} # lets the step also write the notification log (lib/notify.mjs); optional
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          MSG="⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Through the notification log (lib/notify.mjs) when the checkout exists: same Slack text, plus one row in D1.
+          # A failed checkout, a missing node or a refused post falls back to the plain request, so Slack still hears it.
+          if [ -f scripts/notify-cli.mjs ] && node scripts/notify-cli.mjs --source "workflow:${{ github.workflow }}" --kind workflow-failed --severity error "$MSG"; then exit 0; fi
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"$MSG\"}" \
+            "$SLACK_WEBHOOK_URL" || true

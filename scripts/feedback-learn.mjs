@@ -19,6 +19,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PLACES } from "../lib/places.ts";
+import { notify } from "../lib/notify.mjs";
 import { oncePerPersonAcross } from "../lib/feedbackLearn.mjs";
 import { FAR, checkWorse, stationInfo } from "../lib/feedbackCheck.mjs";
 import { HORIZONS, buildParams, colomboDay, feedbackWetness, learnedLines, nearest } from "../lib/learnedParams.mjs";
@@ -196,14 +197,10 @@ export function writeParams(params, file) {
   if (!same) writeFileSync(file, JSON.stringify(params, null, 2) + "\n");
   return { before, same: !!same };
 }
-export async function postSlack(text) {
+// Every message also goes into the in-house notification log (lib/notify.mjs); learn-all.mjs calls this too, as source "learn-all".
+export async function postSlack(text, { source = "feedback-learn", kind = "digest", severity = "info" } = {}) {
   if (!text || !SLACK) return;
-  try {
-    const res = await fetch(SLACK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) console.warn(`Slack post failed: HTTP ${res.status}`);
-  } catch (e) {
-    console.warn(`Slack post failed: ${e instanceof Error ? e.name : "error"}`);
-  }
+  await notify(text, { source, kind, severity, webhook: SLACK, timeoutMs: 15_000 });
 }
 
 if (MAIN) {

@@ -122,7 +122,7 @@ export async function runGroundShadow({ dataDir, nowMs, dry, river, wet, latest,
       updates.push(`UPDATE street_rain_ground_changes SET notified = 2, notified_ms = ${nowMs} WHERE zone = ${q(n.zone)} AND changed_ms = ${n.changedMs} AND notified = 0;`);
       continue;
     }
-    if (await slack(shadowText({ r: n.r, kind: n.kind, live: n.live, site }))) updates.push(`UPDATE street_rain_ground_changes SET notified = 1, notified_ms = ${nowMs} WHERE zone = ${q(n.zone)} AND changed_ms = ${n.changedMs};`);
+    if (await slack(shadowText({ r: n.r, kind: n.kind, live: n.live, site }), { source: "ground-rain-shadow", kind: "shadow", severity: "info" })) updates.push(`UPDATE street_rain_ground_changes SET notified = 1, notified_ms = ${nowMs} WHERE zone = ${q(n.zone)} AND changed_ms = ${n.changedMs};`);
   }
   const body = [...sql, ...updates].join("\n");
   if (!body) return;

@@ -258,5 +258,5 @@ console.log(sameL ? "learned/learned.json unchanged" : `wrote ${learnedFile}`);
 const obsText = rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
 if (!existsSync(prevFile) || readFileSync(prevFile, "utf8") !== obsText) writeFileSync(prevFile, obsText);
 console.log(`learned/observations.jsonl: ${rows.length} rows (v${OBS_VERSION})`);
-await postSlack(text);
+await postSlack(text, { source: "learn-all", kind: "digest", severity: "info" });
 // a due map re-fit is raised by the workflow as a GitHub issue (it reads learned.json)

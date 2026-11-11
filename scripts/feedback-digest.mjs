@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { digestText, feedbackRows, feedbackSql, oncePerPerson } from "../lib/feedbackLearn.mjs";
 import { learnedLines } from "../lib/learnedParams.mjs";
 import { whatWeLearnedLines } from "../lib/learnAll.mjs";
+import { notify } from "../lib/notify.mjs";
 
 const args = process.argv.slice(2);
 const FILE = args.includes("--rows") ? args[args.indexOf("--rows") + 1] : null;
@@ -57,17 +58,11 @@ async function whatWeLearnedText() {
     return "";
   }
 }
-async function slack(text) {
+// Every message also goes into the in-house notification log (lib/notify.mjs).
+async function slack(text, { kind = "digest", severity = "info" } = {}) {
   if (DRY) return console.log(`[dry-run] Slack:\n${text}\n`), true;
   if (!SLACK) return false;
-  try {
-    const res = await fetch(SLACK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) console.warn(`Slack post failed: HTTP ${res.status}`);
-    return res.ok;
-  } catch (e) {
-    console.warn(`Slack post failed: ${e instanceof Error ? e.name : "error"}`);
-    return false;
-  }
+  return (await notify(text, { source: "feedback-digest", kind, severity, webhook: SLACK, timeoutMs: 15_000 })).slackOk;
 }
 
 if (FILE) {
@@ -85,7 +80,7 @@ try {
     const name = u.page === "town" ? `${u.town}${u.station ? ` (gauge ${u.station})` : ""}` : u.station;
     const link = `${SITE}${u.page === "town" ? `/flood/${u.town}` : "/"}`;
     const text = `*Feedback: our verdict looks too mild.* Someone at ${name} says it is worse than shown and water is on roads or in homes${u.dist_km != null ? ` (about ${u.dist_km} km from the gauge)` : ""}.${u.place_pick ? ` Place they picked: ${u.place_pick}.` : ""}${u.rain_3h_mm != null || u.rain_24h_mm != null ? ` Rain at their spot: ${u.rain_3h_mm ?? "?"} mm in 3 h, ${u.rain_24h_mm ?? "?"} mm in 24 h.` : ""}${u.note ? ` They wrote: ${u.note}` : ""} ${link}`;
-    if ((await slack(text)) && !DRY) d1(`UPDATE forecast_feedback SET notified = 1 WHERE id = ${Number(u.id)}`);
+    if ((await slack(text, { kind: "urgent-feedback", severity: "warn" })) && !DRY) d1(`UPDATE forecast_feedback SET notified = 1 WHERE id = ${Number(u.id)}`);
   }
   // 2. daily digest
   if (hour >= 8) {

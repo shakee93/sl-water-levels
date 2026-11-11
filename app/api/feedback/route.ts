@@ -19,6 +19,7 @@ import { fetchStations, getNational } from "@/lib/arcgis";
 import { getNextHourForBasin, timeBox } from "@/lib/nextHour";
 import { getStationVerdicts } from "@/lib/stationVerdict";
 import { toShown } from "@/lib/units";
+import { notify } from "@/lib/notify.mjs";
 import { personDay } from "@/lib/personDay";
 import { addColumns, isMissingColumn } from "@/lib/d1Migrate";
 import { getPointRain } from "@/lib/rainMap";
@@ -73,13 +74,9 @@ async function withSchema<T>(fn: () => Promise<T>): Promise<T> {
 
 async function slack(text: string): Promise<boolean> {
   const url = process.env.SLACK_WEBHOOK_URL;
-  if (!url) return false;
-  try {
-    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(8_000) });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  if (!url) return false; // not sent here: scripts/feedback-digest.mjs sends (and logs) it later
+  // also written to the in-house notification log (lib/notify.mjs); its write is time-boxed to 2.5 s so the visitor never waits long
+  return (await notify(text, { source: "feedback-route", kind: "urgent-feedback", severity: "warn", webhook: url, timeoutMs: 8_000, logTimeoutMs: 2_500 })).slackOk;
 }
 
 export async function POST(req: NextRequest) {

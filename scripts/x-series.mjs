@@ -8,14 +8,16 @@ import { readFileSync } from "node:fs";
 import { d1Query } from "../lib/d1.ts";
 import { deleteTweet, gate, postTweet, uploadMedia } from "../lib/xClient.ts";
 import { X_SCHEMA } from "./x-post.mjs";
+import { notify } from "../lib/notify.mjs";
 
 const env = process.env;
 const num = (v, d) => (Number(v) > 0 ? Number(v) : d);
 const colomboDay = (ms) => new Date(ms + 5.5 * 3_600_000).toISOString().slice(0, 10);
 
-async function slack(text) {
+// Every message also goes into the in-house notification log (lib/notify.mjs) so recurring problems get one tracked issue.
+async function slack(text, { kind, severity } = {}) {
   if (!env.SLACK_WEBHOOK_URL) return;
-  await fetch(env.SLACK_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(20_000) }).catch(() => {});
+  await notify(text, { source: "x-series", kind, severity, env });
 }
 
 async function main() {
@@ -37,7 +39,7 @@ async function main() {
     const r = await deleteTweet(g.keys, del);
     if (!r.ok) throw new Error(`delete ${del} failed: ${r.detail}`);
     await d1Query("UPDATE x_posts SET status = 'deleted', dedupe_key = dedupe_key || ':deleted:' || ? WHERE tweet_id = ?", [String(now), del]);
-    await slack(`:wastebasket: X: deleted post ${del} (${ours.map((o) => o.dedupe_key).join(", ")})`);
+    await slack(`:wastebasket: X: deleted post ${del} (${ours.map((o) => o.dedupe_key).join(", ")})`, { kind: "post-deleted", severity: "info" });
     console.log(`series: deleted ${del}`);
   }
 
@@ -56,7 +58,7 @@ async function main() {
   const budget = num(env.X_MONTHLY_BUDGET_USD, 10);
   const spent = Number((await d1Query("SELECT COALESCE(SUM(cost_usd), 0) AS c FROM x_posts WHERE day LIKE ? AND mode = ? AND status IN ('posted','dry')", [`${day.slice(0, 7)}%`, mode]))[0]?.c ?? 0);
   if (spent + cost > budget * 0.8) {
-    await slack(`:moneybag: X series: skipped "${next.id}", this month's estimated spend $${spent.toFixed(2)} is near the $${budget} budget.`);
+    await slack(`:moneybag: X series: skipped "${next.id}", this month's estimated spend $${spent.toFixed(2)} is near the $${budget} budget.`, { kind: "budget", severity: "warn" });
     return console.log("series: budget");
   }
 
@@ -71,7 +73,7 @@ async function main() {
 
   if (mode === "dry") {
     await d1Query("UPDATE x_posts SET status = 'dry' WHERE dedupe_key = ?", [key]);
-    await slack(`:test_tube: X series DRY RUN (${g.reason}):\n${text}`);
+    await slack(`:test_tube: X series DRY RUN (${g.reason}):\n${text}`, { kind: "dry-run", severity: "info" });
     return console.log(`series: dry ${next.id}`);
   }
   // optional screenshot (content/x-series/*.png); a failed upload stops the post rather than sending it without the picture
@@ -86,13 +88,13 @@ async function main() {
   const res = await postTweet(g.keys, text, { mediaIds });
   if (res.ok) {
     await d1Query("UPDATE x_posts SET status = 'posted', tweet_id = ? WHERE dedupe_key = ?", [res.id, key]);
-    await slack(`:mega: X series posted "${next.id}": https://x.com/i/status/${res.id}`);
+    await slack(`:mega: X series posted "${next.id}": https://x.com/i/status/${res.id}`, { kind: "post-sent", severity: "info" });
     console.log(`series: posted ${next.id} ${res.id}`);
   } else {
     // a duplicate means X already has it: never retry; anything else frees the claim for tomorrow's run
     if (res.duplicate) await d1Query("UPDATE x_posts SET status = 'posted', error = ? WHERE dedupe_key = ?", [res.detail, key]);
     else await d1Query("DELETE FROM x_posts WHERE dedupe_key = ? AND status = 'claimed'", [key]);
-    await slack(`:warning: X series "${next.id}" not posted: ${res.detail}`);
+    await slack(`:warning: X series "${next.id}" not posted: ${res.detail}`, { kind: "post-failed", severity: "warn" });
     throw new Error(res.detail);
   }
 }

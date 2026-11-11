@@ -16,6 +16,7 @@ import { decide } from "../lib/openai.ts";
 import { SHARED_SCHEMA } from "../lib/xReply.ts";
 import { REPLIES_SCHEMA } from "../lib/xReply.ts";
 import { REPOSTS_SCHEMA, parseAccounts, repostQuery, judge, mayRepost } from "../lib/xRepost.ts";
+import { notify } from "../lib/notify.mjs";
 
 const log = (...a) => console.log(...a);
 const quote = (t) => String(t).split("\n").map((l) => `> ${l}`).join("\n");
@@ -34,12 +35,11 @@ export function repostConfig(env) {
   };
 }
 
-async function slack(text, { env, doFetch }) {
+// Every message also goes into the in-house notification log (lib/notify.mjs) so recurring problems get one tracked issue.
+async function slack(text, { env, doFetch, kind, severity }) {
   const hook = env.SLACK_X_WEBHOOK_URL || env.SLACK_WEBHOOK_URL;
-  if (!hook) { log(`[no Slack webhook] ${text}`); return false; }
-  try {
-    return (await doFetch(hook, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }), signal: AbortSignal.timeout(20_000) })).ok;
-  } catch { return false; }
+  if (!hook) log(`[no Slack webhook] ${text}`);
+  return (await notify(text, { source: "x-reposts", kind, severity, env, doFetch, webhook: hook })).slackOk;
 }
 
 const loadValue = async (key, query) => { const r = (await query("SELECT value FROM x_state WHERE key = ?", [key]))[0]; try { return r ? JSON.parse(String(r.value)) : null; } catch { return null; } };
@@ -62,7 +62,7 @@ export async function run(o = {}) {
   if (!Object.values(keys).every((v) => v.trim())) { log("the four X keys are not all set: nothing can be read"); return { mode: cfg.mode, reposted: 0, skipped: "no keys" }; }
   for (const s of [...SHARED_SCHEMA, ...REPLIES_SCHEMA, ...REPOSTS_SCHEMA]) await query(s);
   const day = colomboDay(now).day;
-  const note = (t) => slack(t, { env, doFetch });
+  const noteAs = (kind, severity) => (t) => slack(t, { env, doFetch, kind, severity });
   const meta = (await loadValue("meta", query)) ?? {};
   if (cfg.mode === "live" && meta.pauseUntil && now < meta.pauseUntil) { log("paused"); return { mode: cfg.mode, paused: true, reposted: 0 }; }
 
@@ -89,7 +89,7 @@ export async function run(o = {}) {
   if (!sr.ok) {
     log(`search failed: ${sr.detail}`);
     const st = (await loadValue("reposts_note", query)) ?? {};
-    if (st.day !== day && [401, 402, 403, 429].includes(sr.status)) { await note(`:warning: X reposts: search failed (${sr.detail}).`); await saveValue("reposts_note", { day }, now, query); }
+    if (st.day !== day && [401, 402, 403, 429].includes(sr.status)) { await noteAs("read-failed", "warn")(`:warning: X reposts: search failed (${sr.detail}).`); await saveValue("reposts_note", { day }, now, query); }
     return { mode: cfg.mode, reposted: 0, error: sr.detail };
   }
   await saveValue("reposts_reads", { day, n: todayReads + sr.reads }, now, query);
@@ -108,26 +108,26 @@ export async function run(o = {}) {
     const row = (status, j, extra = {}) => query("INSERT OR IGNORE INTO x_reposts (tweet_id, ts, day, author, text, mode, status, decision, reason, error, cost_usd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [c.id, now, day, c.username, c.text.slice(0, 500), cfg.mode, status, j ? JSON.stringify(j.probs) : null, j?.reason ?? extra.why ?? null, extra.error ?? null, cfg.costRead + (extra.cost ?? 0)]);
     const g = mayRepost(c, { now, accounts: cfg.accounts, maxAgeMs: cfg.maxAgeMs, alreadySeen: seen, sharedToday: shared, dailyMax: cfg.dailyMax, spentUsd: spent, budgetUsd: cfg.budget });
     if (!g.ok) {
-      if (!seen) { await row("skipped", null, { why: g.why }); await note(repostMessage({ c, j: null, outcome: "skipped", why: g.why })); }
+      if (!seen) { await row("skipped", null, { why: g.why }); await noteAs("repost-skipped", "info")(repostMessage({ c, j: null, outcome: "skipped", why: g.why })); }
       continue;
     }
     const j = await judge(c, { now, recent, decide: dec });
-    if (!j.repost) { await row("declined", j); await note(repostMessage({ c, j, outcome: "declined" })); out.declined++; continue; }
+    if (!j.repost) { await row("declined", j); await noteAs("repost-declined", "info")(repostMessage({ c, j, outcome: "declined" })); out.declined++; continue; }
     if (cfg.mode !== "live") {
       await row("dry", j, { cost: cfg.costPost });
-      await note(repostMessage({ c, j, outcome: "dry" }));
+      await noteAs("dry-run", "info")(repostMessage({ c, j, outcome: "dry" }));
       shared++; spent += cfg.costPost; recent.unshift(c.text); out.reposted++;
       continue;
     }
     const r = await repostTweet(keys, me.id, c.id, { doFetch, now });
     if (!r.ok) {
       await row("failed", j, { error: r.detail });
-      await note(repostMessage({ c, j, outcome: "failed", why: r.detail }));
+      await noteAs("repost-failed", "error")(repostMessage({ c, j, outcome: "failed", why: r.detail }));
       if (r.status === 429 || r.status === 401) { meta.pauseUntil = r.retryAfterMs ?? now + 3_600_000; meta.pauseWhy = r.detail; await saveValue("meta", meta, now, query); break; }
       continue;
     }
     await row("posted", j, { cost: cfg.costPost });
-    await note(repostMessage({ c, j, outcome: "posted" }));
+    await noteAs("repost-posted", "info")(repostMessage({ c, j, outcome: "posted" }));
     shared++; spent += cfg.costPost; recent.unshift(c.text); out.reposted++;
   }
   const top = posts.reduce((a, p) => (a == null || BigInt(p.id) > BigInt(a) ? p.id : a), null);
