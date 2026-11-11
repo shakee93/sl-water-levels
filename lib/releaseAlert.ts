@@ -21,6 +21,8 @@
 // downstream. Between 500 and 5,000 the release stays a reason line, not a step. Chosen, not fitted (one measured event):
 // revisit against releases/ on the data branch when more events exist.
 
+import { STEADY_M_PER_H } from "./forecastRules.mjs";
+
 export const RELEASE_ALERT_CUSECS = 5000;
 
 // NARROWED 5 Nov 2026 (owner decision): a release lifts a gauge to Alert only when the gauge is CLOSE to its alert mark (within
@@ -28,7 +30,6 @@ export const RELEASE_ALERT_CUSECS = 5000;
 // below its 15.6 ft mark, while its own page said Normal; on 26 Oct (the event behind the rule) it was at 14.9 ft, 0.7 ft below.
 // Below the bar the release is a note (shown on the gauge and in the reservoir card), never a step. Unknown gauge state = lifted as before.
 export const RELEASE_NEAR_FT = 3;
-const RISING_M_PER_H = 0.006; // same as lib/forecastRules.mjs STEADY_M_PER_H (kept literal: this file stays dependency-free)
 
 export type ReleaseGauge = {
   latest?: { water_level: number | null } | null;
@@ -41,7 +42,7 @@ export type ReleaseGauge = {
 /** true = the gauge is within RELEASE_NEAR_FT of its alert mark or rising; false = far below and not rising; null = cannot tell. */
 export function releaseGaugeNear(g: ReleaseGauge): boolean | null {
   if (!g) return null;
-  if (g.rate3hM != null && Number.isFinite(g.rate3hM) && g.rate3hM > RISING_M_PER_H) return true;
+  if (g.rate3hM != null && Number.isFinite(g.rate3hM) && g.rate3hM > STEADY_M_PER_H) return true;
   const lv = g.latest?.water_level, al = g.thresholds?.alert, mpu = g.metresPerUnit;
   if (lv == null || al == null || al <= 0 || mpu == null || !Number.isFinite(lv)) return null;
   return ((al - lv) * mpu) / 0.3048 <= RELEASE_NEAR_FT;

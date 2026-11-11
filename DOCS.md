@@ -592,6 +592,8 @@ npm run dev
 No env vars. No database. Append `?station=Hanwella` to the URL to
 deep-link a specific station.
 
+**Tests on every push (11 Nov 2026).** `.github/workflows/tests.yml` runs every `scripts/*.test.mts` on each push to `main` (no install, no network, no secrets in the test step), runs them all even after one fails, and reports a failure through the notification log. Three tests had been failing on a clean checkout since 23 Oct - 5 Nov without anyone noticing; they are fixed (`lib/releaseAlert.ts` now imports the shared steady rate, `gate-story` uses the resolve hook the other TypeScript tests use, `wms-weekly` skips its saved-PDF part when no sample PDF is given). Locally: `for f in scripts/*.test.mts; do node --experimental-strip-types --no-warnings "$f"; done`.
+
 ## Official warnings and plain-language advisory (OpenAI)
 
 Both need `OPENAI_API_KEY` (server env only, never `NEXT_PUBLIC_`); without it the page renders a deterministic

@@ -1,0 +1,76 @@
+name: Tests
+
+# Runs every scripts/*.test.mts on each push to main (and by hand). Added 11 Nov 2026: three tests had been failing on a clean
+# checkout for weeks and nothing noticed, because nothing ran them.
+# - No install: the tests import only the repository's own files and node built-ins (checked 11 Nov 2026 on a copy with no
+#   node_modules: all pass). A test that starts needing an npm package should import it dynamically and skip when absent
+#   (see scripts/wms-weekly.test.mts), or this job gets `npm ci --ignore-scripts`.
+# - No network, no secrets: every test uses mocked fetch / fake servers. The test step gets NO secret in its environment, so a
+#   test cannot reach Slack, D1 or GitHub by mistake. Only the failure step below sees SLACK_WEBHOOK_URL.
+# - EXCLUDE (space-separated basenames) is for a test that needs the network or a secret; empty today, nothing needs one.
+# - Every test runs even after one fails; the job fails at the end with the list.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run every test
+        id: run
+        env:
+          EXCLUDE: ""
+        run: |
+          pass=0; failed=""; skipped=""; excluded=""
+          for f in scripts/*.test.mts; do
+            name=$(basename "$f")
+            case " $EXCLUDE " in *" $name "*) excluded="$excluded $name"; echo "EXCLUDED $name"; continue;; esac
+            if out=$(timeout 120 node --experimental-strip-types --no-warnings "$f" 2>&1 </dev/null); then
+              pass=$((pass+1))
+              if echo "$out" | grep -q '^SKIP'; then skipped="$skipped $name"; echo "SKIP-PART $name"; else echo "ok   $name"; fi
+            else
+              failed="$failed $name"
+              echo "::group::FAIL $name"; echo "$out" | tail -40; echo "::endgroup::"
+              echo "FAIL $name"
+            fi
+          done
+          {
+            echo "### Tests"
+            echo "passed: $pass"
+            echo "failed:${failed:- none}"
+            echo "partly skipped (fixture absent):${skipped:- none}"
+            echo "excluded:${excluded:- none}"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "failed=${failed# }" >> "$GITHUB_OUTPUT"
+          [ -z "$failed" ]
+
+      - name: Tell Slack the tests failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }} # lets the step also write the notification log (lib/notify.mjs); optional
+          FAILED: ${{ steps.run.outputs.failed }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          MSG="❌ Tests failed on ${{ github.ref_name }} (${FAILED:-the job itself}) — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -f scripts/notify-cli.mjs ] && node scripts/notify-cli.mjs --source "workflow:tests" --kind tests-failed --severity error "$MSG"; then exit 0; fi
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"$MSG\"}" \
+            "$SLACK_WEBHOOK_URL" || true

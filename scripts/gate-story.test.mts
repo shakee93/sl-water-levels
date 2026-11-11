@@ -1,8 +1,10 @@
 // node scripts/gate-story.test.mts : the news matcher against real-style headlines, with the full catalogue.
-// @ts-expect-error node strip-types needs explicit extensions
-import { matchGateStoryWith } from "../lib/gateStory.ts";
+import { register } from "node:module";
+register("data:text/javascript," + encodeURIComponent(`export async function resolve(s, c, n) { try { return await n(s, c); } catch (e) { if (s.startsWith(".")) return n(s + ".ts", c); throw e; } }`));
 // @ts-expect-error explicit .ts extension for node
-import { matchReservoir } from "../lib/reservoirs.ts";
+const { matchGateStoryWith } = await import("../lib/gateStory.ts");
+// @ts-expect-error explicit .ts extension for node
+const { matchReservoir } = await import("../lib/reservoirs.ts");
 
 const run = (t: string, d = "") => matchGateStoryWith(matchReservoir, t, d);
 let ok = 0;

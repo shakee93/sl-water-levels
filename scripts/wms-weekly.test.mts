@@ -1,6 +1,5 @@
-// node scripts/wms-weekly.test.mts   (needs unpdf from node_modules; sample PDF path as arg or default below)
-import { readFileSync } from "node:fs";
-import { getDocumentProxy } from "unpdf";
+// node scripts/wms-weekly.test.mts   (the PDF part needs unpdf from node_modules and a sample PDF: path as arg or WMS_WEEKLY_PDF; it is SKIPPED when the file is absent)
+import { existsSync, readFileSync } from "node:fs";
 // @ts-expect-error node strip-types needs explicit extensions
 import { parseWeekly, parseSpillDays } from "../lib/wmsWeeklyParse.ts";
 
@@ -30,37 +29,42 @@ eq("no month: meeting month", parseSpillDays("20 to 22", M), ["2026-10-20", "202
 eq("nothing", parseSpillDays("maintain level", M), []);
 
 // ---- the saved PDF
-const file = process.argv[2] ?? "/private/tmp/claude-503/-Users-shakeeb-projects-sl-water-levels/e9c9a5fa-f47f-4c44-9d18-7d5d414d895f/scratchpad/wms/weekly.pdf";
-const pdf = await getDocumentProxy(new Uint8Array(readFileSync(file)));
-type Cell = { s: string; x: number; r: number; y: number; page: number };
-const cells: Cell[] = [];
-for (let p = 1; p <= pdf.numPages; p++) {
-  const tc = await (await pdf.getPage(p)).getTextContent();
-  for (const it of tc.items as { str?: string; transform: number[]; width: number }[]) if (it.str?.trim()) cells.push({ s: it.str!.trim(), x: it.transform[4], r: it.transform[4] + it.width, y: it.transform[5], page: p });
+const file = process.argv[2] ?? process.env.WMS_WEEKLY_PDF ?? "";
+if (!file || !existsSync(file)) {
+  console.log("SKIP the saved-PDF cases: no sample PDF (pass a path or set WMS_WEEKLY_PDF); the parser cases above ran");
+} else {
+  const { getDocumentProxy } = await import("unpdf");
+  const pdf = await getDocumentProxy(new Uint8Array(readFileSync(file)));
+  type Cell = { s: string; x: number; r: number; y: number; page: number };
+  const cells: Cell[] = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    for (const it of tc.items as { str?: string; transform: number[]; width: number }[]) if (it.str?.trim()) cells.push({ s: it.str!.trim(), x: it.transform[4], r: it.transform[4] + it.width, y: it.transform[5], page: p });
+  }
+  const r = parseWeekly(cells);
+  eq("meeting date", r.meetingDate, "2026-10-16");
+  eq("next week", r.nextWeek, { from: "2026-10-19", to: "2026-10-25" });
+  type Item = { name: string; spillWindow: { from: string; to: string } | null; spillDays: string[]; lastWeekMcm: number | null; plannedMcmPerDay: number | null };
+  const by = new Map<string, Item>((r.items as Item[]).map((i) => [i.name, i]));
+  const win = (n: string) => by.get(n)?.spillWindow ?? null;
+  eq("reservoir count", r.items.length >= 18, true);
+  eq("Upper Kotmale window", win("Upper Kotmale"), { from: "2026-10-20", to: "2026-10-22" });
+  eq("Norton window", win("Norton"), { from: "2026-10-16", to: "2026-10-29" });
+  eq("Laxapana window", win("Laxapana"), { from: "2026-10-16", to: "2026-10-21" });
+  eq("Laxapana days", by.get("Laxapana")?.spillDays, ["2026-10-16", "2026-10-17", "2026-10-18", "2026-10-20", "2026-10-21"]);
+  eq("Kukule window (wrapped remark)", win("Kukuleganga"), { from: "2026-10-20", to: "2026-10-24" });
+  eq("Polgolla window (remark split over 2 rows)", win("Polgolla"), { from: "2026-10-16", to: "2026-10-29" });
+  eq("Puhulpola single day", win("Puhulpola"), { from: "2026-10-21", to: "2026-10-21" });
+  eq("Dayaraba", win("Dayaraba"), { from: "2026-10-20", to: "2026-10-21" });
+  for (const n of ["Maussakelle", "Canyon", "Castlereigh", "Kotmale", "Victoria", "Randenigala", "Rantambe", "Samanalawewa", "Bowatenna", "Moragahakanda", "Broadland", "Udawalawa"]) eq(`${n}: no spill`, win(n), null);
+  eq("Upper Kotmale numbers", [by.get("Upper Kotmale")!.lastWeekMcm, by.get("Upper Kotmale")!.plannedMcmPerDay], [15.98, 2.5]);
+  eq("Kotmale numbers", [by.get("Kotmale")!.lastWeekMcm, by.get("Kotmale")!.plannedMcmPerDay], [36.21, 6]);
+  eq("Maussakelle numbers", [by.get("Maussakelle")!.lastWeekMcm, by.get("Maussakelle")!.plannedMcmPerDay], [14.94, 1.25]);
+  eq("Randenigala planned from remark", by.get("Randenigala")!.plannedMcmPerDay, 4.1);
+  eq("Rantambe planned from remark", [by.get("Rantambe")!.lastWeekMcm, by.get("Rantambe")!.plannedMcmPerDay], [33.68, 6.48]);
+  eq("Moragahakanda cusec -> mcm/day", by.get("Moragahakanda")!.plannedMcmPerDay, 3.43);
+  eq("Broadland blank release", by.get("Broadland")!.lastWeekMcm, null);
+  eq("Kukule planned", by.get("Kukuleganga")!.plannedMcmPerDay, 3.3);
 }
-const r = parseWeekly(cells);
-eq("meeting date", r.meetingDate, "2026-10-16");
-eq("next week", r.nextWeek, { from: "2026-10-19", to: "2026-10-25" });
-type Item = { name: string; spillWindow: { from: string; to: string } | null; spillDays: string[]; lastWeekMcm: number | null; plannedMcmPerDay: number | null };
-const by = new Map<string, Item>((r.items as Item[]).map((i) => [i.name, i]));
-const win = (n: string) => by.get(n)?.spillWindow ?? null;
-eq("reservoir count", r.items.length >= 18, true);
-eq("Upper Kotmale window", win("Upper Kotmale"), { from: "2026-10-20", to: "2026-10-22" });
-eq("Norton window", win("Norton"), { from: "2026-10-16", to: "2026-10-29" });
-eq("Laxapana window", win("Laxapana"), { from: "2026-10-16", to: "2026-10-21" });
-eq("Laxapana days", by.get("Laxapana")?.spillDays, ["2026-10-16", "2026-10-17", "2026-10-18", "2026-10-20", "2026-10-21"]);
-eq("Kukule window (wrapped remark)", win("Kukuleganga"), { from: "2026-10-20", to: "2026-10-24" });
-eq("Polgolla window (remark split over 2 rows)", win("Polgolla"), { from: "2026-10-16", to: "2026-10-29" });
-eq("Puhulpola single day", win("Puhulpola"), { from: "2026-10-21", to: "2026-10-21" });
-eq("Dayaraba", win("Dayaraba"), { from: "2026-10-20", to: "2026-10-21" });
-for (const n of ["Maussakelle", "Canyon", "Castlereigh", "Kotmale", "Victoria", "Randenigala", "Rantambe", "Samanalawewa", "Bowatenna", "Moragahakanda", "Broadland", "Udawalawa"]) eq(`${n}: no spill`, win(n), null);
-eq("Upper Kotmale numbers", [by.get("Upper Kotmale")!.lastWeekMcm, by.get("Upper Kotmale")!.plannedMcmPerDay], [15.98, 2.5]);
-eq("Kotmale numbers", [by.get("Kotmale")!.lastWeekMcm, by.get("Kotmale")!.plannedMcmPerDay], [36.21, 6]);
-eq("Maussakelle numbers", [by.get("Maussakelle")!.lastWeekMcm, by.get("Maussakelle")!.plannedMcmPerDay], [14.94, 1.25]);
-eq("Randenigala planned from remark", by.get("Randenigala")!.plannedMcmPerDay, 4.1);
-eq("Rantambe planned from remark", [by.get("Rantambe")!.lastWeekMcm, by.get("Rantambe")!.plannedMcmPerDay], [33.68, 6.48]);
-eq("Moragahakanda cusec -> mcm/day", by.get("Moragahakanda")!.plannedMcmPerDay, 3.43);
-eq("Broadland blank release", by.get("Broadland")!.lastWeekMcm, null);
-eq("Kukule planned", by.get("Kukuleganga")!.plannedMcmPerDay, 3.3);
 console.log(`${ok} passed, ${bad} failed`);
 process.exit(bad ? 1 : 0);
