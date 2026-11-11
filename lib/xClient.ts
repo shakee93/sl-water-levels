@@ -47,7 +47,7 @@ export function oauthHeader(method: string, url: string, keys: XKeys, opts: { no
 
 export type PostResult =
   | { ok: true; id: string }
-  | { ok: false; status: number; detail: string; /** epoch ms before which we must not try again, or null */ retryAfterMs: number | null; duplicate: boolean };
+  | { ok: false; status: number; detail: string; /** epoch ms before which we must not try again, or null */ retryAfterMs: number | null; duplicate: boolean; /** 403 "cannot create Posts longer than 280 characters" (no X Premium): the text is the problem, not the account, so no pause */ tooLong?: boolean };
 
 export const TWEETS_URL = "https://api.x.com/2/tweets";
 
@@ -79,7 +79,9 @@ export async function postTweet(keys: XKeys, text: string, opts: { replyTo?: str
   } else if (res.status === 401 || res.status === 403) retryAfterMs = now + 6 * 3_600_000;
   else if (res.status >= 500 || res.status === 0) retryAfterMs = now + 15 * 60_000;
   const duplicate = res.status === 403 && /duplicate/i.test(detail);
-  return { ok: false, status: res.status, detail: `HTTP ${res.status} ${detail}`, retryAfterMs: duplicate ? null : retryAfterMs, duplicate };
+  // X answers a long post from a non-Premium account with 403 "This account cannot create Posts longer than 280 characters": a rejected text, not a blocked account
+  const tooLong = res.status === 403 && !duplicate && /longer than 280|cannot create posts longer/i.test(detail);
+  return { ok: false, status: res.status, detail: `HTTP ${res.status} ${detail}`, retryAfterMs: duplicate || tooLong ? null : retryAfterMs, duplicate, ...(tooLong ? { tooLong: true } : {}) };
 }
 
 export const MEDIA_URL = "https://api.x.com/2/media/upload";

@@ -61,6 +61,11 @@ assert.equal(gate({ X_POSTING: " LIVE ", X_API_KEY: "a", X_API_SECRET: "b", X_AC
   assert.ok(r401.retryAfterMs > 0 && !r401.duplicate);
   let sent; await postTweet(keys, "x", { replyTo: "5", doFetch: async (u, i) => { sent = JSON.parse(i.body); return new Response("{}", { status: 500 }); } });
   assert.deepEqual(sent, { text: "x", reply: { in_reply_to_tweet_id: "5" } });
+  // 403 "longer than 280": reported as tooLong, no 6 h pause; the generic 403 keeps its pause
+  const tl = await postTweet(keys, "x", { now: 0, doFetch: mk(403, { title: "Forbidden", detail: "This account cannot create Posts longer than 280 characters. Shorten the text, or subscribe to X Premium to create longer Posts." }) });
+  assert.equal(tl.tooLong, true); assert.equal(tl.retryAfterMs, null); assert.equal(tl.duplicate, false);
+  const gen = await postTweet(keys, "x", { now: 0, doFetch: mk(403, { detail: "You are not permitted to perform this action." }) });
+  assert.ok(!gen.tooLong); assert.equal(gen.retryAfterMs, 6 * 3_600_000);
 }
 
 // ---- length the way X counts it
@@ -513,6 +518,105 @@ const gf = (o = {}) => ({ station: "Hanwella", river: "Kelani Ganga", tier: "ale
     assert.equal(w.calls.x.length, 2);
     assert.equal((await query("SELECT COUNT(*) AS n FROM x_posts WHERE status = 'posted'"))[0].n, 1);
     world.xStatus = null;
+  }
+  // X refuses a long post (no Premium): short form sent once, no pause, one Slack note a day, short for 24 h; generic 403 same on long text
+  {
+    const many = (now, calmFirst = false) => snap(Array.from({ length: 12 }, (_, i) => st(`r${i}/g${i}`, `Gauge ${i}`, `River ${i} Ganga`, calmFirst ? "normal" : i === 7 ? "major" : "alert", calmFirst ? 3 : 8.1 + i / 10, { observedAt: iso(now - 600_000) })), { rain: null }, now);
+    const scenario = async (detail, opts = {}) => {
+      const w = world({ X_POSTING: "live", X_LONG_POSTS: "1", ...KEYS }); const query = makeDb();
+      const sent = [];
+      const base = w.doFetch;
+      let media = 0;
+      w.doFetch = async (url, init) => {
+        if (String(url).startsWith("https://api.x.com/2/tweets")) {
+          const body = JSON.parse(init.body); sent.push(body);
+          const reject = typeof opts.reject === "function" ? opts.reject(body, sent.length) : tweetLength(body.text) > MAX_TWEET;
+          if (reject) return new Response(JSON.stringify(detail), { status: 403 });
+          return new Response(JSON.stringify({ data: { id: String(2000 + sent.length) } }), { status: 201 });
+        }
+        if (/media\/upload/.test(String(url))) { media++; return new Response(JSON.stringify({ data: { id: "m1" } }), { status: 200 }); }
+        if (/\/api\/story\//.test(String(url))) return new Response(new Uint8Array(3000), { status: 200, headers: { "content-type": "image/png" } });
+        return base(url, init);
+      };
+      await run({ env: { ...w.env, X_POSTING: "dry" }, doFetch: w.doFetch, query, snap: many(NOW - 7 * 3_600_000, true), now: NOW - 7 * 3_600_000 });
+      w.calls.slack.length = 0;
+      return { w, query, sent, media: () => media };
+    };
+    const TOO_LONG = { title: "Forbidden", detail: "This account cannot create Posts longer than 280 characters. Shorten the text, or subscribe to X Premium to create longer Posts. A link counts as 23 characters" };
+    const GENERIC = { title: "Forbidden", detail: "You are not permitted to perform this action." };
+    for (const detail of [TOO_LONG, GENERIC]) {
+      const { w, query, sent } = await scenario(detail);
+      const r = await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE), now: LATE });
+      assert.equal(sent.length, 2, "one long attempt, one short retry, no loop");
+      assert.ok(tweetLength(sent[0].text) > MAX_TWEET && tweetLength(sent[1].text) <= MAX_TWEET, "long first, short second");
+      assert.equal(r.posted, 1); assert.equal(r.failed, 0);
+      const meta = JSON.parse((await query("SELECT value FROM x_state WHERE key = 'meta'"))[0].value);
+      assert.ok(!meta.pauseUntil, "not paused"); assert.ok(meta.shortUntil > LATE && meta.shortUntil <= LATE + 24 * 3_600_000);
+      const rows = await query("SELECT status, text, cost_usd FROM x_posts WHERE status = 'posted'");
+      assert.equal(rows.length, 1); assert.equal(rows[0].text, sent[1].text, "the recorded text is the short post's");
+      assert.ok(Math.abs(rows[0].cost_usd - 0.02) < 1e-9, `short post + picture (alt text) = ${rows[0].cost_usd}`);
+      assert.equal(w.calls.slack.filter((t) => /refused a long post/.test(t) && /X_LONG_POSTS --body 0/.test(t)).length, 1);
+      assert.ok(!w.calls.slack.some((t) => /X post failed/.test(t)), "no failure alarm");
+      // a later run the same day composes short directly: no long attempt, no second note
+      const later = await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE + 3_600_000), now: LATE + 3_600_000 });
+      const lastBodies = sent.slice(2);
+      assert.ok(lastBodies.every((b) => tweetLength(b.text) <= MAX_TWEET), "short directly");
+      assert.equal(w.calls.slack.filter((t) => /refused a long post/.test(t)).length, 1, "one note a day");
+    }
+    // marker set (X refused a long post earlier): composes short directly, a single attempt
+    {
+      const { w, query, sent } = await scenario(TOO_LONG);
+      await query("INSERT INTO x_state (key, value, updated_ms) VALUES ('meta', ?, 1)", [JSON.stringify({ pauseFixDone: true, shortUntil: LATE + 3_600_000 })]);
+      const r = await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE), now: LATE });
+      assert.equal(sent.length, 1); assert.ok(tweetLength(sent[0].text) <= MAX_TWEET); assert.equal(r.posted, 1);
+      assert.ok(!w.calls.slack.some((t) => /refused a long post/.test(t)), "no note without a refusal");
+    }
+    // the picture is uploaded once and reused by the short post; cost has the picture in it
+    {
+      const { w, query, sent, media } = await scenario(TOO_LONG);
+      w.env.X_MEDIA = "all";
+      await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE), now: LATE });
+      assert.equal(sent.length, 2); assert.equal(media(), 1, "uploaded once");
+      assert.deepEqual(sent[0].media, sent[1].media); assert.deepEqual(sent[1].media, { media_ids: ["m1"] });
+      const row = (await query("SELECT cost_usd FROM x_posts WHERE status = 'posted'"))[0];
+      assert.ok(Math.abs(row.cost_usd - 0.02) < 1e-9, `short post + picture = ${row.cost_usd}`);
+    }
+    // generic 403 on a text of 280 or fewer: paused as before; no retry
+    {
+      const { w, query, sent } = await scenario(GENERIC, { reject: () => true });
+      w.env.X_LONG_POSTS = "0";
+      const r = await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE), now: LATE });
+      assert.equal(sent.length, 1); assert.equal(r.failed, 1);
+      const meta = JSON.parse((await query("SELECT value FROM x_state WHERE key = 'meta'"))[0].value);
+      assert.ok(meta.pauseUntil > LATE + 5 * 3_600_000, "6 h pause kept"); assert.ok(w.calls.slack.some((t) => /X post failed/.test(t)));
+      assert.ok(!meta.shortUntil);
+    }
+    // the short retry fails too: today's pause, events kept for the next post
+    {
+      const { w, query, sent } = await scenario(GENERIC, { reject: () => true });
+      const r = await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE), now: LATE });
+      assert.equal(sent.length, 2); assert.equal(r.failed, 1); assert.equal(r.posted, 0);
+      const meta = JSON.parse((await query("SELECT value FROM x_state WHERE key = 'meta'"))[0].value);
+      assert.ok(meta.pauseUntil > LATE + 5 * 3_600_000 && !meta.shortUntil);
+      const main = JSON.parse((await query("SELECT value FROM x_state WHERE key = 'main'"))[0].value);
+      assert.ok(main.deferred.length > 0, "events kept, as events (never replayed as text)");
+      assert.ok(main.deferred.every((d) => d.ev && !d.text));
+    }
+    // duplicate on a long post: unchanged (skipped, no short retry, no pause)
+    {
+      const { w, query, sent } = await scenario({ title: "Forbidden", detail: "You are not allowed to create a Tweet with duplicate content." });
+      const r = await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE), now: LATE });
+      assert.equal(sent.length, 1); assert.ok(w.calls.slack.some((t) => /duplicate/.test(t)));
+      assert.ok(!(await query("SELECT value FROM x_state WHERE key = 'meta'")).length || !JSON.parse((await query("SELECT value FROM x_state WHERE key = 'meta'"))[0].value).pauseUntil);
+    }
+    // an old 403 pause (set before this fix) is cleared once; the short form goes out on the first run
+    {
+      const { w, query, sent } = await scenario(TOO_LONG);
+      await run({ env: w.env, doFetch: w.doFetch, query, snap: calm(), now: NOW - 7 * 3_600_000 }).catch(() => {});
+      await query("INSERT INTO x_state (key, value, updated_ms) VALUES ('meta', ?, 1) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [JSON.stringify({ pauseUntil: LATE + 4 * 3_600_000, pauseWhy: "HTTP 403 Forbidden: You are not permitted to perform this action." })]);
+      const r = await run({ env: w.env, doFetch: w.doFetch, query, snap: many(LATE + 60_000), now: LATE + 60_000 });
+      assert.equal(r.paused, undefined); assert.equal(r.posted, 1); assert.ok(tweetLength(sent.at(-1).text) <= MAX_TWEET);
+    }
   }
   // reservoirs: no per-reservoir posts; ONE digest after 10:30 am, once a day, no hashtags
   {

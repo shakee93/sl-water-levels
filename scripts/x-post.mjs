@@ -338,8 +338,20 @@ export async function run(o = {}) {
   const meta = (await loadValue("meta", query)) ?? {};
   const live = g.mode === "live";
   const note = (t) => slack(t, { env, doFetch });
+  let metaDirty = false;
+  // One-time: pauses set before the too-long handling existed (HTTP 403 on a long post) end now; the first run sends the short form.
+  if (live && !meta.pauseFixDone) {
+    meta.pauseFixDone = true;
+    metaDirty = true;
+    if (meta.pauseUntil && now < meta.pauseUntil && /longer than 280|not permitted to perform/i.test(meta.pauseWhy ?? "")) {
+      log(`clearing an old 403 pause (${meta.pauseWhy}): long posts are now retried short`);
+      delete meta.pauseUntil;
+      delete meta.pauseWhy;
+    }
+  }
 
   if (live && meta.pauseUntil && now < meta.pauseUntil) {
+    if (metaDirty) await saveValue("meta", meta, now, query);
     log(`paused until ${new Date(meta.pauseUntil).toISOString()} (${meta.pauseWhy ?? ""}): nothing posted, memory untouched`);
     return { mode: "live", paused: true, posted: 0 };
   }
@@ -364,7 +376,8 @@ export async function run(o = {}) {
   // ONE post per run. Updates held back earlier (a post went out < minGap ago) and this run's events are merged; they
   // become one combined post, unless a single event is all there is (then its own, better-worded post goes out).
   const minGap = (Number(env.X_MIN_GAP_MIN) >= 0 && env.X_MIN_GAP_MIN != null && env.X_MIN_GAP_MIN !== "" ? Number(env.X_MIN_GAP_MIN) * 60_000 : MIN_GAP_MS);
-  const long = (env.X_LONG_POSTS ?? "").trim() === "1";
+  // X_LONG_POSTS=1 asks for long posts; meta.shortUntil (set when X refused one: no Premium) keeps runs short for 24 h
+  const long = (env.X_LONG_POSTS ?? "").trim() === "1" && !(meta.shortUntil && now < meta.shortUntil);
   const events = [];
   const held = [];
   const seen = new Set(fresh.map((e) => e.dedupe));
@@ -409,9 +422,10 @@ export async function run(o = {}) {
   log(llm ? `writer: ${OPENAI_MODEL} (checked, template fallback)` : `writer: plain templates (${offReason}). To let ${OPENAI_MODEL} write the posts: gh secret set OPENAI_API_KEY`);
   const recent = await recentPosts(g.mode, query);
   const queue = [];
+  const longNow = long;
 
   /** The text, cost and so on for a batch: one event = its own post; several = the combined post (no model, no thread). */
-  const build = async (list) => {
+  const build = async (list, long = longNow) => {
     if (list.length === 1) {
       const ev = list[0];
       const r = await prepare(ev, llm, { links, replies, recent, offReason });
@@ -489,11 +503,38 @@ export async function run(o = {}) {
         await note(`:information_source: X post went out without its picture: ${m.why}.`);
       }
     }
-    const r = await postTweet(g.keys, item.text, { doFetch, now, mediaIds });
+    let r = await postTweet(g.keys, item.text, { doFetch, now, mediaIds });
+    // X refused a long post (no Premium): "too long", or the generic "not permitted" it used for the same thing while the text is over 280.
+    // Same events in the short form, sent once (picture reused); never a loop. Accepted: posting goes on and later runs compose short for 24 h.
+    if (!r.ok && !r.duplicate && r.status === 403 && tweetLength(item.text) > MAX_TWEET && (r.tooLong || /not permitted to perform/i.test(r.detail))) {
+      const s = await build(item.events, false);
+      if (!s.error && tweetLength(s.text) <= MAX_TWEET) {
+        log(`X refused a long post (${r.detail}): sending the short form once`);
+        const first = r.detail;
+        const r2 = await postTweet(g.keys, s.text, { doFetch, now, mediaIds });
+        item.text = s.text;
+        item.why = s.why;
+        item.cost = s.cost - (item.media && !mediaIds ? mediaCost(rates) : 0);
+        r = r2;
+        // accepted, or refused only as a duplicate: either way X took the short form, so the next 24 h compose short without a long attempt
+        if (r2.ok || r2.duplicate) {
+          meta.shortUntil = now + 24 * 3_600_000;
+          metaDirty = true;
+        }
+        if (r2.ok) {
+          await query("UPDATE x_posts SET text = ?, cost_usd = ? WHERE dedupe_key = ?", [item.text, item.cost, item.dedupe]);
+          if (meta.longNoteDay !== day) {
+            meta.longNoteDay = day;
+            await note(`:information_source: X refused a long post (${first}). The short version went out instead and posting goes on. Long posts need X Premium: unless the account has it, switch them off with: gh variable set X_LONG_POSTS --body 0. Until then runs compose short posts for 24 h.`);
+          }
+        }
+      }
+    }
     if (!r.ok) {
       failed++;
       const fail = `${item.dedupe}#failed${now}`;
-      await query("UPDATE x_posts SET status = 'failed', cost_usd = 0, error = ?, dedupe_key = ? WHERE dedupe_key = ?", [r.detail, fail, item.dedupe]);
+      // text = the text last attempted (the short form after a refused long post), so the row and the Slack alert agree
+      await query("UPDATE x_posts SET status = 'failed', cost_usd = 0, error = ?, dedupe_key = ?, text = ? WHERE dedupe_key = ?", [r.detail, fail, item.text, item.dedupe]);
       if (r.duplicate) {
         await note(`:warning: X rejected a post as a duplicate, skipped: ${item.text.split("\n")[0]}`);
         continue;
@@ -501,6 +542,7 @@ export async function run(o = {}) {
       blocked = true;
       meta.pauseUntil = r.retryAfterMs ?? now + 3_600_000;
       meta.pauseWhy = r.detail;
+      metaDirty = true;
       await note(`:rotating_light: X post failed (${r.detail}). Posting is paused until ${new Date(meta.pauseUntil).toISOString()}; its updates are kept for the next post (for up to ${DEFER_MAX_AGE_MS / 3_600_000} h). Not retrying in a loop.\n${quote(item.text)}`);
       defer(item.events);
       continue;
@@ -514,6 +556,7 @@ export async function run(o = {}) {
         await note(`:warning: X thread reply failed (${rr.detail}); the main post is up. Pausing.`);
         meta.pauseUntil = rr.retryAfterMs ?? now + 3_600_000;
         meta.pauseWhy = rr.detail;
+        metaDirty = true;
         blocked = true;
         break;
       }
@@ -524,7 +567,7 @@ export async function run(o = {}) {
     posted++;
   }
 
-  if (blocked || meta.pauseUntil) await saveValue("meta", meta, now, query);
+  if (blocked || meta.pauseUntil || metaDirty) await saveValue("meta", meta, now, query);
   await saveValue("main", state, now, query);
   log(`events ${events.length}, posts sent ${posted}${live ? "" : " (dry run)"}, failed ${failed}, held ${heldByCap.length}`);
   return { mode: g.mode, posted, failed, held: heldByCap.length, events: events.length };

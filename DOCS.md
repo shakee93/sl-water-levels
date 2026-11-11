@@ -1549,6 +1549,13 @@ A lone event keeps its own wording (and the gpt-6-luna writer); combined posts a
 - **Length:** 280 weighted characters (links 23). If the lines do not fit, the most severe are kept and it ends "+N more on waterlevels.lk"; never a thread.
   `X_LONG_POSTS=1` (repository variable; X Premium accounts only) writes the same sentences as short paragraphs (flood / alerts / action), aims for 400-700 characters, names at most 10 rivers and then says "...and N more rivers at alert level or higher, see waterlevels.lk" (hard limit 25,000):
   `gh variable set X_LONG_POSTS --body 1`. Off by default; a non-Premium account gets an API error for text over 280.
+  **A refused long post no longer pauses posting (11 Nov 2026).** With the switch on and no Premium, X answered 403 ("This account cannot create Posts longer than
+  280 characters"; on 6-10 Nov the generic "You are not permitted to perform this action") and every 403 paused posts, replies and reposts for 6 h, then the same long
+  text was tried again: in the 8-11 Nov flood week posting was paused in 22 of 26 sampled runs and held updates expired after 3 h. Now a post over 280 that gets either
+  403 is rebuilt from the SAME events in the short form and sent once (picture reused); if X takes it the post is recorded with the text and cost really sent, nothing is
+  paused, Slack is told once per Sri Lanka day (with `gh variable set X_LONG_POSTS --body 0`), and `meta.shortUntil` keeps runs short for 24 h (then one long attempt is
+  made again). If the short post is refused too (not as a duplicate) the usual pause applies. A 403 on a text of 280 or fewer, a duplicate, 429 and 401 behave as before.
+  A 403 pause stored before this change is cleared once on the first live run (`meta.pauseFixDone`). Held updates are stored as events, never text. Tests: `scripts/x-post.test.mts`.
 - Preview without posting: `node --experimental-strip-types --no-warnings scripts/x-post.mjs --mode preview --events events.json`; tests: `scripts/x-aggregate.test.mts`.
 
 
