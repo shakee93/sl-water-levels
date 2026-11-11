@@ -89,6 +89,7 @@ const irrChain = (st, line) => {
 };
 const VAR = {
   "ground-rain": { p: base, pick: inCatch },
+  "ground-rain-wide": { p: PARAMS.groundRainWide, pick: inCatch }, // the candidate of 10 Nov 2026: fast-river distance gate opened
   "ground 15/25": { p: withMarks(15, 25), pick: inCatch },
   "ground 20/30": { p: withMarks(20, 30), pick: inCatch },
   "ground 30/50": { p: withMarks(30, 50), pick: inCatch },
@@ -126,6 +127,11 @@ for (const l of lines) {
       const a = JSON.stringify((full["ground-rain"] ?? []).map((x) => [x.threshold, x.shown])), b = JSON.stringify((l.candidates[name] ?? []).slice(-1).map((x) => [x.threshold, x.shown]));
       if (a !== b) throw new Error(`warningCandidates and groundRain disagree at ${l.station} ${new Date(t).toISOString()}: ${a} vs ${b}`);
       selfCheck++;
+    }
+    if (name === "ground-rain-wide") {
+      const full = warningCandidates({ station: l.station, method: "model", currentLevel: l.current_level, asOfTs: t, crossings, rate3hM: null, rain: null, rainBy: null, ground, snapshot });
+      const a = JSON.stringify((full["ground-rain-wide"] ?? []).map((x) => [x.threshold, x.shown])), b = JSON.stringify((l.candidates[name] ?? []).slice(-1).map((x) => [x.threshold, x.shown]));
+      if (a !== b) throw new Error(`warningCandidates and groundRain (wide) disagree at ${l.station} ${new Date(t).toISOString()}: ${a} vs ${b}`);
     }
   }
 }
@@ -190,7 +196,7 @@ console.log("\nCrossings the variant added (caught in time, live was not):");
 for (const r of rows) if (r.addedList.length) console.log(`  ${r.variant}: ${r.addedList.join("; ")}`);
 
 // ---- every scored crossing: live lead, ground-rain lead, heaviest ground rain in the catchment in the 6 h before
-console.log("\nEvery scored crossing (times Sri Lanka): station step time | fast | need h | live lead | ground-rain lead | measured lead | max 1 h / 3 h ground mm in catchment in the 6 h before (lower bounds)");
+console.log("\nEvery scored crossing (times Sri Lanka): station step time | fast | need h | live lead | ground-rain lead | ground-rain-wide lead | measured lead | max 1 h / 3 h ground mm in catchment in the 6 h before (lower bounds)");
 for (const x of scored) {
   const e = x.e, devs = inCatch(e.station);
   let m1 = 0, m3 = 0;
@@ -199,7 +205,7 @@ for (const x of scored) {
     if (g && g.ageMin <= 180) { m1 = Math.max(m1, g.mm1h ?? 0); m3 = Math.max(m3, g.mm3h ?? 0); }
   }
   const rl = ctx.runs.filter((r) => r.station === e.station && r.ts < e.ts && e.ts - r.ts < 24 * HOUR).slice(-1)[0];
-  console.log(`  ${e.station} ${e.threshold} ${new Date(e.ts + 5.5 * HOUR).toISOString().slice(5, 16).replace("T", " ")} | ${isShortForecastGauge(e.station) ? "fast" : "big"} | ${needOf(e)} | ${f1(x.live)} | ${f1(leadOf(e, "ground-rain"))} | ${f1(leadOf(e, "measured (Irrigation)"))} | ${f1(m1)} / ${f1(m3)} (${devs.length} gauges)${rl?.storm ? " storm-flag" : ""}`);
+  console.log(`  ${e.station} ${e.threshold} ${new Date(e.ts + 5.5 * HOUR).toISOString().slice(5, 16).replace("T", " ")} | ${isShortForecastGauge(e.station) ? "fast" : "big"} | ${needOf(e)} | ${f1(x.live)} | ${f1(leadOf(e, "ground-rain"))} | ${f1(leadOf(e, "ground-rain-wide"))} | ${f1(leadOf(e, "measured (Irrigation)"))} | ${f1(m1)} / ${f1(m3)} (${devs.length} gauges)${rl?.storm ? " storm-flag" : ""}`);
 }
 // ---- trigger episodes of ground-rain: what the river did in the 24 h after (the same test KPI 2 uses)
 console.log("\nground-rain rows grouped per gauge and day (first run .. last run, Sri Lanka time): gauge | day | rows | rain (gauge, mm in window) | live shown at first row | reached alert within 24 h of the first row");

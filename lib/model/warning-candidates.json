@@ -340,5 +340,45 @@
     "status": "ship"
    }
   ]
+ },
+ "groundRainWide": {
+  "note": "ground-rain-wide, LOGGED ONLY (KPI cycle 10 Nov 2026). Same marks, ground gauges, chances and lags as groundRain; the ONLY difference is that the fast-river rule has no distance test beyond 'river at or above its usual level' (G 1.0 instead of 0.75), because a cloudburst on a fast tributary can lift the river from far below the step to the step in 2-4 h: on 9 Nov Kithulgala and Nawalapitiya were measured under their 75% gate 2 h before crossing and warned only 0 h / 1.9 h ahead of the 2 h needed. Slow-river rule copied unchanged. Backtest 27 Oct - 10 Nov: warned in time 14 -> 17 (ground-rain) -> 19 of 34; 5 more false-alarm groups than ground-rain.",
+  "mm1h": 25,
+  "mm3h": 40,
+  "maxAgeMin": 180,
+  "rules": [
+   {
+    "name": "fast-ground-rain-wide",
+    "gaugesFrom": "fast-rain-onset",
+    "target": "alert",
+    "G": 1.0,
+    "rise": false,
+    "chance": 0.45,
+    "lag": {
+     "p10": 1,
+     "p50": 2,
+     "p90": 5
+    },
+    "holdH": 3,
+    "status": "shadow",
+    "note": "fast tributaries: a cloudburst in the catchment and the river at or above its usual level (no 'within 75% of the distance' test)"
+   },
+   {
+    "name": "slow-ground-rain-wide",
+    "gaugesFrom": "slow-rain-onset",
+    "target": "alert",
+    "G": 0.25,
+    "rise": false,
+    "chance": 0.43,
+    "lag": {
+     "p10": 3,
+     "p50": 8,
+     "p90": 11
+    },
+    "holdH": 3,
+    "status": "shadow",
+    "note": "other gauges: river within 25% of its usual distance to the alert step"
+   }
+  ]
  }
 }

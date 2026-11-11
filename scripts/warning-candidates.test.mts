@@ -150,7 +150,10 @@ const RAIN = (n6, n12 = null) => ({ ts: T0, next: { 6: n6, 12: n12 } });
     station: "Holombuwa", method: "model", currentLevel: 6 * FT, asOfTs: T0, rate3hM: 0, rain: null, rainBy: null, snapshot: snap("Holombuwa", "m", 6, 6),
     crossings: [{ threshold: "alert", level: 9.843 * FT, probability: 0.1 }], ground: G(hit(30, 35)).Holombuwa,
   };
-  assert.deepEqual(warningCandidates(gbase), { "ground-rain": [{ threshold: "alert", shown: 0.45, etaHours: 2 }] });
+  assert.deepEqual(warningCandidates(gbase), {
+    "ground-rain": [{ threshold: "alert", shown: 0.45, etaHours: 2 }],
+    "ground-rain-wide": [{ threshold: "alert", shown: 0.45, etaHours: 2 }], // wide is a superset of ground-rain: wherever ground-rain fires, wide does
+  });
   assert.deepEqual(warningCandidates({ ...gbase, ground: [] }), {}, "no ground gauge: no row");
   assert.deepEqual(warningCandidates({ ...gbase, ground: null }), {}, "HMIS unavailable: no row");
   assert.deepEqual(warningCandidates({ ...gbase, method: "trend" }), {});
@@ -158,7 +161,42 @@ const RAIN = (n6, n12 = null) => ({ ts: T0, next: { 6: n6, 12: n12 } });
     const o = warningCandidates({ ...gbase, crossings: [{ ...gbase.crossings[0], probability: p }] });
     for (const row of o["ground-rain"] ?? []) assert.ok(row.shown > shownChance("alert", p), `ground-rain never lowers (live ${p})`);
     if (p >= 0.45) assert.equal(o["ground-rain"], undefined);
+    for (const row of o["ground-rain-wide"] ?? []) assert.ok(row.shown > shownChance("alert", p), `ground-rain-wide never lowers (live ${p})`);
+    if (p >= 0.45) assert.equal(o["ground-rain-wide"], undefined);
   }
+}
+
+// ---- 5. ground-rain-wide (10 Nov 2026): the fast-river distance gate is opened, nothing else changes
+{
+  assert.ok(VARIANTS.includes("ground-rain-wide"));
+  const gp = PARAMS.groundRain, wp = PARAMS.groundRainWide;
+  for (const k of ["mm1h", "mm3h", "maxAgeMin"]) assert.equal(wp[k], gp[k], `wide keeps the marks (${k})`);
+  assert.equal(wp.rules.length, gp.rules.length);
+  for (const [w, g] of gp.rules.map((g, i) => [wp.rules[i], g])) {
+    for (const k of ["gaugesFrom", "target", "rise", "chance", "holdH", "status"]) assert.deepEqual(w[k], g[k], `wide rule ${w.name} keeps ${k}`);
+    assert.deepEqual(w.lag, g.lag);
+  }
+  assert.equal(wp.rules[0].G, 1.0, "fast: river at or above its usual level"); assert.equal(wp.rules[1].G, gp.rules[1].G, "slow rule unchanged");
+  const G = (h0) => ({ Holombuwa: [{ name: "Test gauge", lat: 6.9, lon: 80.25, hist: [h0] }] });
+  const hit = { ageMin: 20, mm1h: 30, mm3h: 35 };
+  // Holombuwa: usual 1.476 ft, alert 9.843 ft. 2.6 ft is under the 75% gate (3.57 ft) but above the usual level; 1.0 ft is below the usual level. (snap() takes feet.)
+  const low = snap("Holombuwa", "m", 2.6, 2.6);
+  assert.deepEqual(Object.keys(groundRain(low, T0, G(hit))), [], "ground-rain: river 2.6 ft is too far from the step");
+  assert.equal(groundRain(low, T0, G(hit), wp).Holombuwa.threshold, "alert", "wide: a cloudburst with the river above its usual level warns");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 1.0, 1.0), T0, G(hit), wp)), [], "wide: river still under its usual level (1.476 ft) does not warn");
+  assert.deepEqual(Object.keys(groundRain(snap("Holombuwa", "m", 10.5, 8), T0, G(hit), wp)), [], "wide: already at the step");
+  assert.deepEqual(Object.keys(groundRain(low, T0, G({ ageMin: 20, mm1h: 24.9, mm3h: 39.9 }), wp)), [], "wide: same rain marks");
+  assert.deepEqual(Object.keys(groundRain(low, T0, G({ ageMin: 181, mm1h: 60, mm3h: 80 }), wp)), [], "wide: same record-age limit");
+  // slow rule identical: Hanwella 15 ft is not close enough for either
+  assert.deepEqual(Object.keys(groundRain(snap("Hanwella", "ft", 15, 15), T0, { Hanwella: G(hit).Holombuwa }, wp)), []);
+  assert.equal(groundRain(snap("Hanwella", "ft", 18, 18), T0, { Hanwella: G(hit).Holombuwa }, wp).Hanwella.etaHours, 8);
+  // through warningCandidates(): only the wide variant has a row where the gate matters
+  const wbase = {
+    station: "Holombuwa", method: "model", currentLevel: 2.6 * FT, asOfTs: T0, rate3hM: 0, rain: null, rainBy: null, snapshot: low,
+    crossings: [{ threshold: "alert", level: 9.843 * FT, probability: 0.1 }], ground: G(hit).Holombuwa,
+  };
+  assert.deepEqual(warningCandidates(wbase), { "ground-rain-wide": [{ threshold: "alert", shown: 0.45, etaHours: 2 }] });
+  assert.deepEqual(warningCandidates({ ...wbase, ground: [] }), {}, "no ground gauge: no row");
 }
 
 // ---- warningCandidates(): output shape, "only where it differs", add rules never lower, dry-hold never raises
