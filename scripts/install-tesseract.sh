@@ -23,6 +23,8 @@ DEBS=${DEBS:-"$HOME/tesseract-debs"}
 MIRRORS=${TESSERACT_MIRRORS:-"https://mirrors.edge.kernel.org/ubuntu https://ftp.osuosl.org/pub/ubuntu http://azure.archive.ubuntu.com/ubuntu http://archive.ubuntu.com/ubuntu"}
 APT_OPTS="-o Acquire::Retries=0 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o DPkg::Lock::Timeout=60"
 SUDO=${SUDO-sudo}
+# TESSERACT_CACHE_ONLY=1 (the job that holds the shared D1 queue): install from the kept packages or fail in seconds; never the slow paths.
+CACHE_ONLY=${TESSERACT_CACHE_ONLY:-}
 
 say() { echo "install-tesseract: $*"; }
 have() { command -v tesseract >/dev/null 2>&1 && tesseract --version >/dev/null 2>&1; }
@@ -59,10 +61,12 @@ all_present() { # every wanted file exists in $DEBS with the right hash
 }
 if ls "$DEBS"/*.deb >/dev/null 2>&1; then
   # no index to check against (apt cannot plan): the kept files came from an earlier verified install of this repository's own job, so try them
-  if { [ -z "$URIS" ] || all_present; } && install_debs; then say "installed from the packages kept from an earlier run (no network)"; done_ok; fi
+  if { [ -z "$URIS" ] || [ -n "$CACHE_ONLY" ] || all_present; } && install_debs; then say "installed from the packages kept from an earlier run (no network)"; done_ok; fi
+  if [ -n "$CACHE_ONLY" ]; then echo "::error title=tesseract::the kept packages did not install in the locked job (the prepare job should have refreshed them)"; exit 1; fi
   say "kept packages do not match what this runner image needs; fetching again"
   rm -f "$DEBS"/*.deb
 fi
+if [ -n "$CACHE_ONLY" ]; then echo "::error title=tesseract::no kept packages in the locked job (the prepare job should have saved them)"; exit 1; fi
 
 if [ -z "$URIS" ]; then
   # apt could not even plan the install from its local index: refresh the index once (bounded), then plan again
