@@ -1648,6 +1648,457 @@
     "runsLogged": 1314
    }
   ],
+  "ground-rain-wide": [
+   {
+    "id": 1,
+    "key": "warned",
+    "value": 33.3,
+    "unit": "%",
+    "target": 80,
+    "met": null,
+    "n": 3,
+    "parts": [
+     {
+      "key": "caught",
+      "value": 33.3,
+      "target": 80,
+      "n": 3,
+      "met": null
+     }
+    ],
+    "detail": {
+     "events": 3,
+     "caught": 1,
+     "medianLeadH": 2,
+     "medianLeadWhenCaughtH": 2,
+     "byStep": {
+      "alert": {
+       "n": 2,
+       "caught": 1
+      },
+      "minor": {
+       "n": 1,
+       "caught": 0
+      },
+      "major": {
+       "n": 0,
+       "caught": 0
+      }
+     },
+     "leadNeeded": {
+      "bigAlertH": 6,
+      "bigOtherH": 12,
+      "fastH": 2
+     },
+     "list": [
+      {
+       "station": "Holombuwa",
+       "step": "alert",
+       "at": "2026-11-06T13:34:15.000Z",
+       "leadH": 2,
+       "needH": 2,
+       "caught": true
+      },
+      {
+       "station": "Holombuwa",
+       "step": "minor",
+       "at": "2026-11-06T14:36:59.000Z",
+       "leadH": 1,
+       "needH": 2,
+       "caught": false
+      },
+      {
+       "station": "Dunamale",
+       "step": "alert",
+       "at": "2026-11-06T18:33:18.000Z",
+       "leadH": 5,
+       "needH": 6,
+       "caught": false
+      }
+     ]
+    },
+    "targetText": "at least 80% warned in time",
+    "baseline": {
+     "value": 33.3,
+     "n": 3,
+     "met": null,
+     "parts": [
+      {
+       "key": "caught",
+       "value": 33.3,
+       "n": 3,
+       "met": null
+      }
+     ],
+     "detail": {
+      "events": 3,
+      "caught": 1,
+      "medianLeadH": 2,
+      "medianLeadWhenCaughtH": 2,
+      "byStep": {
+       "alert": {
+        "n": 2,
+        "caught": 1
+       },
+       "minor": {
+        "n": 1,
+        "caught": 0
+       },
+       "major": {
+        "n": 0,
+        "caught": 0
+       }
+      },
+      "leadNeeded": {
+       "bigAlertH": 6,
+       "bigOtherH": 12,
+       "fastH": 2
+      },
+      "list": [
+       {
+        "station": "Holombuwa",
+        "step": "alert",
+        "at": "2026-11-06T13:34:15.000Z",
+        "leadH": 2,
+        "needH": 2,
+        "caught": true
+       },
+       {
+        "station": "Holombuwa",
+        "step": "minor",
+        "at": "2026-11-06T14:36:59.000Z",
+        "leadH": 1,
+        "needH": 2,
+        "caught": false
+       },
+       {
+        "station": "Dunamale",
+        "step": "alert",
+        "at": "2026-11-06T18:33:18.000Z",
+        "leadH": 5,
+        "needH": 6,
+        "caught": false
+       }
+      ]
+     }
+    },
+    "runsLogged": 1314
+   },
+   {
+    "id": 2,
+    "key": "falseAlarms",
+    "value": 75,
+    "unit": "%",
+    "target": 60,
+    "met": null,
+    "n": 11,
+    "parts": [
+     {
+      "key": "possible",
+      "value": 75,
+      "target": 60,
+      "n": 8,
+      "met": null
+     },
+     {
+      "key": "likely",
+      "value": 66.7,
+      "target": 25,
+      "n": 3,
+      "met": null
+     }
+    ],
+    "detail": {
+     "falseAlarms": 8,
+     "gaugeDays": 29,
+     "falseAlarmsPerGaugeDay": 0.28,
+     "possible": {
+      "n": 8,
+      "didNot": 6
+     },
+     "likely": {
+      "n": 3,
+      "didNot": 2
+     }
+    },
+    "targetText": "at most 60% of \"possible\" and 25% of \"likely\" warnings fail to happen",
+    "baseline": {
+     "value": 75,
+     "n": 11,
+     "met": null,
+     "parts": [
+      {
+       "key": "possible",
+       "value": 75,
+       "n": 8,
+       "met": null
+      },
+      {
+       "key": "likely",
+       "value": 66.7,
+       "n": 3,
+       "met": null
+      }
+     ],
+     "detail": {
+      "falseAlarms": 8,
+      "gaugeDays": 29,
+      "falseAlarmsPerGaugeDay": 0.28,
+      "possible": {
+       "n": 8,
+       "didNot": 6
+      },
+      "likely": {
+       "n": 3,
+       "didNot": 2
+      }
+     }
+    },
+    "runsLogged": 1314
+   },
+   {
+    "id": 3,
+    "key": "honest",
+    "value": 100,
+    "unit": "%",
+    "target": 10,
+    "met": true,
+    "n": 1592,
+    "parts": [
+     {
+      "key": "0-10",
+      "value": 3.2,
+      "shown": 0.2,
+      "target": 10,
+      "n": 1529,
+      "met": true
+     },
+     {
+      "key": "10-20",
+      "value": 20,
+      "shown": 11.4,
+      "target": 10,
+      "n": 35,
+      "met": true
+     },
+     {
+      "key": "20-30",
+      "value": 20,
+      "shown": 23.5,
+      "target": 10,
+      "n": 10,
+      "met": true
+     },
+     {
+      "key": "30-50",
+      "value": 30,
+      "shown": 33.5,
+      "target": 10,
+      "n": 10,
+      "met": true
+     },
+     {
+      "key": "50-70",
+      "value": 25,
+      "shown": 56.3,
+      "target": 10,
+      "n": 4,
+      "met": null
+     },
+     {
+      "key": "70-90",
+      "value": 33.3,
+      "shown": 75,
+      "target": 10,
+      "n": 3,
+      "met": null
+     },
+     {
+      "key": "90-100",
+      "value": 100,
+      "shown": 100,
+      "target": 10,
+      "n": 1,
+      "met": null
+     }
+    ],
+    "detail": {
+     "bins": [
+      {
+       "from": 0,
+       "to": 0.1,
+       "n": 1529,
+       "shownPct": 0.2,
+       "observedPct": 3.2,
+       "met": true
+      },
+      {
+       "from": 0.1,
+       "to": 0.2,
+       "n": 35,
+       "shownPct": 11.4,
+       "observedPct": 20,
+       "met": true
+      },
+      {
+       "from": 0.2,
+       "to": 0.3,
+       "n": 10,
+       "shownPct": 23.5,
+       "observedPct": 20,
+       "met": true
+      },
+      {
+       "from": 0.3,
+       "to": 0.5,
+       "n": 10,
+       "shownPct": 33.5,
+       "observedPct": 30,
+       "met": true
+      },
+      {
+       "from": 0.5,
+       "to": 0.7,
+       "n": 4,
+       "shownPct": 56.3,
+       "observedPct": 25,
+       "met": null
+      },
+      {
+       "from": 0.7,
+       "to": 0.9,
+       "n": 3,
+       "shownPct": 75,
+       "observedPct": 33.3,
+       "met": null
+      },
+      {
+       "from": 0.9,
+       "to": 1,
+       "n": 1,
+       "shownPct": 100,
+       "observedPct": 100,
+       "met": null
+      }
+     ],
+     "groupsJudged": 4,
+     "groupsOk": 4
+    },
+    "targetText": "within 10 points in every group with 10+ cases",
+    "baseline": {
+     "value": 100,
+     "n": 1592,
+     "met": true,
+     "parts": [
+      {
+       "key": "0-10",
+       "value": 3.2,
+       "n": 1529,
+       "met": true
+      },
+      {
+       "key": "10-20",
+       "value": 20,
+       "n": 35,
+       "met": true
+      },
+      {
+       "key": "20-30",
+       "value": 20,
+       "n": 10,
+       "met": true
+      },
+      {
+       "key": "30-50",
+       "value": 30,
+       "n": 10,
+       "met": true
+      },
+      {
+       "key": "50-70",
+       "value": 25,
+       "n": 4,
+       "met": null
+      },
+      {
+       "key": "70-90",
+       "value": 33.3,
+       "n": 3,
+       "met": null
+      },
+      {
+       "key": "90-100",
+       "value": 100,
+       "n": 1,
+       "met": null
+      }
+     ],
+     "detail": {
+      "bins": [
+       {
+        "from": 0,
+        "to": 0.1,
+        "n": 1529,
+        "shownPct": 0.2,
+        "observedPct": 3.2,
+        "met": true
+       },
+       {
+        "from": 0.1,
+        "to": 0.2,
+        "n": 35,
+        "shownPct": 11.4,
+        "observedPct": 20,
+        "met": true
+       },
+       {
+        "from": 0.2,
+        "to": 0.3,
+        "n": 10,
+        "shownPct": 23.5,
+        "observedPct": 20,
+        "met": true
+       },
+       {
+        "from": 0.3,
+        "to": 0.5,
+        "n": 10,
+        "shownPct": 33.5,
+        "observedPct": 30,
+        "met": true
+       },
+       {
+        "from": 0.5,
+        "to": 0.7,
+        "n": 4,
+        "shownPct": 56.3,
+        "observedPct": 25,
+        "met": null
+       },
+       {
+        "from": 0.7,
+        "to": 0.9,
+        "n": 3,
+        "shownPct": 75,
+        "observedPct": 33.3,
+        "met": null
+       },
+       {
+        "from": 0.9,
+        "to": 1,
+        "n": 1,
+        "shownPct": 100,
+        "observedPct": 100,
+        "met": null
+       }
+      ],
+      "groupsJudged": 4,
+      "groupsOk": 4
+     }
+    },
+    "runsLogged": 1314
+   }
+  ],
   "rain-onset": [
    {
     "id": 1,
@@ -2541,5 +2992,34 @@
     "targetText": "at least 75% of Rising calls were followed by a rise"
    }
   ]
+ },
+ "generatedAt": "2026-11-11T20:11:22.837Z",
+ "nowUsed": "2026-11-11T20:11:22.837Z",
+ "codeSha": "c81e3616f7a546b7366e7e68fe33d9681b089ae7",
+ "kpiSpec": 1,
+ "versionsHash": "16c87e3fa8acc553",
+ "daysRequested": 30,
+ "daysFound": 21,
+ "daysMissing": [
+  "2026-10-13",
+  "2026-10-14",
+  "2026-10-15",
+  "2026-10-16",
+  "2026-10-17",
+  "2026-10-18",
+  "2026-10-19",
+  "2026-10-20",
+  "2026-10-21"
+ ],
+ "outcomesFinal": true,
+ "coverage": {
+  "stationsWithRuns": 59,
+  "stationsWithReadings": 58,
+  "stationsWithSteps": 30,
+  "stationsExpected": 60,
+  "gaugeHoursPresent": 1291,
+  "gaugeHoursExpected": 1440,
+  "gaugeHourShare": 89.7,
+  "duplicateStationHours": 46
  }
 }

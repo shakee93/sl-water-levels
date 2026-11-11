@@ -1,0 +1,7 @@
+day,station,runs,flagged_runs,events,caught,caught_tol,n_1,mae_1,nochange_mae_1,cov_1,n_3,mae_3,nochange_mae_3,cov_3,n_6,mae_6,nochange_mae_6,cov_6,n_12,mae_12,nochange_mae_12,cov_12,n_24,mae_24,nochange_mae_24,cov_24,bias_12,rises,rises_called,rising_calls,rising_right
+2026-10-22,Deraniyagala,1,0,0,0,0,1,0.03,0.1,100,1,0.32,0.39,100,1,0.94,0.49,100,0,,,,0,,,,,0,0,0,0
+2026-10-22,Galgamuwa,1,0,0,0,0,0,,,,0,,,,0,,,,0,,,,0,,,,,0,0,0,0
+2026-10-22,Kalawellawa (Millakanda),1,0,0,0,0,0,,,,0,,,,0,,,,0,,,,0,,,,,0,0,0,0
+2026-10-22,Thanthirimale,1,0,0,0,0,0,,,,0,,,,0,,,,0,,,,0,,,,,0,0,0,0
+2026-10-22,Thawalama,1,0,0,0,0,1,0.24,0.13,100,1,1.05,0.79,0,1,1.26,1.18,100,0,,,,0,,,,,0,0,1,0
+2026-10-22,Weraganthota,1,0,0,0,0,0,,,,0,,,,0,,,,0,,,,0,,,,,0,0,0,0

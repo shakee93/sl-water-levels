@@ -1616,6 +1616,441 @@
     "runsLogged": 1179
    }
   ],
+  "ground-rain-wide": [
+   {
+    "id": 1,
+    "key": "warned",
+    "value": 50,
+    "unit": "%",
+    "target": 80,
+    "met": null,
+    "n": 2,
+    "parts": [
+     {
+      "key": "caught",
+      "value": 50,
+      "target": 80,
+      "n": 2,
+      "met": null
+     }
+    ],
+    "detail": {
+     "events": 2,
+     "caught": 1,
+     "medianLeadH": 8.5,
+     "medianLeadWhenCaughtH": 16,
+     "byStep": {
+      "alert": {
+       "n": 1,
+       "caught": 0
+      },
+      "minor": {
+       "n": 1,
+       "caught": 1
+      },
+      "major": {
+       "n": 0,
+       "caught": 0
+      }
+     },
+     "leadNeeded": {
+      "bigAlertH": 6,
+      "bigOtherH": 12,
+      "fastH": 2
+     },
+     "list": [
+      {
+       "station": "Urawa",
+       "step": "alert",
+       "at": "2026-10-28T08:43:32.000Z",
+       "leadH": 1,
+       "needH": 2,
+       "caught": false
+      },
+      {
+       "station": "Panadugama",
+       "step": "minor",
+       "at": "2026-10-28T10:33:46.000Z",
+       "leadH": 16,
+       "needH": 2,
+       "caught": true
+      }
+     ]
+    },
+    "targetText": "at least 80% warned in time",
+    "baseline": {
+     "value": 50,
+     "n": 2,
+     "met": null,
+     "parts": [
+      {
+       "key": "caught",
+       "value": 50,
+       "n": 2,
+       "met": null
+      }
+     ],
+     "detail": {
+      "events": 2,
+      "caught": 1,
+      "medianLeadH": 8.5,
+      "medianLeadWhenCaughtH": 16,
+      "byStep": {
+       "alert": {
+        "n": 1,
+        "caught": 0
+       },
+       "minor": {
+        "n": 1,
+        "caught": 1
+       },
+       "major": {
+        "n": 0,
+        "caught": 0
+       }
+      },
+      "leadNeeded": {
+       "bigAlertH": 6,
+       "bigOtherH": 12,
+       "fastH": 2
+      },
+      "list": [
+       {
+        "station": "Urawa",
+        "step": "alert",
+        "at": "2026-10-28T08:43:32.000Z",
+        "leadH": 1,
+        "needH": 2,
+        "caught": false
+       },
+       {
+        "station": "Panadugama",
+        "step": "minor",
+        "at": "2026-10-28T10:33:46.000Z",
+        "leadH": 16,
+        "needH": 2,
+        "caught": true
+       }
+      ]
+     }
+    },
+    "runsLogged": 1179
+   },
+   {
+    "id": 2,
+    "key": "falseAlarms",
+    "value": 80,
+    "unit": "%",
+    "target": 60,
+    "met": null,
+    "n": 7,
+    "parts": [
+     {
+      "key": "possible",
+      "value": 80,
+      "target": 60,
+      "n": 5,
+      "met": null
+     },
+     {
+      "key": "likely",
+      "value": 50,
+      "target": 25,
+      "n": 2,
+      "met": null
+     }
+    ],
+    "detail": {
+     "falseAlarms": 5,
+     "gaugeDays": 29,
+     "falseAlarmsPerGaugeDay": 0.17,
+     "possible": {
+      "n": 5,
+      "didNot": 4
+     },
+     "likely": {
+      "n": 2,
+      "didNot": 1
+     }
+    },
+    "targetText": "at most 60% of \"possible\" and 25% of \"likely\" warnings fail to happen",
+    "baseline": {
+     "value": 80,
+     "n": 7,
+     "met": null,
+     "parts": [
+      {
+       "key": "possible",
+       "value": 80,
+       "n": 5,
+       "met": null
+      },
+      {
+       "key": "likely",
+       "value": 50,
+       "n": 2,
+       "met": null
+      }
+     ],
+     "detail": {
+      "falseAlarms": 5,
+      "gaugeDays": 29,
+      "falseAlarmsPerGaugeDay": 0.17,
+      "possible": {
+       "n": 5,
+       "didNot": 4
+      },
+      "likely": {
+       "n": 2,
+       "didNot": 1
+      }
+     }
+    },
+    "runsLogged": 1179
+   },
+   {
+    "id": 3,
+    "key": "honest",
+    "value": 50,
+    "unit": "%",
+    "target": 10,
+    "met": false,
+    "n": 1490,
+    "parts": [
+     {
+      "key": "0-10",
+      "value": 0.9,
+      "shown": 0.2,
+      "target": 10,
+      "n": 1399,
+      "met": true
+     },
+     {
+      "key": "10-20",
+      "value": 0,
+      "shown": 11,
+      "target": 10,
+      "n": 36,
+      "met": false
+     },
+     {
+      "key": "20-30",
+      "value": 0,
+      "shown": 21.7,
+      "target": 10,
+      "n": 15,
+      "met": false
+     },
+     {
+      "key": "30-50",
+      "value": 28.9,
+      "shown": 32.1,
+      "target": 10,
+      "n": 38,
+      "met": true
+     },
+     {
+      "key": "50-70",
+      "value": 0,
+      "shown": 50,
+      "target": 10,
+      "n": 1,
+      "met": null
+     },
+     {
+      "key": "70-90",
+      "value": null,
+      "shown": null,
+      "target": 10,
+      "n": 0,
+      "met": null
+     },
+     {
+      "key": "90-100",
+      "value": 100,
+      "shown": 95,
+      "target": 10,
+      "n": 1,
+      "met": null
+     }
+    ],
+    "detail": {
+     "bins": [
+      {
+       "from": 0,
+       "to": 0.1,
+       "n": 1399,
+       "shownPct": 0.2,
+       "observedPct": 0.9,
+       "met": true
+      },
+      {
+       "from": 0.1,
+       "to": 0.2,
+       "n": 36,
+       "shownPct": 11,
+       "observedPct": 0,
+       "met": false
+      },
+      {
+       "from": 0.2,
+       "to": 0.3,
+       "n": 15,
+       "shownPct": 21.7,
+       "observedPct": 0,
+       "met": false
+      },
+      {
+       "from": 0.3,
+       "to": 0.5,
+       "n": 38,
+       "shownPct": 32.1,
+       "observedPct": 28.9,
+       "met": true
+      },
+      {
+       "from": 0.5,
+       "to": 0.7,
+       "n": 1,
+       "shownPct": 50,
+       "observedPct": 0,
+       "met": null
+      },
+      {
+       "from": 0.7,
+       "to": 0.9,
+       "n": 0,
+       "shownPct": null,
+       "observedPct": null,
+       "met": null
+      },
+      {
+       "from": 0.9,
+       "to": 1,
+       "n": 1,
+       "shownPct": 95,
+       "observedPct": 100,
+       "met": null
+      }
+     ],
+     "groupsJudged": 4,
+     "groupsOk": 2
+    },
+    "targetText": "within 10 points in every group with 10+ cases",
+    "baseline": {
+     "value": 50,
+     "n": 1490,
+     "met": false,
+     "parts": [
+      {
+       "key": "0-10",
+       "value": 0.9,
+       "n": 1399,
+       "met": true
+      },
+      {
+       "key": "10-20",
+       "value": 0,
+       "n": 36,
+       "met": false
+      },
+      {
+       "key": "20-30",
+       "value": 0,
+       "n": 15,
+       "met": false
+      },
+      {
+       "key": "30-50",
+       "value": 28.9,
+       "n": 38,
+       "met": true
+      },
+      {
+       "key": "50-70",
+       "value": 0,
+       "n": 1,
+       "met": null
+      },
+      {
+       "key": "70-90",
+       "value": null,
+       "n": 0,
+       "met": null
+      },
+      {
+       "key": "90-100",
+       "value": 100,
+       "n": 1,
+       "met": null
+      }
+     ],
+     "detail": {
+      "bins": [
+       {
+        "from": 0,
+        "to": 0.1,
+        "n": 1399,
+        "shownPct": 0.2,
+        "observedPct": 0.9,
+        "met": true
+       },
+       {
+        "from": 0.1,
+        "to": 0.2,
+        "n": 36,
+        "shownPct": 11,
+        "observedPct": 0,
+        "met": false
+       },
+       {
+        "from": 0.2,
+        "to": 0.3,
+        "n": 15,
+        "shownPct": 21.7,
+        "observedPct": 0,
+        "met": false
+       },
+       {
+        "from": 0.3,
+        "to": 0.5,
+        "n": 38,
+        "shownPct": 32.1,
+        "observedPct": 28.9,
+        "met": true
+       },
+       {
+        "from": 0.5,
+        "to": 0.7,
+        "n": 1,
+        "shownPct": 50,
+        "observedPct": 0,
+        "met": null
+       },
+       {
+        "from": 0.7,
+        "to": 0.9,
+        "n": 0,
+        "shownPct": null,
+        "observedPct": null,
+        "met": null
+       },
+       {
+        "from": 0.9,
+        "to": 1,
+        "n": 1,
+        "shownPct": 95,
+        "observedPct": 100,
+        "met": null
+       }
+      ],
+      "groupsJudged": 4,
+      "groupsOk": 2
+     }
+    },
+    "runsLogged": 1179
+   }
+  ],
   "rain-onset": [
    {
     "id": 1,
@@ -2272,5 +2707,34 @@
     "targetText": "at least 75% of Rising calls were followed by a rise"
    }
   ]
+ },
+ "generatedAt": "2026-11-11T20:11:22.837Z",
+ "nowUsed": "2026-11-11T20:11:22.837Z",
+ "codeSha": "c81e3616f7a546b7366e7e68fe33d9681b089ae7",
+ "kpiSpec": 1,
+ "versionsHash": "16c87e3fa8acc553",
+ "daysRequested": 30,
+ "daysFound": 21,
+ "daysMissing": [
+  "2026-10-13",
+  "2026-10-14",
+  "2026-10-15",
+  "2026-10-16",
+  "2026-10-17",
+  "2026-10-18",
+  "2026-10-19",
+  "2026-10-20",
+  "2026-10-21"
+ ],
+ "outcomesFinal": true,
+ "coverage": {
+  "stationsWithRuns": 59,
+  "stationsWithReadings": 58,
+  "stationsWithSteps": 30,
+  "stationsExpected": 60,
+  "gaugeHoursPresent": 1173,
+  "gaugeHoursExpected": 1440,
+  "gaugeHourShare": 81.5,
+  "duplicateStationHours": 30
  }
 }
