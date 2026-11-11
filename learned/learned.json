@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-10T23:47:04.499Z",
-  "asOf": "2026-11-11",
+  "updatedAt": "2026-11-11T18:50:53.596Z",
+  "asOf": "2026-11-12",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 217,
-    "feedback": 189,
-    "street": 20,
-    "flood3d": 8,
-    "newTonight": 5,
+    "total": 230,
+    "feedback": 200,
+    "street": 21,
+    "flood3d": 9,
+    "newTonight": 13,
     "trusted": 9,
     "flagged": 0
   },
@@ -26,8 +26,8 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 474,
-      "stepDays": 15,
+      "steps": 503,
+      "stepDays": 16,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -35,8 +35,8 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 476,
-      "stepDays": 15,
+      "steps": 505,
+      "stepDays": 16,
       "events": 6,
       "eventDays": 4,
       "metrics": {
@@ -54,8 +54,8 @@
             "atCurrentPossible": {
               "events": 5,
               "hits": 0,
-              "episodes": 2,
-              "unmatched": 2
+              "episodes": 3,
+              "unmatched": 3
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
@@ -80,8 +80,8 @@
             "atCurrentPossible": {
               "events": 4,
               "hits": 0,
-              "episodes": 2,
-              "unmatched": 2
+              "episodes": 3,
+              "unmatched": 3
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
@@ -106,8 +106,8 @@
             "atCurrentPossible": {
               "events": 5,
               "hits": 0,
-              "episodes": 2,
-              "unmatched": 2
+              "episodes": 3,
+              "unmatched": 3
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
@@ -123,8 +123,8 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 474,
-      "stepDays": 15,
+      "steps": 503,
+      "stepDays": 16,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -132,8 +132,8 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 474,
-      "stepDays": 15,
+      "steps": 503,
+      "stepDays": 16,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -141,8 +141,8 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 474,
-      "stepDays": 15,
+      "steps": 503,
+      "stepDays": 16,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -150,8 +150,8 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 474,
-      "stepDays": 15,
+      "steps": 503,
+      "stepDays": 16,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -159,14 +159,14 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-02",
+      "from": "2026-11-03",
       "to": "2026-11-11",
-      "points": 15250
+      "points": 15161
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4558,
+          "n": 5039,
           "maeBase": 0.21,
           "maeFit": 0.21,
           "gainPct": 0,
@@ -174,48 +174,48 @@
           "pooledGainPct": -3
         },
         "3": {
-          "n": 4504,
-          "maeBase": 0.53,
-          "maeFit": 0.53,
-          "gainPct": 0,
-          "maePooled": 0.53,
+          "n": 5011,
+          "maeBase": 0.54,
+          "maeFit": 0.54,
+          "gainPct": 1,
+          "maePooled": 0.54,
           "pooledGainPct": 0
         },
         "6": {
-          "n": 5057,
-          "maeBase": 0.96,
-          "maeFit": 0.95,
+          "n": 4931,
+          "maeBase": 0.97,
+          "maeFit": 0.96,
           "gainPct": 1,
-          "maePooled": 0.96,
+          "maePooled": 0.97,
           "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 3,
+      "gaugesPassingOwnTest": 5,
       "useful": false,
       "wired": false
     },
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 3,
+          "rowsWithReports": 1,
           "testN": 0,
           "testDays": 0,
           "maeBase": null,
           "maeFit": null,
           "gainPct": null,
-          "beta": 0
+          "beta": null
         },
         "3": {
-          "rowsWithReports": 3,
+          "rowsWithReports": 1,
           "testN": 0,
           "testDays": 0,
           "maeBase": null,
           "maeFit": null,
           "gainPct": null,
-          "beta": 0
+          "beta": null
         }
       },
-      "reports": 11,
+      "reports": 12,
       "useful": false,
       "wired": false
     }
