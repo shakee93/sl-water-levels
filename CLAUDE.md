@@ -283,6 +283,15 @@ These cost real debugging time. Future-you should not relearn them.
   (`STEADY_M_PER_H`, a test fails on a private 0.006); Nagalagam Street's calm "watch" headline is held 3 h (`lib/verdictHold.ts`, evidence from the readings
   and the D1 forecast log, never the official step). Official steps still alone drive verdicts and push.
 
+- **Level-model hidden trial** (12 Nov 2026, DOCS.md "Level-model hidden trial"): the forecast lab's linear level model `lvl-lin-d4` (`lib/model/lvl-lin-d4.json`, `lib/levelTrial/`)
+  runs BESIDE the live forecast: scored every night, never shown, never a verdict / alert / push input. Inputs first: under `?shadow=1` the hourly route only LOGS the rain as it stood
+  (`run.inputs` -> D1 `forecast_inputs`, kept 400 days) and the warning rule's extra fields (`forecast_crossings_x`, `forecast_runs_x`: unrounded chance, shown chance and wording, Next hour rate);
+  no model, D1 read or upstream request is added there. `scripts/level-trial-run.mjs` (workflow `level-trial.yml`, 19:30 UTC, own concurrency group, 6 min budget) rebuilds each run at night and writes
+  `forecast_shadow_points` variants `lvl-lin-d4` (ok) / `lvl-lin-d4-deg` (degraded) + `forecast_trial_log`; report `kpi/level-trial/latest.json` (last step of the nightly KPI job, cannot fail it).
+  `lib/levelTrial/predict.mjs` is byte for byte the verified port: never edit it by hand (a model change is a refit and a re-export in the lab). Units: one conversion for a gauge and its partners,
+  checked against `UNIT_BY_STATION`; NO ratio guard (it would refuse real floods). Promotion needs at least 7 days including rain, the checklist in DOCS.md and the owner's sign-off.
+  Tests: `scripts/level-trial.test.mts`, `scripts/forecast-inputs.test.mts`, `scripts/level-trial-run.test.mts`.
+
 ## Don't-do list
 
 - Don't add a hardcoded unit suffix. Use `detectUnit()` from

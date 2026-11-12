@@ -1,0 +1,94 @@
+# Nightly runner of the level-model HIDDEN TRIAL (lvl-lin-d4). MEASURES ONLY: nothing here reaches a visitor, a verdict, an alert or a push.
+#   The hourly forecast route logs the rain inputs of each gauge run (forecast_inputs); this job rebuilds each run's model inputs from that record plus the
+#   stored readings, runs the model and writes its forecast to forecast_shadow_points (variant lvl-lin-d4, degraded ones lvl-lin-d4-deg) and one row per run to
+#   forecast_trial_log. The nightly archive (forecast-scoreboard.yml, 20:10 UTC) then scores it with the live forecast. Script: scripts/level-trial-run.mjs.
+#
+# Why its own workflow and its own concurrency group (never `d1-writes`, never `snapshot`):
+#   - a group keeps ONE pending run and cancels an older pending one, so a slow job sharing the group of the hourly store (d1-writes) can get that store
+#     cancelled (it happened twice on 11 Nov 2026 with the CUrW snapshot), and a pending trial run in `snapshot` could replace the pending archive/KPI run;
+#   - it writes through lib/d1Sql.mjs (HTTP /query, small batches, no import lock), so a concurrent hourly store or archive is not blocked.
+#   Time: 19:30 UTC is an hour after the Sri Lanka day ends (18:30 UTC) and 40 min before the archive; the second slot (19:50) only repeats the first if that
+#   one was skipped or cut by its time budget (everything is idempotent: a second run writes nothing new). The archive re-reads two days, so a late run is
+#   picked up the next night. The runner has its own 6-minute budget, the step 9 and the job 12; a transient D1 failure is a warning and exit 0.
+# Started by GitHub's schedule below; add `"30 19 * * *": ["level-trial.yml"]` to workers/scheduler/index.mjs if GitHub's cron skips it (it dispatches on main
+# with no inputs, which is what this expects).
+# Manual run: `from`/`to` (YYYY-MM-DD) or `days` = N (the N Colombo days before today); `dry` = read and compute, send nothing.
+
+name: Level trial
+
+on:
+  schedule:
+    - cron: "30 19 * * *"
+    - cron: "50 19 * * *"
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "First Colombo day (YYYY-MM-DD); empty = the two days before today"
+        required: false
+      to:
+        description: "Last day (YYYY-MM-DD); empty = same as from"
+        required: false
+      days:
+        description: "Instead of from/to: the N Colombo days before today (1-14)"
+        required: false
+      dry:
+        description: "true = read D1 and compute, write nothing"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: level-trial
+  cancel-in-progress: false
+
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_ACCOUNT_ID: 83e812aa5ee674fe01ce3a9eb1e04cbe
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Work out the days
+        id: range
+        env:
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+          DAYS: ${{ inputs.days }}
+          DRY: ${{ inputs.dry }}
+        run: |
+          range=""
+          if [ -n "$DAYS" ]; then range="--days $DAYS"
+          elif [ -n "$FROM" ]; then range="--from $FROM --to ${TO:-$FROM}"; fi
+          [ "$DRY" = "true" ] && range="$range --dry"
+          echo "range=$range" >> "$GITHUB_OUTPUT"
+          echo "Arguments: ${range:-default (the two days before today)}"
+      - name: Run the trial
+        timeout-minutes: 9
+        run: |
+          set -o pipefail
+          rc=0
+          node --experimental-strip-types --no-warnings scripts/level-trial-run.mjs ${{ steps.range.outputs.range }} --budget-min 6 | tee trial.txt || rc=$?
+          { echo '### Level trial'; echo '```'; grep -v '^SUMMARY ' trial.txt || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      - name: Tell Slack the workflow failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }} # lets the step also write the notification log (lib/notify.mjs); optional
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          MSG="⚠️ Workflow failed: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Through the notification log (lib/notify.mjs) when the checkout exists: same Slack text, plus one row in D1.
+          # A failed checkout, a missing node or a refused post falls back to the plain request, so Slack still hears it.
+          if [ -f scripts/notify-cli.mjs ] && node scripts/notify-cli.mjs --source "workflow:${{ github.workflow }}" --kind workflow-failed --severity error "$MSG"; then exit 0; fi
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"$MSG\"}" \
+            "$SLACK_WEBHOOK_URL" || true

@@ -2046,3 +2046,117 @@ hashtags) is not sent and Slack says why. The test fails if a link in the table 
 7. **Stop**: `gh variable set FB_MODE --body off`, or `--body dry` to go back to previews.
 
 Open owner decisions: whether a post whose picture is missing is skipped (now) or sent as a link post (`FB_NO_PICTURE=link`), and whether the Page should get its own limits (`FB_FEED_MAX`, `FB_KEEPALIVE_WEEK`) or languages (`FB_LANGS`).
+
+## Level-model hidden trial (lvl-lin-d4, built 12 Nov 2026)
+
+A new river-level model from the private forecast lab runs BESIDE the live forecast: computed and scored every night, never shown to a visitor, never a verdict, alert or push input.
+Why: out of fold on 11 months it beat today's forecast at every horizon (skill against "no change" 27.7 / 30.0 / 30.4 / 23.5 / 17.6% at 1 / 3 / 6 / 12 / 24 h, against 21.9 / 22.2 / 20.0 / 15.5 / 10.1),
+on the last 20 days 35.4 / 34.7 / 32.9 / 27.6 / 20.6 against 27.5 / 24.5 / 19.7 / 14.3 / 8.2, and it was not worse in Cyclone Ditwah. The owner's cycle asks for a hidden trial of at least 7 days
+including rain before anything replaces the live forecast.
+
+Design, inputs first: the hourly forecast route does NOT run the model (it has a 60 s limit and its log was starved on 11 Nov). It only saves, for every gauge with a rain grid, the rain exactly as it
+stood at that run. A nightly job rebuilds each run's inputs from that record and the stored readings, runs the model and writes its forecast where the existing hidden-trial machinery looks. Because the
+inputs are kept as they stood (400 days), a later model can be tested on the same record without waiting a week each time.
+
+### The pure part (model, predictor, record, rebuild)
+
+The lab's verified level model `lvl-lin-d4` runs as a hidden trial: computed and scored, never shown to a visitor, never a verdict, alert or push input. Inputs first: the hourly forecast route only LOGS
+the rain inputs of each gauge run (`lib/levelTrial/record.mjs`); a nightly job rebuilds the model inputs from that record and the stored readings (`lib/levelTrial/rebuild.mjs`), calls the predictor
+(`lib/levelTrial/predict.mjs`, model `lib/model/lvl-lin-d4.json`, sha256 bd4752a7...) and writes the forecast where the existing hidden-trial machinery looks.
+
+Files: `lib/model/lvl-lin-d4.json` (818 kB, 29 gauges, schema `slwl-port/lvl-lin-d4@2`), `lib/levelTrial/predict.mjs` (pure, never throws, never returns a number for a refused call, no options argument),
+`record.mjs` (codec, `buildRecord`, `inputsOf`), `rebuild.mjs` (`rebuild`, `glitchFlags`, `minimalGrid`, `toFeet`), `conformal.mjs` (dependency-free range helper for the later online range layer), type files `*.d.mts`.
+Test `node --experimental-strip-types --no-warnings scripts/level-trial.test.mts` (37 checks; fixture `scripts/fixtures/lvl-lin-d4-cases.json.gz`, 240 cases, 350 kB, written lab-side from the Python candidate).
+
+Rules the code keeps:
+- Units: the model's unit of the gauge and of every partner must equal the site's own unit table (`UNIT_BY_STATION`), else the rebuild skips with `unit_table_mismatch`. There is NO ratio guard (it would have refused
+  1,548 real flood readings: Badalgama 4.39 -> 13.46 m in Cyclone Ditwah). The predictor's range guard (training range in feet +-10% of the range) stays. Every OTHER reading of the own history and of each partner
+  that is outside that gauge's feet range counts as missing and is flagged `history_out_of_range` (a sentinel or a wrong-unit value in the middle of a history no longer passes). `unitRefFt` = newest level converted with the site's table.
+- Glitch flags are those of `lib/readingQc.mjs` run on the stored readings up to t (spikes and stuck sensors), as known at issue time; a flagged reading carries `bad = t`.
+- The rain grid sent to the predictor is exactly the minimal one (96 hour ends, floor_hour(t) - 71 h ... + 24 h; observed values only up to floor_hour(t), forecast values only after it), so a shifted grid shows as a missing edge window.
+- The record is ONE series per zone: hours up to N (the weather code's `nowHour`) are what the weather service reported, later hours its forecast at the time of the run. Hours between floor_hour(t) and N (0-4 h) are read as reported.
+- 12 of the 29 gauges have no up-zone cells (`rain.up_cells = 0`): legitimate, verdict unaffected. The test pins the 12 and the cell counts of all 29 against `catchments.json` / `subcatchments.json`.
+
+Numbers: parity of the shipped predictor against the lab's UNROUNDED Python truth, all 8 blocks with their fold models: 228,195 lines compared (2,950,293 values), largest difference 1.17e-14 ft, 0 values above 1e-9 ft, every
+line equal to the lab's written 4-decimal line; the 1,054 lines the predictor refuses (860 `own_history_missing`, 194 `rain_missing`) carry no numbers any more (the old test switch is gone); verdicts over 229,249 lab times:
+ok 188,635, degraded 39,560, refused 1,054 (the earlier 189,037 / 39,158 / 1,054 plus 402 lines now degraded by `history_out_of_range`, all of them a PARTNER reading outside its range that no lag reads: numbers did not move).
+Hostile list (275 cases) on the shipped file: 275 of 275. Fixture through rebuild + predict: 2,790 values, largest difference 2.8e-13 ft (tolerance 1e-6 ft; it holds for DEQUANTISED inputs, rain in 0.1 mm).
+
+### The hourly path (the route logs, the store job writes)
+
+The hourly forecast route only LOGS. Under `?shadow=1` (the hourly store job's request; the default payload is byte for byte unchanged) every run gets two new fields, attached AFTER the run is in the route's list, each in its own
+try/catch and only while the route has used less than 35 s of its 60 s (`GUARD_MS` in `lib/levelTrial/routeInputs.mjs`):
+
+- `run.inputs`: the rain inputs of the gauge as they stood, `{ fmt: 1, blob, gridMs, ageMin, nCells }` (blob = the base64 record of `lib/levelTrial/record.mjs`), or `{ skip: reason }`. No model is computed, no D1 is read, no upstream request is made: the
+  per-cell Open-Meteo answer the forecast already fetched (`lib/weather.ts` keeps it in a WeakMap beside the `BasinWeather`, not on it; `rawWeatherOf(data)`) is encoded as it is. Every gauge that has a rain grid is logged, not only the model's 29 (12 of the 29 have no up zone).
+  `ageMin` = minutes between the weather answer's own `Date` header (`getJson` now keeps it as `fetchedMs`) and the run; null when the header is missing.
+- `run.ruleFields`, for the warning rule: `{ horizonLimitH, experimentalOn, nhRateMh, nhWord, steps: [{ threshold, pModel, pModelSeen, pShown, wordingShown }] }`. `pModel` = the model's UNROUNDED chance over all fitted horizons before capP / 5% rounding / the
+  experimental ceiling; `pModelSeen` = the same over the horizons the page may show (a fast gauge: 1-6 h); `pShown` = the number the page passes to `chanceWords` (= today's shown `crossings[].probability`); `wordingShown` = the shown wording. A step the gauge is already at
+  or above has 1 / 1 / 1 and "already". `nhRateMh` / `nhWord` = the rate behind the Next hour tile (m/h) and its word (the same rule as `lib/nextHour.ts`, mirrored in `nextHourRate` because `nextHourOf` does not return it and is the public API's shape). Only
+  gauges the model path forecast have rule fields (trend-only, empty and no-forecast runs have none).
+  The side channel is a WeakMap in `lib/forecast.ts` (`ruleFieldsOf(f)`, `trialWeatherOf(f)`), keyed by the Forecast object and carried through the two copies `makeForecast` makes; the Forecast object itself has no new key.
+
+`scripts/store-forecasts.mjs` turns them into rows of three NEW tables (`CREATE TABLE IF NOT EXISTS`, no ALTER of a live table; `d1/0023_forecast_inputs.sql`, `d1/0024_forecast_rule_fields.sql`), written ONLY to the failure-tolerant `<out>.shadow.sql`, appended after every
+existing shadow statement (so a problem there cannot starve the shadow points above it), built inside try/catch and validated value by value (`lib/levelTrial/storeRows.mjs`: a malformed `inputs` / `ruleFields` becomes a `skip = 'error'` row or nothing; raw text never
+reaches SQL). The live SQL file is byte for byte what it was. A feed without the new fields (the site before this change) gives byte-identical live AND shadow files. The same shadow file deletes `forecast_inputs` rows older than 400 days.
+
+Tables:
+- `forecast_inputs (station, issued_at, fmt, grid_ms, weather_age_min, made_ms, n_cells, blob, skip)`, PK (station, issued_at) like `forecast_runs`; upsert `ON CONFLICT DO UPDATE ... WHERE forecast_inputs.blob IS NULL`: the first logged record wins, a skip is upgraded by a later run on the
+  same reading. `skip` = NULL when logged, else `no_points | no_times | bad_now_hour | no_data | encode | too_large | no_grid | weather | deadline | error`.
+- `forecast_crossings_x (station, issued_at, threshold, p_model, p_model_seen, p_shown, wording_shown)`, PK (station, issued_at, threshold); `forecast_runs_x (station, issued_at, horizon_limit_h, experimental_on, nh_rate_m_h, nh_word)`, PK (station, issued_at). Insert-or-ignore (first wins).
+- `forecast_trial_log` is stage 3's (`d1/0025_level_trial_log.sql`), not created here.
+
+`scripts/forecast-archive.mjs` reads the two rule tables for the day (a failed read, e.g. "no such table", gives null and changes nothing) and `buildArchiveLines` (`lib/forecastScoreboard.mjs`, new optional arguments `crossingsX`, `runsX`) adds to a step
+`p_model, p_model_seen, p_shown, wording_shown` and to a run `horizon_limit_h, experimental_on, nh_rate_m_h, nh_word`, only where a row exists. `probability` keeps its meaning (the model's own 5% chance, before the display limits). With the tables absent, empty or
+without a matching row the day file is byte for byte what it was. `p_model` is archived at full precision (not rounded again).
+The route is explicit about the Node runtime (`export const runtime = "nodejs"`): the record codec uses `node:zlib`.
+
+Test: `node --experimental-strip-types --no-warnings scripts/forecast-inputs.test.mts` (23 checks). The proofs of "nothing changed" load the HEAD version of `lib/weather.ts`, `lib/forecast.ts`, `app/api/forecasts/route.ts`, `scripts/store-forecasts.mjs`,
+`scripts/forecast-archive.mjs` and `lib/forecastScoreboard.mjs` with `git show HEAD:<path>` and run old and new on the same inputs (the route with the real forecast chain, a faked data layer and a frozen clock; the SQL on a real SQLite via `node:sqlite`; the archive against
+a fake D1 HTTP endpoint backed by SQLite). They were run before the change was committed (HEAD = the old code); since that commit the "before" side of those tests is the committed new code and the equality checks become self-comparisons (still valid, no longer a proof of
+change); the new-field checks keep their force.
+
+### The nightly side (runner, report, review)
+
+Nothing here is in the site's request path and nothing reaches a visitor, a verdict, an alert or a push.
+
+**Runner** `scripts/level-trial-run.mjs`, workflow `.github/workflows/level-trial.yml` (own concurrency group `level-trial`). Cron 19:30 UTC (01:00 Colombo, one hour after the Sri Lanka day ends at 18:30 UTC) and a repeat at 19:50 UTC; the nightly archive is 20:10 UTC. For the two Colombo days before today
+(manual: `from` / `to` or `days` = N, `dry` = true reads and computes, writes nothing) it takes every live run of a model gauge (`forecast_runs`) that has no final trial row, reads the logged rain record (`forecast_inputs`) and the gauge's and its
+partners' readings (`observations`, 120 h before the first run of the day, one query per station), rebuilds the predictor input (`lib/levelTrial/rebuild.mjs`), calls the predictor and writes
+- `forecast_shadow_points`: variant `lvl-lin-d4` for verdict ok, `lvl-lin-d4-deg` for degraded (ts = t + h x 1 h, level / low / high in the gauge's own unit); the nightly archive and `lib/forecastKpi.mjs` read them as they read any hidden variant, unchanged;
+- `forecast_trial_log` (new table, `d1/0025_level_trial_log.sql`, created by the runner with CREATE TABLE IF NOT EXISTS): one row per run, variant `lvl-lin-d4`, verdict ok | degraded | refused | skipped, reason (the predictor's code, the rebuild's skip reason,
+  `inputs_skip:<why>` or `no_inputs`), flags (degraded codes), n_hist, gap_h, lag_h, weather_age_min, runner (`gha:<run id>`), ran_ms. Refused and skipped runs have a log row and no points.
+Idempotent: a run with a final log row is not recomputed; a run logged `no_inputs` / `inputs_skip:*` is looked at again (the hourly route may have stored the record later) and written only if its outcome changed; INSERT OR REPLACE of deterministic rows, points before the log row,
+so a run cut half-way is simply redone. A second run sends nothing. Own wall-clock budget 6 min (`--budget-min`): it stops cleanly, prints what is left and exits 0 (the step has 9 min, the job 12). A transient D1 failure is `::warning::` and exit 0; anything else exits 1 and the
+failure step tells Slack through `scripts/notify-cli.mjs`. After the writes (and not after a budget stop) it prunes `forecast_inputs`, `forecast_crossings_x` and `forecast_runs_x` older than 400 days and `forecast_trial_log` older than 120 days (a missing table is a warning). 400 days is also the hourly store job's own limit for `forecast_inputs`.
+If `forecast_inputs` cannot be read (table not created yet) the runner writes nothing for that day and says so.
+
+**Where its writes go, and why (R4).** Through `lib/d1Sql.mjs` (HTTP `/query`, batches of at most 50 statements / 100 KB, no import lock), from a workflow of its own group. Not in `d1-writes` (store-forecasts, curw-snapshot, gsmap-snapshot): a group keeps one pending run and cancels an older pending one, which is how the
+hourly store was cancelled twice on 11 Nov 2026. Not in `snapshot` (archive, KPIs, other `data` pushes): a pending trial run could replace the pending archive run. It pushes nothing to the `data` branch, so it needs no `snapshot` slot. Its writes are 40 runs per request at most, about 7,000 statements a night.
+Its failure can only lose trial rows (the next night's two-day window redoes them); it cannot delay or cancel the hourly store, the archive or the KPIs.
+
+**Report** `lib/levelTrial/report.mjs` (pure) + `scripts/level-trial-report.mjs`, the LAST step of `forecast-scoreboard.yml` ("Level-model trial report"): `continue-on-error`, step timeout 3 min, `timeout 100`, an internal 90 s timer, every error caught, always exit 0. It reads the archive lines of the last 30 days and (with the token) D1 for the last 2 days, and writes
+`kpi/level-trial/latest.json` and `kpi/level-trial/days/YYYY-MM-DD.json` (committed by the existing `git add kpi`). Rows are (live run x horizon) with a trial point AND a live point AND a reading: trial and live are scored on identical rows, skill = 100 x (1 - MAE / MAE of "no change"), in feet.
+The range replay (`lib/levelTrial/conformal.mjs`, a copy of the lab's `conformal.mjs`): one state per horizon pooled over gauges, target 0.8, gamma 0.02, window 200, 20 outcomes before it learns (q = 0 until then), additive q on both ends in feet; lines in (issued_at, station) order; the outcome of (run, h) enters the state only when a line
+issued at or after issued_at + h + 40 min is processed. Differences from the lab: no glitch flag on outcomes (an outcome is the archive's reading near the target), feet with scale 1, recomputed from the archive every night and not stored.
+
+### First-night checklist
+
+Stage 2 must have been live for at least one full Colombo day, or the first night has nothing to read. Before that, run the workflow by hand with `dry` = true to check the plumbing.
+1. Actions > "Level trial": the run is green; the summary shows `level trial: N live runs, M already done, K judged now ({...}), P points, 0 left` and no `::warning::`. Expect N about 700 per day (29 gauges x 24), K near N on the first night, `stopped` absent. If it says `forecast_inputs not readable`, the hourly route has not created the table yet.
+2. In D1: `SELECT verdict, count(*) FROM forecast_trial_log GROUP BY 1` shows mostly ok, some degraded, few refused; `SELECT reason, count(*) FROM forecast_trial_log WHERE verdict IN ('skipped','refused') GROUP BY 1 ORDER BY 2 DESC`: the top reason decides what to fix first (`no_inputs` = the route did not log: check stage 2's `inputs_skip` rows; `grid_misaligned`; `t_not_newest` = a D1 hole in `observations`; `unit_table_mismatch` must be 0).
+3. `SELECT variant, count(*), count(DISTINCT station) FROM forecast_shadow_points WHERE variant LIKE 'lvl-lin-d4%' GROUP BY 1`: about 5 rows per ok run (3 for the fast gauges).
+4. Second slot (19:50) of the same night: green, `0 judged now` (idempotence in production).
+5. After the 20:10 UTC scoreboard run: its new step "Level-model trial report" is green (a `::warning::` there is allowed to happen and must be read); the `data` branch has `kpi/level-trial/latest.json` and `days/<yesterday>.json`; `forecasts/2026/<day>.jsonl` lines carry `shadows["lvl-lin-d4"]`; `kpi/latest.json` lists the variant `lvl-lin-d4` (the existing KPI code picked it up without a change).
+6. In `latest.json` read, in this order: `coverage.sharePct` (>= 90 is the promotion bar, the first night may be lower), `log.reasons`, `log.history.completePct` (D1 holds about 7 days of readings: if low, the history rule is the cause, not the model), `log.lagHours` and `log.ageMin` (the inputs' lag and age), then `pooled.h1..h24.diffPts`: one night is noise, the sign is only a plausibility check (the lab says about +6 to +10 points at 1 to 24 h).
+7. Nothing else changed: the hourly store run of that hour took its usual time and was not cancelled; `forecast_runs` of the night match the day before in count.
+
+### Promotion check (owner signs off)
+
+At least 7 days including at least 2 rain days; the trial present on at least 90% of live runs; pooled skill above live at 3 / 6 / 12 / 24 h with the paired day-block interval above 0 (the lab's review script);
+every gauge-horizon with 100 or more runs where the trial is more than 5 points below live listed and explained. Degraded trial forecasts are scored apart (`lvl-lin-d4-deg`); refused ones are only logged.
+
+### Scheduler
+
+`workers/scheduler` starts `level-trial.yml` at 19:30 UTC (GitHub's own cron has skipped runs; the workflow keeps its two GitHub slots as a fallback). The worker must be redeployed once for the new cron
+(`wrangler deploy` in `workers/scheduler`, the owner's step). Until then only GitHub's slots start it.

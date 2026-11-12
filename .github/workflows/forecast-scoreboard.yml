@@ -81,6 +81,14 @@ jobs:
         run: |
           node scripts/forecast-kpi.mjs archive | tee kpi.txt
           { echo '### Forecast KPIs'; echo '```'; cat kpi.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Level-model trial report (hidden trial, measures only; last and isolated: it cannot fail this job)
+        # scripts/level-trial-report.mjs -> kpi/level-trial/latest.json + days/YYYY-MM-DD.json (committed below). Catches every error itself, ends after its own
+        # 90 s timer, and `continue-on-error` + the step timeout are two more guards: the archive and the KPIs above are already written when it starts.
+        continue-on-error: true
+        timeout-minutes: 3
+        run: |
+          timeout 100 node scripts/level-trial-report.mjs archive --budget-sec 90 | tee level-trial.txt || echo "::warning::level trial report did not finish"
+          { echo '### Level-model trial'; echo '```'; cat level-trial.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY" || true
       - name: Commit and push
         working-directory: archive
         run: |
