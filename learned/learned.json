@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-11T18:50:53.596Z",
+  "updatedAt": "2026-11-12T01:05:31.956Z",
   "asOf": "2026-11-12",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 230,
-    "feedback": 200,
+    "total": 237,
+    "feedback": 207,
     "street": 21,
     "flood3d": 9,
-    "newTonight": 13,
-    "trusted": 9,
+    "newTonight": 7,
+    "trusted": 10,
     "flagged": 0
   },
   "streetLevel": {
     "Nagalagam Street": {
       "ft": 3,
-      "n": 5,
-      "days": 4,
+      "n": 6,
+      "days": 5,
       "defaultFt": 5,
       "clamped": true,
       "dryBelowN": 6
@@ -26,7 +26,7 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 503,
+      "steps": 511,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -35,10 +35,10 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 505,
+      "steps": 513,
       "stepDays": 16,
-      "events": 6,
-      "eventDays": 4,
+      "events": 7,
+      "eventDays": 5,
       "metrics": {
         "mm1h": {
           "current": {
@@ -52,14 +52,14 @@
           "backtest": {
             "atProposedPossible": null,
             "atCurrentPossible": {
-              "events": 5,
-              "hits": 0,
+              "events": 6,
+              "hits": 1,
               "episodes": 3,
-              "unmatched": 3
+              "unmatched": 2
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
-              "events": 5,
+              "events": 6,
               "hits": 0,
               "episodes": 2,
               "unmatched": 2
@@ -78,14 +78,14 @@
           "backtest": {
             "atProposedPossible": null,
             "atCurrentPossible": {
-              "events": 4,
-              "hits": 0,
+              "events": 5,
+              "hits": 1,
               "episodes": 3,
-              "unmatched": 3
+              "unmatched": 2
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
-              "events": 4,
+              "events": 5,
               "hits": 0,
               "episodes": 1,
               "unmatched": 1
@@ -104,14 +104,14 @@
           "backtest": {
             "atProposedPossible": null,
             "atCurrentPossible": {
-              "events": 5,
-              "hits": 0,
+              "events": 6,
+              "hits": 1,
               "episodes": 3,
-              "unmatched": 3
+              "unmatched": 2
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
-              "events": 5,
+              "events": 6,
               "hits": 0,
               "episodes": 1,
               "unmatched": 1
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 503,
+      "steps": 511,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 503,
+      "steps": 511,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 503,
+      "steps": 511,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 503,
+      "steps": 511,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -159,14 +159,14 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-03",
-      "to": "2026-11-11",
-      "points": 15161
+      "from": "2026-11-04",
+      "to": "2026-11-12",
+      "points": 15029
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 5039,
+          "n": 4499,
           "maeBase": 0.21,
           "maeFit": 0.21,
           "gainPct": 0,
@@ -174,23 +174,23 @@
           "pooledGainPct": -3
         },
         "3": {
-          "n": 5011,
-          "maeBase": 0.54,
-          "maeFit": 0.54,
+          "n": 4450,
+          "maeBase": 0.56,
+          "maeFit": 0.56,
           "gainPct": 1,
-          "maePooled": 0.54,
-          "pooledGainPct": 0
+          "maePooled": 0.56,
+          "pooledGainPct": -1
         },
         "6": {
-          "n": 4931,
-          "maeBase": 0.97,
-          "maeFit": 0.96,
+          "n": 4378,
+          "maeBase": 1.02,
+          "maeFit": 1.01,
           "gainPct": 1,
-          "maePooled": 0.97,
+          "maePooled": 1.02,
           "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 5,
+      "gaugesPassingOwnTest": 6,
       "useful": false,
       "wired": false
     },
@@ -254,9 +254,9 @@
       "due": false
     },
     "Kelaniya": {
-      "trusted": 3,
-      "newTrusted": 3,
-      "newPeople": 3,
+      "trusted": 4,
+      "newTrusted": 4,
+      "newPeople": 4,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -331,14 +331,14 @@
     },
     {
       "kind": "map",
-      "name": "Kelaniya",
-      "have": 3,
+      "name": "Kelani floodplain (elsewhere)",
+      "have": 4,
       "need": 10,
-      "missing": 7
+      "missing": 6
     },
     {
       "kind": "map",
-      "name": "Kelani floodplain (elsewhere)",
+      "name": "Kelaniya",
       "have": 4,
       "need": 10,
       "missing": 6
