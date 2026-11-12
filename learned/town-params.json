@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-12T18:50:52.710Z",
+  "updatedAt": "2026-11-12T23:54:51.100Z",
   "asOf": "2026-11-13",
   "minimums": {
     "answers": 3,
@@ -701,32 +701,32 @@
   "forecast": {
     "window": {
       "from": "2026-11-04",
-      "to": "2026-11-12",
-      "points": 14995
+      "to": "2026-11-13",
+      "points": 15004
     },
     "horizons": {
       "1": {
-        "n": 4372,
+        "n": 4492,
         "maeBase": 0.22,
-        "maeFit": 0.22,
+        "maeFit": 0.21,
         "gainPct": 1,
         "maePooled": 0.22,
-        "pooledGainPct": -3
+        "pooledGainPct": -2
       },
       "3": {
-        "n": 4957,
-        "maeBase": 0.55,
-        "maeFit": 0.55,
+        "n": 4442,
+        "maeBase": 0.58,
+        "maeFit": 0.57,
         "gainPct": 1,
-        "maePooled": 0.55,
+        "maePooled": 0.58,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 4853,
-        "maeBase": 1.01,
+        "n": 4982,
+        "maeBase": 1,
         "maeFit": 1,
         "gainPct": 1,
-        "maePooled": 1.01,
+        "maePooled": 1,
         "pooledGainPct": 0
       }
     },
