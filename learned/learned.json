@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-12T01:05:31.956Z",
-  "asOf": "2026-11-12",
+  "updatedAt": "2026-11-12T18:50:52.710Z",
+  "asOf": "2026-11-13",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 237,
-    "feedback": 207,
-    "street": 21,
-    "flood3d": 9,
-    "newTonight": 7,
-    "trusted": 10,
+    "total": 254,
+    "feedback": 218,
+    "street": 24,
+    "flood3d": 12,
+    "newTonight": 17,
+    "trusted": 12,
     "flagged": 0
   },
   "streetLevel": {
@@ -26,7 +26,7 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 511,
+      "steps": 537,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 513,
+      "steps": 539,
       "stepDays": 16,
       "events": 7,
       "eventDays": 5,
@@ -106,8 +106,8 @@
             "atCurrentPossible": {
               "events": 6,
               "hits": 1,
-              "episodes": 3,
-              "unmatched": 2
+              "episodes": 4,
+              "unmatched": 3
             },
             "atProposedLikely": null,
             "atCurrentLikely": {
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 511,
+      "steps": 537,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 511,
+      "steps": 537,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 511,
+      "steps": 537,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 511,
+      "steps": 537,
       "stepDays": 16,
       "events": 0,
       "eventDays": 0,
@@ -161,36 +161,36 @@
     "window": {
       "from": "2026-11-04",
       "to": "2026-11-12",
-      "points": 15029
+      "points": 14995
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4499,
-          "maeBase": 0.21,
-          "maeFit": 0.21,
-          "gainPct": 0,
+          "n": 4372,
+          "maeBase": 0.22,
+          "maeFit": 0.22,
+          "gainPct": 1,
           "maePooled": 0.22,
           "pooledGainPct": -3
         },
         "3": {
-          "n": 4450,
-          "maeBase": 0.56,
-          "maeFit": 0.56,
+          "n": 4957,
+          "maeBase": 0.55,
+          "maeFit": 0.55,
           "gainPct": 1,
-          "maePooled": 0.56,
-          "pooledGainPct": -1
+          "maePooled": 0.55,
+          "pooledGainPct": 0
         },
         "6": {
-          "n": 4378,
-          "maeBase": 1.02,
-          "maeFit": 1.01,
+          "n": 4853,
+          "maeBase": 1.01,
+          "maeFit": 1,
           "gainPct": 1,
-          "maePooled": 1.02,
+          "maePooled": 1.01,
           "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 6,
+      "gaugesPassingOwnTest": 5,
       "useful": false,
       "wired": false
     },
@@ -215,7 +215,7 @@
           "beta": null
         }
       },
-      "reports": 12,
+      "reports": 13,
       "useful": false,
       "wired": false
     }
@@ -254,9 +254,9 @@
       "due": false
     },
     "Kelaniya": {
-      "trusted": 4,
-      "newTrusted": 4,
-      "newPeople": 4,
+      "trusted": 6,
+      "newTrusted": 6,
+      "newPeople": 5,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -339,9 +339,9 @@
     {
       "kind": "map",
       "name": "Kelaniya",
-      "have": 4,
+      "have": 6,
       "need": 10,
-      "missing": 6
+      "missing": 4
     },
     {
       "kind": "streetLevel",
