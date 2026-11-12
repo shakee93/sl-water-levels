@@ -1,0 +1,12 @@
+import type { OmPoint } from "./record.mjs";
+export const GUARD_MS: number;
+export function ageMinutes(fetchedMs: number | null | undefined, nowMs: number): number | null;
+export type TrialWeather = { ok: true; data: { nowHour: number } } | { ok: false; reason?: string } | null | undefined;
+export type RawWeatherLike = { points: unknown[]; cells: number[]; nearIds: number[] | null; upIds: number[] | null; fetchedMs: number | null };
+export type RunInputs = { fmt: 1; blob: string; gridMs: number; ageMin: number | null; nCells: number } | { skip: string };
+export type RuleFieldsIn = { horizonLimitH: number | null; experimentalOn: boolean; steps: { threshold: string; pModel: number; pModelSeen: number; pShown: number; wordingShown: string }[] };
+export type RunRuleFields = { horizonLimitH: number | null; experimentalOn: boolean; nhRateMh: number | null; nhWord: string | null; steps: { threshold: string; pModel: number | null; pModelSeen: number | null; pShown: number | null; wordingShown: string | null }[] };
+export function inputsField(a: { tw: TrialWeather; raw: RawWeatherLike | null | undefined; nowMs: number; startMs: number; guardMs?: number; build?: (a: { points: OmPoint[]; near?: number[] | null; up?: number[] | null; nowHour: number; ageMin?: number | null }) => any }): RunInputs;
+export function ruleFieldsOf(a: { rules: RuleFieldsIn | null | undefined; nh?: { rateM?: number | null; word?: string | null } | null }): RunRuleFields | null;
+export function nextHourRate(a: { f: any; me: any; mpu: number; tidal: boolean }): number | null;
+export function attachTrialFields<T extends Record<string, unknown>>(run: T, a: { tw: TrialWeather; raw: RawWeatherLike | null | undefined; getRules?: () => RuleFieldsIn | null | undefined; getNh?: () => { rateM?: number | null; word?: string | null } | null; nowMs: number; startMs: number; guardMs?: number; build?: any }): T;

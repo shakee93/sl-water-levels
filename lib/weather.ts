@@ -26,7 +26,8 @@ const RAIN_REVALIDATE_S = 1800;
 const GLOFAS_REVALIDATE_S = 6 * 3600;
 const TIMEOUT_MS = 8000;
 
-export type Fetched<T> = { ok: true; data: T } | { ok: false; reason: string };
+/** `fetchedMs` = the response's own Date header (epoch ms; null when absent), so a cached answer shows its real age. Only the hidden level-model trial reads it. */
+export type Fetched<T> = { ok: true; data: T; fetchedMs?: number | null } | { ok: false; reason: string };
 
 /** Hourly catchment-mean rain in mm, keyed by the epoch-ms end of each hour. */
 export type RainSeries = Record<number, number>;
@@ -91,11 +92,26 @@ export async function getJson(url: string, revalidate: number): Promise<Fetched<
       } catch {}
       return { ok: false, reason: `HTTP ${res.status}${why ? `: ${why}` : ""}` };
     }
-    return { ok: true, data: await res.json() };
+    const data = await res.json();
+    let fetchedMs: number | null = null;
+    try {
+      const d = Date.parse(res.headers.get("date") ?? "");
+      fetchedMs = Number.isFinite(d) ? d : null;
+    } catch {}
+    return { ok: true, data, fetchedMs };
   } catch (e) {
     return { ok: false, reason: e instanceof Error ? e.message : String(e) };
   }
 }
+
+/**
+ * HIDDEN TRIAL side channel (lib/levelTrial/): the per-cell Open-Meteo answer a BasinWeather was built from, kept beside it (not on it), so the
+ * hourly forecast route can log the rain inputs without a second request. A WeakMap: nothing is added to the BasinWeather object, and it is
+ * dropped with it. `cells` = the gauge's cell ids in the order of `points`; `nearIds` / `upIds` = the sub-zone cell ids (subcatchments.json).
+ */
+export type RawWeather = { points: unknown[]; cells: number[]; nearIds: number[] | null; upIds: number[] | null; fetchedMs: number | null };
+const RAW = new WeakMap<object, RawWeather>();
+export const rawWeatherOf = (w: BasinWeather | null | undefined): RawWeather | null => (w ? (RAW.get(w) ?? null) : null);
 
 type OmPoint = { hourly?: Record<string, (number | null)[] | string[]> };
 const asList = (j: unknown): OmPoint[] => (Array.isArray(j) ? (j as OmPoint[]) : [j as OmPoint]);
@@ -213,23 +229,24 @@ export async function getBasinWeather(basin: string, station: string, now = Date
     }
   }
 
-  return {
-    ok: true,
-    data: {
-      basin: key,
-      station,
-      cells: { det: det.length, ens: ensPts.length },
-      nowHour,
-      rain,
-      nearRain,
-      upRain,
-      scenarios,
-      ensembleReason,
-      past6hMm: past6,
-      past24hMm: past24,
-      next24hMm: { det: detNext, p10, p50, p90 },
-    },
+  const data: BasinWeather = {
+    basin: key,
+    station,
+    cells: { det: det.length, ens: ensPts.length },
+    nowHour,
+    rain,
+    nearRain,
+    upRain,
+    scenarios,
+    ensembleReason,
+    past6hMm: past6,
+    past24hMm: past24,
+    next24hMm: { det: detNext, p10, p50, p90 },
   };
+  try {
+    RAW.set(data, { points: asList(detR.data), cells: sc.cells, nearIds: sub?.near ?? null, upIds: sub?.up ?? null, fetchedMs: detR.fetchedMs ?? null });
+  } catch {}
+  return { ok: true, data };
 }
 
 /** GloFAS outlook for the basin's main-stem cell. null = this basin has no cell configured. */

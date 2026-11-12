@@ -43,12 +43,15 @@ async function archiveDay(day) {
   const shadows = await selectRows("SELECT station, issued_at, variant, horizon_h, target_ts, level, low, high FROM forecast_shadow_points WHERE issued_at >= ? AND issued_at < ?", [a, b]).catch(() => []); // table appears with the first stored shadow run
   // warning-rule candidates (d1/0019): null when the table does not exist yet (older days stay "not logged"), [] when it does and nothing differed
   const warnings = await selectRows("SELECT station, issued_at, variant, threshold, shown, eta_h FROM forecast_warning_shadow WHERE issued_at >= ? AND issued_at < ?", [a, b]).catch(() => null);
+  // the warning rule's extra fields (d1/0024): null when a table is absent or unreadable, which leaves the archive lines exactly as they were; a failed read never fails the archive
+  const crossingsX = await selectRows("SELECT station, issued_at, threshold, p_model, p_model_seen, p_shown, wording_shown FROM forecast_crossings_x WHERE issued_at >= ? AND issued_at < ?", [a, b]).catch(() => null);
+  const runsX = await selectRows("SELECT station, issued_at, horizon_limit_h, experimental_on, nh_rate_m_h, nh_word FROM forecast_runs_x WHERE issued_at >= ? AND issued_at < ?", [a, b]).catch(() => null);
   const obs = {};
   for (const st of new Set(runs.map((r) => r.station))) {
     obs[st] = await selectRows("SELECT ts, level FROM observations WHERE station = ? AND ts BETWEEN ? AND ?", [st, a - 36 * HOUR, b + 25 * HOUR]);
     obs[st].sort((x, y) => x.ts - y.ts);
   }
-  const lines = buildArchiveLines({ runs, points, crossings, shadows, warnings, obs });
+  const lines = buildArchiveLines({ runs, points, crossings, shadows, warnings, obs, crossingsX, runsX });
   const readings = buildReadings({ day, runs, obs }); // for scripts/forecast-kpi.mjs (real crossings, rates and outcomes)
   const file = path.join(out, "forecasts", day.slice(0, 4), `${day}.jsonl`);
   mkdirSync(path.dirname(file), { recursive: true });

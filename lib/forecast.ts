@@ -257,14 +257,38 @@ async function loadGround(): Promise<GroundGauge[]> {
 export const loadForecast = cache(async function loadForecast(basin: string, snapshot: BasinStation[], station: string): Promise<Forecast> {
   const key = normaliseBasin(basin);
   // a gauge that shows no forecast needs no weather fetch
-  if (hasNoForecast(station)) return makeForecast({ basin, snapshot, station, weather: null, glofas: null, gsmap: null });
+  if (hasNoForecast(station)) return trialWeather(makeForecast({ basin, snapshot, station, weather: null, glofas: null, gsmap: null }), null);
   const covered = COEFFS[station] && normaliseBasin(COEFFS[station].basin) === key;
   // Rain is fetched for every gauge that has a grid (trend-only gauges show it too); GloFAS only matters to fitted models.
   const [weather, glofas, gsmap, ground] = hasCatchment(key, station)
     ? await Promise.all([getBasinWeather(key, station), covered ? getGlofas(key) : null, STORM4.stations[station] ? import("./gsmap").then((m) => m.getGsmap()) : null, STORM4.stations[station] ? loadGround() : null])
     : [null, null, null, null];
-  return makeForecast({ basin, snapshot, station, weather, glofas, gsmap, ground });
+  return trialWeather(makeForecast({ basin, snapshot, station, weather, glofas, gsmap, ground }), weather);
 });
+
+// ---- HIDDEN TRIAL side channels (lib/levelTrial/, the hourly route's ?shadow=1 branch only) -------------------------------------------------
+// Two WeakMaps keyed by the Forecast object the page receives: the weather answer the forecast was built from (so the route can log the rain
+// inputs without a second request) and the unrounded chances behind the display rules. Nothing is added to the Forecast object itself, so every
+// field a page, the log or the API reads is exactly what it was; a map entry that is missing just means "not logged".
+export type RuleFields = {
+  horizonLimitH: number | null;
+  /** True when capP's experimental 90% ceiling was active for this run. */
+  experimentalOn: boolean;
+  /** Per step (the marks above the gauge's level; a mark already crossed has pModel = pShown = 1, wording "already"): pModel = unrounded chance over ALL fitted
+   *  horizons before capP / r5 / the ceiling; pModelSeen = the same over the horizons the page may show; pShown = the number the page passes to chanceWords
+   *  (= today's shown crossings[].probability); wordingShown = the wording the page shows. */
+  steps: { threshold: ThresholdName; pModel: number; pModelSeen: number; pShown: number; wordingShown: Wording }[];
+};
+const RULES = new WeakMap<object, RuleFields>();
+const TRIAL_WEATHER = new WeakMap<object, Fetched<BasinWeather> | null>();
+function trialWeather(f: Forecast, w: Fetched<BasinWeather> | null | undefined): Forecast {
+  try { TRIAL_WEATHER.set(f, w ?? null); } catch {}
+  return f;
+}
+/** The rule fields of a forecast built by `fromModel` (not trend-only or empty ones), else null. */
+export const ruleFieldsOf = (f: Forecast): RuleFields | null => RULES.get(f) ?? null;
+/** The weather answer a forecast came from: `undefined` = the forecast did not come from loadForecast, `null` = no weather was fetched (no rain grid / no forecast gauge). */
+export const trialWeatherOf = (f: Forecast): Fetched<BasinWeather> | null | undefined => (TRIAL_WEATHER.has(f) ? TRIAL_WEATHER.get(f) : undefined);
 
 const r5 = (p: number) => Math.round(p * 20) / 20;
 const nameOf: Record<ThresholdName, string> = { alert: "alert level", minor: "minor flood level", major: "major flood level" };
@@ -375,7 +399,10 @@ export function makeForecast(raw: ForecastInput): Forecast {
   if (qc.ownOdd) notes.unshift(`The latest reading at ${station} jumped sharply from a steady level and may be a sensor glitch. The forecast is less certain than usual; the level and the official step are shown as reported.`);
   if (qc.ownStuckH != null) notes.unshift(`The reading at ${station} has not changed for ${Math.round(qc.ownStuckH)} hours, so the sensor may be stuck. The repeats were ignored and the forecast is less reliable.`);
   const f = qc.ownOdd || qc.ownStuckH != null ? { ...f0, notes } : f0;
-  return measured ? { ...f, rainRisk: withMeasured(f.rainRisk, measured) } : f;
+  const out = measured ? { ...f, rainRisk: withMeasured(f.rainRisk, measured) } : f;
+  const rules = RULES.get(f0);
+  if (rules && out !== f0) RULES.set(out, rules); // the copies above keep the side-channel entry
+  return out;
 }
 
 /** The satellite catchment rain for this gauge plus the weather series the v4 model times it against; null when either is missing. */
@@ -658,7 +685,8 @@ function fromModel(
   // (lib/forecastRules.mjs: minor capped at 30%, major at 10%, neither ever "likely"; limited horizons). Alert is untouched. ETAs follow the wording shown.
   const crossings: Forecast["crossings"] = [];
   const rawCrossings: Forecast["crossings"] = [];
-  type Assessed = { wording: Wording; p: number; etaFor: (w: Wording) => number | null };
+  const ruleSteps: RuleFields["steps"] = [];
+  type Assessed = { wording: Wording; p: number; maxP: number; etaFor: (w: Wording) => number | null };
   const assess = (X: H[], T: number): Assessed => {
     const P = X.map((x) => 1 - mixCdf(T, x.mix));
     const persists = (cut: number) => P.some((p, i) => i + 1 < P.length && p >= cut && P[i + 1] >= cut);
@@ -681,7 +709,7 @@ function fromModel(
       }
       return null;
     };
-    return { wording, p: capP(maxP), etaFor };
+    return { wording, p: capP(maxP), maxP, etaFor };
   };
   for (const name of SEVERITY) {
     const T = th[name];
@@ -690,6 +718,7 @@ function fromModel(
       const already = { threshold: name, level: T, probability: 1, etaTs: null, wording: "already" as Wording };
       crossings.push(already);
       rawCrossings.push(already);
+      ruleSteps.push({ threshold: name, pModel: 1, pModelSeen: 1, pShown: 1, wordingShown: "already" });
       continue;
     }
     const raw = assess(hs, T);
@@ -698,6 +727,7 @@ function fromModel(
     const wording = shownWording(name, seen.wording, shownP) as Wording;
     rawCrossings.push({ threshold: name, level: T, probability: raw.p, etaTs: raw.etaFor(raw.wording), wording: raw.wording });
     crossings.push({ threshold: name, level: T, probability: shownP, etaTs: seen.etaFor(wording), wording });
+    ruleSteps.push({ threshold: name, pModel: raw.maxP, pModelSeen: seen.maxP, pShown: shownP, wordingShown: wording });
   }
 
   // ---- direction, outlook
@@ -800,7 +830,7 @@ function fromModel(
     else basis.push(`The ${old.map((x) => x.h).join(", ")} hour steps are from a rain model fitted to ${coef.trainDays} days of readings; it beat a 'no change' guess out-of-sample only at ${skilled.join(", ") || "no horizon"}.`);
   }
 
-  return {
+  const out: Forecast = {
     station, unit, currentLevel: L0, asOfTs: anchor,
     method: "model", status: degraded ? "degraded" : "ok", direction, experimental: experimentalNow,
     basis,
@@ -816,6 +846,8 @@ function fromModel(
     stormHorizonsMeasured: [...stormM].filter((h) => limitH == null || h <= limitH).sort((a, b) => a - b),
     ...(stormG.size ? { stormHorizonsGround: shownH(stormG), rainGauges: groundUsed } : {}),
   };
+  RULES.set(out, { horizonLimitH: limitH, experimentalOn: experimentalNow, steps: ruleSteps });
+  return out;
 }
 
 // Linear interpolation consistent with lib/model/core.mjs interp (2h hold, 6h max gap).

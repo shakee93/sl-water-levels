@@ -5,11 +5,15 @@
 
 import { connection } from "next/server";
 import { fetchBasinSnapshot, getNational } from "@/lib/arcgis";
-import { loadForecast } from "@/lib/forecast";
+import { loadForecast, ruleFieldsOf as rulesOf, trialWeatherOf } from "@/lib/forecast";
+import { rawWeatherOf } from "@/lib/weather";
+import { nextHourOf } from "@/lib/nextHour";
+import { FT_IN_M } from "@/lib/units";
+import { attachTrialFields, nextHourRate } from "@/lib/levelTrial/routeInputs.mjs";
 import coefficients from "@/lib/model/coefficients.json";
 import { getGsmap } from "@/lib/gsmap";
 import { getForecastRainAll, measuredAtGauge } from "@/lib/stationRain";
-import { liftVerdict, riverRising } from "@/lib/verdictLift";
+import { isTidalStation, liftVerdict, riverRising } from "@/lib/verdictLift";
 import { getReleases, releaseAffectingFrom, type ReleasesResult } from "@/lib/releases";
 import { officialReleaseAlert } from "@/lib/releaseAlert";
 import { shadowVariants } from "@/lib/shadowForecast";
@@ -21,9 +25,12 @@ import { getGroundGauges } from "@/lib/groundRainLive";
 // one old copy for ~26 h (24-26 Oct), so the hourly store job saw no new forecasts. The upstream
 // data calls are cached in lib/arcgis.ts; the CDN still absorbs repeat hits for 60 s.
 export const maxDuration = 60;
+// node:zlib is used by the hidden level-model trial's input record (lib/levelTrial/record.mjs): this route must stay on the Node runtime.
+export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   await connection();
+  const startMs = Date.now(); // wall clock for the hidden-trial guard below
   // Candidate forecasts (lib/shadowForecast.ts) are logged only: returned when asked for (?shadow=1, the hourly store job), never shown anywhere.
   const withShadow = new URL(request.url).searchParams.get("shadow") === "1";
   const national = await getNational();
@@ -107,6 +114,21 @@ export async function GET(request: Request) {
           observations: s.trend24h.map((r) => ({ ts: r.ts, level: r.water_level, rain: r.rain_fall })),
         };
         runs.push(run);
+        if (withShadow) {
+          // HIDDEN level-model trial (lib/levelTrial/): the rain inputs exactly as they stood and the warning rule's extra fields, attached AFTER the run
+          // is in the list, in their own try/catch and only while the route is within 35 s of its 60 s. Adds run.inputs / run.ruleFields; nothing else changes.
+          try {
+            const tw = trialWeatherOf(f);
+            attachTrialFields(run, {
+              tw,
+              raw: tw && tw.ok ? rawWeatherOf(tw.data) : null,
+              getRules: () => rulesOf(f),
+              getNh: () => (f.unit ? { rateM: nextHourRate({ f, me: s, mpu: f.unit === "m" ? 1 : FT_IN_M, tidal: isTidalStation(f.station) }), word: nextHourOf(f, s)?.direction ?? null } : null),
+              nowMs: Date.now(),
+              startMs,
+            });
+          } catch {}
+        }
         if (withShadow) {
           const issuedAt = f.asOfTs ?? s.latest.ts;
           // the forecast rain "as it stood" at the run hour (and 1-3 h earlier, from the same model run's series, for the 3 h hold of rain-onset)

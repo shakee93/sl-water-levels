@@ -9,6 +9,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { splitSql } from "../lib/d1Sql.mjs";
+import { trialStatements, TRIAL_RETENTION_MS } from "../lib/levelTrial/storeRows.mjs";
 
 const [input, output] = process.argv.slice(2);
 if (!input || !output) {
@@ -95,6 +96,32 @@ for (const r of data.runs ?? []) {
   }
 }
 
+// Hidden level-model trial (lib/levelTrial/): the rain-input record and the warning rule's extra fields of every run, in NEW tables (d1/0023, d1/0024),
+// appended at the END of the failure-tolerant shadow file (so a problem here can never starve the shadow points above it) and built inside try/catch:
+// a malformed run.inputs / run.ruleFields, an unreadable schema file or anything else costs only its own rows, never the live SQL file.
+let trialRows = 0;
+let trialErrors = 0;
+try {
+  const ddl = [];
+  for (const f of ["0023_forecast_inputs.sql", "0024_forecast_rule_fields.sql"]) ddl.push(...splitSql(await readFile(new URL(`../d1/${f}`, import.meta.url), "utf8")).map((x) => x + ";"));
+  const rows = [];
+  for (const r of data.runs ?? []) {
+    try {
+      const st = trialStatements(r, now);
+      rows.push(...st);
+    } catch {
+      trialErrors++;
+    }
+  }
+  if (rows.length) {
+    shadowSql.push(...ddl, ...rows, `DELETE FROM forecast_inputs WHERE issued_at < ${Math.round(now - TRIAL_RETENTION_MS)};`);
+    trialRows = rows.length;
+  }
+} catch (e) {
+  trialErrors++;
+  console.error(`hidden-trial rows skipped: ${e instanceof Error ? e.message : e}`);
+}
+
 await writeFile(output, sql.join("\n") + "\n");
 await writeFile(`${output}.shadow.sql`, shadowSql.join("\n") + "\n");
-console.log(`${data.runs?.length ?? 0} runs, ${points} points, ${obs} observations, ${shadowPoints} shadow points, ${warningRows} warning-candidate rows -> ${output}; errors: ${data.errors?.length ?? 0}`);
+console.log(`${data.runs?.length ?? 0} runs, ${points} points, ${obs} observations, ${shadowPoints} shadow points, ${warningRows} warning-candidate rows -> ${output}; errors: ${data.errors?.length ?? 0}; trial rows: ${trialRows}${trialErrors ? `, trial errors: ${trialErrors}` : ""}`);
