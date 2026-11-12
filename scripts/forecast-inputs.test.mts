@@ -29,6 +29,16 @@ const ok = async (name: string, fn: () => unknown) => {
     process.exitCode = 1;
   }
 };
+// The BEFORE / AFTER proofs compare this code with the last commit BEFORE the change (108020a8, the commit that only added the pure part). They were
+// run when the change was made. A checkout that does not hold that commit (the shallow clone of the Tests workflow) cannot repeat them: there the "old"
+// side is the current code, the checks that need a real difference between old and new are skipped and counted, and every check of the new code still
+// runs. TRIAL_PROOF_BASE=<commit> picks another base.
+const BASE = process.env.TRIAL_PROOF_BASE ?? "108020a8";
+let PROOF = true;
+try { execFileSync("git", ["cat-file", "-e", `${BASE}^{commit}`], { cwd: ROOT, stdio: "ignore" }); } catch { PROOF = false; }
+const oldSource = (rel: string): Buffer => (PROOF ? execFileSync("git", ["show", `${BASE}:${rel}`], { cwd: ROOT, maxBuffer: 64 << 20 }) : readFileSync(path.join(ROOT, rel)));
+let skipped = 0;
+const proof = async (name: string, fn: () => unknown) => { if (PROOF) return ok(name, fn); skipped++; };
 
 // ------------------------------------------------------------------------------------------------ loader: .ts / extensionless / @/ / json, fakes, git-HEAD copies
 // Old (HEAD) copies of the changed modules live in TMP; their relative imports resolve against the ORIGINAL directory, and inside an old module
@@ -38,7 +48,7 @@ const OLD: Record<string, string> = {};
 const ORIG: Record<string, string> = {};
 for (const rel of CHANGED) {
   const dst = path.join(TMP, "old-" + rel.replace(/\//g, "_"));
-  writeFileSync(dst, execFileSync("git", ["show", `HEAD:${rel}`], { cwd: ROOT, maxBuffer: 64 << 20 }));
+  writeFileSync(dst, oldSource(rel));
   OLD[rel] = dst;
   ORIG[dst] = path.join(ROOT, rel);
 }
@@ -502,7 +512,7 @@ await ok("R5 route: the default payload is byte for byte what it was (HEAD vs no
   assert.ok(b.runs.every((r: any) => !("inputs" in r) && !("ruleFields" in r)));
 });
 
-await ok("R5 route: with ?shadow=1 every existing field of every run is unchanged and the new fields are only added (inputs on every run, rule fields on model runs)", async () => {
+await proof("R5 route: with ?shadow=1 every existing field of every run is unchanged and the new fields are only added (inputs on every run, rule fields on model runs)", async () => {
   const a = await getRoute(OLD_ROUTE, "?shadow=1");
   const b = await getRoute(NEW_ROUTE, "?shadow=1");
   assert.equal(b.runs.length, a.runs.length);
@@ -541,7 +551,7 @@ await ok("R5 route: with ?shadow=1 every existing field of every run is unchange
   assert.ok(extra > 0 && extra < b.runs.length * 4200, `extra payload ${extra} bytes for ${b.runs.length} runs`);
 });
 
-await ok("R5 route: past the 35 s guard every run is still returned, unchanged, with inputs { skip: deadline } and no rule fields", async () => {
+await proof("R5 route: past the 35 s guard every run is still returned, unchanged, with inputs { skip: deadline } and no rule fields", async () => {
   pendingJump = 40_000;
   try {
     jump = 0;
@@ -575,8 +585,9 @@ import { splitSql } from "../lib/d1Sql.mjs";
 import { DatabaseSync } from "node:sqlite";
 
 const OLD_STORE = path.join(TMP, "old-store-forecasts.mjs");
-writeFileSync(OLD_STORE, execFileSync("git", ["show", "HEAD:scripts/store-forecasts.mjs"], { cwd: ROOT, maxBuffer: 64 << 20 }).toString()
+writeFileSync(OLD_STORE, oldSource("scripts/store-forecasts.mjs").toString()
   .replace('"../lib/d1Sql.mjs"', JSON.stringify(path.join(ROOT, "lib/d1Sql.mjs")))
+  .replace('"../lib/levelTrial/storeRows.mjs"', JSON.stringify(path.join(ROOT, "lib/levelTrial/storeRows.mjs")))
   .replace(/new URL\("\.\.\/d1\//g, `new URL("file://${ROOT}/d1/`));
 const shadowPayload = await getRoute(NEW_ROUTE, "?shadow=1");
 const PLAIN = await getRoute(NEW_ROUTE, "");
@@ -599,7 +610,7 @@ const runStore = (script: string, file: string, tag: string) => {
 const OLD_STORE_REL = OLD_STORE;
 const NEW_STORE = path.join(ROOT, "scripts/store-forecasts.mjs");
 
-await ok("store job: the live SQL file is byte for byte unchanged by the new fields; the shadow file only gains rows at its end", () => {
+await proof("store job: the live SQL file is byte for byte unchanged by the new fields; the shadow file only gains rows at its end", () => {
   const { file } = asFile(shadowPayload, "feed-shadow.json");
   const o = runStore(OLD_STORE_REL, file, "old-shadow"), nw = runStore(NEW_STORE, file, "new-shadow");
   assert.equal(o.status, 0, o.stderr);
@@ -718,9 +729,9 @@ import { promisify } from "node:util";
 const execFileP = promisify(execFile);
 
 const OLD_SB = path.join(TMP, "old-forecastScoreboard.mjs");
-writeFileSync(OLD_SB, execFileSync("git", ["show", "HEAD:lib/forecastScoreboard.mjs"], { cwd: ROOT, maxBuffer: 64 << 20 }).toString().replace('"./forecastRules.mjs"', JSON.stringify(path.join(ROOT, "lib/forecastRules.mjs"))));
+writeFileSync(OLD_SB, oldSource("lib/forecastScoreboard.mjs").toString().replace('"./forecastRules.mjs"', JSON.stringify(path.join(ROOT, "lib/forecastRules.mjs"))));
 const OLD_ARCHIVE = path.join(TMP, "old-forecast-archive.mjs");
-writeFileSync(OLD_ARCHIVE, execFileSync("git", ["show", "HEAD:scripts/forecast-archive.mjs"], { cwd: ROOT, maxBuffer: 64 << 20 }).toString()
+writeFileSync(OLD_ARCHIVE, oldSource("scripts/forecast-archive.mjs").toString()
   .replace('"../lib/d1Sql.mjs"', JSON.stringify(path.join(ROOT, "lib/d1Sql.mjs")))
   .replace('"../lib/forecastScoreboard.mjs"', JSON.stringify(OLD_SB)));
 const NEW_ARCHIVE = path.join(ROOT, "scripts/forecast-archive.mjs");
@@ -823,4 +834,4 @@ await ok("buildArchiveLines: crossingsX / runsX null, [] or without a matching r
   assert.deepEqual([x.horizon_limit_h, x.experimental_on, x.nh_rate_m_h, x.nh_word], [6, 1, 0.01, "rising"]);
 });
 
-console.log(`${n} checks passed${failures.length ? `, ${failures.length} FAILED: ${failures.join("; ")}` : ""}`);
+console.log(`${n} checks passed${skipped ? `, ${skipped} before/after proofs skipped (the pre-change commit ${BASE} is not in this checkout)` : ""}${failures.length ? `, ${failures.length} FAILED: ${failures.join("; ")}` : ""}`);
