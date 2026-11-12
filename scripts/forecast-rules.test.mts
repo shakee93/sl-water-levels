@@ -94,9 +94,11 @@ assert.equal(TOWN_RISING, STEADY_M_PER_H);
 assert.equal(directionFor(-0.007).en, "Falling");
 assert.equal(directionFor(-0.005).en, "Steady");
 // no file outside lib/forecastRules.mjs may keep a private "0.006" steady threshold again
+// (lib/levelTrial/predict.mjs is left out on purpose: its 0.006 is a constant of a FITTED model, the hidden level trial. It must stay what the model was
+//  fitted with even if the site's threshold is changed one day, so it must not import STEADY_M_PER_H; the file is kept byte for byte equal to the verified port.)
 const walk = (d) => readdirSync(d).flatMap((f) => (f === "node_modules" || f === ".next" || f.startsWith(".") ? [] : statSync(join(d, f)).isDirectory() ? walk(join(d, f)) : [join(d, f)]));
 const offenders = [...walk(new URL("../app", import.meta.url).pathname), ...walk(new URL("../lib", import.meta.url).pathname)]
-  .filter((f) => /\.(ts|tsx|mjs)$/.test(f) && !/forecastRules\.mjs$|flood3d|i18n/.test(f))
+  .filter((f) => /\.(ts|tsx|mjs)$/.test(f) && !/forecastRules\.mjs$|flood3d|i18n|levelTrial\/predict\.mjs$/.test(f))
   .filter((f) => /(?<![\d.])0\.006(?!\d)/.test(readFileSync(f, "utf8").split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n")));
 assert.deepEqual(offenders, [], "private copies of the steady threshold: " + offenders.join(", "));
 

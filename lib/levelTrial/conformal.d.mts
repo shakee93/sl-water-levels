@@ -1,0 +1,11 @@
+export const CONFORMAL_SCHEMA: string;
+export type ConformalState = { schema: string; target: number; gamma: number; window: number; alpha_min: number; alpha_max: number; min_scores: number; keys: Record<string, any> };
+export function newState(o?: { target?: number; gamma?: number; window?: number; alphaMin?: number; alphaMax?: number; minScores?: number }): ConformalState;
+export function checkState(state: unknown): ConformalState;
+export function score(lo0: number, hi0: number, y: number, scale?: number): number;
+export function quantile(scores: number[], alpha: number): number | null;
+export function resolve(state: ConformalState, key: string): any;
+export function currentQ(state: ConformalState, key: string): number | null;
+export function interval(state: ConformalState, key: string, lo0: number, hi0: number, scale?: number): [number, number] | null;
+export function update(state: ConformalState, key: string, lo0: number, hi0: number, y: number, scale?: number): { q: number | null; covered: boolean | null };
+export function staticState(state: ConformalState): ConformalState;
