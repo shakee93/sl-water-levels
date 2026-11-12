@@ -152,6 +152,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run ig-post.yml --repo "${{ github.repository }}"
 
+      # The Facebook Page (scripts/fb-post.mjs): the same feed posts as the Instagram account, in its own workflow and
+      # concurrency group. OFF by default: this step does not even start the job until the repository variable FB_MODE is
+      # "dry" or "live". Never fails the snapshot.
+      - name: Start the Facebook Page job
+        if: steps.secrets.outputs.ready == 'true' && (vars.FB_MODE == 'dry' || vars.FB_MODE == 'live')
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run fb-post.yml --repo "${{ github.repository }}"
+
       # Slack only hears about a workflow that has failed 3 runs in a row (the 3rd failure, then every 12th): a single D1 or API
       # blip on a job that runs every 5-30 minutes fixes itself on the next run. Cancelled/skipped runs do not count either way.
       # If the history cannot be read, it alerts (fail open).

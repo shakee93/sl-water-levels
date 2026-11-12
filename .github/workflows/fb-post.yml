@@ -1,0 +1,96 @@
+# The site's Facebook Page: the same FEED posts as the Instagram account (same rules, same pictures, never stories), each with
+# the link of the matching page (scripts/fb-post.mjs). See DOCS.md "Facebook Page posting".
+#   - OFF by default: until the repository VARIABLE FB_MODE is "dry" or "live" the job does nothing and says so in its log
+#     (the rain snapshot does not even start it, and the two crons below are skipped).
+#   - FB_MODE=dry: every post is shown in the owner's Slack (SLACK_WEBHOOK_URL) marked "DRY RUN", nothing goes to Facebook.
+#   - FB_MODE=live: publishes, only when both secrets exist (FB_PAGE_ID, FB_PAGE_TOKEN). A missing secret always means
+#     dry-run, and Slack says so once a day. Back to "dry", "off" or deleting the variable stops it at the next run.
+#   - Its OWN workflow, not a step of ig-post.yml: its own run, time limit, concurrency group and failure count, so a failing
+#     or hanging Instagram run can never stop a Facebook post, and a Facebook problem never touches Instagram.
+#   - Started after every satellite-rain snapshot (gsmap-snapshot.yml, every 30 min, like x-post.yml and ig-post.yml), plus two
+#     crons (GitHub's cron is best-effort): 07:05 Colombo for the morning post, 09:35 Colombo for a calm day's first post.
+#   - Manual: mode "run" = one normal pass; mode "sample" = a few sample posts from today's data, to Slack only.
+#   - The tables (d1/0022_fb_posts.sql) are created by the job through lib/d1Sql.mjs the first time a dry or live run needs them.
+# Optional variables: FB_LANGS, FB_FEED_MAX, FB_KEEPALIVE_WEEK (each falls back to Instagram's IG_LANGS, IG_FEED_MAX,
+# IG_KEEPALIVE_WEEK), FB_NO_PICTURE (skip | link), IG_GRAPH_VERSION (shared with Instagram).
+
+name: Facebook Page
+
+on:
+  schedule:
+    - cron: "35 1 * * *"
+    - cron: "5 4 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "run = one normal pass now; sample = a few sample posts from today's data, to Slack only (both do nothing while FB_MODE is off)"
+        type: choice
+        options: [run, sample]
+        default: run
+
+permissions:
+  contents: read
+  actions: read # failure history for the Slack rule
+
+# One at a time, never cancelled half-way: two runs must not post the same thing.
+concurrency:
+  group: fb-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    # The crons do not even take a runner while the switch is off. A run started by hand (or by the rain snapshot) always
+    # runs, so "off" can be seen in its log.
+    if: github.event_name != 'schedule' || vars.FB_MODE == 'dry' || vars.FB_MODE == 'live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Post
+        env:
+          MODE: ${{ github.event.inputs.mode || 'run' }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_MODE: ${{ vars.FB_MODE }}
+          FB_LANGS: ${{ vars.FB_LANGS }}
+          FB_FEED_MAX: ${{ vars.FB_FEED_MAX }}
+          FB_KEEPALIVE_WEEK: ${{ vars.FB_KEEPALIVE_WEEK }}
+          FB_NO_PICTURE: ${{ vars.FB_NO_PICTURE }}
+          IG_LANGS: ${{ vars.IG_LANGS }}
+          IG_FEED_MAX: ${{ vars.IG_FEED_MAX }}
+          IG_KEEPALIVE_WEEK: ${{ vars.IG_KEEPALIVE_WEEK }}
+          IG_GRAPH_VERSION: ${{ vars.IG_GRAPH_VERSION }}
+        run: node --experimental-strip-types --no-warnings scripts/fb-post.mjs --mode "$MODE"
+
+      # Slack only hears about a workflow that has failed 3 runs in a row (the 3rd failure, then every 12th), like ig-post.yml.
+      - name: Tell Slack the workflow failed (3 in a row)
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }} # lets the step also write the notification log (lib/notify.mjs); optional
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          n=0
+          if hist=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow "${{ github.workflow }}" --status completed --limit 30 --json databaseId,conclusion --jq '[.[] | select(.databaseId != ${{ github.run_id }}) | select(.conclusion == "success" or .conclusion == "failure") | .conclusion] | join(" ")' 2>/dev/null); then
+            for c in $hist; do [ "$c" = "failure" ] && n=$((n+1)) || break; done
+          else
+            n=2
+          fi
+          streak=$((n+1))
+          if [ "$streak" -ne 3 ] && [ $((streak % 12)) -ne 0 ]; then
+            echo "Failed run #$streak in a row: not alerting Slack until the 3rd."
+            exit 0
+          fi
+          MSG="⚠️ Workflow failed $streak runs in a row: ${{ github.workflow }} — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Through the notification log (lib/notify.mjs) when the checkout exists: same Slack text, plus one row in D1.
+          # A failed checkout, a missing node or a refused post falls back to the plain request, so Slack still hears it.
+          if [ -f scripts/notify-cli.mjs ] && node scripts/notify-cli.mjs --source "workflow:${{ github.workflow }}" --kind workflow-failed --severity error "$MSG"; then exit 0; fi
+          curl -sS -o /dev/null --max-time 20 -X POST -H 'Content-Type: application/json' \
+            --data "{\"text\":\"$MSG\"}" \
+            "$SLACK_WEBHOOK_URL" || true

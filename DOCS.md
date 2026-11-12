@@ -1921,4 +1921,128 @@ Line 1 English, then a Sinhala line and a Tamil line (`IG_LANGS=en,si,ta`; Sinha
 8. **Go live**: `gh variable set IG_MODE --body live`. To stop at any time: `gh variable set IG_MODE --body off` (nothing runs) or `--body dry`.
 9. After the first real event, check reach and consider fewer update stories (`IG_STORIES_MAX`).
 
-Open owner decisions (from the plan): whether captions keep all three languages (`IG_LANGS`), and whether disaster feed posts also go to the Facebook Page (the same API, not built).
+Open owner decisions (from the plan): whether captions keep all three languages (`IG_LANGS`). Feed posts to the Facebook Page are built since 12 Nov 2026 and switched off until the owner turns them on: see "Facebook Page posting" below.
+
+## Facebook Page posting (built 12 Nov 2026, OFF by default)
+
+The site's Facebook Page gets **the same feed posts as the Instagram account**: same rules for when a post goes out, same pictures, same
+three-language caption. Never stories. One difference: a Facebook post can carry a link, so each caption ends with the link of the page that
+matches the picture instead of the bare address. **Nothing happens until the owner sets the repository variable `FB_MODE`.**
+
+| Piece | Where |
+|---|---|
+| Switch (off / dry / live), the two Pages API calls, error classes | `lib/fbClient.ts` |
+| The page link and the caption (Instagram's caption with the address line replaced by the link) | `lib/fbCompose.ts` |
+| One run: gate, memory, plan, claim, preview or publish; `--mode sample` | `scripts/fb-post.mjs` |
+| When and what to post | `scripts/ig-engine.mjs` `planIg`, unchanged: the Page keeps only its feed posts |
+| Schedule | `.github/workflows/fb-post.yml`: started after every satellite-rain snapshot (`gsmap-snapshot.yml`, only while `FB_MODE` is `dry` or `live`), plus crons 07:05 and 09:35 Colombo; one run at a time (`concurrency: fb-post`) |
+| Memory | D1 `fb_posts` (every post and its status) and `fb_state` (the Page's own copy of the engine memory; pause-until after an error; once-a-day notes), `d1/0022_fb_posts.sql`, created by the job through `lib/d1Sql.mjs` the first time a dry or live run finds them missing |
+| Tests | `node --experimental-strip-types --no-warnings scripts/fb-post.test.mts` (fake D1 built from the SQL file, fake Slack, fake Graph API; the real `fetch` is replaced by a trap, so nothing can reach graph.facebook.com) |
+
+### The switch
+
+| `FB_MODE` (repository variable) | What happens |
+|---|---|
+| not set, `off`, or anything else | **Nothing.** The rain snapshot does not start the job, the crons are skipped, and a run started by hand reads nothing, creates no table, sends nothing to Slack and says so in its log. |
+| `dry` | Each post is shown in the owner's Slack as `DRY RUN: not posted to Facebook`, with the picture address, a check that the picture can be fetched, and the caption. Nothing goes to Facebook. Works without the secrets. |
+| `live` | Posts go to the Page, only when the secrets `FB_PAGE_ID` and `FB_PAGE_TOKEN` both exist. A missing secret (or an `FB_PAGE_ID` that is not a number, or an `IG_GRAPH_VERSION` that is not like `v24.0`) always means dry run, and Slack says so, with what to do, **once a day**. These are checked before a post claims its key, so a setting that could not have worked never uses a post up. |
+
+Kill switch: `gh variable set FB_MODE --body off` (or `gh variable delete FB_MODE`). It takes effect at the next run; a run already in progress finishes.
+
+### What goes out, and with which link
+
+| Post (rule in "Instagram", Modes) | Picture | Link line |
+|---|---|---|
+| Flood morning "Rivers right now" (disaster, once a day) and the weather-day morning post | `/api/story/home/now.jpg?format=portrait` | `Live levels: https://waterlevels.lk` |
+| A gauge reaches Minor or Major: the worst river | `/api/story/river/<river>.jpg?format=portrait` | `Live levels: https://waterlevels.lk/<river>` |
+| Calm-day keep-alive: rain | `/api/story/rain/now.jpg` | `Rain map: https://waterlevels.lk/rain` |
+| Calm-day keep-alive: reservoirs spilling | `/api/story/reservoirs/now.jpg` | `Reservoirs: https://waterlevels.lk/reservoirs/spilling` |
+| Calm-day keep-alive: river of the week | `/api/story/river/<river>.jpg` | `Live levels: https://waterlevels.lk/<river>` |
+| Calm-day keep-alive: flood-survey call, embed call | `/api/story/home/now.jpg` | `Add your spot: https://waterlevels.lk/flood-survey`, `Get the widget: https://waterlevels.lk/embed` |
+
+Each is a photo post (`POST /{page-id}/photos`, the picture by its public address, the caption under it). Caps are Instagram's: 3 feed posts a
+day in a flood, 1 a day otherwise, keep-alive posts at most 3 in 7 days and 30 h apart, nothing 22:00-06:00 outside a flood. `FB_FEED_MAX`,
+`FB_KEEPALIVE_WEEK` and `FB_LANGS` override them for the Page only; unset, the Page follows `IG_FEED_MAX`, `IG_KEEPALIVE_WEEK` and `IG_LANGS`.
+A caption that fails its own checks (no link, a second link, a link that is not a plain `https` page of our site, an @mention, over 5
+hashtags) is not sent and Slack says why. The test fails if a link in the table stops being a real route.
+
+### How it differs from Instagram, and why it is separate
+
+- **Its own workflow and its own memory.** The Page runs in `fb-post.yml`, not as a step of `ig-post.yml`, and keeps its own copy of the engine
+  memory (as Instagram keeps its own copy of the X engine's). A step inside the Instagram job would be skipped when the Instagram step fails
+  and killed when it hangs, and one failure count would cover both; reading Instagram's post log would silence the Page whenever Instagram is
+  paused, failing or switched off. This way neither platform can block the other: `IG_MODE=off` leaves Facebook running and the reverse.
+- **Same rules, not the same clock.** Flood and weather posts fall on the same day on both, because the same river data drives them. Calm-day
+  keep-alive posts follow the same limits but each account counts its own posts, so the Page may show "rain" on a day Instagram shows
+  "river of the week".
+- **The day's limit counts the Page's own posts.** Instagram's "one post a day outside a flood" also counts stories; the Page has none.
+- **A post that worked says nothing in Slack** (as on Instagram). Failures, held posts and dry runs do.
+
+### Safety
+
+- **Claim before publish.** Each post inserts its key in `fb_posts` (unique) with the id of the run, reads it back, and sends only if the row
+  carries its own id. Two runs at once cannot both send; a run that died after claiming leaves the row `claimed` and nobody sends it later.
+  An hour on, the next run closes that row and tells Slack once that the post may or may not be on the Page.
+- **One key, one request, ever.** A publish is a single request and is never retried: not after an error, not after a timeout (the post may
+  already be on the Page; Slack then says to look), not by a later run. Unlike Instagram, a failed key is not freed again.
+- **Every attempt uses its slot.** Posted, shown, failed and still-in-flight rows all count towards the day's limit and the keep-alive
+  rotation. So a post that may be on the Page without our knowing still counts, and a calm-day post that failed makes the rules move on to
+  the next kind 30 h later instead of being picked again on every run. A post that fails its own caption checks is recorded the same way and said once.
+- **Pause.** An expired token (190) or a missing permission (200-299) pauses posting 6 h; a rate limit (4, 17, 32, 613, 80001) or a
+  temporary block (368) 1 h; a 5xx or no answer 15 min. Nothing is called while paused, and the memory is left as it was from the run in
+  which the pause started: the posts behind the one that failed, and what happens meanwhile, still go out afterwards if they still apply
+  (a morning post only inside its morning window). The post that failed is not among them.
+- **Only graph.facebook.com.** The client builds one address, `https://graph.facebook.com/<version>/<numeric page id>/<photos|feed>`, refuses
+  anything else (a Page id that is not digits, a version that is not like `v24.0`), refuses redirects, and has no default `fetch`.
+- **Secrets.** The token travels only in the `Authorization` header: never in an address, a body, a log, Slack or D1 (`lib/notify.mjs` also
+  removes it from any message). The job is handed no Instagram or X secret.
+- **Picture missing.** If our own picture cannot be fetched the post is skipped and Slack is told, like Instagram. `FB_NO_PICTURE=link` sends
+  it as a link post instead (text + link, Facebook draws the preview card): an owner choice, off by default.
+- The Graph API version is Instagram's (`IG_GRAPH_VERSION`, v24.0, available until 18 Feb 2028; the newest is v27.0).
+
+### What Meta requires (read 12 Nov 2026)
+
+- **Permissions and token.** Publishing to a Page needs a **Page access token** asked for by someone who can do the `CREATE_CONTENT` task on
+  the Page, with `pages_manage_posts`, `pages_read_engagement` and `pages_show_list`
+  ([Page Feed](https://developers.facebook.com/docs/graph-api/reference/page/feed/), [Page Photos](https://developers.facebook.com/docs/graph-api/reference/page/photos/),
+  [Pages API posts](https://developers.facebook.com/docs/pages-api/posts)). The Instagram token already has the last two; `pages_manage_posts` is new.
+- **The existing System User can be used, with a new token.** `pages_manage_posts` is in the list of permissions a system user token can carry
+  ([install apps and generate tokens](https://developers.facebook.com/docs/marketing-api/businessmanager/systemuser/install-apps-and-generate-tokens)),
+  and system-user tokens can be non-expiring. A token's permissions are picked when it is generated, so the owner generates a new one with the
+  extra permission. The references ask for a *Page* token, so the job is given the Page's own token, read with the system-user token from
+  `me/accounts` ([Pages API getting started](https://developers.facebook.com/docs/pages-api/getting-started/)). **Not confirmed by the pages
+  read**: whether the publish calls would also take the system-user token directly, and whether a Page token made from a never-expiring
+  system-user token itself never expires (Meta says so for one made from a long-lived user token:
+  [long-lived tokens](https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived/)). The Access Token Debugger shows both for the real token.
+- **Photo post**: `url` (jpeg, png, gif, bmp or tiff, at most 10 MB) and `caption`; `message` and `name` are deprecated on that call. Answer
+  `{ id, post_id }`. **Link or text post**: `message` and / or `link`; answer `{ id }`.
+- **App mode: the one likely blocker.** Anything made by an app in Development mode can be seen only by people with a role on the app
+  ([App modes](https://developers.facebook.com/docs/development/build-and-test/app-modes/)). If the Meta app is not in Live mode, the Page
+  posts will look fine to the team and be invisible to everyone else.
+- **App Review**: not needed here. Standard Access covers people with a role on the app, which is the case for the team's own system user and
+  Page; Advanced Access (App Review plus Business Verification) is only for serving other people's Pages
+  ([Access levels](https://developers.facebook.com/docs/graph-api/overview/access-levels/)).
+- **Page role**: the system user must have the Page assigned with content rights (it has full control from the Instagram setup).
+- **Rate limit**: with a Page or system-user token, 4,800 calls per engaged user per 24 h, error 80001 when reached
+  ([Rate limits](https://developers.facebook.com/docs/graph-api/overview/rate-limiting/)). We make a handful of calls a day. No per-day cap on
+  posts is documented; error 368 means Facebook judged the activity abusive.
+- **Unused permissions lapse**: a permission an app has not used for 90 days must be granted again
+  ([Permissions](https://developers.facebook.com/docs/permissions/)). Do not generate the token months before going live.
+
+### Go live (owner, in this order)
+
+1. **Meta app** (developers.facebook.com, the app used for Instagram): add the permission `pages_manage_posts`. Check the app is in **Live** mode.
+2. **New token**: Business settings, System users, the existing system user, Generate token for the app: tick the four Instagram permissions
+   **and `pages_manage_posts`**, expiry Never. Meta's pages do not say whether a new system-user token cancels the older one that Instagram
+   uses ("Revoke tokens" does cancel all of them: do not press it). Right after generating, check the old token in the Access Token Debugger; if it is no
+   longer valid, or Slack shows "Instagram post failed ... code 190", save the new token as `IG_ACCESS_TOKEN` too (it carries the Instagram permissions).
+3. **The Page's own token**: in the Graph API Explorer paste that token and ask for `me/accounts?fields=id,name,access_token`. The entry for the
+   Page gives the Page id and the Page token. An empty list means the system user does not have the Page assigned. In the
+   [Access Token Debugger](https://developers.facebook.com/tools/debug/accesstoken/) the Page token should show type Page, expiry Never and `pages_manage_posts`.
+4. **Two GitHub secrets**: `gh secret set FB_PAGE_ID` and `gh secret set FB_PAGE_TOKEN` (each asks for the value; never paste a token into chat, an issue or a commit).
+5. **Previews first**: `gh variable set FB_MODE --body dry`, then `gh workflow run fb-post.yml -f mode=sample` for a few sample posts in Slack
+   straight away. Real previews follow as the rules fire (on a calm day the first one comes between 09:00 and 20:00). Read them for a few days.
+6. **Live**: `gh variable set FB_MODE --body live`. What was already shown in Slack that day is not sent again; the first live post is the next new one. Open it in a private browser window: if it cannot be seen there, the Meta app is still in Development mode (step 1).
+7. **Stop**: `gh variable set FB_MODE --body off`, or `--body dry` to go back to previews.
+
+Open owner decisions: whether a post whose picture is missing is skipped (now) or sent as a link post (`FB_NO_PICTURE=link`), and whether the Page should get its own limits (`FB_FEED_MAX`, `FB_KEEPALIVE_WEEK`) or languages (`FB_LANGS`).
