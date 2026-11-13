@@ -7,6 +7,8 @@
 //   kpi/events/YYYY-MM.jsonl        permanent event ledger (one line per gauge-step crossing, with why a miss missed), idempotent upsert
 //   kpi/gauges/YYYY-MM-DD.csv       per-gauge daily table
 //   kpi/archive-health.json         days missing in the last 30 for every data-branch folder the forecast depends on
+//   kpi/v3/latest.json              spec 3 (owner-approved 13 Nov 2026, DOCS.md "Forecast KPIs, spec 3"): lab Notice, public records P1-P4, next hour; window + rolling 12 months
+//   kpi/v3/days/YYYY-MM-DD.json     one day's sufficient statistics for spec 3 (summed for the rolling window); NOT read by the page
 //
 // usage: node scripts/forecast-kpi.mjs <archiveDir> [--asof YYYY-MM-DD] [--window 30] [--now ISO]
 //   Reads forecasts/YYYY/YYYY-MM-DD.jsonl and .readings.json (scripts/forecast-archive.mjs) for the last --window Colombo days up to --asof
@@ -24,6 +26,7 @@ import { addDays, colomboDay, daysBetween } from "../lib/forecastScoreboard.mjs"
 import {
   SPEC1, SPEC2, buildContext, dayCoverage, dropInternal, gaugeTable, historyRows, kpiSet, ledgerKey, ledgerMonth, ledgerRecords, mergeReadings, missingDays, summarise, systemSet, systemsOf,
   upsertHistory, upsertLedger, upsertWide, upsertWideEdge, parseLedger, variantsOf, wideRows,
+  v3DayStats, v3Report, v3Sum, v3WindowExact,
 } from "../lib/forecastKpi.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -271,3 +274,38 @@ step("archive-health.json", () => {
 
 const extra = Object.entries(sizeOf).map(([f, b]) => `${f} ${b}`).join(", ");
 console.log(`extras: spec 2 ${latest2 ? `met ${latest2.summary.met} of ${latest2.summary.assessable}` : "not written"}; ledger ${ledger.length} events; ${extra.length ? `bytes: ${extra.slice(0, 600)}` : ""}`);
+
+// ---------------------------------------------------------------- spec 3 (side by side; nothing above reads it, a failure is a warning)
+step("spec 3 (kpi/v3)", () => {
+  const v3Dir = path.join(kpiDir, "v3");
+  const dayDir = path.join(v3Dir, "days");
+  mkdirSync(dayDir, { recursive: true });
+  const prov = provenance({ id: 3 });
+  const windowStats = [];
+  for (const d of days) {
+    const file = path.join(dayDir, `${d}.json`);
+    const final = outcomesFinalDay(d) && withReadings.includes(d);
+    const edge = d === days[0] && !days.includes(addDays(d, -1)); // the previous day is not loaded: early floods may lack their lead runs
+    const old = existsSync(file) ? readJson(file) : null;
+    if (edge && old && !old.edge) { windowStats.push(old); continue; } // keep the complete file written when the window reached further back
+    const st = v3DayStats(ctx, d, { final, edge });
+    windowStats.push(st);
+    put(file, json({ ...st, kpiSpec: 3, generatedAt: prov.generatedAt, codeSha: prov.codeSha, versionsHash: prov.versionsHash }));
+  }
+  // rolling 12 months: every final day file on disk (these ones were just rewritten)
+  const first = addDays(asOf, -364);
+  const rolling = readdirSync(dayDir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).map((f) => f.slice(0, 10)).filter((d) => d >= first && d <= asOf).sort().map((d) => readJson(path.join(dayDir, `${d}.json`)));
+  const winDays = windowStats.filter((s) => s.final && !s.edge).map((s) => s.day);
+  const win = v3Report(v3Sum(windowStats), { exact: v3WindowExact(ctx, winDays) });
+  const roll = v3Report(v3Sum(rolling));
+  const latest3 = {
+    version: 1, kpiSpec: 3, ...prov, asOf,
+    note: "Spec 3, side by side with kpi/latest.json (spec 1) and kpi/v2/latest.json (spec 2); not read by the page. window = the days of this run that are final (24 h outcomes read) and complete; rolling = the day files of the last 365 days.",
+    window: { from: win.days[0] ?? null, to: win.days[win.days.length - 1] ?? null, days: win.days.length, requested: windowDays, notFinal: windowStats.filter((s) => !s.final).map((s) => s.day), edge: windowStats.filter((s) => s.edge).map((s) => s.day) },
+    ...win,
+    rolling: { from: roll.days[0] ?? null, to: roll.days[roll.days.length - 1] ?? null, ...roll },
+  };
+  put(path.join(v3Dir, "latest.json"), json(latest3));
+  const t = win.targets.map((x) => `${x.key} ${x.value ?? "-"} (target ${x.target}, ${x.scored + x.missed} floods, ${x.met == null ? "not judged" : x.met ? "met" : "not met"})`).join("; ");
+  console.log(`spec 3 ${latest3.window.from}..${latest3.window.to} (${win.days.length} final days): ${t}; rise catch ${win.nextHour.riseCatchAt10PctFalseHours.value ?? "-"}; P3 ${win.public.p3.verdict}`);
+});
