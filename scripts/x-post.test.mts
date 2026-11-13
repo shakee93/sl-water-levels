@@ -71,6 +71,15 @@ assert.equal(gate({ X_POSTING: " LIVE ", X_API_KEY: "a", X_API_SECRET: "b", X_AC
 // ---- length the way X counts it
 assert.equal(tweetLength("a".repeat(10) + " https://waterlevels.lk/kelani-ganga/hanwella/very/long/path"), 10 + 1 + 23);
 assert.equal(tweetLength("සූදානම්"), 7, "Sinhala letters count 1 each");
+// X links a bare domain too (13 Nov 2026: 278-character posts with "on waterlevels.lk" were refused as over 280)
+{
+  const refused = "8:02 pm: The Nilwala at Panadugama (20.6 ft) and the Gin at Baddegama (13.6 ft) are in minor flood. The Kalu at Kalawellawa (Millakanda) (20.7 ft) has reached alert level. 2 more rivers at alert level on waterlevels.lk. Near these rivers? Move valuables up. Emergency: 117.\n#lka";
+  assert.ok(tweetLength(refused) > MAX_TWEET, "the post X refused counts as over 280");
+  assert.equal(tweetLength("on waterlevels.lk."), 3 + 23 + 1, "bare domain = 23, the full stop after it stays");
+  assert.equal(tweetLength("see dmc.gov.lk/en/x now"), 4 + 23 + 4, "bare domain with a path");
+  assert.equal(tweetLength("2.5 ft at 4.40 pm, e.g. 117."), 28, "numbers and abbreviations are not links");
+  assert.equal(tweetLength("mail@site.lk"), 12, "an address is not a link");
+}
 assert.equal(tweetLength("😀"), 2);
 assert.deepEqual(numbersIn("1,200 cusecs at 2:30 pm, 8.2 ft https://x.com/a1/b2"), [1200, 2, 30, 8.2]);
 

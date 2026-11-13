@@ -30,9 +30,14 @@ export const ALWAYS_OK_NUMBERS = [117];
 
 const URL_RE = /https?:\/\/[^\s]+/g;
 
-/** Length the way X counts it (twitter-text v3): a link = 23, characters in the Latin/Sinhala/Tamil ranges = 1, CJK and emoji = 2. */
+// A domain written without https:// ("waterlevels.lk", "dmc.gov.lk/x") is ALSO turned into a t.co link by X and counted as 23.
+// Found 12-13 Nov 2026: posts of 276-278 characters by the old count, each with a bare "waterlevels.lk" (14 characters), were refused
+// as "longer than 280"; every accepted post with that bare domain was at most 271 (271 + 23 - 14 = 280).
+const BARE_DOMAIN_RE = /(?<![\w@.\/-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:lk|com|org|net|gov|info|io|co|edu|int|news)(?:\/[^\s]*)?(?![\w-])/gi;
+
+/** Length the way X counts it (twitter-text v3): a link (with or without https://) = 23, Latin/Sinhala/Tamil = 1, CJK and emoji = 2. */
 export function tweetLength(text: string): number {
-  const t = text.normalize("NFC").replace(URL_RE, "x".repeat(TCO_LENGTH));
+  const t = text.normalize("NFC").replace(URL_RE, "x".repeat(TCO_LENGTH)).replace(BARE_DOMAIN_RE, (m) => "x".repeat(TCO_LENGTH) + (/[.,;:!?]$/.test(m) ? m.slice(-1) : ""));
   let n = 0;
   for (const ch of t) {
     const c = ch.codePointAt(0)!;
