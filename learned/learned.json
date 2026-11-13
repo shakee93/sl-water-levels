@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-12T23:54:51.100Z",
-  "asOf": "2026-11-13",
+  "updatedAt": "2026-11-13T18:51:08.047Z",
+  "asOf": "2026-11-14",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 258,
-    "feedback": 221,
+    "total": 261,
+    "feedback": 224,
     "street": 25,
     "flood3d": 12,
-    "newTonight": 4,
-    "trusted": 12,
+    "newTonight": 3,
+    "trusted": 13,
     "flagged": 0
   },
   "streetLevel": {
@@ -19,15 +19,15 @@
       "days": 5,
       "defaultFt": 5,
       "clamped": true,
-      "dryBelowN": 6
+      "dryBelowN": 7
     }
   },
   "groundRain": {
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 545,
-      "stepDays": 17,
+      "steps": 572,
+      "stepDays": 18,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -35,8 +35,8 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 547,
-      "stepDays": 17,
+      "steps": 574,
+      "stepDays": 18,
       "events": 7,
       "eventDays": 5,
       "metrics": {
@@ -123,8 +123,8 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 545,
-      "stepDays": 17,
+      "steps": 572,
+      "stepDays": 18,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -132,8 +132,8 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 545,
-      "stepDays": 17,
+      "steps": 572,
+      "stepDays": 18,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -141,8 +141,8 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 545,
-      "stepDays": 17,
+      "steps": 572,
+      "stepDays": 18,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -150,8 +150,8 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 545,
-      "stepDays": 17,
+      "steps": 572,
+      "stepDays": 18,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -159,34 +159,34 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-04",
+      "from": "2026-11-05",
       "to": "2026-11-13",
-      "points": 15004
+      "points": 15020
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4492,
-          "maeBase": 0.22,
-          "maeFit": 0.21,
+          "n": 5015,
+          "maeBase": 0.21,
+          "maeFit": 0.2,
           "gainPct": 1,
-          "maePooled": 0.22,
+          "maePooled": 0.21,
           "pooledGainPct": -2
         },
         "3": {
-          "n": 4442,
-          "maeBase": 0.58,
-          "maeFit": 0.57,
-          "gainPct": 1,
-          "maePooled": 0.58,
-          "pooledGainPct": 0
+          "n": 4964,
+          "maeBase": 0.54,
+          "maeFit": 0.54,
+          "gainPct": 0,
+          "maePooled": 0.55,
+          "pooledGainPct": -1
         },
         "6": {
-          "n": 4982,
+          "n": 4859,
           "maeBase": 1,
           "maeFit": 1,
-          "gainPct": 1,
-          "maePooled": 1,
+          "gainPct": 0,
+          "maePooled": 1.01,
           "pooledGainPct": 0
         }
       },
@@ -254,9 +254,9 @@
       "due": false
     },
     "Kelaniya": {
-      "trusted": 6,
-      "newTrusted": 6,
-      "newPeople": 5,
+      "trusted": 7,
+      "newTrusted": 7,
+      "newPeople": 6,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -339,9 +339,9 @@
     {
       "kind": "map",
       "name": "Kelaniya",
-      "have": 6,
+      "have": 7,
       "need": 10,
-      "missing": 4
+      "missing": 3
     },
     {
       "kind": "streetLevel",

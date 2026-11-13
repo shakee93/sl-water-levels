@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-12T23:54:51.100Z",
-  "asOf": "2026-11-13",
+  "updatedAt": "2026-11-13T18:51:08.047Z",
+  "asOf": "2026-11-14",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 208,
-    "people": 203,
+    "answers": 212,
+    "people": 207,
     "streetReports": 18,
-    "days": 18
+    "days": 19
   },
   "stations": {
     "Badalgama": {
@@ -55,9 +55,9 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 54,
-        "days": 12,
-        "yes": 33,
+        "n": 55,
+        "days": 13,
+        "yes": 34,
         "worse": 8,
         "better": 2,
         "unsure": 11
@@ -78,9 +78,9 @@
         "meanErrFt": 1.57
       },
       "falling": {
-        "n": 18,
-        "days": 8,
-        "yes": 14,
+        "n": 19,
+        "days": 9,
+        "yes": 15,
         "worse": 3,
         "better": 1,
         "errN": 7,
@@ -115,16 +115,16 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 53,
-        "days": 16,
+        "n": 55,
+        "days": 17,
         "yes": 19,
-        "worse": 23,
+        "worse": 25,
         "better": 4,
         "unsure": 7
       },
       "seen": {
-        "n": 9,
-        "higher": 7,
+        "n": 10,
+        "higher": 8,
         "same": 2,
         "lower": 0
       },
@@ -138,13 +138,13 @@
         "meanErrFt": -0.06
       },
       "falling": {
-        "n": 23,
-        "days": 12,
+        "n": 24,
+        "days": 13,
         "yes": 10,
-        "worse": 12,
+        "worse": 13,
         "better": 1,
-        "errN": 13,
-        "meanErrFt": -0.1
+        "errN": 14,
+        "meanErrFt": -0.13
       },
       "streetLevel": {
         "ft": 3,
@@ -152,7 +152,7 @@
         "days": 5,
         "defaultFt": 5,
         "clamped": true,
-        "dryBelowN": 6
+        "dryBelowN": 7
       }
     },
     "Norwood": {
@@ -558,6 +558,16 @@
         "errN": 1,
         "meanErrFt": -0.28
       }
+    },
+    "Baddegama": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 0,
+        "better": 0,
+        "unsure": 1
+      }
     }
   },
   "zones": {},
@@ -700,33 +710,33 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-11-04",
+      "from": "2026-11-05",
       "to": "2026-11-13",
-      "points": 15004
+      "points": 15020
     },
     "horizons": {
       "1": {
-        "n": 4492,
-        "maeBase": 0.22,
-        "maeFit": 0.21,
+        "n": 5015,
+        "maeBase": 0.21,
+        "maeFit": 0.2,
         "gainPct": 1,
-        "maePooled": 0.22,
+        "maePooled": 0.21,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 4442,
-        "maeBase": 0.58,
-        "maeFit": 0.57,
-        "gainPct": 1,
-        "maePooled": 0.58,
-        "pooledGainPct": 0
+        "n": 4964,
+        "maeBase": 0.54,
+        "maeFit": 0.54,
+        "gainPct": 0,
+        "maePooled": 0.55,
+        "pooledGainPct": -1
       },
       "6": {
-        "n": 4982,
+        "n": 4859,
         "maeBase": 1,
         "maeFit": 1,
-        "gainPct": 1,
-        "maePooled": 1,
+        "gainPct": 0,
+        "maePooled": 1.01,
         "pooledGainPct": 0
       }
     },
