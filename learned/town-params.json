@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T18:51:08.047Z",
+  "updatedAt": "2026-11-13T23:57:14.447Z",
   "asOf": "2026-11-14",
   "minimums": {
     "answers": 3,
@@ -83,8 +83,8 @@
         "yes": 15,
         "worse": 3,
         "better": 1,
-        "errN": 7,
-        "meanErrFt": 0.1
+        "errN": 8,
+        "meanErrFt": 0.09
       }
     },
     "Holombuwa": {
@@ -711,36 +711,36 @@
   "forecast": {
     "window": {
       "from": "2026-11-05",
-      "to": "2026-11-13",
-      "points": 15020
+      "to": "2026-11-14",
+      "points": 15042
     },
     "horizons": {
       "1": {
-        "n": 5015,
+        "n": 4508,
         "maeBase": 0.21,
-        "maeFit": 0.2,
+        "maeFit": 0.21,
         "gainPct": 1,
-        "maePooled": 0.21,
-        "pooledGainPct": -2
+        "maePooled": 0.22,
+        "pooledGainPct": -3
       },
       "3": {
-        "n": 4964,
-        "maeBase": 0.54,
-        "maeFit": 0.54,
+        "n": 4460,
+        "maeBase": 0.55,
+        "maeFit": 0.55,
         "gainPct": 0,
         "maePooled": 0.55,
-        "pooledGainPct": -1
+        "pooledGainPct": 0
       },
       "6": {
-        "n": 4859,
-        "maeBase": 1,
-        "maeFit": 1,
+        "n": 4984,
+        "maeBase": 0.98,
+        "maeFit": 0.98,
         "gainPct": 0,
-        "maePooled": 1.01,
+        "maePooled": 0.98,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 5,
+    "gaugesPassingOwnTest": 4,
     "useful": false,
     "wired": false
   }
