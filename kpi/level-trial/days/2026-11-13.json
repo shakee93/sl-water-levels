@@ -1,0 +1,108 @@
+{
+ "schema": "slwl-level-trial/report@1/day",
+ "day": "2026-11-13",
+ "generatedAt": "2026-11-13T20:11:52.454Z",
+ "coverage": {
+  "liveRuns": 668,
+  "withTrial": 589,
+  "withDegraded": 79,
+  "sharePct": 88.2
+ },
+ "pooled": {
+  "h1": {
+   "n": 569,
+   "trialSkillPct": 30.5,
+   "liveSkillPct": 25.1,
+   "diffPts": 5.4
+  },
+  "h3": {
+   "n": 527,
+   "trialSkillPct": 43.9,
+   "liveSkillPct": 37.6,
+   "diffPts": 6.3
+  },
+  "h6": {
+   "n": 452,
+   "trialSkillPct": 53.2,
+   "liveSkillPct": 38.5,
+   "diffPts": 14.7
+  },
+  "h12": {
+   "n": 191,
+   "trialSkillPct": 53.9,
+   "liveSkillPct": 44,
+   "diffPts": 9.9
+  },
+  "h24": {
+   "n": 15,
+   "trialSkillPct": 62.2,
+   "liveSkillPct": 44.4,
+   "diffPts": 17.9
+  }
+ },
+ "log": {
+  "runs": 668,
+  "byVerdict": {
+   "ok": 589,
+   "degraded": 79
+  },
+  "reasons": {},
+  "degradedFlags": {
+   "own_lags_missing": 54,
+   "partner_lags_missing": 25,
+   "partner_stale": 6
+  },
+  "history": {
+   "checked": 668,
+   "complete": 644,
+   "incomplete": 24
+  },
+  "lagHours": {
+   "0": 9,
+   "1": 659
+  },
+  "ageMin": {
+   "<=30": 193,
+   "<=60": 208,
+   "<=15": 161,
+   "<=120": 104,
+   ">120": 2
+  }
+ },
+ "rain": {
+  "gauges": 28,
+  "thresholdMm": 10,
+  "thresholdGauges": 5,
+  "rainDay": true,
+  "names": [
+   "Badalgama",
+   "Baddegama",
+   "Deraniyagala",
+   "Ellagawa",
+   "Glencourse",
+   "Hanwella",
+   "Holombuwa",
+   "Horowpothana",
+   "Kithulgala",
+   "Kuda Oya",
+   "Magura",
+   "Manampitiya",
+   "Moragaswewa",
+   "Moraketiya",
+   "Nagalagam Street",
+   "Nawalapitiya",
+   "Norwood",
+   "Padiyathalawa",
+   "Panadugama",
+   "Peradeniya",
+   "Pitabeddara",
+   "Rathnapura",
+   "Thaldena",
+   "Thalgahagoda",
+   "Thanamalwila",
+   "Thawalama",
+   "Urawa",
+   "Wellawaya"
+  ]
+ }
+}

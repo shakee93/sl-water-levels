@@ -1,0 +1,162 @@
+{
+ "day": "2026-10-22",
+ "final": true,
+ "edge": true,
+ "sources": {
+  "runs": 2,
+  "shownArchive": 0,
+  "shownRecomputed": 6,
+  "chancePModel": 0,
+  "chanceProbability": 6
+ },
+ "notice": {
+  "hours": {
+   "Thawalama|alert": {
+    "5": 1.163
+   }
+  },
+  "floods": [
+   {
+    "s": "Moragaswewa",
+    "k": "alert",
+    "cls": "big",
+    "ts": 1792676035000,
+    "st": "missed",
+    "z": null
+   }
+  ]
+ },
+ "p1": {
+  "big": {
+   "1": {
+    "alert": [
+     1,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "3": {
+    "alert": [
+     1,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "6": {
+    "alert": [
+     1,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   "12": {
+    "alert": [
+     1,
+     0,
+     1,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ "p2": {
+  "big": {
+   "warn": 0,
+   "wrong": 0,
+   "unknown": 0,
+   "gauges": []
+  },
+  "fast": {
+   "warn": 0,
+   "wrong": 0,
+   "unknown": 0,
+   "gauges": [
+    "Deraniyagala",
+    "Thawalama"
+   ]
+  },
+  "tidal": {
+   "warn": 0,
+   "wrong": 0,
+   "unknown": 0,
+   "gauges": []
+  }
+ },
+ "p3": {
+  "alert": {
+   "tiers": {
+    "<1in10": [
+     2,
+     0.05,
+     0
+    ]
+   },
+   "atLimit": [
+    0,
+    0
+   ]
+  },
+  "minor": {
+   "tiers": {
+    "<1in10": [
+     2,
+     0,
+     0
+    ]
+   },
+   "atLimit": [
+    0,
+    0
+   ]
+  },
+  "major": {
+   "tiers": {
+    "<1in10": [
+     2,
+     0,
+     0
+    ]
+   },
+   "atLimit": [
+    0,
+    0
+   ]
+  }
+ },
+ "nh": {
+  "hours": 2,
+  "fast": 0,
+  "fastRising": 0,
+  "rising": 1,
+  "risingRight": 0,
+  "still": 2,
+  "stillRising": 1,
+  "archiveWords": 0,
+  "rebuiltWords": 2,
+  "catch": {
+   "Deraniyagala": {
+    "-39": [
+     1,
+     0
+    ]
+   },
+   "Thawalama": {
+    "34": [
+     1,
+     0
+    ]
+   }
+  }
+ },
+ "kpiSpec": 3,
+ "generatedAt": "2026-11-13T20:11:42.372Z",
+ "codeSha": "efecf7409426e8422afe1f98deb87401bc75a8fd",
+ "versionsHash": "16c87e3fa8acc553"
+}
