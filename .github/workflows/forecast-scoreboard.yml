@@ -81,7 +81,7 @@ jobs:
         run: |
           node scripts/forecast-kpi.mjs archive | tee kpi.txt
           { echo '### Forecast KPIs'; echo '```'; cat kpi.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-      - name: Level-model trial report (hidden trial, measures only; last and isolated: it cannot fail this job)
+      - name: "Level-model trial report (hidden trial, measures only; last and isolated: it cannot fail this job)" # quoted: a colon inside an unquoted name made this whole file invalid (12 Nov 2026)
         # scripts/level-trial-report.mjs -> kpi/level-trial/latest.json + days/YYYY-MM-DD.json (committed below). Catches every error itself, ends after its own
         # 90 s timer, and `continue-on-error` + the step timeout are two more guards: the archive and the KPIs above are already written when it starts.
         continue-on-error: true
