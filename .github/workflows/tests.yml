@@ -33,6 +33,21 @@ jobs:
         with:
           node-version: 22
 
+      # Every workflow file must parse. On 12 Nov 2026 an unquoted colon in a step name made forecast-scoreboard.yml invalid:
+      # GitHub refused the file, the nightly archive and KPIs silently did not run, and no test noticed. Ruby (Psych) is on the
+      # runner image; this needs no install. It runs before the tests and fails the job (and tells Slack) on any bad file.
+      - name: Check every workflow file parses
+        run: |
+          bad=0
+          for f in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$f" ] || continue
+            if ! ruby -ryaml -e 'y = YAML.load_file(ARGV[0]); abort "no jobs" unless y.is_a?(Hash) && y["jobs"].is_a?(Hash); abort "no trigger" unless y.key?("on") || y.key?(true)' "$f" 2>err.txt; then
+              echo "::error file=$f::workflow file does not parse: $(tail -1 err.txt)"; bad=$((bad+1))
+            fi
+          done
+          echo "workflow files checked, $bad bad"
+          [ "$bad" = 0 ]
+
       - name: Run every test
         id: run
         env:
