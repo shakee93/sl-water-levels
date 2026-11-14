@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-14T18:51:05.290Z",
+  "updatedAt": "2026-11-14T22:46:50.086Z",
   "asOf": "2026-11-15",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
@@ -8,7 +8,7 @@
     "feedback": 227,
     "street": 26,
     "flood3d": 13,
-    "newTonight": 1,
+    "newTonight": 0,
     "trusted": 13,
     "flagged": 0
   },
@@ -26,8 +26,8 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 611,
-      "stepDays": 18,
+      "steps": 618,
+      "stepDays": 19,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -35,8 +35,8 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 613,
-      "stepDays": 18,
+      "steps": 620,
+      "stepDays": 19,
       "events": 7,
       "eventDays": 5,
       "metrics": {
@@ -123,8 +123,8 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 611,
-      "stepDays": 18,
+      "steps": 618,
+      "stepDays": 19,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -132,8 +132,8 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 611,
-      "stepDays": 18,
+      "steps": 618,
+      "stepDays": 19,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -141,8 +141,8 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 611,
-      "stepDays": 18,
+      "steps": 618,
+      "stepDays": 19,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -150,8 +150,8 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 611,
-      "stepDays": 18,
+      "steps": 618,
+      "stepDays": 19,
       "events": 0,
       "eventDays": 0,
       "pending": "needs 3 independent street-water reports on 2 days (has 0 on 0)"
@@ -160,37 +160,37 @@
   "forecast": {
     "window": {
       "from": "2026-11-06",
-      "to": "2026-11-14",
-      "points": 15087
+      "to": "2026-11-15",
+      "points": 15128
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 5039,
-          "maeBase": 0.19,
-          "maeFit": 0.19,
-          "gainPct": 0,
-          "maePooled": 0.2,
-          "pooledGainPct": -3
+          "n": 4502,
+          "maeBase": 0.18,
+          "maeFit": 0.18,
+          "gainPct": 1,
+          "maePooled": 0.19,
+          "pooledGainPct": -4
         },
         "3": {
-          "n": 4988,
-          "maeBase": 0.51,
-          "maeFit": 0.51,
+          "n": 4460,
+          "maeBase": 0.49,
+          "maeFit": 0.49,
           "gainPct": 0,
-          "maePooled": 0.51,
+          "maePooled": 0.49,
           "pooledGainPct": -1
         },
         "6": {
-          "n": 4886,
-          "maeBase": 0.93,
-          "maeFit": 0.93,
+          "n": 4996,
+          "maeBase": 0.92,
+          "maeFit": 0.92,
           "gainPct": 0,
-          "maePooled": 0.93,
+          "maePooled": 0.92,
           "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 3,
+      "gaugesPassingOwnTest": 6,
       "useful": false,
       "wired": false
     },
