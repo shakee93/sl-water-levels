@@ -653,15 +653,14 @@
   }
  ],
  "variants": {},
- "generatedAt": "2026-11-13T20:11:42.372Z",
- "nowUsed": "2026-11-13T20:11:42.372Z",
+ "generatedAt": "2026-11-14T20:11:47.042Z",
+ "nowUsed": "2026-11-14T20:11:47.042Z",
  "codeSha": "efecf7409426e8422afe1f98deb87401bc75a8fd",
  "kpiSpec": 1,
  "versionsHash": "16c87e3fa8acc553",
  "daysRequested": 30,
- "daysFound": 23,
+ "daysFound": 24,
  "daysMissing": [
-  "2026-10-15",
   "2026-10-16",
   "2026-10-17",
   "2026-10-18",
