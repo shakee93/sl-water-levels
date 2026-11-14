@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T23:57:14.447Z",
-  "asOf": "2026-11-14",
+  "updatedAt": "2026-11-14T18:51:05.290Z",
+  "asOf": "2026-11-15",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 265,
-    "feedback": 226,
+    "total": 266,
+    "feedback": 227,
     "street": 26,
     "flood3d": 13,
-    "newTonight": 4,
+    "newTonight": 1,
     "trusted": 13,
     "flagged": 0
   },
@@ -26,7 +26,7 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 579,
+      "steps": 611,
       "stepDays": 18,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 581,
+      "steps": 613,
       "stepDays": 18,
       "events": 7,
       "eventDays": 5,
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 579,
+      "steps": 611,
       "stepDays": 18,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 579,
+      "steps": 611,
       "stepDays": 18,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 579,
+      "steps": 611,
       "stepDays": 18,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 579,
+      "steps": 611,
       "stepDays": 18,
       "events": 0,
       "eventDays": 0,
@@ -159,38 +159,38 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-05",
+      "from": "2026-11-06",
       "to": "2026-11-14",
-      "points": 15042
+      "points": 15087
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4508,
-          "maeBase": 0.21,
-          "maeFit": 0.21,
-          "gainPct": 1,
-          "maePooled": 0.22,
+          "n": 5039,
+          "maeBase": 0.19,
+          "maeFit": 0.19,
+          "gainPct": 0,
+          "maePooled": 0.2,
           "pooledGainPct": -3
         },
         "3": {
-          "n": 4460,
-          "maeBase": 0.55,
-          "maeFit": 0.55,
+          "n": 4988,
+          "maeBase": 0.51,
+          "maeFit": 0.51,
           "gainPct": 0,
-          "maePooled": 0.55,
-          "pooledGainPct": 0
+          "maePooled": 0.51,
+          "pooledGainPct": -1
         },
         "6": {
-          "n": 4984,
-          "maeBase": 0.98,
-          "maeFit": 0.98,
+          "n": 4886,
+          "maeBase": 0.93,
+          "maeFit": 0.93,
           "gainPct": 0,
-          "maePooled": 0.98,
+          "maePooled": 0.93,
           "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 4,
+      "gaugesPassingOwnTest": 3,
       "useful": false,
       "wired": false
     },
