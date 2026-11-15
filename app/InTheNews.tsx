@@ -20,7 +20,6 @@ export async function InTheNews({ lang, basin, reservoir }: { lang: Locale; basi
       <h2 id="in-news" className="flex items-center gap-2 text-base font-semibold tracking-tight">
         <Newspaper className="size-4 text-slate-500 dark:text-slate-400" aria-hidden />
         {nw("inNews")}
-        <span className="text-xs font-normal text-slate-500 dark:text-slate-400">{nw("inNewsNote")}</span>
       </h2>
       <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         {rows.map((r) => (

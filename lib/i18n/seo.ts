@@ -280,9 +280,9 @@ export const SEO = {
   "rain.h1": { en: "Rain map of Sri Lanka, today", si: "අද ශ්‍රී ලංකා වැසි සිතියම", ta: "இன்று இலங்கை மழை வரைபடம்" },
   "news.title": { en: "Flood News Sri Lanka Today – Rivers, Rain, Dams", si: "අද ශ්‍රී ලංකා ගංවතුර පුවත් – නවතම වාර්තා", ta: "இன்று இலங்கை வெள்ளச் செய்திகள் – சமீபத்திய அறிக்கைகள்" },
   "news.desc": {
-    en: "Latest news on floods, river levels, spill gates, heavy rain and landslides in Sri Lanka, last 7 days. News reports, not official warnings.",
-    si: "ගිය දින 7 තුළ ශ්‍රී ලංකාවේ ගංවතුර, ගංගා ජල මට්ටම්, වාන් දොරටු, තද වැසි සහ නායයෑම් පිළිබඳ නවතම පුවත් වාර්තා. පුවත් වාර්තා පමණි, නිල අනතුරු ඇඟවීම් නොවේ.",
-    ta: "கடந்த 7 நாட்களில் இலங்கையில் வெள்ளம், ஆற்று நீர்மட்டம், வான்கதவுகள், கனமழை, நிலச்சரிவு பற்றிய சமீபத்திய செய்தி அறிக்கைகள். செய்தி அறிக்கைகள் மட்டுமே, அதிகாரப்பூர்வ எச்சரிக்கைகள் அல்ல.",
+    en: "Latest news on floods, river levels, spill gates, heavy rain and landslides in Sri Lanka, last 7 days.",
+    si: "ගිය දින 7 තුළ ශ්‍රී ලංකාවේ ගංවතුර, ගංගා ජල මට්ටම්, වාන් දොරටු, තද වැසි සහ නායයෑම් පිළිබඳ නවතම පුවත් වාර්තා.",
+    ta: "கடந்த 7 நாட்களில் இலங்கையில் வெள்ளம், ஆற்று நீர்மட்டம், வான்கதவுகள், கனமழை, நிலச்சரிவு பற்றிய சமீபத்திய செய்தி அறிக்கைகள்.",
   },
   "news.h1": { en: "Flood news Sri Lanka today", si: "අද ශ්‍රී ලංකා ගංවතුර පුවත්", ta: "இன்று இலங்கை வெள்ளச் செய்திகள்" },
   "help.title": { en: "Flood Help Sri Lanka – 117 Hotline & What To Do", si: "ශ්‍රී ලංකා ගංවතුර උදව්: 117 හදිසි අංකය", ta: "இலங்கை வெள்ள உதவி: 117 அவசர எண்" },

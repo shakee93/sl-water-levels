@@ -26,7 +26,6 @@ export async function NewsCard({ lang }: { lang: Locale }) {
               <Newspaper className="size-4 text-slate-500 dark:text-slate-400" aria-hidden />
               {nw("homeTitle")}
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{nw("notice")}</p>
           </div>
           <Link
             href={p("/news")}

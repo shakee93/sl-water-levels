@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { ogBase } from "@/lib/seoMeta";
 import { seoFor } from "@/lib/i18n/seo";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { getNews, nowMs } from "@/lib/news";
 import { NEWS_TAGS, type NewsTag } from "@/lib/newsClassify";
 import { JsonLd } from "@/app/Answer";
@@ -52,10 +52,6 @@ export default async function NewsPage({ params }: { params: Promise<{ lang: str
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{seoFor(lang)("news.h1")}</h1>
           <p className="mt-1.5 text-sm text-slate-700 dark:text-slate-300">{nw("lead")}</p>
         </header>
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-300" role="note">
-          <Info className="size-4 mt-0.5 shrink-0 text-slate-500" aria-hidden />
-          <p>{nw("notice")}</p>
-        </div>
         <Suspense fallback={<div className="h-64 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 animate-pulse" aria-hidden />}>
           <NewsList lang={lang} />
         </Suspense>

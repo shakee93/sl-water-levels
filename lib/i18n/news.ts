@@ -10,7 +10,7 @@ const en = {
   lead: "Recent news reports about floods, rivers, reservoirs, heavy rain, cyclones and landslides in Sri Lanka, from Newswire and other Sri Lankan outlets.",
   notice: "News reports, not official. For warnings check the Disaster Management Centre (hotline 117) and the Irrigation Department.",
   metaTitle: "Flood news Sri Lanka: latest reports on floods, rain, rivers and reservoirs",
-  metaDesc: "Links to the latest news reports on floods, river levels, spill gates, heavy rain, cyclones and landslides in Sri Lanka from the last 7 days. News reports, not official warnings.",
+  metaDesc: "Links to the latest news reports on floods, river levels, spill gates, heavy rain, cyclones and landslides in Sri Lanka from the last 7 days.",
   all: "All",
   filters: "Filter by topic",
   count: "{n} reports in the last 7 days",
@@ -44,7 +44,7 @@ const si: Record<K, string> = {
   lead: "ශ්‍රී ලංකාවේ ගංවතුර, ගංගා, ජලාශ, තද වැසි, සුළි සුළං සහ නායයෑම් පිළිබඳ මෑත පුවත් වාර්තා.", // needs native review
   notice: "මේවා පුවත් වාර්තා මිස නිල තොරතුරු නොවේ. අනතුරු ඇඟවීම් සඳහා ආපදා කළමනාකරණ මධ්‍යස්ථානය (ඇමතුම් 117) සහ වාරිමාර්ග දෙපාර්තමේන්තුව පරීක්ෂා කරන්න.", // needs native review
   metaTitle: "ශ්‍රී ලංකා ගංවතුර පුවත්: ගංවතුර, වැසි, ගංගා සහ ජලාශ පිළිබඳ නවතම වාර්තා", // needs native review
-  metaDesc: "ගිය දින 7 තුළ ශ්‍රී ලංකාවේ ගංවතුර, ගංගා ජල මට්ටම්, වාන් දොරටු, තද වැසි, සුළි සුළං සහ නායයෑම් පිළිබඳ නවතම පුවත් වාර්තා වෙත සබැඳි. පුවත් වාර්තා මිස නිල අනතුරු ඇඟවීම් නොවේ.", // needs native review
+  metaDesc: "ගිය දින 7 තුළ ශ්‍රී ලංකාවේ ගංවතුර, ගංගා ජල මට්ටම්, වාන් දොරටු, තද වැසි, සුළි සුළං සහ නායයෑම් පිළිබඳ නවතම පුවත් වාර්තා වෙත සබැඳි.", // needs native review
   all: "සියල්ල", // needs native review
   filters: "මාතෘකාව අනුව පෙරන්න", // needs native review
   count: "ගිය දින 7 තුළ වාර්තා {n}", // needs native review
@@ -77,7 +77,7 @@ const ta: Record<K, string> = {
   lead: "இலங்கையில் வெள்ளம், ஆறுகள், நீர்த்தேக்கங்கள், கனமழை, சூறாவளி மற்றும் நிலச்சரிவு பற்றிய சமீபத்திய செய்தி அறிக்கைகள்.", // needs native review
   notice: "இவை செய்தி அறிக்கைகள், அதிகாரப்பூர்வமானவை அல்ல. எச்சரிக்கைகளுக்கு பேரிடர் முகாமைத்துவ நிலையம் (117) மற்றும் நீர்ப்பாசனத் திணைக்களத்தைப் பார்க்கவும்.", // needs native review
   metaTitle: "இலங்கை வெள்ளச் செய்திகள்: வெள்ளம், மழை, ஆறுகள், நீர்த்தேக்கங்கள் பற்றிய சமீபத்திய அறிக்கைகள்", // needs native review
-  metaDesc: "கடந்த 7 நாட்களில் இலங்கையில் வெள்ளம், ஆற்று நீர்மட்டம், வான்கதவுகள், கனமழை, சூறாவளி, நிலச்சரிவு பற்றிய செய்தி அறிக்கைகளுக்கான இணைப்புகள். செய்தி அறிக்கைகள், அதிகாரப்பூர்வ எச்சரிக்கைகள் அல்ல.", // needs native review
+  metaDesc: "கடந்த 7 நாட்களில் இலங்கையில் வெள்ளம், ஆற்று நீர்மட்டம், வான்கதவுகள், கனமழை, சூறாவளி, நிலச்சரிவு பற்றிய செய்தி அறிக்கைகளுக்கான இணைப்புகள்.", // needs native review
   all: "அனைத்தும்", // needs native review
   filters: "தலைப்பின்படி வடிகட்டு", // needs native review
   count: "கடந்த 7 நாட்களில் {n} அறிக்கைகள்", // needs native review
