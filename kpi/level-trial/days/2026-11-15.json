@@ -1,0 +1,91 @@
+{
+ "schema": "slwl-level-trial/report@1/day",
+ "day": "2026-11-15",
+ "generatedAt": "2026-11-15T20:11:58.044Z",
+ "coverage": {
+  "liveRuns": 670,
+  "withTrial": 594,
+  "withDegraded": 75,
+  "sharePct": 88.7
+ },
+ "pooled": {
+  "h1": {
+   "n": 575,
+   "trialSkillPct": 14.1,
+   "liveSkillPct": 16.5,
+   "diffPts": -2.5
+  },
+  "h3": {
+   "n": 530,
+   "trialSkillPct": 16.3,
+   "liveSkillPct": 24.3,
+   "diffPts": -7.9
+  },
+  "h6": {
+   "n": 453,
+   "trialSkillPct": 28.6,
+   "liveSkillPct": 30.2,
+   "diffPts": -1.6
+  },
+  "h12": {
+   "n": 208,
+   "trialSkillPct": 38.7,
+   "liveSkillPct": 27.7,
+   "diffPts": 11.1
+  },
+  "h24": {
+   "n": 17,
+   "trialSkillPct": 60.7,
+   "liveSkillPct": 25.7,
+   "diffPts": 35
+  }
+ },
+ "log": {
+  "runs": 670,
+  "byVerdict": {
+   "ok": 594,
+   "degraded": 75,
+   "refused": 1
+  },
+  "reasons": {
+   "refused:own_history_missing": 1
+  },
+  "degradedFlags": {
+   "own_lags_missing": 46,
+   "partner_lags_missing": 25,
+   "partner_stale": 7
+  },
+  "history": {
+   "checked": 670,
+   "complete": 644,
+   "incomplete": 26
+  },
+  "lagHours": {
+   "0": 65,
+   "1": 605
+  },
+  "ageMin": {
+   "<=30": 171,
+   "<=60": 317,
+   "<=15": 93,
+   "<=120": 88,
+   ">120": 1
+  }
+ },
+ "rain": {
+  "gauges": 8,
+  "thresholdMm": 10,
+  "thresholdGauges": 5,
+  "rainDay": true,
+  "names": [
+   "Dunamale",
+   "Horowpothana",
+   "Kuda Oya",
+   "Moragaswewa",
+   "Nawalapitiya",
+   "Peradeniya",
+   "Thaldena",
+   "Wellawaya"
+  ]
+ }
+}

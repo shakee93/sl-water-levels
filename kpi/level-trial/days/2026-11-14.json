@@ -1,7 +1,7 @@
 {
  "schema": "slwl-level-trial/report@1/day",
  "day": "2026-11-14",
- "generatedAt": "2026-11-14T20:11:57.777Z",
+ "generatedAt": "2026-11-15T20:11:58.015Z",
  "coverage": {
   "liveRuns": 670,
   "withTrial": 605,
@@ -16,28 +16,28 @@
    "diffPts": 3.3
   },
   "h3": {
-   "n": 541,
-   "trialSkillPct": 38.7,
-   "liveSkillPct": 33.1,
-   "diffPts": 5.5
+   "n": 592,
+   "trialSkillPct": 38.1,
+   "liveSkillPct": 33,
+   "diffPts": 5.1
   },
   "h6": {
-   "n": 459,
-   "trialSkillPct": 45.1,
-   "liveSkillPct": 35.3,
-   "diffPts": 9.7
+   "n": 589,
+   "trialSkillPct": 43.6,
+   "liveSkillPct": 35.9,
+   "diffPts": 7.7
   },
   "h12": {
-   "n": 198,
-   "trialSkillPct": 56.2,
-   "liveSkillPct": 37,
-   "diffPts": 19.1
+   "n": 391,
+   "trialSkillPct": 56.8,
+   "liveSkillPct": 37.5,
+   "diffPts": 19.3
   },
   "h24": {
-   "n": 17,
-   "trialSkillPct": 68.7,
-   "liveSkillPct": 54.7,
-   "diffPts": 14
+   "n": 392,
+   "trialSkillPct": 67.2,
+   "liveSkillPct": 36,
+   "diffPts": 31.2
   }
  },
  "log": {

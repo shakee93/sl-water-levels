@@ -1,6 +1,6 @@
 {
  "day": "2026-11-14",
- "final": false,
+ "final": true,
  "edge": false,
  "sources": {
   "runs": 668,
@@ -10,14 +10,57 @@
   "chanceProbability": 0
  },
  "notice": {
-  "hours": {},
+  "hours": {
+   "Moraketiya|alert": {
+    "7": 1.673,
+    "17": 2.878,
+    "25": 2.165
+   },
+   "Dunamale|alert": {
+    "7": 0.914,
+    "8": 2.057,
+    "9": 2.035,
+    "10": 0.979,
+    "11": 1.003,
+    "12": 1.01,
+    "13": 1.007,
+    "14": 0.999
+   },
+   "Panadugama|minor": {
+    "5": 1.766,
+    "7": 0.964,
+    "11": 0.273,
+    "13": 3.215,
+    "14": 0.975,
+    "15": 0.983,
+    "16": 1.04,
+    "17": 0.978,
+    "18": 0.926,
+    "34": 0.658,
+    "35": 1.229,
+    "49": 1.008
+   },
+   "Baddegama|minor": {
+    "7": 2.02,
+    "14": 1.137,
+    "17": 1.951,
+    "22": 2.08,
+    "25": 0.966,
+    "30": 0.959
+   },
+   "Baddegama|alert": {
+    "5": 0.882,
+    "6": 1.13,
+    "12": 0.984
+   }
+  },
   "floods": []
  },
  "p1": {},
  "p2": {
   "big": {
-   "warn": 0,
-   "wrong": 0,
+   "warn": 7,
+   "wrong": 7,
    "unknown": 0,
    "gauges": [
     "Badalgama",
@@ -40,8 +83,8 @@
    ]
   },
   "fast": {
-   "warn": 0,
-   "wrong": 0,
+   "warn": 2,
+   "wrong": 2,
    "unknown": 0,
    "gauges": [
     "Deraniyagala",
@@ -68,21 +111,59 @@
  },
  "p3": {
   "alert": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     578,
+     0.7,
+     0
+    ],
+    "2-4in10": [
+     2,
+     0.45,
+     0
+    ],
+    "1in10": [
+     11,
+     1.3,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "minor": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     613,
+     0.3,
+     0
+    ],
+    "1in10": [
+     5,
+     0.7,
+     0
+    ],
+    "2-4in10": [
+     6,
+     1.35,
+     0
+    ]
+   },
    "atLimit": [
-    0,
+    1,
     0
    ]
   },
   "major": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     647,
+     0,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
@@ -90,15 +171,15 @@
   }
  },
  "nh": {
-  "hours": 1183,
+  "hours": 1159,
   "fast": 9,
   "fastRising": 3,
   "rising": 106,
   "risingRight": 33,
-  "still": 1087,
+  "still": 1063,
   "stillRising": 73,
   "archiveWords": 581,
-  "rebuiltWords": 602,
+  "rebuiltWords": 578,
   "catch": {
    "Nakkala": {
     "-3": [
@@ -1524,12 +1605,6 @@
      0
     ]
    },
-   "Mullamunai Bridge": {
-    "0": [
-     24,
-     0
-    ]
-   },
    "Niriella Ganga (Elapatha)": {
     "3": [
      1,
@@ -2149,7 +2224,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-14T20:11:47.042Z",
- "codeSha": "efecf7409426e8422afe1f98deb87401bc75a8fd",
+ "generatedAt": "2026-11-15T20:11:45.031Z",
+ "codeSha": "900ea8e481b3528de1324e12286c3e815d69d466",
  "versionsHash": "16c87e3fa8acc553"
 }

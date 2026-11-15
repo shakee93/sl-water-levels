@@ -3587,15 +3587,14 @@
    }
   ]
  },
- "generatedAt": "2026-11-14T20:11:47.042Z",
- "nowUsed": "2026-11-14T20:11:47.042Z",
- "codeSha": "efecf7409426e8422afe1f98deb87401bc75a8fd",
+ "generatedAt": "2026-11-15T20:11:45.031Z",
+ "nowUsed": "2026-11-15T20:11:45.031Z",
+ "codeSha": "900ea8e481b3528de1324e12286c3e815d69d466",
  "kpiSpec": 1,
  "versionsHash": "16c87e3fa8acc553",
  "daysRequested": 30,
- "daysFound": 24,
+ "daysFound": 25,
  "daysMissing": [
-  "2026-10-16",
   "2026-10-17",
   "2026-10-18",
   "2026-10-19",
