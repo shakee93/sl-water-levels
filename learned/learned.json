@@ -1,32 +1,23 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-14T22:46:50.086Z",
-  "asOf": "2026-11-15",
+  "updatedAt": "2026-11-15T18:51:09.202Z",
+  "asOf": "2026-11-16",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 266,
-    "feedback": 227,
+    "total": 270,
+    "feedback": 231,
     "street": 26,
     "flood3d": 13,
-    "newTonight": 0,
+    "newTonight": 4,
     "trusted": 13,
     "flagged": 0
   },
-  "streetLevel": {
-    "Nagalagam Street": {
-      "ft": 3,
-      "n": 6,
-      "days": 5,
-      "defaultFt": 5,
-      "clamped": true,
-      "dryBelowN": 7
-    }
-  },
+  "streetLevel": {},
   "groundRain": {
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 618,
+      "steps": 648,
       "stepDays": 19,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +26,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 620,
+      "steps": 650,
       "stepDays": 19,
       "events": 7,
       "eventDays": 5,
@@ -123,7 +114,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 618,
+      "steps": 648,
       "stepDays": 19,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +123,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 618,
+      "steps": 648,
       "stepDays": 19,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +132,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 618,
+      "steps": 648,
       "stepDays": 19,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +141,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 618,
+      "steps": 648,
       "stepDays": 19,
       "events": 0,
       "eventDays": 0,
@@ -159,63 +150,63 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-06",
+      "from": "2026-11-07",
       "to": "2026-11-15",
-      "points": 15128
+      "points": 15121
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4502,
-          "maeBase": 0.18,
-          "maeFit": 0.18,
-          "gainPct": 1,
-          "maePooled": 0.19,
-          "pooledGainPct": -4
+          "n": 5048,
+          "maeBase": 0.17,
+          "maeFit": 0.17,
+          "gainPct": 0,
+          "maePooled": 0.17,
+          "pooledGainPct": 0
         },
         "3": {
-          "n": 4460,
-          "maeBase": 0.49,
-          "maeFit": 0.49,
+          "n": 5001,
+          "maeBase": 0.44,
+          "maeFit": 0.44,
           "gainPct": 0,
-          "maePooled": 0.49,
-          "pooledGainPct": -1
+          "maePooled": 0.45,
+          "pooledGainPct": 0
         },
         "6": {
-          "n": 4996,
-          "maeBase": 0.92,
-          "maeFit": 0.92,
+          "n": 4900,
+          "maeBase": 0.82,
+          "maeFit": 0.82,
           "gainPct": 0,
-          "maePooled": 0.92,
-          "pooledGainPct": 0
+          "maePooled": 0.83,
+          "pooledGainPct": -1
         }
       },
-      "gaugesPassingOwnTest": 6,
+      "gaugesPassingOwnTest": 3,
       "useful": false,
       "wired": false
     },
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 4,
-          "testN": 2,
-          "testDays": 2,
-          "maeBase": 0.08,
-          "maeFit": 0.08,
+          "rowsWithReports": 5,
+          "testN": 5,
+          "testDays": 4,
+          "maeBase": 0.06,
+          "maeFit": 0.06,
           "gainPct": 0,
           "beta": 0
         },
         "3": {
-          "rowsWithReports": 4,
-          "testN": 2,
-          "testDays": 2,
-          "maeBase": 0.11,
-          "maeFit": 0.11,
-          "gainPct": 0,
+          "rowsWithReports": 6,
+          "testN": 6,
+          "testDays": 4,
+          "maeBase": 0.09,
+          "maeFit": 0.09,
+          "gainPct": -1,
           "beta": 0
         }
       },
-      "reports": 13,
+      "reports": 14,
       "useful": false,
       "wired": false
     }
@@ -345,14 +336,14 @@
     },
     {
       "kind": "streetLevel",
-      "name": "Hanwella",
+      "name": "Moragaswewa",
       "have": 1,
       "need": 3,
       "missing": 2
     },
     {
       "kind": "streetLevel",
-      "name": "Moragaswewa",
+      "name": "Kalawellawa (Millakanda)",
       "have": 1,
       "need": 3,
       "missing": 2
