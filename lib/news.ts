@@ -2,7 +2,8 @@
 // landslides and weather closures in Sri Lanka, from Newswire (main) plus Ada Derana and Daily Mirror.
 //
 // What we keep of a story: its headline as published, the outlet, its time, a tag, a link, and at most
-// the first sentence of the feed's own description cut at 20 words. Never the article. News is a
+// the first sentence of the feed's own description cut at 20 words, and (owner decision 15 Nov 2026) the story's
+// cover image as a small linked thumbnail (lib/newsImage.ts). Never the article. News is a
 // report by someone else, never an official warning, and the pages say so.
 //
 // Newswire's feed holds only the newest ~20 stories (about half a day), so for the 7-day /news page
@@ -10,7 +11,8 @@
 // topic, cached 10 minutes together with the feeds.
 import { unstable_cache } from "next/cache";
 import { aiConfigured, decide } from "./openai";
-import { articleTimeCached, getFeeds, NEWSWIRE_UA, type Outlet, type OutletItem } from "./newsFeeds";
+import { articleImageCached, articleTimeCached, getFeeds, NEWSWIRE_UA, type Outlet, type OutletItem } from "./newsFeeds";
+import { wpImage } from "./newsImage";
 import { classifyNews, type NewsTag } from "./newsClassify";
 import { decodeEntities, plainText, snippetOf } from "./newsText";
 import { matchReservoir } from "./reservoirs";
@@ -32,6 +34,8 @@ export type NewsItem = {
   tag: NewsTag;
   /** First sentence of the feed's description, 20 words at most; null when there is none worth showing. */
   snippet: string | null;
+  /** Cover image: https, a listed host (lib/newsImage.ts), shown only through next/image as a small thumbnail; null when the story has none. */
+  image: string | null;
   /** Catalogue reservoir ids (lib/reservoirs.ts), river basins (trimmed gauge basin names) and town slugs named in the story. */
   reservoirs: string[];
   rivers: string[];
@@ -46,13 +50,15 @@ const DAY = 86_400_000;
 export const NEWS_DAYS = 7;
 const MAX_ITEMS = 150;
 const MAX_AI_PER_REFRESH = 8;
+/** Story pages read for an og:image per refresh (Ada Derana only; each is cached 30 days, so this is a ceiling, not a rate). */
+const MAX_IMAGE_PAGES_PER_REFRESH = 12;
 
 // ---------------------------------------------------------------- Newswire backfill (earlier days)
 
 const WP = "https://www.newswire.lk/wp-json/wp/v2/posts";
 const WP_QUERIES = ["flood", "rain", "reservoir", "spill gates", "landslide", "cyclone", "weather", "evacuat"];
 
-type WpPost = { link?: string; date_gmt?: string; title?: { rendered?: string }; excerpt?: { rendered?: string } };
+type WpPost = { link?: string; date_gmt?: string; title?: { rendered?: string }; excerpt?: { rendered?: string }; _embedded?: Record<string, unknown> };
 
 async function backfill(sinceMs: number): Promise<OutletItem[]> {
   const after = new Date(sinceMs).toISOString().slice(0, 19);
@@ -60,7 +66,7 @@ async function backfill(sinceMs: number): Promise<OutletItem[]> {
   await Promise.all(
     WP_QUERIES.map(async (q) => {
       try {
-        const url = `${WP}?search=${encodeURIComponent(q)}&per_page=40&after=${after}&orderby=date&_fields=link,date_gmt,title,excerpt`;
+        const url = `${WP}?search=${encodeURIComponent(q)}&per_page=40&after=${after}&orderby=date&_embed=wp:featuredmedia&_fields=link,date_gmt,title,excerpt,_embedded,_links`;
         const res = await fetch(url, { headers: { "User-Agent": NEWSWIRE_UA, Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(10_000) });
         if (!res.ok) return;
         const posts = (await res.json()) as WpPost[];
@@ -69,7 +75,7 @@ async function backfill(sinceMs: number): Promise<OutletItem[]> {
           const ms = Date.parse(`${p.date_gmt ?? ""}Z`);
           const title = plainText(p.title?.rendered ?? "");
           if (!link.startsWith("https://www.newswire.lk/") || !title || !Number.isFinite(ms)) continue;
-          out.push({ guid: link, link, title, desc: plainText(p.excerpt?.rendered ?? ""), pubMs: ms, outlet: "Newswire" });
+          out.push({ guid: link, link, title, desc: plainText(p.excerpt?.rendered ?? ""), pubMs: ms, outlet: "Newswire", image: wpImage(p) });
         }
       } catch {
         /* the feed alone is enough; the backfill only adds earlier days */
@@ -139,12 +145,18 @@ async function build(): Promise<NewsData> {
   const all = [...feeds.items, ...extra].sort((a, b) => rank(a.outlet) - rank(b.outlet));
   const seen = new Set<string>();
   const out: NewsItem[] = [];
+  const byKey = new Map<string, NewsItem>();
   let aiLeft = MAX_AI_PER_REFRESH;
 
   for (const it of all) {
     if (!it.title || !it.link) continue;
     const k = keyOf(it.title);
-    if (seen.has(k)) continue;
+    if (seen.has(k)) {
+      // the same story from the feed and the backfill: keep whichever has a picture
+      const dup = byKey.get(k);
+      if (dup && !dup.image && it.image) dup.image = it.image;
+      continue;
+    }
     const v = classifyNews({ title: it.title, desc: it.desc });
     if (v.kind === "no") continue;
     if (v.kind === "borderline") {
@@ -157,7 +169,7 @@ async function build(): Promise<NewsData> {
     const ms = it.pubMs ?? (await articleTimeCached(it.link).catch(() => null));
     if (ms == null || ms < since || ms - now > 3_600_000) continue;
     seen.add(k);
-    out.push({
+    const item: NewsItem = {
       id: k.slice(0, 48) + ms.toString(36),
       title: decodeEntities(it.title),
       url: it.link,
@@ -165,16 +177,29 @@ async function build(): Promise<NewsData> {
       publishedAt: ms,
       tag: v.tag,
       snippet: snippetOf(it.desc, it.title),
+      image: it.image ?? null,
       ...namesIn(it.title, it.desc),
       sure: v.kind === "yes",
-    });
+    };
+    out.push(item);
+    byKey.set(k, item);
   }
   out.sort((a, b) => b.publishedAt - a.publishedAt);
-  return { items: out.slice(0, MAX_ITEMS), errors: feeds.errors, fetchedAt: now };
+  const kept = out.slice(0, MAX_ITEMS);
+  // Ada Derana's feed has no picture: read the og:image of the newest stories' pages (capped, cached per story, a miss just means no thumbnail).
+  await Promise.all(
+    kept
+      .filter((i) => !i.image && i.source === "Ada Derana")
+      .slice(0, MAX_IMAGE_PAGES_PER_REFRESH)
+      .map(async (i) => {
+        i.image = await articleImageCached(i.url).catch(() => null);
+      }),
+  );
+  return { items: kept, errors: feeds.errors, fetchedAt: now };
 }
 
 /** Cached 10 minutes. Throws only when no feed can be read. */
-export const getNews = unstable_cache(build, ["news-board-v2"], { revalidate: 600 });
+export const getNews = unstable_cache(build, ["news-board-v3"], { revalidate: 600 });
 
 /** For page render: never throws, never waits more than 1.5 s (a slow refresh finishes in the background). */
 export async function getNewsSoon(ms = 1500): Promise<NewsData | null> {

@@ -1610,6 +1610,19 @@ announcements from the site (default on); and a "Send me a test alert" button.
 - Tests: `node --experimental-strip-types --no-warnings scripts/push-prefs.test.mts` (defaults, filtering, levels, quiet hours, all-clear, broadcast, stats)
   and `scripts/push.test.mts` (the whole sender).
 
+#### Flood news board: cover thumbnails
+
+Owner decision, 15 Nov 2026: every row of the Flood news list (home card, `/news`, "In the news" on river and reservoir pages, all one `NewsRow`) shows a
+small cover image beside the headline, linked to the article. This widens the earlier rule ("headline + link + 20-word first sentence"); we still keep no article text.
+- Source, from data already fetched: Newswire feed (`<img>` in the description, else `content:encoded`) and its WordPress backfill (`_embed=wp:featuredmedia`, the
+  medium file); Daily Mirror feed (`<image><url>`); Ada Derana's feed has no picture, so the story page's `og:image` is read for at most 12 stories per refresh
+  and cached 30 days per story.
+- `lib/newsImage.ts` accepts only https, no query, jpg/png/webp, on `www.newswire.lk`, the Daily Mirror object-storage host and `media.adaderanaenglish.lk`
+  (exact hosts and paths, also in `next.config.ts` `images.remotePatterns`; the test checks they agree), and drops tracking pixels, logos and anything declared under 100 px.
+- `app/NewsThumb.tsx`: `next/image`, 96x64, lazy, empty alt, never hotlinked raw. With no image, or if it fails to load, nothing is rendered and the row looks as before.
+- `/api/news` (push sender) does not carry the image. Tests: `node scripts/news.test.mts`.
+- If a new outlet host appears, add it in both places; an unlisted host simply gives no thumbnail.
+
 #### Flood news alert (opt-in, off by default)
 
 A switch in Alert settings, "Flood news: a notification when a new flood or water-release story is reported", with a choice of

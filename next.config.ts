@@ -30,7 +30,14 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: { "/api/story/**": ["./lib/story/fonts/**"] },
   images: {
     // Reservoir photos (app/ReservoirPhotos.tsx) are Wikimedia Commons thumbnails and nothing else.
-    remotePatterns: [{ protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/commons/**", search: "" }],
+    // News thumbnails (app/NewsThumb.tsx, owner decision 15 Nov 2026): the three outlets' own image hosts, exact; keep in step
+    // with NEWS_IMAGE_HOSTS in lib/newsImage.ts (scripts/news.test.mts checks it). No CSP img-src is set, so nothing else to open.
+    remotePatterns: [
+      { protocol: "https", hostname: "upload.wikimedia.org", pathname: "/wikipedia/commons/**", search: "" },
+      { protocol: "https", hostname: "www.newswire.lk", pathname: "/wp-content/uploads/**", search: "" },
+      { protocol: "https", hostname: "bmkltsly13vb.compat.objectstorage.ap-singapore-1.oraclecloud.com", pathname: "/cdn.sg.dailymirror.lk/assets/uploads/**", search: "" },
+      { protocol: "https", hostname: "media.adaderanaenglish.lk", pathname: "/articles/**", search: "" },
+    ],
   },
   async redirects() {
     return [

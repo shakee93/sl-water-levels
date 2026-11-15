@@ -4,6 +4,10 @@ import { classifyNews } from "../lib/newsClassify.ts";
 // @ts-expect-error explicit .ts extension for node
 import { snippetOf, SNIPPET_MAX_WORDS, plainText } from "../lib/newsText.ts";
 
+// @ts-expect-error explicit .ts extension for node
+import { cleanImageUrl, feedImage, wpImage, ogImage, NEWS_IMAGE_HOSTS } from "../lib/newsImage.ts";
+import { readFileSync } from "node:fs";
+
 let ok = 0;
 let bad = 0;
 const pass = (cond: boolean, label: string, extra = "") => {
@@ -74,6 +78,51 @@ pass(snippetOf("", "x") === null, "snippet: empty description gives none");
 const words = (x: string | null) => (x ?? "").replace(/…$/, "").split(" ").filter(Boolean).length;
 pass(words(snippetOf("word ".repeat(200).trim() + ".", "t")) <= SNIPPET_MAX_WORDS, "snippet: never more than 20 words, even with no sentence end");
 pass(plainText("<p>Sri Lanka&#8217;s &amp; <b>rain</b></p>") === "Sri Lanka’s & rain", "plainText: tags stripped, entities decoded");
+
+// ---- cover thumbnails (owner decision 15 Nov 2026): extraction per source, https only, junk dropped, missing image
+const NW = "https://www.newswire.lk/wp-content/uploads/2026/11/Zafran-News-6.jpeg";
+const DM = "https://bmkltsly13vb.compat.objectstorage.ap-singapore-1.oraclecloud.com/cdn.sg.dailymirror.lk/assets/uploads/image_2c3106dabe.jpg";
+const AD = "https://media.adaderanaenglish.lk/articles/251698/MediaFile_20261115_091424_660.jpg";
+// Newswire RSS: first <img> of the description (real shape, CDATA)
+const nwItem = `<item><title>T</title><description><![CDATA[<p><img width="640" height="400" src="${NW}" class="wp-post-image" alt="" srcset="${NW} 640w" /></p><p>Text</p>]]></description></item>`;
+pass(feedImage(nwItem) === NW, "image: Newswire feed, first <img> of the description");
+// Newswire: no image in the description, one in content:encoded
+pass(feedImage(`<item><description><![CDATA[<p>No picture</p>]]></description><content:encoded><![CDATA[<p><img src="${NW}" width="640" height="400"/></p>]]></content:encoded></item>`) === NW, "image: Newswire feed, falls back to content:encoded");
+// Daily Mirror: <image><url> (and single-quoted <img>)
+pass(feedImage(`<item><description><![CDATA[Text <img src='${DM}' />]]></description><image>\n<url>${DM}</url>\n</image></item>`) === DM, "image: Daily Mirror feed, <image><url>");
+pass(feedImage(`<item><description><![CDATA[Text <img src='${DM}' />]]></description></item>`) === DM, "image: Daily Mirror feed, single-quoted <img> in the description");
+// enclosure / media:content, and an enclosure that is not an image is skipped
+pass(feedImage(`<item><enclosure url="${NW}" type="image/jpeg" length="1"/></item>`) === NW, "image: enclosure");
+pass(feedImage(`<item><media:content url="${NW}" medium="image" width="640" height="400"/></item>`) === NW, "image: media:content");
+pass(feedImage(`<item><enclosure url="${NW}" type="audio/mpeg" length="1"/></item>`) === null, "image: a non-image enclosure is ignored");
+// Ada Derana: feed has none (a real item), the story page has og:image
+pass(feedImage("<item><title>Thundershowers</title><link>https://adaderana.lk/news/251698</link><description>Thundershowers</description></item>") === null, "image: Ada Derana feed item has none (missing image gives null)");
+pass(ogImage(`<head><meta property="og:image" content="${AD}"/><meta property="og:image:width" content="1280"/><meta name="twitter:image" content="${AD}"/></head>`) === AD, "image: Ada Derana story page og:image");
+pass(ogImage(`<head><meta name="twitter:image" content="${AD}"/></head>`) === AD, "image: story page falls back to twitter:image");
+pass(ogImage("<head><title>x</title></head>") === null, "image: story page without og:image gives null");
+// Newswire WordPress API: _embed=wp:featuredmedia
+const wpPost = { _embedded: { "wp:featuredmedia": [{ source_url: NW, media_details: { width: 1600, height: 1130, sizes: { medium: { source_url: "https://www.newswire.lk/wp-content/uploads/2026/11/Zafran-News-6-425x300.jpeg", width: 425, height: 300 } } } }] } };
+pass(wpImage(wpPost) === "https://www.newswire.lk/wp-content/uploads/2026/11/Zafran-News-6-425x300.jpeg", "image: WordPress API prefers the medium size");
+pass(wpImage({ _embedded: { "wp:featuredmedia": [{ source_url: NW }] } }) === NW, "image: WordPress API falls back to the original file");
+pass(wpImage({ _embedded: { "wp:featuredmedia": [{ code: "rest_forbidden" }] } }) === null && wpImage({}) === null && wpImage(null) === null, "image: WordPress post with no featured media gives null");
+// https only, listed hosts only
+pass(cleanImageUrl(NW.replace("https:", "http:")) === null, "image: http is rejected");
+pass(cleanImageUrl("data:image/png;base64,iVBORw0KGgo=") === null, "image: data: is rejected");
+pass(cleanImageUrl("//www.newswire.lk/wp-content/uploads/a.jpg") === null, "image: protocol-relative is rejected");
+pass(cleanImageUrl("https://evil.example/wp-content/uploads/a.jpg") === null, "image: an unlisted host is rejected");
+pass(cleanImageUrl("https://www.newswire.lk.evil.example/wp-content/uploads/a.jpg") === null, "image: a look-alike host is rejected");
+pass(cleanImageUrl("https://www.newswire.lk/other/a.jpg") === null, "image: a listed host outside its image path is rejected");
+pass(cleanImageUrl(NW + "?x=1") === null, "image: a query string is rejected (remotePatterns has none)");
+// tracking pixels and tiny icons
+pass(cleanImageUrl("https://www.newswire.lk/wp-content/uploads/2026/11/pixel.png") === null, "image: tracking pixel by name is rejected");
+pass(cleanImageUrl("https://www.newswire.lk/wp-content/uploads/2026/11/logo-white.png") === null, "image: logo is rejected");
+pass(cleanImageUrl(NW, 1, 1) === null && cleanImageUrl(NW, 64, 64) === null, "image: tiny declared size is rejected");
+pass(cleanImageUrl(NW, 640, 400) === NW && cleanImageUrl(NW) === NW, "image: a normal picture passes");
+pass(feedImage(`<item><description><![CDATA[<img src="https://www.newswire.lk/wp-content/uploads/2026/11/pixel.png" width="1" height="1"/><img src="${NW}" width="640" height="400"/>]]></description></item>`) === NW, "image: a pixel before the real picture is skipped");
+pass(feedImage("<item><description>no image at all</description></item>") === null, "image: item with no image gives null");
+// next.config.ts opens exactly the hosts the extractor accepts
+const cfg = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
+pass(NEWS_IMAGE_HOSTS.every((h: { hostname: string; pathPrefix: string }) => cfg.includes(`hostname: "${h.hostname}", pathname: "${h.pathPrefix}**"`)), "image: every listed host and path is in next.config.ts remotePatterns");
 
 console.log(`\n${ok} passed, ${bad} failed`);
 if (bad) process.exit(1);

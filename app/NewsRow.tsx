@@ -1,10 +1,11 @@
 import { Ban, CloudRain, Droplets, ExternalLink, Mountain, TriangleAlert, Waves, Wind } from "lucide-react";
 import Link from "next/link";
 import type { NewsTag } from "@/lib/newsClassify";
+import { NewsThumb } from "./NewsThumb";
 import { TimeAgo } from "./TimeAgo";
 
 // One news report: tag, outlet, time, the headline exactly as published (links out to the outlet), at most a
-// 20-word first sentence from the outlet's own feed, and links to the rivers / reservoirs / towns it names.
+// 20-word first sentence from the outlet's own feed, a small cover thumbnail beside it (linked to the article), and links to the rivers / reservoirs / towns it names.
 // Plain data in, so it renders in server components and in the client filter board alike.
 
 export type NewsRowData = {
@@ -16,6 +17,8 @@ export type NewsRowData = {
   tag: NewsTag;
   tagLabel: string;
   snippet: string | null;
+  /** Cover image URL (https, listed host) or null. */
+  image?: string | null;
   /** "26 Oct, 8:12 am", Sri Lanka time. */
   when: string;
   links: { label: string; href: string }[];
@@ -57,6 +60,8 @@ export function TagChip({ tag, label }: { tag: NewsTag; label: string }) {
 export function NewsRow({ row, serverNow, labels }: { row: NewsRowData; serverNow: number; labels: NewsRowLabels }) {
   return (
     <li id={row.id} className="scroll-mt-24 px-3.5 py-3 target:bg-sky-50 dark:target:bg-sky-950/40">
+      <div className="flex items-start gap-3">
+      <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
         <TagChip tag={row.tag} label={row.tagLabel} />
         <span>{labels.source.replace("{src}", row.source)}</span>
@@ -86,6 +91,9 @@ export function NewsRow({ row, serverNow, labels }: { row: NewsRowData; serverNo
           ))}
         </p>
       )}
+      </div>
+      {row.image && <NewsThumb src={row.image} href={row.url} />}
+      </div>
     </li>
   );
 }

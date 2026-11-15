@@ -107,7 +107,10 @@ lib/
   `lib/newsClassify.ts`, optional gpt-6-luna for borderline items, max 8/refresh; `/news`, home card,
   "In the news" on river/reservoir pages). The feed holds only ~12 h, so `/news` backfills 7 days from
   Newswire's WordPress search API. We keep headline + link + a 20-word first sentence, never articles;
-  never NewsArticle markup. Health check `feed-newswire`. Tests: `node scripts/news.test.mts`.
+  never NewsArticle markup. **Owner decision 15 Nov 2026: each row also shows a small cover thumbnail (96x64, linked to the article)**, widening that rule:
+  image from data we already fetch (Newswire feed `<img>` / WordPress `_embed=wp:featuredmedia` medium size, Daily Mirror `<image><url>`, Ada Derana story-page
+  og:image read for at most 12 stories per refresh, cached 30 days); `lib/newsImage.ts` keeps only https URLs on three exact hosts (mirrored in `next.config.ts`
+  `remotePatterns`), no tracking pixels or icons; shown via `next/image` in `app/NewsThumb.tsx` (empty alt, no box when missing or failed), one `NewsRow` for all pages. Health check `feed-newswire`. Tests: `node scripts/news.test.mts`.
 - **News RSS** (Ada Derana rss.php, Daily Mirror breaking-news/108): keyword match of
   "spill/sluice gates opened/closed" + a catalogue reservoir. Shown as "reported",
   never official, expires after 12 h. Ada Derana items have no date: the story

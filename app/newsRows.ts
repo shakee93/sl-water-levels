@@ -39,6 +39,7 @@ export async function newsRows(items: NewsItem[], lang: Locale, o: { links?: boo
       tag: i.tag,
       tagLabel: nw(`tag.${i.tag}` as "tag.Rain"),
       snippet: i.snippet,
+      image: i.image ?? null,
       when: shortStamp(i.publishedAt, t),
       links: links.slice(0, 4),
     };

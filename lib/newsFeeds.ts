@@ -4,9 +4,10 @@
 // callers cache for 10 minutes) and If-Modified-Since / If-None-Match so an unchanged feed costs a 304.
 import { unstable_cache } from "next/cache";
 import { plainText } from "./newsText";
+import { feedImage, ogImage } from "./newsImage";
 
 export type Outlet = "Newswire" | "Ada Derana" | "Daily Mirror";
-export type FeedItem = { guid: string; title: string; desc: string; link: string; pubMs: number | null };
+export type FeedItem = { guid: string; title: string; desc: string; link: string; pubMs: number | null; /** Cover image (https, listed host, lib/newsImage.ts) or null. */ image: string | null };
 export type OutletItem = FeedItem & { outlet: Outlet };
 
 const SITE_URL = "https://waterlevels.lk";
@@ -36,7 +37,7 @@ export function parseFeed(xml: string): FeedItem[] {
     if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(pub)) pubMs = Date.parse(pub.replace(" ", "T") + (pub.length === 16 ? ":00" : "") + "+05:30"); // Daily Mirror: Colombo local time
     else if (pub) pubMs = Date.parse(pub);
     const link = xmlText(b, "link");
-    return { guid: xmlText(b, "guid") || link, title: xmlText(b, "title"), desc: xmlText(b, "description"), link, pubMs: pubMs != null && Number.isFinite(pubMs) ? pubMs : null };
+    return { guid: xmlText(b, "guid") || link, title: xmlText(b, "title"), desc: xmlText(b, "description"), link, pubMs: pubMs != null && Number.isFinite(pubMs) ? pubMs : null, image: feedImage(b) };
   });
 }
 
@@ -92,6 +93,17 @@ export const articleTimeCached = unstable_cache(
     return ms;
   },
   ["releases-news-time-v1"],
+  { revalidate: 30 * 24 * 3600 },
+);
+
+/** Ada Derana's feed carries no image: the story page's og:image (the same kind of page read for the time above). Cached per story; null = none. */
+export const articleImageCached = unstable_cache(
+  async (url: string): Promise<string | null> => {
+    const res = await fetch(url, { headers: { "User-Agent": OLD_UA }, cache: "no-store", signal: AbortSignal.timeout(6_000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return ogImage((await res.text()).slice(0, 60_000));
+  },
+  ["news-article-image-v1"],
   { revalidate: 30 * 24 * 3600 },
 );
 
