@@ -5,6 +5,8 @@ import type { Locale } from "./config";
 export const MADE_BY: Record<Locale, string> = { en: "Made by", si: "නිර්මාණය කළේ", ta: "உருவாக்கியவர்" };
 export const RESEARCH: Record<Locale, string> = { en: "Research", si: "පර්යේෂණ", ta: "ஆய்வுகள்" };
 
+export const PRIVACY_NAV: Record<Locale, string> = { en: "Privacy", si: "පෞද්ගලිකත්වය", ta: "தனியுரிமை" };
+
 export const DATA_NAV: Record<Locale, string> = { en: "Data", si: "දත්ත", ta: "தரவு" };
 // Group headings shared by the footer and the phone More sheet (si/ta drafts: need native review).
 export const NAV_GROUPS: Record<Locale, { levels: string; news: string; about: string }> = {

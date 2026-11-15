@@ -2,7 +2,7 @@
 // Labels are the same strings the pages use for their breadcrumb / H1 (naming rule: one name per section).
 // Basins (rivers) are listed separately by both, from live station data. Home, Towns, Reservoirs and News are also
 // phone tabs, but are repeated in the sheet so that it alone is a complete index.
-import { House, List, Map as MapIcon, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, Target, LifeBuoy, Info, FlaskConical, Code2, type LucideIcon } from "lucide-react";
+import { House, List, Map as MapIcon, MapPin, Waves, Droplets, CloudRain, Newspaper, History, Database, Activity, Target, LifeBuoy, Info, ShieldCheck, FlaskConical, Code2, type LucideIcon } from "lucide-react";
 import type { Locale } from "./i18n/config";
 import { seoFor } from "./i18n/seo";
 import { rtFor } from "./i18n/return";
@@ -11,7 +11,7 @@ import { nwFor } from "./i18n/news";
 import { rmFor } from "./i18n/rainMap";
 import { statusT } from "./i18n/status";
 import { fkT } from "./i18n/forecastKpi";
-import { DATA_NAV, NAV_GROUPS, RESEARCH } from "./i18n/footer";
+import { DATA_NAV, NAV_GROUPS, PRIVACY_NAV, RESEARCH } from "./i18n/footer";
 import { ccFor } from "./i18n/colombo";
 import { embedT } from "./i18n/embed";
 
@@ -53,6 +53,7 @@ export function navGroups(lang: Locale, t: (k: "footer.home" | "crumb.allBasins"
         { href: "/about", label: t("nav.about"), icon: Info, event: "about_nav_click" },
         { href: "/research", label: RESEARCH[lang], icon: FlaskConical, event: "research_nav_click" },
         { href: "/embed", label: embedT(lang)("e.nav"), icon: Code2, event: "embed_nav_click" },
+        { href: "/privacy", label: PRIVACY_NAV[lang], icon: ShieldCheck, event: "privacy_nav_click" },
       ],
     },
   ];

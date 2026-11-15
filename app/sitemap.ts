@@ -94,6 +94,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...entry("/news", Date.now()),
     ...entry("/help", contentDay),
     ...entry("/about", contentDay),
+    // English only (like /data): one address, no si/ta copies.
+    { url: `${SITE}/privacy`, lastModified: new Date("2026-11-15") },
     // Nightly forecast scorecard (kpi/latest.json on the data branch): changes once a day.
     ...entry("/forecast-accuracy", Date.now()),
     ...entry("/research", Date.parse(`${WF_MODIFIED}T00:00:00+05:30`)),
