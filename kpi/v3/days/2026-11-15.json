@@ -1,16 +1,45 @@
 {
  "day": "2026-11-15",
- "final": false,
+ "final": true,
  "edge": false,
  "sources": {
-  "runs": 656,
-  "shownArchive": 1923,
+  "runs": 635,
+  "shownArchive": 1860,
   "shownRecomputed": 0,
-  "chancePModel": 1923,
+  "chancePModel": 1860,
   "chanceProbability": 0
  },
  "notice": {
-  "hours": {},
+  "hours": {
+   "Panadugama|minor": {
+    "5": 5.006,
+    "6": 0.92,
+    "7": 0.943,
+    "8": 1.975,
+    "9": 2.088,
+    "10": 0.93
+   },
+   "Panadugama|alert": {
+    "18": 1.089,
+    "21": 1.037,
+    "39": 1.098,
+    "40": 0.838,
+    "41": 1.01,
+    "43": 4.002,
+    "44": 0.943,
+    "45": 0.988,
+    "46": 1.505,
+    "47": 0.956,
+    "49": 2.623,
+    "50": 1.902,
+    "52": 2.027,
+    "54": 0.92
+   },
+   "Thalgahagoda|minor": {
+    "48": 0.991,
+    "49": 0.966
+   }
+  },
   "floods": []
  },
  "p1": {},
@@ -32,7 +61,6 @@
     "Manampitiya",
     "Moragaswewa",
     "Moraketiya",
-    "Padiyathalawa",
     "Rathnapura",
     "Thaldena",
     "Thanamalwila",
@@ -40,8 +68,8 @@
    ]
   },
   "fast": {
-   "warn": 0,
-   "wrong": 0,
+   "warn": 6,
+   "wrong": 6,
    "unknown": 0,
    "gauges": [
     "Deraniyagala",
@@ -56,8 +84,8 @@
    ]
   },
   "tidal": {
-   "warn": 0,
-   "wrong": 0,
+   "warn": 2,
+   "wrong": 2,
    "unknown": 0,
    "gauges": [
     "Nagalagam Street",
@@ -68,21 +96,54 @@
  },
  "p3": {
   "alert": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     594,
+     0.45,
+     0
+    ],
+    "5+in10": [
+     1,
+     0.5,
+     0
+    ],
+    "2-4in10": [
+     5,
+     1.55,
+     0
+    ],
+    "1in10": [
+     1,
+     0.1,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "minor": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     604,
+     0,
+     0
+    ]
+   },
    "atLimit": [
-    0,
+    2,
     0
    ]
   },
   "major": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     626,
+     0,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
@@ -90,15 +151,15 @@
   }
  },
  "nh": {
-  "hours": 1147,
+  "hours": 1124,
   "fast": 16,
   "fastRising": 4,
   "rising": 107,
   "risingRight": 32,
-  "still": 1039,
+  "still": 1016,
   "stillRising": 75,
-  "archiveWords": 568,
-  "rebuiltWords": 579,
+  "archiveWords": 549,
+  "rebuiltWords": 575,
   "catch": {
    "Horowpothana": {
     "0": [
@@ -998,12 +1059,6 @@
      0
     ]
    },
-   "Padiyathalawa": {
-    "0": [
-     19,
-     0
-    ]
-   },
    "Moraketiya": {
     "0": [
      9,
@@ -1660,15 +1715,15 @@
    },
    "Miriswatta": {
     "0": [
-     12,
+     11,
      0
     ],
     "3": [
-     3,
+     1,
      0
     ],
     "-3": [
-     6,
+     5,
      0
     ],
     "-7": [
@@ -2029,7 +2084,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-15T20:11:45.031Z",
- "codeSha": "900ea8e481b3528de1324e12286c3e815d69d466",
+ "generatedAt": "2026-11-16T20:11:43.432Z",
+ "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

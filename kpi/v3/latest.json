@@ -1,28 +1,27 @@
 {
  "version": 1,
  "kpiSpec": 3,
- "generatedAt": "2026-11-15T20:11:45.031Z",
- "nowUsed": "2026-11-15T20:11:45.031Z",
- "codeSha": "900ea8e481b3528de1324e12286c3e815d69d466",
+ "generatedAt": "2026-11-16T20:11:43.432Z",
+ "nowUsed": "2026-11-16T20:11:43.432Z",
+ "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553",
  "daysRequested": 30,
- "daysFound": 25,
+ "daysFound": 26,
  "daysMissing": [
-  "2026-10-17",
   "2026-10-18",
   "2026-10-19",
   "2026-10-20",
   "2026-10-21"
  ],
- "asOf": "2026-11-15",
+ "asOf": "2026-11-16",
  "note": "Spec 3, side by side with kpi/latest.json (spec 1) and kpi/v2/latest.json (spec 2); not read by the page. window = the days of this run that are final (24 h outcomes read) and complete; rolling = the day files of the last 365 days.",
  "window": {
   "from": "2026-10-23",
-  "to": "2026-11-14",
-  "days": 23,
+  "to": "2026-11-15",
+  "days": 24,
   "requested": 30,
   "notFinal": [
-   "2026-11-15"
+   "2026-11-16"
   ],
   "edge": [
    "2026-10-22"
@@ -51,22 +50,23 @@
   "2026-11-11",
   "2026-11-12",
   "2026-11-13",
-  "2026-11-14"
+  "2026-11-14",
+  "2026-11-15"
  ],
- "spanDays": 23,
- "calendarDays": 23,
+ "spanDays": 24,
+ "calendarDays": 24,
  "sources": {
-  "runs": 13464,
-  "shownArchive": 4121,
+  "runs": 14088,
+  "shownArchive": 5948,
   "shownRecomputed": 34250,
-  "chancePModel": 4121,
+  "chancePModel": 5948,
   "chanceProbability": 34250
  },
  "lab": {
   "notice": {
    "big": {
     "leadH": 12,
-    "value": 11.5,
+    "value": 11.6,
     "floods": 34,
     "scored": 26,
     "missed": 4,
@@ -75,7 +75,7 @@
    },
    "fast": {
     "leadH": 6,
-    "value": 20,
+    "value": 17.5,
     "floods": 40,
     "scored": 36,
     "missed": 4,
@@ -90,17 +90,17 @@
    "cls": "big",
    "leadH": 12,
    "target": 45,
-   "value": 11.5,
+   "value": 11.6,
    "floods": 34,
    "scored": 26,
    "missed": 4,
    "alreadyAtStep": 4,
    "storms": 2,
    "largestStormShare": 0.5,
-   "valueWithoutLargestStorm": 9.6,
+   "valueWithoutLargestStorm": 9.9,
    "pointAtOrAboveTarget": false,
    "met": null,
-   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 23 days, 30 floods, 2 storms)",
+   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 24 days, 30 floods, 2 storms)",
    "labConfirmation": "paired interval against river height alone, lab"
   },
   {
@@ -108,17 +108,17 @@
    "cls": "fast",
    "leadH": 6,
    "target": 37,
-   "value": 20,
+   "value": 17.5,
    "floods": 40,
    "scored": 36,
    "missed": 4,
    "alreadyAtStep": 0,
    "storms": 2,
    "largestStormShare": 0.65,
-   "valueWithoutLargestStorm": 35.7,
+   "valueWithoutLargestStorm": 28.6,
    "pointAtOrAboveTarget": false,
    "met": null,
-   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 23 days, 40 floods, 2 storms)",
+   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 24 days, 40 floods, 2 storms)",
    "labConfirmation": "paired interval against river height alone, lab"
   }
  ],
@@ -474,32 +474,32 @@
   "p2": {
    "big": {
     "gauges": 17,
-    "days": 23,
+    "days": 24,
     "warningHours": 877,
     "notComeTrue": 737,
     "unknownOutcome": 7,
-    "perGaugePer30Days": 56.5,
+    "perGaugePer30Days": 54.2,
     "shareNotComeTrue": 84.7,
     "coverage": 99.2
    },
    "fast": {
     "gauges": 9,
-    "days": 23,
-    "warningHours": 582,
-    "notComeTrue": 411,
+    "days": 24,
+    "warningHours": 588,
+    "notComeTrue": 417,
     "unknownOutcome": 3,
-    "perGaugePer30Days": 59.6,
-    "shareNotComeTrue": 71,
+    "perGaugePer30Days": 57.9,
+    "shareNotComeTrue": 71.3,
     "coverage": 99.5
    },
    "tidal": {
     "gauges": 3,
-    "days": 23,
-    "warningHours": 216,
-    "notComeTrue": 128,
+    "days": 24,
+    "warningHours": 218,
+    "notComeTrue": 130,
     "unknownOutcome": 3,
-    "perGaugePer30Days": 55.7,
-    "shareNotComeTrue": 60.1,
+    "perGaugePer30Days": 54.2,
+    "shareNotComeTrue": 60.5,
     "coverage": 98.6
    }
   },
@@ -509,15 +509,15 @@
      "tiers": [
       {
        "tier": "<1in10",
-       "hours": 10036,
+       "hours": 10600,
        "stated": 0.3,
-       "cameTrue": 4.2,
-       "gap": 3.9,
+       "cameTrue": 4,
+       "gap": 3.7,
        "verdict": "passes"
       },
       {
        "tier": "1in10",
-       "hours": 587,
+       "hours": 588,
        "stated": 12.1,
        "cameTrue": 15,
        "gap": 2.9,
@@ -525,18 +525,18 @@
       },
       {
        "tier": "2-4in10",
-       "hours": 764,
-       "stated": 29.4,
-       "cameTrue": 24.3,
-       "gap": -5.1,
+       "hours": 769,
+       "stated": 29.5,
+       "cameTrue": 24.2,
+       "gap": -5.3,
        "verdict": "passes"
       },
       {
        "tier": "5+in10",
-       "hours": 349,
+       "hours": 350,
        "stated": 67.7,
-       "cameTrue": 53,
-       "gap": -14.7,
+       "cameTrue": 52.9,
+       "gap": -14.8,
        "verdict": "fails: came true LESS"
       }
      ],
@@ -551,7 +551,7 @@
      "tiers": [
       {
        "tier": "<1in10",
-       "hours": 11579,
+       "hours": 12153,
        "stated": 0.1,
        "cameTrue": 0.5,
        "gap": 0.4,
@@ -579,8 +579,8 @@
       }
      ],
      "atLimit": {
-      "hours": 688,
-      "cameTrue": 18.9,
+      "hours": 690,
+      "cameTrue": 18.8,
       "note": "the page prints its limit, not the forecaster's chance: not judged"
      },
      "verdict": "passes"
@@ -589,7 +589,7 @@
      "tiers": [
       {
        "tier": "<1in10",
-       "hours": 12625,
+       "hours": 13221,
        "stated": 0.1,
        "cameTrue": 0,
        "gap": -0.1,
@@ -642,38 +642,38 @@
  },
  "nextHour": {
   "riseCatchAt10PctFalseHours": {
-   "value": 76.9,
+   "value": 75.9,
    "chance": 10,
    "perfect": 100,
-   "fastRises": 1411,
-   "falseHours": 16898,
-   "hours": 21524,
+   "fastRises": 1427,
+   "falseHours": 17902,
+   "hours": 22636,
    "source": "runs",
    "target": null
   },
   "records": {
    "R1_risingWhenRoseTenCm": {
-    "pct": 78.5,
-    "n": 1411
+    "pct": 77.9,
+    "n": 1427
    },
    "R2_risingFollowedByRise": {
-    "pct": 63.2,
-    "n": 4465
+    "pct": 62.4,
+    "n": 4572
    },
    "R3_hoursShowingRising": {
-    "pct": 20.7,
-    "n": 21524,
-    "pctOfHoursWithoutARise": 9.7
+    "pct": 20.2,
+    "n": 22636,
+    "pctOfHoursWithoutARise": 9.6
    }
   },
   "wordSource": {
-   "archived": 1274,
-   "rebuiltByRulesOfTheDay": 20250
+   "archived": 1811,
+   "rebuiltByRulesOfTheDay": 20825
   }
  },
  "rolling": {
   "from": "2026-10-23",
-  "to": "2026-11-14",
+  "to": "2026-11-15",
   "days": [
    "2026-10-23",
    "2026-10-24",
@@ -697,22 +697,23 @@
    "2026-11-11",
    "2026-11-12",
    "2026-11-13",
-   "2026-11-14"
+   "2026-11-14",
+   "2026-11-15"
   ],
-  "spanDays": 23,
-  "calendarDays": 23,
+  "spanDays": 24,
+  "calendarDays": 24,
   "sources": {
-   "runs": 13464,
-   "shownArchive": 4121,
+   "runs": 14088,
+   "shownArchive": 5948,
    "shownRecomputed": 34250,
-   "chancePModel": 4121,
+   "chancePModel": 5948,
    "chanceProbability": 34250
   },
   "lab": {
    "notice": {
     "big": {
      "leadH": 12,
-     "value": 11.5,
+     "value": 11.6,
      "floods": 34,
      "scored": 26,
      "missed": 4,
@@ -721,7 +722,7 @@
     },
     "fast": {
      "leadH": 6,
-     "value": 20,
+     "value": 18.1,
      "floods": 40,
      "scored": 36,
      "missed": 4,
@@ -736,17 +737,17 @@
     "cls": "big",
     "leadH": 12,
     "target": 45,
-    "value": 11.5,
+    "value": 11.6,
     "floods": 34,
     "scored": 26,
     "missed": 4,
     "alreadyAtStep": 4,
     "storms": 2,
     "largestStormShare": 0.5,
-    "valueWithoutLargestStorm": 9.6,
+    "valueWithoutLargestStorm": 9.9,
     "pointAtOrAboveTarget": false,
     "met": null,
-    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 23 days, 30 floods, 2 storms)",
+    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 24 days, 30 floods, 2 storms)",
     "labConfirmation": "paired interval against river height alone, lab"
    },
    {
@@ -754,17 +755,17 @@
     "cls": "fast",
     "leadH": 6,
     "target": 37,
-    "value": 20,
+    "value": 18.1,
     "floods": 40,
     "scored": 36,
     "missed": 4,
     "alreadyAtStep": 0,
     "storms": 2,
     "largestStormShare": 0.65,
-    "valueWithoutLargestStorm": 35.7,
+    "valueWithoutLargestStorm": 30.3,
     "pointAtOrAboveTarget": false,
     "met": null,
-    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 23 days, 40 floods, 2 storms)",
+    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 24 days, 40 floods, 2 storms)",
     "labConfirmation": "paired interval against river height alone, lab"
    }
   ],
@@ -1120,32 +1121,32 @@
    "p2": {
     "big": {
      "gauges": 17,
-     "days": 23,
+     "days": 24,
      "warningHours": 877,
      "notComeTrue": 737,
      "unknownOutcome": 7,
-     "perGaugePer30Days": 56.5,
+     "perGaugePer30Days": 54.2,
      "shareNotComeTrue": 84.7,
      "coverage": 99.2
     },
     "fast": {
      "gauges": 9,
-     "days": 23,
-     "warningHours": 582,
-     "notComeTrue": 411,
+     "days": 24,
+     "warningHours": 588,
+     "notComeTrue": 417,
      "unknownOutcome": 3,
-     "perGaugePer30Days": 59.6,
-     "shareNotComeTrue": 71,
+     "perGaugePer30Days": 57.9,
+     "shareNotComeTrue": 71.3,
      "coverage": 99.5
     },
     "tidal": {
      "gauges": 3,
-     "days": 23,
-     "warningHours": 216,
-     "notComeTrue": 128,
+     "days": 24,
+     "warningHours": 218,
+     "notComeTrue": 130,
      "unknownOutcome": 3,
-     "perGaugePer30Days": 55.7,
-     "shareNotComeTrue": 60.1,
+     "perGaugePer30Days": 54.2,
+     "shareNotComeTrue": 60.5,
      "coverage": 98.6
     }
    },
@@ -1155,15 +1156,15 @@
       "tiers": [
        {
         "tier": "<1in10",
-        "hours": 10036,
+        "hours": 10600,
         "stated": 0.3,
-        "cameTrue": 4.2,
-        "gap": 3.9,
+        "cameTrue": 4,
+        "gap": 3.7,
         "verdict": "passes"
        },
        {
         "tier": "1in10",
-        "hours": 587,
+        "hours": 588,
         "stated": 12.1,
         "cameTrue": 15,
         "gap": 2.9,
@@ -1171,18 +1172,18 @@
        },
        {
         "tier": "2-4in10",
-        "hours": 764,
-        "stated": 29.4,
-        "cameTrue": 24.3,
-        "gap": -5.1,
+        "hours": 769,
+        "stated": 29.5,
+        "cameTrue": 24.2,
+        "gap": -5.3,
         "verdict": "passes"
        },
        {
         "tier": "5+in10",
-        "hours": 349,
+        "hours": 350,
         "stated": 67.7,
-        "cameTrue": 53,
-        "gap": -14.7,
+        "cameTrue": 52.9,
+        "gap": -14.8,
         "verdict": "fails: came true LESS"
        }
       ],
@@ -1197,7 +1198,7 @@
       "tiers": [
        {
         "tier": "<1in10",
-        "hours": 11579,
+        "hours": 12153,
         "stated": 0.1,
         "cameTrue": 0.5,
         "gap": 0.4,
@@ -1225,8 +1226,8 @@
        }
       ],
       "atLimit": {
-       "hours": 688,
-       "cameTrue": 18.9,
+       "hours": 690,
+       "cameTrue": 18.8,
        "note": "the page prints its limit, not the forecaster's chance: not judged"
       },
       "verdict": "passes"
@@ -1235,7 +1236,7 @@
       "tiers": [
        {
         "tier": "<1in10",
-        "hours": 12625,
+        "hours": 13221,
         "stated": 0.1,
         "cameTrue": 0,
         "gap": -0.1,
@@ -1288,33 +1289,33 @@
   },
   "nextHour": {
    "riseCatchAt10PctFalseHours": {
-    "value": 76.9,
+    "value": 75.9,
     "chance": 10,
     "perfect": 100,
-    "fastRises": 1411,
-    "falseHours": 16898,
-    "hours": 21524,
+    "fastRises": 1427,
+    "falseHours": 17902,
+    "hours": 22636,
     "source": "day files, 1 mm/h bins",
     "target": null
    },
    "records": {
     "R1_risingWhenRoseTenCm": {
-     "pct": 78.5,
-     "n": 1411
+     "pct": 77.9,
+     "n": 1427
     },
     "R2_risingFollowedByRise": {
-     "pct": 63.2,
-     "n": 4465
+     "pct": 62.4,
+     "n": 4572
     },
     "R3_hoursShowingRising": {
-     "pct": 20.7,
-     "n": 21524,
-     "pctOfHoursWithoutARise": 9.7
+     "pct": 20.2,
+     "n": 22636,
+     "pctOfHoursWithoutARise": 9.6
     }
    },
    "wordSource": {
-    "archived": 1274,
-    "rebuiltByRulesOfTheDay": 20250
+    "archived": 1811,
+    "rebuiltByRulesOfTheDay": 20825
    }
   }
  }

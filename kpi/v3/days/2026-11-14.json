@@ -3,10 +3,10 @@
  "final": true,
  "edge": false,
  "sources": {
-  "runs": 668,
-  "shownArchive": 1923,
+  "runs": 657,
+  "shownArchive": 1890,
   "shownRecomputed": 0,
-  "chancePModel": 1923,
+  "chancePModel": 1890,
   "chanceProbability": 0
  },
  "notice": {
@@ -113,7 +113,7 @@
   "alert": {
    "tiers": {
     "<1in10": [
-     578,
+     557,
      0.7,
      0
     ],
@@ -136,7 +136,7 @@
   "minor": {
    "tiers": {
     "<1in10": [
-     613,
+     592,
      0.3,
      0
     ],
@@ -159,7 +159,7 @@
   "major": {
    "tiers": {
     "<1in10": [
-     647,
+     626,
      0,
      0
     ]
@@ -171,14 +171,14 @@
   }
  },
  "nh": {
-  "hours": 1159,
+  "hours": 1147,
   "fast": 9,
   "fastRising": 3,
   "rising": 106,
   "risingRight": 33,
-  "still": 1063,
+  "still": 1051,
   "stillRising": 73,
-  "archiveWords": 581,
+  "archiveWords": 569,
   "rebuiltWords": 578,
   "catch": {
    "Nakkala": {
@@ -209,7 +209,7 @@
    },
    "Padiyathalawa": {
     "0": [
-     15,
+     5,
      0
     ],
     "1": [
@@ -221,7 +221,7 @@
      0
     ],
     "-1": [
-     3,
+     1,
      0
     ]
    },
@@ -2224,7 +2224,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-15T20:11:45.031Z",
- "codeSha": "900ea8e481b3528de1324e12286c3e815d69d466",
+ "generatedAt": "2026-11-16T20:11:43.432Z",
+ "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

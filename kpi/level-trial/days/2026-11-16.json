@@ -1,0 +1,85 @@
+{
+ "schema": "slwl-level-trial/report@1/day",
+ "day": "2026-11-16",
+ "generatedAt": "2026-11-16T20:11:56.893Z",
+ "coverage": {
+  "liveRuns": 663,
+  "withTrial": 571,
+  "withDegraded": 79,
+  "sharePct": 86.1
+ },
+ "pooled": {
+  "h1": {
+   "n": 552,
+   "trialSkillPct": 7,
+   "liveSkillPct": 3,
+   "diffPts": 4
+  },
+  "h3": {
+   "n": 508,
+   "trialSkillPct": 16.6,
+   "liveSkillPct": 12.9,
+   "diffPts": 3.6
+  },
+  "h6": {
+   "n": 434,
+   "trialSkillPct": 19.8,
+   "liveSkillPct": 15.4,
+   "diffPts": 4.4
+  },
+  "h12": {
+   "n": 173,
+   "trialSkillPct": 22.3,
+   "liveSkillPct": 0.3,
+   "diffPts": 22
+  },
+  "h24": {
+   "n": 14,
+   "trialSkillPct": 59,
+   "liveSkillPct": 15.1,
+   "diffPts": 43.9
+  }
+ },
+ "log": {
+  "runs": 663,
+  "byVerdict": {
+   "ok": 571,
+   "degraded": 79,
+   "refused": 13
+  },
+  "reasons": {
+   "refused:own_history_missing": 13
+  },
+  "degradedFlags": {
+   "own_lags_missing": 71,
+   "partner_lags_missing": 8,
+   "partner_stale": 2
+  },
+  "history": {
+   "checked": 663,
+   "complete": 567,
+   "incomplete": 96
+  },
+  "lagHours": {
+   "0": 70,
+   "1": 593
+  },
+  "ageMin": {
+   "<=30": 185,
+   "<=60": 246,
+   "<=15": 122,
+   "<=120": 106,
+   ">120": 4
+  }
+ },
+ "rain": {
+  "gauges": 2,
+  "thresholdMm": 10,
+  "thresholdGauges": 5,
+  "rainDay": false,
+  "names": [
+   "Dunamale",
+   "Moragaswewa"
+  ]
+ }
+}
