@@ -281,6 +281,7 @@ function Card({ m, d }: { m: StoryModel; d: Dim }) {
   const w = d.W - 2 * d.pad;
   const list = m.rows.length > 0 || m.kind === "river" || m.kind === "home";
   const stale = m.level == null && !list;
+  const listRows = [...m.rows, ...(m.calm ?? [])];
   return (
     <Frame d={d} tier={m.tier} top={list}>
       <div style={{ ...COL, width: "100%" }}>
@@ -294,14 +295,14 @@ function Card({ m, d }: { m: StoryModel; d: Dim }) {
         <div style={{ ...COL, width: "100%", marginTop: d.gap * 0.5 }}>
           {m.summary && (
             <div style={{ ...COL, alignItems: "flex-start", marginBottom: d.gap * 0.5 }}>
-              <Pill tier={m.tier} label={m.rows.length ? m.step : "✓"} size={d.pill * 0.7} />
+              <Pill tier={m.tier} label={m.step} size={d.pill * 0.7} />
               <div style={{ ...F, fontSize: d.sum, fontWeight: 500, color: INK, lineHeight: 1.25, marginTop: 10 }}>{m.summary}</div>
             </div>
           )}
-          {m.rows.length > 0 && (
+          {listRows.length > 0 && (
             <div style={{ ...COL, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 36, padding: "6px 30px" }}>
-              {m.rows.map((r, i) => (
-                <RowItem key={`${r.name}-${i}`} r={r} d={d} last={i === m.rows.length - 1} />
+              {listRows.map((r, i) => (
+                <RowItem key={`${r.name}-${i}`} r={r} d={d} last={i === listRows.length - 1} />
               ))}
             </div>
           )}
@@ -340,6 +341,7 @@ function Card({ m, d }: { m: StoryModel; d: Dim }) {
 function Og({ m }: { m: StoryModel }) {
   const W = 1200, Hh = 630;
   const list = m.rows.length > 0 || m.kind === "river" || m.kind === "home";
+  const listRows = [...m.rows, ...(m.calm ?? [])];
   const d: Dim = { ...DIM.square, W, Hh, rowH: 64, rowName: 28, rowSub: 20, rowLvl: 28, rowPill: 20, chartH: 300, upd: 24 };
   const rightW = 560;
   return (
@@ -355,7 +357,7 @@ function Og({ m }: { m: StoryModel }) {
           <div style={COL}>
             {!list && (m.level ? <Level text={m.level} size={120} unit={52} /> : null)}
             <div style={{ ...F, alignItems: "center", marginTop: 14 }}>
-              <Pill tier={m.tier} label={m.rows.length ? m.step : m.step} size={34} />
+              <Pill tier={m.tier} label={m.step} size={34} />
               {m.trend && !list && (
                 <div style={{ ...F, alignItems: "center", marginLeft: 20, fontSize: 32, fontWeight: 800, color: ARROW_COLOR[m.arrow ?? "steady"] }}>
                   <ArrowIcon a={m.arrow} size={36} />
@@ -369,9 +371,9 @@ function Og({ m }: { m: StoryModel }) {
         </div>
         <div style={{ ...COL, flex: 1, marginLeft: 32, justifyContent: "center" }}>
           {!list && m.chart ? <ChartCard m={m} d={d} w={rightW + 40} /> : null}
-          {list && m.rows.length > 0 && (
+          {list && listRows.length > 0 && (
             <div style={{ ...COL, background: "#ffffff", border: "2px solid #e2e8f0", borderRadius: 28, padding: "4px 22px", width: rightW + 40 }}>
-              {m.rows.slice(0, 5).map((r, i, a) => (
+              {listRows.slice(0, 5).map((r, i, a) => (
                 <RowItem key={`${r.name}-${i}`} r={r} d={d} last={i === a.length - 1} />
               ))}
             </div>

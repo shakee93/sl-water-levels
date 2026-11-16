@@ -19,6 +19,7 @@ import { getRainMap } from "@/lib/rainMap";
 import { basinSatellite, correctedTotal, perBasin, satelliteTotal, type RainMapData } from "@/lib/rainMapCalc";
 import { COAST } from "@/lib/geo/geo";
 import { riverName } from "@/lib/i18n/format";
+import { getI18n } from "@/lib/i18n/server";
 
 export type StoryRow = { name: string; sub: string | null; level: string | null; tier: PillTier; step: string; arrow: Arrow };
 export type StoryModel = {
@@ -38,6 +39,8 @@ export type StoryModel = {
   updated: string | null;
   chart: LChart | null;
   rows: StoryRow[];
+  /** kind "home": calm rivers (one row per river not already listed, with its gauge count), appended under a short list so the card is not left empty. */
+  calm?: StoryRow[];
   summary: string | null;
   /** "waterlevels.lk/kalu-ganga/ratnapura" */
   where: string;
@@ -223,12 +226,37 @@ export async function buildStory(kind: StoryKind, slug: string, lang: Locale, un
   const n = await buildEmbed("now", null, cfg);
   if (!n || n.kind !== "now") return null;
   const riverOf = new Map(n.groups.flatMap((g) => g.rows.map((x) => [x.key, g.river] as const)));
-  const sorted = worstFirst(n.groups.flatMap((g) => g.rows), await getNational().catch(() => []));
+  const nat = await getNational().catch(() => []);
+  const sorted = worstFirst(n.groups.flatMap((g) => g.rows), nat);
   const all = sorted.map((x) => localRow(x, riverOf.get(x.key) ?? null, lang));
-  const hot = all.length;
+  const t = getI18n(lang).t;
+  const top = all.length ? all.reduce((a, b) => ((TIER_ORDER[b.tier] ?? 0) > (TIER_ORDER[a.tier] ?? 0) ? b : a)) : null;
+  const rows = all.slice(0, MAX_ROWS);
+  const live = nat.filter((x) => x.tier !== "stale");
+  // Calm state: no gauge at Alert or above. The pill used to print a check mark the bundled fonts do not have; it now says the step word.
+  const tier: PillTier = top ? top.tier : live.length ? "normal" : "stale";
   return {
-    kind, lang, title: n.title, subtitle: null, tier: hot ? (all.reduce((a, b) => ((TIER_ORDER[b.tier] ?? 0) > (TIER_ORDER[a.tier] ?? 0) ? b : a)).tier) : "normal",
-    step: hot ? all.reduce((a, b) => ((TIER_ORDER[b.tier] ?? 0) > (TIER_ORDER[a.tier] ?? 0) ? b : a)).step : n.summary, level: null, arrow: null, trend: null, next: null, nextArrow: null,
-    updated: n.checked, chart: null, rows: all.slice(0, MAX_ROWS), summary: n.summary, where: whereOf(n.open.href),
+    kind, lang, title: n.title, subtitle: null, tier, step: top ? top.step : t(live.length ? "tier.normal" : "tier.stale"), level: null, arrow: null, trend: null, next: null, nextArrow: null,
+    updated: n.checked, chart: null, rows, calm: calmRivers(live, rows, lang), summary: n.summary, where: whereOf(n.open.href),
   };
+}
+
+const CALM_TIERS = ["major", "minor", "alert", "normal", "none"];
+/**
+ * Pure: one row per river from the gauges that are reporting ("Kelani Ganga, 12 gauges, Normal"), for rivers not already listed in `rows`,
+ * until the list holds MAX_ROWS rows. Only when the list is short (<= 5 rows); a long list is left exactly as it was.
+ */
+export function calmRivers(live: { basin: string; tier: string }[], rows: StoryRow[], lang: Locale): StoryRow[] {
+  if (rows.length > 5) return [];
+  const t = getI18n(lang).t;
+  const word = STORY_STRINGS[lang].gauges;
+  const listed = new Set(rows.map((r) => r.sub));
+  const by = new Map<string, string[]>();
+  for (const s of live) by.set(s.basin.trim(), [...(by.get(s.basin.trim()) ?? []), s.tier]);
+  return [...by.entries()]
+    .map(([basin, tiers]) => ({ basin, name: riverName(basin, lang), n: tiers.length, worst: tiers.reduce((a, b) => ((TIER_ORDER[b] ?? 0) > (TIER_ORDER[a] ?? 0) ? b : a)) }))
+    .filter((r) => !listed.has(r.name) && CALM_TIERS.includes(r.worst))
+    .sort((a, b) => (TIER_ORDER[b.worst] ?? 0) - (TIER_ORDER[a.worst] ?? 0) || b.n - a.n || a.basin.localeCompare(b.basin))
+    .slice(0, MAX_ROWS - rows.length)
+    .map((r) => ({ name: r.name, sub: `${r.n} ${lang === "en" && r.n === 1 ? "gauge" : word}`, level: null, tier: r.worst as PillTier, step: t(`tier.${r.worst}` as "tier.normal"), arrow: null as Arrow }));
 }
