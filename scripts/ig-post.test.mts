@@ -253,9 +253,10 @@ assert.equal(gate({ IG_MODE: "live", IG_ACCESS_TOKEN: "  ", IG_USER_ID: "1" }).m
   r = applyIgCaps(items, "disaster", { story: 18, feed: 3 });
   assert.deepEqual([r.send.filter((i) => i.format === "story").length, r.send.filter((i) => i.format === "feed").length], [2, 0]);
   r = applyIgCaps(items, "weather", { story: 0, feed: 0 });
-  assert.equal(r.send.length, 1);
+  assert.deepEqual(r.send.map((i) => i.format), ["story", "feed"], "a story uses the shared budget; a feed post counts only feed posts");
   assert.equal(applyIgCaps(items, "calm", { story: 0, feed: 1 }).send.length, 0, "one post a day in total");
-  assert.equal(applyIgCaps(items, "calm", { story: 1, feed: 0 }).send.length, 0, "a story counts too");
+  assert.deepEqual(applyIgCaps(items, "calm", { story: 1, feed: 0 }).send.map((i) => i.format), ["feed"], "earlier stories do not hold back a feed post (16 Nov 2026)");
+  assert.equal(applyIgCaps(items, "calm", { story: 1, feed: 0 }, { otherMax: 1 }).send.filter((i) => i.format === "story").length, 0, "a story still counts every post");
   const best = applyIgCaps([{ format: "feed", priority: 1, kind: "a", dedupe: "a", label: "a" }, { format: "feed", priority: 9, kind: "b", dedupe: "b", label: "b" }], "calm", { story: 0, feed: 0 }).send;
   assert.equal(best[0].kind, "b");
   assert.equal(planIg(hw("alert", 8.3, at(-7.5)), planIg(hw("normal", 4, at(-8)), emptyIgState(), noCtx).state, { ...noCtx, used: { story: 20, feed: 0 } }).held.length, 1, "planIg reports what the cap stopped");

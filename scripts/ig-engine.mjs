@@ -241,9 +241,12 @@ export function applyIgCaps(items, mode, used, cfgIn = {}) {
       } else held.push(it);
     }
   } else {
-    let total = used.story + used.feed;
+    // A feed post counts only feed posts made today: the stories of an alert earlier in the day (4 gauge stories on 16 Nov) used up
+    // the whole calm-day budget and held back the reservoir post (owner, 16 Nov 2026). A story still counts everything.
+    let total = used.story + used.feed, feed = used.feed;
     for (const it of sorted) {
-      if (total < cfg.otherMax) { send.push(it); total++; } else held.push(it);
+      const room = it.format === "story" ? total < cfg.otherMax : feed < cfg.otherMax;
+      if (room) { send.push(it); total++; if (it.format !== "story") feed++; } else held.push(it);
     }
   }
   return { send, held };
