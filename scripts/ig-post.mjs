@@ -13,7 +13,7 @@
 //
 // Event detection is the X account's (scripts/x-engine.mjs, via scripts/ig-engine.mjs) and the snapshot is x-post's buildSnapshot.
 // Env: SITE_URL, SLACK_WEBHOOK_URL, CLOUDFLARE_API_TOKEN (state), IG_MODE, IG_ACCESS_TOKEN, IG_USER_ID, IG_LANGS=en,si,ta,
-//      IG_STORIES_MAX (20), IG_FEED_MAX (3), IG_KEEPALIVE_WEEK (3), IG_GRAPH_VERSION.
+//      IG_STORIES_MAX (20), IG_FEED_MAX (3), IG_DAY_MAX (3), IG_KEEPALIVE_WEEK (15), IG_GRAPH_VERSION.
 import { pathToFileURL } from "node:url";
 import { d1Query, isD1ReadBlip } from "../lib/d1.ts";
 import { gate, publishImage, publishingUsage, fetchJpeg, IG_LIMIT_24H } from "../lib/igClient.ts";
@@ -21,6 +21,7 @@ import { composeCaption, validateCaption } from "../lib/igCompose.ts";
 import { colomboDay } from "../lib/xCompose.ts";
 import { buildSnapshot } from "./x-post.mjs";
 import { planIg, emptyIgState, imageUrl, IG_DEFAULTS, releasingCount } from "./ig-engine.mjs";
+export const IG_POST_DEFAULTS = { otherMax: 3, keepWeekMax: 15 };
 import { tierLevel } from "./x-engine.mjs";
 import { notify } from "../lib/notify.mjs";
 
@@ -133,7 +134,9 @@ export async function run(o = {}) {
 
   const prev = (await loadValue("main", query)) ?? emptyIgState();
   const ctx = await loadContext(query, { day, mode: g.mode, now });
-  const cfg = { storiesMax: num(env.IG_STORIES_MAX, IG_DEFAULTS.storiesMax), feedMaxDisaster: num(env.IG_FEED_MAX, IG_DEFAULTS.feedMaxDisaster), keepWeekMax: num(env.IG_KEEPALIVE_WEEK, IG_DEFAULTS.keepWeekMax) };
+  // calm / weather days: up to IG_DAY_MAX posts a day and IG_KEEPALIVE_WEEK keep-alive posts a week (owner, 16 Nov 2026: 1 a day held
+  // back real posts; same numbers as the Facebook Page). The engine's own IG_DEFAULTS stay at 1 / 3 for its tests.
+  const cfg = { storiesMax: num(env.IG_STORIES_MAX, IG_DEFAULTS.storiesMax), feedMaxDisaster: num(env.IG_FEED_MAX, IG_DEFAULTS.feedMaxDisaster), otherMax: num(env.IG_DAY_MAX, IG_POST_DEFAULTS.otherMax), keepWeekMax: num(env.IG_KEEPALIVE_WEEK, IG_POST_DEFAULTS.keepWeekMax) };
   const { situation, items, held, state } = planIg(snap, prev, ctx, cfg);
   log(`mode: ${situation.mode ?? "unknown"} (${situation.why}); ${items.length} to post, ${held.length} held by the daily limit`);
 
@@ -143,7 +146,7 @@ export async function run(o = {}) {
   }
   // once a day: the same held post is planned again every 30-min run, and a note per run flooded Slack (owner, 3 Nov 2026)
   if (held.length && meta.heldNoteDay !== day) {
-    await noteAs("held", "info")(`:information_source: Instagram: ${held.length} post(s) held back by the daily limit (${situation.mode === "disaster" ? `${cfg.storiesMax} stories + ${cfg.feedMaxDisaster} feed posts` : "1 post"} a day). (This note comes once a day.)`);
+    await noteAs("held", "info")(`:information_source: Instagram: ${held.length} post${held.length === 1 ? "" : "s"} held back by the daily limit (${situation.mode === "disaster" ? `${cfg.storiesMax} stories + ${cfg.feedMaxDisaster} feed posts` : `${cfg.otherMax} post${cfg.otherMax === 1 ? "" : "s"}`} a day). (This note comes once a day.)`);
     meta.heldNoteDay = day;
     await saveValue("meta", meta, now, query);
   }

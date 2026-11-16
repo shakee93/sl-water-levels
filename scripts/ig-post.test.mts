@@ -429,7 +429,7 @@ const rows = async (q) => q("SELECT kind, format, situation, mode, status, dedup
   await run({ env: w.env, doFetch: w.doFetch, query: q, snap: many(at(-3), "normal"), now: at(-3) });
   const r = await run({ env: w.env, doFetch: w.doFetch, query: q, snap: many(at(-2.5), "alert"), now: at(-2.5) });
   assert.deepEqual([r.posted, r.held], [3, 3]); // 4 gauge stories + the 06:30 morning story, 2 allowed; + the morning feed post (own cap)
-  assert.ok(w.slack.some((s) => /3 post\(s\) held back by the daily limit/.test(s)));
+  assert.ok(w.slack.some((s) => /3 posts held back by the daily limit/.test(s)));
   const more = (now, s) => snap(["e", "f", "g", "h"].map((n) => st(`r${n}/g${n}`, `G${n}`, `R${n}`, s, 9, now)), now);
   await run({ env: w.env, doFetch: w.doFetch, query: q, snap: more(at(-2.4), "normal"), now: at(-2.4) });
   const r2 = await run({ env: w.env, doFetch: w.doFetch, query: q, snap: more(at(-2), "alert"), now: at(-2) });

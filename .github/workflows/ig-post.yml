@@ -7,7 +7,7 @@
 #     (GitHub's cron is best-effort): 07:00 Colombo for the morning story / post, 09:30 Colombo for the first keep-alive post of a calm day.
 #   - Manual: mode "run" = one normal pass; mode "sample" = up to 4 sample posts from today's data to Slack only;
 #     mode "seed" = the 5 first feed posts of the account (once a day at most, through the same IG_MODE gate).
-# Optional variables: IG_LANGS (en,si,ta), IG_STORIES_MAX (20), IG_FEED_MAX (3), IG_KEEPALIVE_WEEK (3), IG_GRAPH_VERSION.
+# Optional variables: IG_LANGS (en,si,ta), IG_STORIES_MAX (20), IG_FEED_MAX (3), IG_DAY_MAX (3), IG_KEEPALIVE_WEEK (15), IG_GRAPH_VERSION.
 
 name: Instagram account
 
@@ -52,6 +52,7 @@ jobs:
           IG_LANGS: ${{ vars.IG_LANGS }}
           IG_STORIES_MAX: ${{ vars.IG_STORIES_MAX }}
           IG_FEED_MAX: ${{ vars.IG_FEED_MAX }}
+          IG_DAY_MAX: ${{ vars.IG_DAY_MAX }}
           IG_KEEPALIVE_WEEK: ${{ vars.IG_KEEPALIVE_WEEK }}
           IG_GRAPH_VERSION: ${{ vars.IG_GRAPH_VERSION }}
         run: |
