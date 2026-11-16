@@ -502,7 +502,7 @@ const RISE_KEY = "feed:rise:Kelani Ganga:major:2026-10-28";
   assert.deepEqual([r.posted, s.graph.length, s.rows().at(-1).kind, s.rows().at(-1).status], [1, 1, "keepalive:reservoirs", "posted"], "30 h later the next kind goes out");
 
   // a run that died right after Facebook took the post: the day's limit still counts it, and nothing is sent twice
-  const d = world({ FB_MODE: "live", ...SECRETS });
+  const d = world({ FB_MODE: "live", FB_DAY_MAX: "1", ...SECRETS });
   const realQuery = d.query;
   d.query = async (sql, params) => {
     if (/^UPDATE fb_posts SET status = 'posted'/.test(sql)) throw new Error("D1 write timed out");

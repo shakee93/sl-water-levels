@@ -32,6 +32,8 @@ import { planIg, emptyIgState, imageUrl, calmItem, IG_DEFAULTS } from "./ig-engi
 import { tierLevel } from "./x-engine.mjs";
 import { notify } from "../lib/notify.mjs";
 
+export const FB_DEFAULTS = { otherMax: 3, keepWeekMax: 15 };
+
 export const FB_SCHEMA_FILE = new URL("../d1/0022_fb_posts.sql", import.meta.url);
 export const OFF_LINE = 'Facebook Page posting is OFF: nothing was read, composed, shown in Slack or sent to Facebook. To see previews in Slack, set the repository variable FB_MODE to dry (DOCS.md "Facebook Page posting").';
 const SITE_DEFAULT = "https://waterlevels.lk";
@@ -191,7 +193,14 @@ export async function run(o = {}) {
   // the Instagram rules, on the Page's own memory; the Page gets the feed posts only
   const prev = (await loadValue("main", query)) ?? emptyIgState();
   const ctx = await loadContext(query, { day, mode: g.mode, now });
-  const cfg = { feedMaxDisaster: num(pick(env, "FB_FEED_MAX", "IG_FEED_MAX"), IG_DEFAULTS.feedMaxDisaster), keepWeekMax: num(pick(env, "FB_KEEPALIVE_WEEK", "IG_KEEPALIVE_WEEK"), IG_DEFAULTS.keepWeekMax) };
+  // The Page posts more often than Instagram on calm and weather days (owner, 16 Nov 2026: one post a day left it quiet):
+  // FB_DAY_MAX posts a day in those modes (default 3) and FB_KEEPALIVE_WEEK keep-alive posts in any 7 days (default 15).
+  // These two do NOT fall back to Instagram's values; FB_FEED_MAX (disaster days) still does.
+  const cfg = {
+    feedMaxDisaster: num(pick(env, "FB_FEED_MAX", "IG_FEED_MAX"), IG_DEFAULTS.feedMaxDisaster),
+    otherMax: num(env.FB_DAY_MAX, FB_DEFAULTS.otherMax),
+    keepWeekMax: num(env.FB_KEEPALIVE_WEEK, FB_DEFAULTS.keepWeekMax),
+  };
   const plan = planIg(snap, prev, ctx, cfg);
   const { situation, state } = plan;
   const items = plan.items.filter(isFeed);
@@ -204,7 +213,7 @@ export async function run(o = {}) {
     await query("INSERT OR IGNORE INTO fb_posts (ts, day, kind, format, situation, dedupe_key, mode, status, caption) VALUES (?, ?, ?, 'photo', ?, ?, ?, 'held', ?)", [now, day, h.kind, situation.mode ?? "unknown", `held:${h.dedupe}`, g.mode, `(held by daily limit) ${h.label}`]);
   }
   if (held.length && meta.heldNoteDay !== day) {
-    const cap = situation.mode === "disaster" ? cfg.feedMaxDisaster : IG_DEFAULTS.otherMax;
+    const cap = situation.mode === "disaster" ? cfg.feedMaxDisaster : cfg.otherMax;
     await noteAs("held", "info")(`:information_source: Facebook: ${held.length} post${held.length === 1 ? "" : "s"} held back by the daily limit (${cap} post${cap === 1 ? "" : "s"} a day). (This note comes once a day.)`);
     meta.heldNoteDay = day;
     metaDirty = true;

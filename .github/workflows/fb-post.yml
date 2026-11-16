@@ -60,6 +60,7 @@ jobs:
           FB_LANGS: ${{ vars.FB_LANGS }}
           FB_FEED_MAX: ${{ vars.FB_FEED_MAX }}
           FB_KEEPALIVE_WEEK: ${{ vars.FB_KEEPALIVE_WEEK }}
+          FB_DAY_MAX: ${{ vars.FB_DAY_MAX }}
           FB_NO_PICTURE: ${{ vars.FB_NO_PICTURE }}
           IG_LANGS: ${{ vars.IG_LANGS }}
           IG_FEED_MAX: ${{ vars.IG_FEED_MAX }}
