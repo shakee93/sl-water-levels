@@ -25,6 +25,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { queryWithRetry } from "./snapshot-query.mjs";
 
 const SERVICES = "https://services3.arcgis.com/J7ZFXmR8rSmQ3FGf/arcgis/rest/services";
 const PAGE = 1000; // layer maxRecordCount
@@ -52,26 +53,13 @@ if (!outDir) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ArcGIS rate-limits bursts (>=1 req/s returns "Too many requests."), so
-// space requests out and retry with backoff.
-async function query(layer, params) {
+// Retry with backoff (rate limits, HTTP and network errors): scripts/snapshot-query.mjs.
+const query = (layer, params) => {
   const url = new URL(`${SERVICES}/${layer}/FeatureServer/0/query`);
   url.searchParams.set("f", "json");
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
-  for (let attempt = 1; ; attempt++) {
-    const r = await fetch(url);
-    const text = await r.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { error: { message: text.slice(0, 200) } };
-    }
-    if (r.ok && !data.error) return data;
-    if (attempt >= 5) throw new Error(`${layer} query failed: ${r.status} ${JSON.stringify(data.error)}`);
-    await sleep(2000 * attempt);
-  }
-}
+  return queryWithRetry(url, layer);
+};
 
 async function fetchAllReadings() {
   const rows = [];
