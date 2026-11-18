@@ -97,10 +97,14 @@ export function summariseSeasonTab(grid: string[][], kind: SeasonKind, today: st
   }
 
   const rows: SeasonRow[] = [];
+  let staleNewest = -1; // newest filled day among reservoirs dropped as stale, for a clearer error
   for (const [name, b] of best) {
     const active = num(b.row[c.active]);
     if (active == null || active <= 0) continue;
-    if (todayOrd - b.ord > MAX_GAP_DAYS) continue; // stale: say nothing rather than compare an old day
+    if (todayOrd - b.ord > MAX_GAP_DAYS) {
+      staleNewest = Math.max(staleNewest, b.ord);
+      continue; // stale: say nothing rather than compare an old day
+    }
     const m = md(b.row[c.date])!;
     const yr = m[0] >= 10 || kind === "yala" ? start : start + 1; // calendar year of that month-day
     rows.push({
@@ -112,7 +116,12 @@ export function summariseSeasonTab(grid: string[][], kind: SeasonKind, today: st
       day: `${yr}-${String(m[0]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`,
     });
   }
-  if (rows.length < 20) throw new Error(`${kind}: only ${rows.length} reservoirs with a current row (sheet layout changed?)`);
+  if (rows.length < 20) {
+    // Most rows dropped only for being old: the source has not been filled in, the layout is fine.
+    if (staleNewest >= 0 && rows.length + [...best.values()].filter((b) => b.ord === staleNewest).length >= 20)
+      throw new Error(`${kind}: only ${rows.length} reservoirs with a current row (this season's storage not filled in for ${todayOrd - staleNewest} days)`);
+    throw new Error(`${kind}: only ${rows.length} reservoirs with a current row (sheet layout changed?)`);
+  }
   return { kind, asOf: today, rows };
 }
 

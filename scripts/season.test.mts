@@ -37,6 +37,8 @@ eq("every reservoir present once", s.rows.length, 26);
 const s2 = summariseSeasonTab(grid, "maha", "2026-10-30");
 eq("two days past the last filled row still uses it", s2.rows.find((r: { name: string }) => r.name === "Tampitiya")?.day, "2026-10-28");
 throws("a week past the last filled row is dropped", () => summariseSeasonTab(grid, "maha", "2026-11-10"), /only 0 reservoirs/);
+// 18 Nov 2026: the tab was not filled in after 13 Nov. Say the source is stale, not "layout changed".
+throws("an unfilled source says so, not 'layout changed'", () => summariseSeasonTab(grid, "maha", "2026-11-10"), /not filled in for 13 days/);
 
 // January belongs to the season that started in October: its columns are ES_26_27, not ES_27_28
 const jan = [MAHA_H, ...names.map((n) => mahaRow("1/5/2027", n, "1,000", "500", "800", "200", "250"))];
