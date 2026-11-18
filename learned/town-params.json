@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-18T01:22:18.286Z",
-  "asOf": "2026-11-18",
+  "updatedAt": "2026-11-18T18:51:07.639Z",
+  "asOf": "2026-11-19",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -83,8 +83,8 @@
         "yes": 15,
         "worse": 4,
         "better": 1,
-        "errN": 5,
-        "meanErrFt": 0.05
+        "errN": 3,
+        "meanErrFt": 0.01
       }
     },
     "Holombuwa": {
@@ -142,7 +142,7 @@
         "worse": 15,
         "better": 1,
         "errN": 11,
-        "meanErrFt": -0.13
+        "meanErrFt": -0.14
       },
       "streetLevel": {
         "ft": 3,
@@ -234,8 +234,8 @@
         "yes": 2,
         "worse": 1,
         "better": 0,
-        "errN": 2,
-        "meanErrFt": -0.18
+        "errN": 1,
+        "meanErrFt": -0.12
       }
     },
     "Moragaswewa": {
@@ -494,8 +494,8 @@
         "yes": 5,
         "worse": 0,
         "better": 0,
-        "errN": 3,
-        "meanErrFt": 0.97
+        "errN": 2,
+        "meanErrFt": 1.45
       },
       "falling": {
         "n": 2,
@@ -503,8 +503,8 @@
         "yes": 1,
         "worse": 1,
         "better": 0,
-        "errN": 2,
-        "meanErrFt": -0.29
+        "errN": 1,
+        "meanErrFt": -0.01
       }
     },
     "Nawalapitiya": {
@@ -521,9 +521,7 @@
         "days": 3,
         "yes": 3,
         "worse": 0,
-        "better": 1,
-        "errN": 2,
-        "meanErrFt": -0.39
+        "better": 1
       }
     },
     "Kuru Ganga (Kuruvita)": {
@@ -716,35 +714,35 @@
     "window": {
       "from": "2026-11-10",
       "to": "2026-11-18",
-      "points": 15107
+      "points": 15135
     },
     "horizons": {
       "1": {
-        "n": 4544,
-        "maeBase": 0.11,
-        "maeFit": 0.11,
+        "n": 5049,
+        "maeBase": 0.1,
+        "maeFit": 0.1,
         "gainPct": 0,
-        "maePooled": 0.11,
+        "maePooled": 0.1,
         "pooledGainPct": 1
       },
       "3": {
-        "n": 4503,
-        "maeBase": 0.25,
-        "maeFit": 0.25,
+        "n": 5002,
+        "maeBase": 0.24,
+        "maeFit": 0.24,
         "gainPct": -1,
-        "maePooled": 0.25,
+        "maePooled": 0.24,
         "pooledGainPct": -1
       },
       "6": {
-        "n": 4423,
-        "maeBase": 0.45,
-        "maeFit": 0.46,
+        "n": 4903,
+        "maeBase": 0.43,
+        "maeFit": 0.43,
         "gainPct": -1,
-        "maePooled": 0.45,
-        "pooledGainPct": 0
+        "maePooled": 0.43,
+        "pooledGainPct": -1
       }
     },
-    "gaugesPassingOwnTest": 5,
+    "gaugesPassingOwnTest": 0,
     "useful": false,
     "wired": false
   }

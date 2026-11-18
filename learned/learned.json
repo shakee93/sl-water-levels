@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-18T01:22:18.286Z",
-  "asOf": "2026-11-18",
+  "updatedAt": "2026-11-18T18:51:07.639Z",
+  "asOf": "2026-11-19",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 274,
-    "feedback": 235,
+    "total": 275,
+    "feedback": 236,
     "street": 26,
     "flood3d": 13,
-    "newTonight": 0,
+    "newTonight": 1,
     "trusted": 13,
     "flagged": 0
   },
@@ -26,7 +26,7 @@
     "chilaw": {
       "proposed": true,
       "wired": false,
-      "steps": 729,
+      "steps": 743,
       "stepDays": 22,
       "events": 0,
       "eventDays": 0,
@@ -35,7 +35,7 @@
     "colombo-east": {
       "proposed": true,
       "wired": false,
-      "steps": 731,
+      "steps": 745,
       "stepDays": 22,
       "events": 8,
       "eventDays": 6,
@@ -123,7 +123,7 @@
     "ja-ela": {
       "proposed": true,
       "wired": false,
-      "steps": 729,
+      "steps": 743,
       "stepDays": 22,
       "events": 0,
       "eventDays": 0,
@@ -132,7 +132,7 @@
     "marawila": {
       "proposed": true,
       "wired": false,
-      "steps": 729,
+      "steps": 743,
       "stepDays": 22,
       "events": 0,
       "eventDays": 0,
@@ -141,7 +141,7 @@
     "negombo": {
       "proposed": true,
       "wired": false,
-      "steps": 729,
+      "steps": 743,
       "stepDays": 22,
       "events": 0,
       "eventDays": 0,
@@ -150,7 +150,7 @@
     "wennappuwa": {
       "proposed": true,
       "wired": false,
-      "steps": 729,
+      "steps": 743,
       "stepDays": 22,
       "events": 0,
       "eventDays": 0,
@@ -161,36 +161,36 @@
     "window": {
       "from": "2026-11-10",
       "to": "2026-11-18",
-      "points": 15107
+      "points": 15135
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4544,
-          "maeBase": 0.11,
-          "maeFit": 0.11,
+          "n": 5049,
+          "maeBase": 0.1,
+          "maeFit": 0.1,
           "gainPct": 0,
-          "maePooled": 0.11,
+          "maePooled": 0.1,
           "pooledGainPct": 1
         },
         "3": {
-          "n": 4503,
-          "maeBase": 0.25,
-          "maeFit": 0.25,
+          "n": 5002,
+          "maeBase": 0.24,
+          "maeFit": 0.24,
           "gainPct": -1,
-          "maePooled": 0.25,
+          "maePooled": 0.24,
           "pooledGainPct": -1
         },
         "6": {
-          "n": 4423,
-          "maeBase": 0.45,
-          "maeFit": 0.46,
+          "n": 4903,
+          "maeBase": 0.43,
+          "maeFit": 0.43,
           "gainPct": -1,
-          "maePooled": 0.45,
-          "pooledGainPct": 0
+          "maePooled": 0.43,
+          "pooledGainPct": -1
         }
       },
-      "gaugesPassingOwnTest": 5,
+      "gaugesPassingOwnTest": 0,
       "useful": false,
       "wired": false
     },
@@ -358,7 +358,5 @@
       "missing": 2
     }
   ],
-  "changes": [
-    "Nagalagam Street: people report road water from ~3.0 ft (6 reports, 5 days)"
-  ]
+  "changes": []
 }
