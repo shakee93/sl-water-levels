@@ -101,14 +101,14 @@
    "unit": "%",
    "target": 10,
    "met": false,
-   "n": 1587,
+   "n": 1584,
    "parts": [
     {
      "key": "0-10",
      "value": 0,
      "shown": 0,
      "target": 10,
-     "n": 1552,
+     "n": 1549,
      "met": true
     },
     {
@@ -165,7 +165,7 @@
      {
       "from": 0,
       "to": 0.1,
-      "n": 1552,
+      "n": 1549,
       "shownPct": 0,
       "observedPct": 0,
       "met": true
@@ -894,14 +894,14 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 1587,
+    "n": 1584,
     "parts": [
      {
       "key": "0-10",
       "value": 0,
       "shown": 0,
       "target": 10,
-      "n": 1552,
+      "n": 1549,
       "met": true
      },
      {
@@ -958,7 +958,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 1552,
+       "n": 1549,
        "shownPct": 0,
        "observedPct": 0,
        "met": true
@@ -1018,13 +1018,13 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 33.3,
-     "n": 1587,
+     "n": 1584,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0,
-       "n": 1552,
+       "n": 1549,
        "met": true
       },
       {
@@ -1069,7 +1069,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 1552,
+        "n": 1549,
         "shownPct": 0,
         "observedPct": 0,
         "met": true
@@ -1295,14 +1295,14 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 1587,
+    "n": 1584,
     "parts": [
      {
       "key": "0-10",
       "value": 0,
       "shown": 0,
       "target": 10,
-      "n": 1552,
+      "n": 1549,
       "met": true
      },
      {
@@ -1359,7 +1359,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 1552,
+       "n": 1549,
        "shownPct": 0,
        "observedPct": 0,
        "met": true
@@ -1419,13 +1419,13 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 33.3,
-     "n": 1587,
+     "n": 1584,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0,
-       "n": 1552,
+       "n": 1549,
        "met": true
       },
       {
@@ -1470,7 +1470,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 1552,
+        "n": 1549,
         "shownPct": 0,
         "observedPct": 0,
         "met": true
@@ -1696,14 +1696,14 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 1587,
+    "n": 1584,
     "parts": [
      {
       "key": "0-10",
       "value": 0,
       "shown": 0,
       "target": 10,
-      "n": 1552,
+      "n": 1549,
       "met": true
      },
      {
@@ -1760,7 +1760,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 1552,
+       "n": 1549,
        "shownPct": 0,
        "observedPct": 0,
        "met": true
@@ -1820,13 +1820,13 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 33.3,
-     "n": 1587,
+     "n": 1584,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0,
-       "n": 1552,
+       "n": 1549,
        "met": true
       },
       {
@@ -1871,7 +1871,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 1552,
+        "n": 1549,
         "shownPct": 0,
         "observedPct": 0,
         "met": true
@@ -2539,14 +2539,14 @@
     "unit": "%",
     "target": 10,
     "met": false,
-    "n": 1587,
+    "n": 1584,
     "parts": [
      {
       "key": "0-10",
       "value": 0,
       "shown": 0,
       "target": 10,
-      "n": 1552,
+      "n": 1549,
       "met": true
      },
      {
@@ -2603,7 +2603,7 @@
       {
        "from": 0,
        "to": 0.1,
-       "n": 1552,
+       "n": 1549,
        "shownPct": 0,
        "observedPct": 0,
        "met": true
@@ -2663,13 +2663,13 @@
     "targetText": "within 10 points in every group with 10+ cases",
     "baseline": {
      "value": 33.3,
-     "n": 1587,
+     "n": 1584,
      "met": false,
      "parts": [
       {
        "key": "0-10",
        "value": 0,
-       "n": 1552,
+       "n": 1549,
        "met": true
       },
       {
@@ -2714,7 +2714,7 @@
        {
         "from": 0,
         "to": 0.1,
-        "n": 1552,
+        "n": 1549,
         "shownPct": 0,
         "observedPct": 0,
         "met": true
@@ -3218,15 +3218,14 @@
    }
   ]
  },
- "generatedAt": "2026-11-17T20:11:52.404Z",
- "nowUsed": "2026-11-17T20:11:52.404Z",
+ "generatedAt": "2026-11-18T20:11:46.524Z",
+ "nowUsed": "2026-11-18T20:11:46.524Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "kpiSpec": 1,
  "versionsHash": "16c87e3fa8acc553",
  "daysRequested": 30,
- "daysFound": 27,
+ "daysFound": 28,
  "daysMissing": [
-  "2026-10-19",
   "2026-10-20",
   "2026-10-21"
  ],

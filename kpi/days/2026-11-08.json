@@ -3289,15 +3289,14 @@
    }
   ]
  },
- "generatedAt": "2026-11-17T20:11:52.404Z",
- "nowUsed": "2026-11-17T20:11:52.404Z",
+ "generatedAt": "2026-11-18T20:11:46.524Z",
+ "nowUsed": "2026-11-18T20:11:46.524Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "kpiSpec": 1,
  "versionsHash": "16c87e3fa8acc553",
  "daysRequested": 30,
- "daysFound": 27,
+ "daysFound": 28,
  "daysMissing": [
-  "2026-10-19",
   "2026-10-20",
   "2026-10-21"
  ],
