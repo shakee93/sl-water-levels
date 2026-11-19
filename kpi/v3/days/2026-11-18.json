@@ -1,16 +1,20 @@
 {
  "day": "2026-11-18",
- "final": false,
+ "final": true,
  "edge": false,
  "sources": {
-  "runs": 646,
-  "shownArchive": 1938,
+  "runs": 636,
+  "shownArchive": 1908,
   "shownRecomputed": 0,
-  "chancePModel": 1938,
+  "chancePModel": 1908,
   "chanceProbability": 0
  },
  "notice": {
-  "hours": {},
+  "hours": {
+   "Moraketiya|alert": {
+    "5": 0.985
+   }
+  },
   "floods": []
  },
  "p1": {},
@@ -68,21 +72,39 @@
  },
  "p3": {
   "alert": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     612,
+     0.05,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "minor": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     612,
+     0,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "major": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     612,
+     0,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
@@ -90,15 +112,15 @@
   }
  },
  "nh": {
-  "hours": 1149,
+  "hours": 1130,
   "fast": 17,
   "fastRising": 7,
   "rising": 172,
   "risingRight": 77,
-  "still": 982,
+  "still": 963,
   "stillRising": 95,
-  "archiveWords": 551,
-  "rebuiltWords": 598,
+  "archiveWords": 541,
+  "rebuiltWords": 589,
   "catch": {
    "Siyambalanduwa": {
     "0": [
@@ -160,7 +182,7 @@
    },
    "Thaldena": {
     "0": [
-     12,
+     13,
      0
     ],
     "48": [
@@ -844,7 +866,7 @@
    },
    "Mullamunai Bridge": {
     "0": [
-     8,
+     1,
      0
     ],
     "23": [
@@ -865,10 +887,6 @@
     ],
     "-3": [
      1,
-     0
-    ],
-    "-7": [
-     2,
      0
     ]
    },
@@ -1596,7 +1614,7 @@
    },
    "Horowpothana": {
     "0": [
-     22,
+     11,
      0
     ]
    },
@@ -2017,7 +2035,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-18T20:11:46.524Z",
+ "generatedAt": "2026-11-19T20:11:51.296Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

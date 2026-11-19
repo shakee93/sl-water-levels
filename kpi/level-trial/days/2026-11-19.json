@@ -1,0 +1,32 @@
+{
+ "schema": "slwl-level-trial/report@1/day",
+ "day": "2026-11-19",
+ "generatedAt": "2026-11-19T20:12:07.226Z",
+ "coverage": {
+  "liveRuns": 663,
+  "withTrial": 0,
+  "withDegraded": 0,
+  "sharePct": 0
+ },
+ "pooled": {},
+ "log": {
+  "runs": 0,
+  "byVerdict": {},
+  "reasons": {},
+  "degradedFlags": {},
+  "history": {
+   "checked": 0,
+   "complete": 0,
+   "incomplete": 0
+  },
+  "lagHours": {},
+  "ageMin": {}
+ },
+ "rain": {
+  "gauges": 0,
+  "thresholdMm": 10,
+  "thresholdGauges": 5,
+  "rainDay": false,
+  "names": []
+ }
+}
