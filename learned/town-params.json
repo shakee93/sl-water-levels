@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-19T00:47:18.623Z",
-  "asOf": "2026-11-19",
+  "updatedAt": "2026-11-19T18:51:24.048Z",
+  "asOf": "2026-11-20",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 221,
-    "people": 216,
+    "answers": 223,
+    "people": 218,
     "streetReports": 18,
-    "days": 24
+    "days": 25
   },
   "stations": {
     "Badalgama": {
@@ -49,8 +49,8 @@
         "yes": 3,
         "worse": 1,
         "better": 0,
-        "errN": 2,
-        "meanErrFt": 0.06
+        "errN": 1,
+        "meanErrFt": -0.04
       }
     },
     "Hanwella": {
@@ -74,8 +74,8 @@
         "yes": 19,
         "worse": 5,
         "better": 1,
-        "errN": 2,
-        "meanErrFt": 0.63
+        "errN": 1,
+        "meanErrFt": 0.5
       },
       "falling": {
         "n": 20,
@@ -113,16 +113,16 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 60,
-        "days": 21,
+        "n": 61,
+        "days": 22,
         "yes": 20,
-        "worse": 29,
+        "worse": 30,
         "better": 4,
         "unsure": 7
       },
       "seen": {
-        "n": 12,
-        "higher": 10,
+        "n": 13,
+        "higher": 11,
         "same": 2,
         "lower": 0
       },
@@ -141,13 +141,13 @@
         "yes": 11,
         "worse": 15,
         "better": 1,
-        "errN": 10,
-        "meanErrFt": -0.14
+        "errN": 7,
+        "meanErrFt": -0.15
       },
       "streetLevel": {
         "ft": 3,
-        "n": 6,
-        "days": 5,
+        "n": 7,
+        "days": 6,
         "defaultFt": 5,
         "clamped": true,
         "dryBelowN": 8
@@ -190,9 +190,7 @@
         "days": 6,
         "yes": 10,
         "worse": 1,
-        "better": 1,
-        "errN": 1,
-        "meanErrFt": 0.24
+        "better": 1
       },
       "falling": {
         "n": 3,
@@ -225,8 +223,8 @@
         "yes": 5,
         "worse": 1,
         "better": 0,
-        "errN": 3,
-        "meanErrFt": 0.88
+        "errN": 1,
+        "meanErrFt": 1.15
       },
       "falling": {
         "n": 3,
@@ -493,9 +491,7 @@
         "days": 4,
         "yes": 5,
         "worse": 0,
-        "better": 0,
-        "errN": 2,
-        "meanErrFt": 1.45
+        "better": 0
       },
       "falling": {
         "n": 2,
@@ -548,9 +544,7 @@
         "days": 1,
         "yes": 0,
         "worse": 0,
-        "better": 1,
-        "errN": 1,
-        "meanErrFt": -0.28
+        "better": 1
       }
     },
     "Baddegama": {
@@ -565,9 +559,9 @@
     },
     "Mahiyangana Bridge": {
       "answers": {
-        "n": 1,
-        "days": 1,
-        "yes": 0,
+        "n": 2,
+        "days": 2,
+        "yes": 1,
         "worse": 1,
         "better": 0,
         "unsure": 0
@@ -714,35 +708,35 @@
     "window": {
       "from": "2026-11-11",
       "to": "2026-11-19",
-      "points": 15109
+      "points": 15187
     },
     "horizons": {
       "1": {
-        "n": 4582,
-        "maeBase": 0.09,
-        "maeFit": 0.09,
+        "n": 5084,
+        "maeBase": 0.1,
+        "maeFit": 0.1,
         "gainPct": 0,
-        "maePooled": 0.09,
+        "maePooled": 0.1,
         "pooledGainPct": 0
       },
       "3": {
-        "n": 4536,
+        "n": 5036,
         "maeBase": 0.19,
         "maeFit": 0.19,
         "gainPct": 0,
         "maePooled": 0.19,
-        "pooledGainPct": -1
+        "pooledGainPct": 0
       },
       "6": {
-        "n": 4449,
+        "n": 4936,
         "maeBase": 0.31,
         "maeFit": 0.31,
-        "gainPct": -1,
+        "gainPct": 0,
         "maePooled": 0.31,
         "pooledGainPct": 0
       }
     },
-    "gaugesPassingOwnTest": 2,
+    "gaugesPassingOwnTest": 1,
     "useful": false,
     "wired": false
   }

@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-19T00:47:18.623Z",
-  "asOf": "2026-11-19",
+  "updatedAt": "2026-11-19T18:51:24.048Z",
+  "asOf": "2026-11-20",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 275,
-    "feedback": 236,
+    "total": 278,
+    "feedback": 239,
     "street": 26,
     "flood3d": 13,
-    "newTonight": 0,
+    "newTonight": 3,
     "trusted": 13,
     "flagged": 0
   },
   "streetLevel": {
     "Nagalagam Street": {
       "ft": 3,
-      "n": 6,
-      "days": 5,
+      "n": 7,
+      "days": 6,
       "defaultFt": 5,
       "clamped": true,
       "dryBelowN": 8
@@ -37,8 +37,8 @@
       "wired": false,
       "steps": 745,
       "stepDays": 22,
-      "events": 8,
-      "eventDays": 6,
+      "events": 9,
+      "eventDays": 7,
       "metrics": {
         "mm1h": {
           "current": {
@@ -161,56 +161,56 @@
     "window": {
       "from": "2026-11-11",
       "to": "2026-11-19",
-      "points": 15109
+      "points": 15187
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4582,
-          "maeBase": 0.09,
-          "maeFit": 0.09,
+          "n": 5084,
+          "maeBase": 0.1,
+          "maeFit": 0.1,
           "gainPct": 0,
-          "maePooled": 0.09,
+          "maePooled": 0.1,
           "pooledGainPct": 0
         },
         "3": {
-          "n": 4536,
+          "n": 5036,
           "maeBase": 0.19,
           "maeFit": 0.19,
           "gainPct": 0,
           "maePooled": 0.19,
-          "pooledGainPct": -1
+          "pooledGainPct": 0
         },
         "6": {
-          "n": 4449,
+          "n": 4936,
           "maeBase": 0.31,
           "maeFit": 0.31,
-          "gainPct": -1,
+          "gainPct": 0,
           "maePooled": 0.31,
           "pooledGainPct": 0
         }
       },
-      "gaugesPassingOwnTest": 2,
+      "gaugesPassingOwnTest": 1,
       "useful": false,
       "wired": false
     },
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 5,
-          "testN": 5,
-          "testDays": 4,
-          "maeBase": 0.06,
-          "maeFit": 0.06,
+          "rowsWithReports": 4,
+          "testN": 2,
+          "testDays": 2,
+          "maeBase": 0.09,
+          "maeFit": 0.09,
           "gainPct": 0,
           "beta": 0
         },
         "3": {
-          "rowsWithReports": 6,
-          "testN": 6,
-          "testDays": 4,
-          "maeBase": 0.09,
-          "maeFit": 0.09,
+          "rowsWithReports": 5,
+          "testN": 5,
+          "testDays": 3,
+          "maeBase": 0.11,
+          "maeFit": 0.11,
           "gainPct": -1,
           "beta": 0
         }
