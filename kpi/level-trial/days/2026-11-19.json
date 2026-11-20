@@ -1,26 +1,75 @@
 {
  "schema": "slwl-level-trial/report@1/day",
  "day": "2026-11-19",
- "generatedAt": "2026-11-19T20:12:07.226Z",
+ "generatedAt": "2026-11-20T20:11:57.799Z",
  "coverage": {
   "liveRuns": 663,
-  "withTrial": 0,
-  "withDegraded": 0,
-  "sharePct": 0
+  "withTrial": 565,
+  "withDegraded": 90,
+  "sharePct": 85.2
  },
- "pooled": {},
- "log": {
-  "runs": 0,
-  "byVerdict": {},
-  "reasons": {},
-  "degradedFlags": {},
-  "history": {
-   "checked": 0,
-   "complete": 0,
-   "incomplete": 0
+ "pooled": {
+  "h1": {
+   "n": 540,
+   "trialSkillPct": -3.8,
+   "liveSkillPct": -1.6,
+   "diffPts": -2.2
   },
-  "lagHours": {},
-  "ageMin": {}
+  "h3": {
+   "n": 538,
+   "trialSkillPct": -2.6,
+   "liveSkillPct": 2.3,
+   "diffPts": -4.9
+  },
+  "h6": {
+   "n": 538,
+   "trialSkillPct": -0.9,
+   "liveSkillPct": 4,
+   "diffPts": -4.9
+  },
+  "h12": {
+   "n": 339,
+   "trialSkillPct": 14.8,
+   "liveSkillPct": 9.9,
+   "diffPts": 5
+  },
+  "h24": {
+   "n": 338,
+   "trialSkillPct": 24.9,
+   "liveSkillPct": 20.9,
+   "diffPts": 4
+  }
+ },
+ "log": {
+  "runs": 663,
+  "byVerdict": {
+   "degraded": 90,
+   "ok": 565,
+   "refused": 8
+  },
+  "reasons": {
+   "refused:own_history_missing": 8
+  },
+  "degradedFlags": {
+   "partner_lags_missing": 16,
+   "own_lags_missing": 74
+  },
+  "history": {
+   "checked": 663,
+   "complete": 500,
+   "incomplete": 163
+  },
+  "lagHours": {
+   "0": 35,
+   "1": 628
+  },
+  "ageMin": {
+   "<=30": 164,
+   "<=15": 182,
+   "<=60": 239,
+   "<=120": 76,
+   ">120": 2
+  }
  },
  "rain": {
   "gauges": 0,

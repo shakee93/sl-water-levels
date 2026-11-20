@@ -1,6 +1,6 @@
 {
  "day": "2026-11-19",
- "final": false,
+ "final": true,
  "edge": false,
  "sources": {
   "runs": 651,
@@ -68,21 +68,39 @@
  },
  "p3": {
   "alert": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     616,
+     0,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "minor": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     616,
+     0,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "major": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     616,
+     0,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
@@ -1885,7 +1903,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-19T20:11:51.296Z",
+ "generatedAt": "2026-11-20T20:11:43.657Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }
