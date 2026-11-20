@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-19T18:51:24.048Z",
+  "updatedAt": "2026-11-20T00:57:06.733Z",
   "asOf": "2026-11-20",
   "minimums": {
     "answers": 3,
@@ -39,9 +39,7 @@
         "days": 2,
         "yes": 3,
         "worse": 0,
-        "better": 1,
-        "errN": 1,
-        "meanErrFt": 0.69
+        "better": 1
       },
       "falling": {
         "n": 4,
@@ -73,9 +71,7 @@
         "days": 5,
         "yes": 19,
         "worse": 5,
-        "better": 1,
-        "errN": 1,
-        "meanErrFt": 0.5
+        "better": 1
       },
       "falling": {
         "n": 20,
@@ -141,8 +137,8 @@
         "yes": 11,
         "worse": 15,
         "better": 1,
-        "errN": 7,
-        "meanErrFt": -0.15
+        "errN": 6,
+        "meanErrFt": -0.19
       },
       "streetLevel": {
         "ft": 3,
@@ -222,9 +218,7 @@
         "days": 5,
         "yes": 5,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": 1.15
+        "better": 0
       },
       "falling": {
         "n": 3,
@@ -706,33 +700,33 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-11-11",
-      "to": "2026-11-19",
-      "points": 15187
+      "from": "2026-11-12",
+      "to": "2026-11-20",
+      "points": 15249
     },
     "horizons": {
       "1": {
-        "n": 5084,
-        "maeBase": 0.1,
-        "maeFit": 0.1,
-        "gainPct": 0,
-        "maePooled": 0.1,
+        "n": 4585,
+        "maeBase": 0.08,
+        "maeFit": 0.08,
+        "gainPct": -1,
+        "maePooled": 0.08,
         "pooledGainPct": 0
       },
       "3": {
-        "n": 5036,
-        "maeBase": 0.19,
-        "maeFit": 0.19,
+        "n": 4541,
+        "maeBase": 0.15,
+        "maeFit": 0.15,
         "gainPct": 0,
-        "maePooled": 0.19,
+        "maePooled": 0.15,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 4936,
-        "maeBase": 0.31,
-        "maeFit": 0.31,
+        "n": 4452,
+        "maeBase": 0.22,
+        "maeFit": 0.22,
         "gainPct": 0,
-        "maePooled": 0.31,
+        "maePooled": 0.22,
         "pooledGainPct": 0
       }
     },
