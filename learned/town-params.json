@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-20T00:57:06.733Z",
-  "asOf": "2026-11-20",
+  "updatedAt": "2026-11-20T18:51:12.415Z",
+  "asOf": "2026-11-21",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 223,
-    "people": 218,
+    "answers": 224,
+    "people": 219,
     "streetReports": 18,
-    "days": 25
+    "days": 26
   },
   "stations": {
     "Badalgama": {
@@ -46,9 +46,7 @@
         "days": 4,
         "yes": 3,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.04
+        "better": 0
       }
     },
     "Hanwella": {
@@ -79,8 +77,8 @@
         "yes": 15,
         "worse": 4,
         "better": 1,
-        "errN": 3,
-        "meanErrFt": 0.01
+        "errN": 2,
+        "meanErrFt": -0.01
       }
     },
     "Holombuwa": {
@@ -109,10 +107,10 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 61,
-        "days": 22,
+        "n": 62,
+        "days": 23,
         "yes": 20,
-        "worse": 30,
+        "worse": 31,
         "better": 4,
         "unsure": 7
       },
@@ -137,8 +135,8 @@
         "yes": 11,
         "worse": 15,
         "better": 1,
-        "errN": 6,
-        "meanErrFt": -0.19
+        "errN": 4,
+        "meanErrFt": -0.18
       },
       "streetLevel": {
         "ft": 3,
@@ -193,9 +191,7 @@
         "days": 3,
         "yes": 2,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.18
+        "better": 0
       }
     },
     "Peradeniya": {
@@ -225,9 +221,7 @@
         "days": 3,
         "yes": 2,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.12
+        "better": 0
       }
     },
     "Moragaswewa": {
@@ -268,9 +262,7 @@
         "days": 2,
         "yes": 2,
         "worse": 0,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.43
+        "better": 0
       },
       "falling": {
         "n": 2,
@@ -324,9 +316,7 @@
         "days": 2,
         "yes": 2,
         "worse": 0,
-        "better": 1,
-        "errN": 1,
-        "meanErrFt": -0.62
+        "better": 1
       },
       "falling": {
         "n": 1,
@@ -350,9 +340,7 @@
         "days": 3,
         "yes": 2,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.14
+        "better": 0
       },
       "falling": {
         "n": 2,
@@ -492,9 +480,7 @@
         "days": 2,
         "yes": 1,
         "worse": 1,
-        "better": 0,
-        "errN": 1,
-        "meanErrFt": -0.01
+        "better": 0
       }
     },
     "Nawalapitiya": {
@@ -702,32 +688,32 @@
     "window": {
       "from": "2026-11-12",
       "to": "2026-11-20",
-      "points": 15249
+      "points": 15203
     },
     "horizons": {
       "1": {
-        "n": 4585,
+        "n": 5079,
         "maeBase": 0.08,
         "maeFit": 0.08,
-        "gainPct": -1,
+        "gainPct": 0,
         "maePooled": 0.08,
         "pooledGainPct": 0
       },
       "3": {
-        "n": 4541,
+        "n": 5028,
         "maeBase": 0.15,
         "maeFit": 0.15,
-        "gainPct": 0,
+        "gainPct": 1,
         "maePooled": 0.15,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 4452,
-        "maeBase": 0.22,
+        "n": 4924,
+        "maeBase": 0.23,
         "maeFit": 0.22,
-        "gainPct": 0,
-        "maePooled": 0.22,
-        "pooledGainPct": 0
+        "gainPct": 1,
+        "maePooled": 0.23,
+        "pooledGainPct": -1
       }
     },
     "gaugesPassingOwnTest": 1,

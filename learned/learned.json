@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-20T00:57:06.733Z",
-  "asOf": "2026-11-20",
+  "updatedAt": "2026-11-20T18:51:12.415Z",
+  "asOf": "2026-11-21",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 278,
-    "feedback": 239,
+    "total": 279,
+    "feedback": 240,
     "street": 26,
     "flood3d": 13,
-    "newTonight": 0,
+    "newTonight": 1,
     "trusted": 13,
     "flagged": 0
   },
@@ -161,33 +161,33 @@
     "window": {
       "from": "2026-11-12",
       "to": "2026-11-20",
-      "points": 15249
+      "points": 15203
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4585,
+          "n": 5079,
           "maeBase": 0.08,
           "maeFit": 0.08,
-          "gainPct": -1,
+          "gainPct": 0,
           "maePooled": 0.08,
           "pooledGainPct": 0
         },
         "3": {
-          "n": 4541,
+          "n": 5028,
           "maeBase": 0.15,
           "maeFit": 0.15,
-          "gainPct": 0,
+          "gainPct": 1,
           "maePooled": 0.15,
           "pooledGainPct": 0
         },
         "6": {
-          "n": 4452,
-          "maeBase": 0.22,
+          "n": 4924,
+          "maeBase": 0.23,
           "maeFit": 0.22,
-          "gainPct": 0,
-          "maePooled": 0.22,
-          "pooledGainPct": 0
+          "gainPct": 1,
+          "maePooled": 0.23,
+          "pooledGainPct": -1
         }
       },
       "gaugesPassingOwnTest": 1,
@@ -197,12 +197,12 @@
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 4,
-          "testN": 2,
-          "testDays": 2,
-          "maeBase": 0.09,
-          "maeFit": 0.09,
-          "gainPct": 0,
+          "rowsWithReports": 3,
+          "testN": 0,
+          "testDays": 0,
+          "maeBase": null,
+          "maeFit": null,
+          "gainPct": null,
           "beta": 0
         },
         "3": {
