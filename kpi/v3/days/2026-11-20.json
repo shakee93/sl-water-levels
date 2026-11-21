@@ -1,6 +1,6 @@
 {
  "day": "2026-11-20",
- "final": false,
+ "final": true,
  "edge": false,
  "sources": {
   "runs": 631,
@@ -10,7 +10,52 @@
   "chanceProbability": 0
  },
  "notice": {
-  "hours": {},
+  "hours": {
+   "Peradeniya|alert": {
+    "5": 0.914
+   },
+   "Glencourse|alert": {
+    "7": 1.025,
+    "9": 1.036
+   },
+   "Glencourse|minor": {
+    "6": 1.025,
+    "7": 1.036
+   },
+   "Kithulgala|alert": {
+    "6": 1.02,
+    "8": 0.956
+   },
+   "Hanwella|alert": {
+    "11": 1.017,
+    "12": 0.992
+   },
+   "Hanwella|minor": {
+    "6": 1.017,
+    "7": 0.992
+   },
+   "Nagalagam Street|alert": {
+    "7": 0.987
+   },
+   "Holombuwa|alert": {
+    "10": 1.967
+   },
+   "Thawalama|alert": {
+    "32": 1.036,
+    "40": 1.016,
+    "45": 1.125
+   },
+   "Thawalama|minor": {
+    "14": 1.036,
+    "18": 1.016,
+    "22": 1.125
+   },
+   "Thawalama|major": {
+    "6": 1.036,
+    "9": 1.016,
+    "11": 1.125
+   }
+  },
   "floods": []
  },
  "p1": {},
@@ -39,8 +84,8 @@
    ]
   },
   "fast": {
-   "warn": 0,
-   "wrong": 0,
+   "warn": 2,
+   "wrong": 2,
    "unknown": 0,
    "gauges": [
     "Deraniyagala",
@@ -67,21 +112,54 @@
  },
  "p3": {
   "alert": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     606,
+     0.2,
+     42
+    ],
+    "1in10": [
+     7,
+     0.75,
+     0
+    ],
+    "2-4in10": [
+     2,
+     0.8,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "minor": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     614,
+     0.15,
+     0
+    ],
+    "1in10": [
+     1,
+     0.1,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
    ]
   },
   "major": {
-   "tiers": {},
+   "tiers": {
+    "<1in10": [
+     615,
+     0.05,
+     0
+    ]
+   },
    "atLimit": [
     0,
     0
@@ -89,15 +167,15 @@
   }
  },
  "nh": {
-  "hours": 1155,
+  "hours": 1137,
   "fast": 50,
   "fastRising": 38,
   "rising": 261,
   "risingRight": 146,
-  "still": 874,
+  "still": 856,
   "stillRising": 115,
-  "archiveWords": 561,
-  "rebuiltWords": 594,
+  "archiveWords": 560,
+  "rebuiltWords": 577,
   "catch": {
    "Wellawaya": {
     "0": [
@@ -1367,10 +1445,6 @@
     "-2": [
      2,
      0
-    ],
-    "-4": [
-     1,
-     0
     ]
    },
    "Manampitiya": {
@@ -1795,16 +1869,6 @@
      0
     ]
    },
-   "Yaka Wewa": {
-    "0": [
-     16,
-     0
-    ],
-    "3": [
-     1,
-     0
-    ]
-   },
    "Miriswatta": {
     "0": [
      1,
@@ -1974,7 +2038,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-20T20:11:43.657Z",
+ "generatedAt": "2026-11-21T20:11:45.560Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

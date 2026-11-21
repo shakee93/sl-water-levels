@@ -11,10 +11,6 @@
  },
  "notice": {
   "hours": {
-   "Thawalama|alert": {
-    "6": 1.239,
-    "7": 3.895
-   },
    "Magura|minor": {
     "6": 2.904
    },
@@ -82,6 +78,10 @@
     "36": 1.052,
     "39": 0.967,
     "41": 0.838
+   },
+   "Thawalama|alert": {
+    "6": 1.239,
+    "7": 3.895
    }
   },
   "floods": []
@@ -2688,7 +2688,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-20T20:11:43.657Z",
+ "generatedAt": "2026-11-21T20:11:45.560Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }
