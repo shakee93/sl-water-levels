@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-20T18:51:12.415Z",
+  "updatedAt": "2026-11-21T00:22:47.679Z",
   "asOf": "2026-11-21",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 279,
-    "feedback": 240,
+    "total": 280,
+    "feedback": 241,
     "street": 26,
     "flood3d": 13,
     "newTonight": 1,
@@ -160,13 +160,13 @@
   "forecast": {
     "window": {
       "from": "2026-11-12",
-      "to": "2026-11-20",
-      "points": 15203
+      "to": "2026-11-21",
+      "points": 15224
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 5079,
+          "n": 4560,
           "maeBase": 0.08,
           "maeFit": 0.08,
           "gainPct": 0,
@@ -174,20 +174,20 @@
           "pooledGainPct": 0
         },
         "3": {
-          "n": 5028,
-          "maeBase": 0.15,
-          "maeFit": 0.15,
+          "n": 4513,
+          "maeBase": 0.16,
+          "maeFit": 0.16,
           "gainPct": 1,
-          "maePooled": 0.15,
+          "maePooled": 0.16,
           "pooledGainPct": 0
         },
         "6": {
-          "n": 4924,
-          "maeBase": 0.23,
-          "maeFit": 0.22,
+          "n": 5058,
+          "maeBase": 0.25,
+          "maeFit": 0.25,
           "gainPct": 1,
-          "maePooled": 0.23,
-          "pooledGainPct": -1
+          "maePooled": 0.25,
+          "pooledGainPct": 0
         }
       },
       "gaugesPassingOwnTest": 1,
@@ -197,22 +197,22 @@
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 3,
+          "rowsWithReports": 1,
           "testN": 0,
           "testDays": 0,
           "maeBase": null,
           "maeFit": null,
           "gainPct": null,
-          "beta": 0
+          "beta": null
         },
         "3": {
-          "rowsWithReports": 5,
-          "testN": 5,
-          "testDays": 3,
-          "maeBase": 0.11,
-          "maeFit": 0.11,
-          "gainPct": -1,
-          "beta": 0
+          "rowsWithReports": 2,
+          "testN": 0,
+          "testDays": 0,
+          "maeBase": null,
+          "maeFit": null,
+          "gainPct": null,
+          "beta": null
         }
       },
       "reports": 14,
