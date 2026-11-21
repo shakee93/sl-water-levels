@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T00:22:47.679Z",
-  "asOf": "2026-11-21",
+  "updatedAt": "2026-11-21T18:51:08.033Z",
+  "asOf": "2026-11-22",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,33 +13,35 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 225,
-    "people": 220,
+    "answers": 230,
+    "people": 225,
     "streetReports": 18,
     "days": 27
   },
   "stations": {
     "Badalgama": {
       "answers": {
-        "n": 11,
-        "days": 5,
+        "n": 12,
+        "days": 6,
         "yes": 6,
-        "worse": 2,
+        "worse": 3,
         "better": 1,
         "unsure": 2
       },
       "seen": {
-        "n": 2,
-        "higher": 0,
+        "n": 3,
+        "higher": 1,
         "same": 1,
         "lower": 1
       },
       "rising": {
-        "n": 4,
-        "days": 2,
+        "n": 5,
+        "days": 3,
         "yes": 3,
-        "worse": 0,
-        "better": 1
+        "worse": 1,
+        "better": 1,
+        "errN": 1,
+        "meanErrFt": -0.25
       },
       "falling": {
         "n": 4,
@@ -51,25 +53,27 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 56,
-        "days": 14,
+        "n": 57,
+        "days": 15,
         "yes": 34,
-        "worse": 9,
+        "worse": 10,
         "better": 2,
         "unsure": 11
       },
       "seen": {
-        "n": 7,
-        "higher": 1,
+        "n": 8,
+        "higher": 2,
         "same": 5,
         "lower": 1
       },
       "rising": {
-        "n": 25,
-        "days": 5,
+        "n": 26,
+        "days": 6,
         "yes": 19,
-        "worse": 5,
-        "better": 1
+        "worse": 6,
+        "better": 1,
+        "errN": 1,
+        "meanErrFt": 0.11
       },
       "falling": {
         "n": 20,
@@ -77,8 +81,8 @@
         "yes": 15,
         "worse": 4,
         "better": 1,
-        "errN": 2,
-        "meanErrFt": -0.01
+        "errN": 1,
+        "meanErrFt": -0.02
       }
     },
     "Holombuwa": {
@@ -135,8 +139,8 @@
         "yes": 11,
         "worse": 15,
         "better": 1,
-        "errN": 4,
-        "meanErrFt": -0.18
+        "errN": 3,
+        "meanErrFt": -0.08
       },
       "streetLevel": {
         "ft": 3,
@@ -166,9 +170,9 @@
     },
     "Dunamale": {
       "answers": {
-        "n": 19,
-        "days": 9,
-        "yes": 14,
+        "n": 20,
+        "days": 10,
+        "yes": 15,
         "worse": 2,
         "better": 3,
         "unsure": 0
@@ -226,9 +230,9 @@
     },
     "Moragaswewa": {
       "answers": {
-        "n": 3,
-        "days": 2,
-        "yes": 2,
+        "n": 4,
+        "days": 3,
+        "yes": 3,
         "worse": 1,
         "better": 0,
         "unsure": 0
@@ -559,6 +563,16 @@
         "same": 0,
         "lower": 0
       }
+    },
+    "Thambuththegama": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 0,
+        "better": 0,
+        "unsure": 1
+      }
     }
   },
   "zones": {},
@@ -660,6 +674,14 @@
     },
     {
       "kind": "streetLevel",
+      "station": "Hanwella",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
       "station": "Moragaswewa",
       "n": 1,
       "days": 1,
@@ -693,34 +715,34 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-11-12",
+      "from": "2026-11-13",
       "to": "2026-11-21",
-      "points": 15224
+      "points": 15203
     },
     "horizons": {
       "1": {
-        "n": 4560,
-        "maeBase": 0.08,
-        "maeFit": 0.08,
+        "n": 5075,
+        "maeBase": 0.09,
+        "maeFit": 0.09,
         "gainPct": 0,
-        "maePooled": 0.08,
-        "pooledGainPct": 0
+        "maePooled": 0.09,
+        "pooledGainPct": -1
       },
       "3": {
-        "n": 4513,
-        "maeBase": 0.16,
-        "maeFit": 0.16,
-        "gainPct": 1,
-        "maePooled": 0.16,
-        "pooledGainPct": 0
+        "n": 5028,
+        "maeBase": 0.18,
+        "maeFit": 0.19,
+        "gainPct": 0,
+        "maePooled": 0.19,
+        "pooledGainPct": -1
       },
       "6": {
-        "n": 5058,
-        "maeBase": 0.25,
-        "maeFit": 0.25,
-        "gainPct": 1,
-        "maePooled": 0.25,
-        "pooledGainPct": 0
+        "n": 4927,
+        "maeBase": 0.28,
+        "maeFit": 0.28,
+        "gainPct": 0,
+        "maePooled": 0.29,
+        "pooledGainPct": -1
       }
     },
     "gaugesPassingOwnTest": 1,
