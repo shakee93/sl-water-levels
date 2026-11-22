@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T23:36:42.747Z",
-  "asOf": "2026-11-22",
+  "updatedAt": "2026-11-22T23:54:10.729Z",
+  "asOf": "2026-11-23",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 230,
-    "people": 225,
+    "answers": 235,
+    "people": 230,
     "streetReports": 18,
-    "days": 27
+    "days": 28
   },
   "stations": {
     "Badalgama": {
@@ -53,27 +53,27 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 57,
-        "days": 15,
+        "n": 58,
+        "days": 16,
         "yes": 34,
-        "worse": 10,
+        "worse": 11,
         "better": 2,
         "unsure": 11
       },
       "seen": {
-        "n": 8,
-        "higher": 2,
+        "n": 9,
+        "higher": 3,
         "same": 5,
         "lower": 1
       },
       "rising": {
-        "n": 26,
-        "days": 6,
+        "n": 27,
+        "days": 7,
         "yes": 19,
-        "worse": 6,
+        "worse": 7,
         "better": 1,
-        "errN": 1,
-        "meanErrFt": 0.11
+        "errN": 2,
+        "meanErrFt": -0.03
       },
       "falling": {
         "n": 20,
@@ -111,16 +111,16 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 62,
-        "days": 23,
+        "n": 63,
+        "days": 24,
         "yes": 20,
-        "worse": 31,
+        "worse": 32,
         "better": 4,
         "unsure": 7
       },
       "seen": {
-        "n": 13,
-        "higher": 11,
+        "n": 14,
+        "higher": 12,
         "same": 2,
         "lower": 0
       },
@@ -134,18 +134,18 @@
         "meanErrFt": -0.13
       },
       "falling": {
-        "n": 27,
-        "days": 16,
+        "n": 28,
+        "days": 17,
         "yes": 11,
-        "worse": 15,
+        "worse": 16,
         "better": 1,
         "errN": 3,
-        "meanErrFt": -0.08
+        "meanErrFt": -0.15
       },
       "streetLevel": {
         "ft": 3,
-        "n": 7,
-        "days": 6,
+        "n": 8,
+        "days": 7,
         "defaultFt": 5,
         "clamped": true,
         "dryBelowN": 8
@@ -449,16 +449,16 @@
     },
     "Deraniyagala": {
       "answers": {
-        "n": 1,
-        "days": 1,
+        "n": 2,
+        "days": 2,
         "yes": 0,
-        "worse": 1,
+        "worse": 2,
         "better": 0,
         "unsure": 0
       },
       "seen": {
-        "n": 1,
-        "higher": 1,
+        "n": 2,
+        "higher": 2,
         "same": 0,
         "lower": 0
       },
@@ -573,6 +573,41 @@
         "better": 0,
         "unsure": 1
       }
+    },
+    "Maalayarkattu Bridge": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "unsure": 0
+      }
+    },
+    "Magura": {
+      "answers": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "unsure": 0
+      },
+      "seen": {
+        "n": 1,
+        "higher": 1,
+        "same": 0,
+        "lower": 0
+      },
+      "rising": {
+        "n": 1,
+        "days": 1,
+        "yes": 0,
+        "worse": 1,
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -14.23
+      }
     }
   },
   "zones": {},
@@ -658,6 +693,14 @@
   "pending": [
     {
       "kind": "streetLevel",
+      "station": "Hanwella",
+      "n": 2,
+      "days": 2,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
       "station": "Dunamale",
       "n": 2,
       "days": 2,
@@ -674,14 +717,6 @@
     },
     {
       "kind": "streetLevel",
-      "station": "Hanwella",
-      "n": 1,
-      "days": 1,
-      "needN": 3,
-      "needDays": 2
-    },
-    {
-      "kind": "streetLevel",
       "station": "Moragaswewa",
       "n": 1,
       "days": 1,
@@ -691,6 +726,14 @@
     {
       "kind": "streetLevel",
       "station": "Kalawellawa (Millakanda)",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
+      "station": "Deraniyagala",
       "n": 1,
       "days": 1,
       "needN": 3,
@@ -715,33 +758,33 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-11-13",
+      "from": "2026-11-14",
       "to": "2026-11-22",
-      "points": 15224
+      "points": 14556
     },
     "horizons": {
       "1": {
-        "n": 4541,
-        "maeBase": 0.1,
-        "maeFit": 0.1,
-        "gainPct": -1,
-        "maePooled": 0.1,
+        "n": 4277,
+        "maeBase": 0.11,
+        "maeFit": 0.11,
+        "gainPct": 0,
+        "maePooled": 0.11,
         "pooledGainPct": -1
       },
       "3": {
-        "n": 4493,
-        "maeBase": 0.2,
-        "maeFit": 0.2,
-        "gainPct": 0,
-        "maePooled": 0.2,
+        "n": 4270,
+        "maeBase": 0.22,
+        "maeFit": 0.22,
+        "gainPct": -1,
+        "maePooled": 0.22,
         "pooledGainPct": -1
       },
       "6": {
-        "n": 5050,
-        "maeBase": 0.29,
-        "maeFit": 0.29,
+        "n": 4902,
+        "maeBase": 0.33,
+        "maeFit": 0.33,
         "gainPct": 0,
-        "maePooled": 0.29,
+        "maePooled": 0.33,
         "pooledGainPct": -1
       }
     },

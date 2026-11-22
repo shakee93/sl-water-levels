@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T23:36:42.747Z",
-  "asOf": "2026-11-22",
+  "updatedAt": "2026-11-22T23:54:10.729Z",
+  "asOf": "2026-11-23",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 286,
-    "feedback": 247,
-    "street": 26,
-    "flood3d": 13,
-    "newTonight": 0,
-    "trusted": 13,
+    "total": 298,
+    "feedback": 255,
+    "street": 27,
+    "flood3d": 16,
+    "newTonight": 12,
+    "trusted": 16,
     "flagged": 0
   },
   "streetLevel": {
     "Nagalagam Street": {
       "ft": 3,
-      "n": 7,
-      "days": 6,
+      "n": 8,
+      "days": 7,
       "defaultFt": 5,
       "clamped": true,
       "dryBelowN": 8
@@ -37,8 +37,8 @@
       "wired": false,
       "steps": 745,
       "stepDays": 22,
-      "events": 9,
-      "eventDays": 7,
+      "events": 10,
+      "eventDays": 8,
       "metrics": {
         "mm1h": {
           "current": {
@@ -159,34 +159,34 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-13",
+      "from": "2026-11-14",
       "to": "2026-11-22",
-      "points": 15224
+      "points": 14556
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4541,
-          "maeBase": 0.1,
-          "maeFit": 0.1,
-          "gainPct": -1,
-          "maePooled": 0.1,
+          "n": 4277,
+          "maeBase": 0.11,
+          "maeFit": 0.11,
+          "gainPct": 0,
+          "maePooled": 0.11,
           "pooledGainPct": -1
         },
         "3": {
-          "n": 4493,
-          "maeBase": 0.2,
-          "maeFit": 0.2,
-          "gainPct": 0,
-          "maePooled": 0.2,
+          "n": 4270,
+          "maeBase": 0.22,
+          "maeFit": 0.22,
+          "gainPct": -1,
+          "maePooled": 0.22,
           "pooledGainPct": -1
         },
         "6": {
-          "n": 5050,
-          "maeBase": 0.29,
-          "maeFit": 0.29,
+          "n": 4902,
+          "maeBase": 0.33,
+          "maeFit": 0.33,
           "gainPct": 0,
-          "maePooled": 0.29,
+          "maePooled": 0.33,
           "pooledGainPct": -1
         }
       },
@@ -197,25 +197,25 @@
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 4,
-          "testN": 1,
-          "testDays": 1,
-          "maeBase": 0.11,
-          "maeFit": 0.11,
+          "rowsWithReports": 7,
+          "testN": 7,
+          "testDays": 3,
+          "maeBase": 0.03,
+          "maeFit": 0.03,
           "gainPct": 0,
           "beta": 0
         },
         "3": {
-          "rowsWithReports": 5,
-          "testN": 2,
-          "testDays": 1,
-          "maeBase": 0.06,
-          "maeFit": 0.06,
-          "gainPct": 0,
+          "rowsWithReports": 8,
+          "testN": 8,
+          "testDays": 3,
+          "maeBase": 0.07,
+          "maeFit": 0.07,
+          "gainPct": -10,
           "beta": 0
         }
       },
-      "reports": 15,
+      "reports": 16,
       "useful": false,
       "wired": false
     }
@@ -246,9 +246,9 @@
       "due": false
     },
     "Kelani floodplain (elsewhere)": {
-      "trusted": 4,
-      "newTrusted": 4,
-      "newPeople": 4,
+      "trusted": 6,
+      "newTrusted": 6,
+      "newPeople": 5,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -278,9 +278,9 @@
       "due": false
     },
     "Wellampitiya and Kolonnawa": {
-      "trusted": 1,
-      "newTrusted": 1,
-      "newPeople": 1,
+      "trusted": 2,
+      "newTrusted": 2,
+      "newPeople": 2,
       "needNew": 10,
       "needPeople": 3,
       "due": false
@@ -325,16 +325,16 @@
     {
       "kind": "map",
       "name": "Wellampitiya and Kolonnawa",
-      "have": 1,
+      "have": 2,
       "need": 10,
-      "missing": 9
+      "missing": 8
     },
     {
       "kind": "map",
       "name": "Kelani floodplain (elsewhere)",
-      "have": 4,
+      "have": 6,
       "need": 10,
-      "missing": 6
+      "missing": 4
     },
     {
       "kind": "map",
@@ -345,14 +345,14 @@
     },
     {
       "kind": "streetLevel",
-      "name": "Hanwella",
+      "name": "Moragaswewa",
       "have": 1,
       "need": 3,
       "missing": 2
     },
     {
       "kind": "streetLevel",
-      "name": "Moragaswewa",
+      "name": "Kalawellawa (Millakanda)",
       "have": 1,
       "need": 3,
       "missing": 2
