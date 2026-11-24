@@ -1,0 +1,102 @@
+{
+ "schema": "slwl-level-trial/report@1/day",
+ "day": "2026-11-24",
+ "generatedAt": "2026-11-24T20:11:54.174Z",
+ "coverage": {
+  "liveRuns": 332,
+  "withTrial": 309,
+  "withDegraded": 23,
+  "sharePct": 93.1
+ },
+ "pooled": {
+  "h1": {
+   "n": 305,
+   "trialSkillPct": 37.9,
+   "liveSkillPct": 30.9,
+   "diffPts": 7
+  },
+  "h3": {
+   "n": 251,
+   "trialSkillPct": 29.9,
+   "liveSkillPct": 19.5,
+   "diffPts": 10.4
+  },
+  "h6": {
+   "n": 170,
+   "trialSkillPct": 17.2,
+   "liveSkillPct": 6.1,
+   "diffPts": 11.1
+  },
+  "h12": {
+   "n": 12,
+   "trialSkillPct": 44.9,
+   "liveSkillPct": 22,
+   "diffPts": 22.9
+  }
+ },
+ "log": {
+  "runs": 332,
+  "byVerdict": {
+   "ok": 309,
+   "degraded": 23
+  },
+  "reasons": {},
+  "degradedFlags": {
+   "partner_lags_missing": 5,
+   "own_lags_missing": 18
+  },
+  "history": {
+   "checked": 332,
+   "complete": 298,
+   "incomplete": 34
+  },
+  "lagHours": {
+   "0": 1,
+   "1": 329,
+   "2": 2
+  },
+  "ageMin": {
+   "<=30": 98,
+   ">120": 4,
+   "<=60": 109,
+   "<=15": 83,
+   "<=120": 38
+  }
+ },
+ "rain": {
+  "gauges": 28,
+  "thresholdMm": 10,
+  "thresholdGauges": 5,
+  "rainDay": true,
+  "names": [
+   "Badalgama",
+   "Baddegama",
+   "Deraniyagala",
+   "Dunamale",
+   "Ellagawa",
+   "Glencourse",
+   "Hanwella",
+   "Holombuwa",
+   "Horowpothana",
+   "Kithulgala",
+   "Kuda Oya",
+   "Magura",
+   "Manampitiya",
+   "Moragaswewa",
+   "Moraketiya",
+   "Nagalagam Street",
+   "Nawalapitiya",
+   "Norwood",
+   "Panadugama",
+   "Peradeniya",
+   "Pitabeddara",
+   "Rathnapura",
+   "Thaldena",
+   "Thalgahagoda",
+   "Thanamalwila",
+   "Thawalama",
+   "Urawa",
+   "Wellawaya"
+  ]
+ }
+}

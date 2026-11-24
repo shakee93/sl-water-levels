@@ -1,0 +1,667 @@
+{
+ "day": "2026-11-23",
+ "final": true,
+ "edge": false,
+ "sources": {
+  "runs": 79,
+  "shownArchive": 153,
+  "shownRecomputed": 84,
+  "chancePModel": 153,
+  "chanceProbability": 84
+ },
+ "notice": {
+  "hours": {
+   "Panadugama|alert": {
+    "5": 3,
+    "6": 3,
+    "26": 3
+   },
+   "Magura|alert": {
+    "5": 3
+   }
+  },
+  "floods": []
+ },
+ "p1": {},
+ "p2": {
+  "big": {
+   "warn": 0,
+   "wrong": 0,
+   "unknown": 0,
+   "gauges": [
+    "Badalgama",
+    "Baddegama",
+    "Dunamale",
+    "Ellagawa",
+    "Glencourse",
+    "Hanwella",
+    "Horowpothana",
+    "Kuda Oya",
+    "Magura",
+    "Manampitiya",
+    "Moragaswewa",
+    "Moraketiya",
+    "Rathnapura",
+    "Thaldena",
+    "Thanamalwila",
+    "Wellawaya"
+   ]
+  },
+  "fast": {
+   "warn": 0,
+   "wrong": 0,
+   "unknown": 0,
+   "gauges": [
+    "Deraniyagala",
+    "Holombuwa",
+    "Kithulgala",
+    "Nawalapitiya",
+    "Norwood",
+    "Panadugama",
+    "Pitabeddara",
+    "Thawalama",
+    "Urawa"
+   ]
+  },
+  "tidal": {
+   "warn": 0,
+   "wrong": 0,
+   "unknown": 0,
+   "gauges": [
+    "Nagalagam Street",
+    "Peradeniya",
+    "Thalgahagoda"
+   ]
+  }
+ },
+ "p3": {
+  "alert": {
+   "tiers": {
+    "<1in10": [
+     75,
+     0.1,
+     0
+    ]
+   },
+   "atLimit": [
+    0,
+    0
+   ]
+  },
+  "minor": {
+   "tiers": {
+    "<1in10": [
+     75,
+     0,
+     0
+    ]
+   },
+   "atLimit": [
+    0,
+    0
+   ]
+  },
+  "major": {
+   "tiers": {
+    "<1in10": [
+     75,
+     0,
+     0
+    ]
+   },
+   "atLimit": [
+    0,
+    0
+   ]
+  }
+ },
+ "nh": {
+  "hours": 136,
+  "fast": 7,
+  "fastRising": 5,
+  "rising": 34,
+  "risingRight": 16,
+  "still": 111,
+  "stillRising": 18,
+  "archiveWords": 40,
+  "rebuiltWords": 96,
+  "catch": {
+   "Horowpothana": {
+    "0": [
+     2,
+     0
+    ]
+   },
+   "Panadugama": {
+    "-10": [
+     1,
+     0
+    ],
+    "-14": [
+     1,
+     0
+    ],
+    "-12": [
+     1,
+     0
+    ]
+   },
+   "Lavanai Aru Bridge": {
+    "0": [
+     1,
+     0
+    ],
+    "3": [
+     2,
+     0
+    ]
+   },
+   "Mullamunai Bridge": {
+    "7": [
+     1,
+     0
+    ],
+    "-13": [
+     1,
+     0
+    ]
+   },
+   "Pulipanchakal Bridge": {
+    "13": [
+     0,
+     1
+    ],
+    "17": [
+     0,
+     1
+    ]
+   },
+   "Maalayarkattu Bridge": {
+    "13": [
+     1,
+     0
+    ],
+    "-20": [
+     1,
+     0
+    ]
+   },
+   "Rajagalathenna Bridge": {
+    "0": [
+     1,
+     0
+    ],
+    "-3": [
+     1,
+     0
+    ],
+    "-13": [
+     1,
+     0
+    ]
+   },
+   "Vadamunai Bridge": {
+    "-70": [
+     1,
+     0
+    ],
+    "-47": [
+     1,
+     0
+    ]
+   },
+   "Wellawaya": {
+    "-6": [
+     1,
+     0
+    ]
+   },
+   "Nakkala": {
+    "0": [
+     3,
+     0
+    ]
+   },
+   "Moragaswewa": {
+    "-59": [
+     1,
+     0
+    ],
+    "-53": [
+     1,
+     0
+    ],
+    "-32": [
+     1,
+     0
+    ]
+   },
+   "Hanwella": {
+    "31": [
+     1,
+     0
+    ],
+    "-11": [
+     1,
+     0
+    ],
+    "-18": [
+     1,
+     0
+    ]
+   },
+   "Giriulla": {
+    "-23": [
+     1,
+     0
+    ],
+    "-7": [
+     2,
+     0
+    ]
+   },
+   "Siyambalanduwa": {
+    "0": [
+     2,
+     0
+    ],
+    "-3": [
+     1,
+     0
+    ]
+   },
+   "Thanamalwila": {
+    "3": [
+     1,
+     0
+    ],
+    "10": [
+     1,
+     0
+    ],
+    "-16": [
+     1,
+     0
+    ]
+   },
+   "Glencourse": {
+    "21": [
+     1,
+     0
+    ],
+    "-3": [
+     1,
+     0
+    ]
+   },
+   "Thaldena": {
+    "0": [
+     3,
+     0
+    ]
+   },
+   "Norwood": {
+    "-3": [
+     1,
+     0
+    ],
+    "-2": [
+     1,
+     0
+    ]
+   },
+   "Ellagawa": {
+    "10": [
+     1,
+     0
+    ],
+    "-3": [
+     1,
+     0
+    ],
+    "-28": [
+     1,
+     0
+    ]
+   },
+   "Kalawellawa (Millakanda)": {
+    "28": [
+     0,
+     1
+    ],
+    "-50": [
+     1,
+     0
+    ]
+   },
+   "Urawa": {
+    "0": [
+     2,
+     0
+    ],
+    "-2": [
+     1,
+     0
+    ]
+   },
+   "Badalgama": {
+    "-22": [
+     1,
+     0
+    ],
+    "-7": [
+     1,
+     0
+    ],
+    "-5": [
+     1,
+     0
+    ]
+   },
+   "Moraketiya": {
+    "1": [
+     1,
+     0
+    ],
+    "-4": [
+     1,
+     0
+    ],
+    "-34": [
+     1,
+     0
+    ]
+   },
+   "Magura": {
+    "54": [
+     1,
+     0
+    ],
+    "62": [
+     0,
+     1
+    ],
+    "-29": [
+     0,
+     1
+    ]
+   },
+   "Kithulgala": {
+    "47": [
+     1,
+     0
+    ],
+    "140": [
+     1,
+     0
+    ],
+    "-46": [
+     1,
+     0
+    ]
+   },
+   "Mahiyangana Bridge": {
+    "18": [
+     1,
+     0
+    ],
+    "-6": [
+     1,
+     0
+    ]
+   },
+   "Deraniyagala": {
+    "-5": [
+     1,
+     0
+    ]
+   },
+   "Denawaka Ganga (Pelmadulla)": {
+    "330": [
+     1,
+     0
+    ],
+    "-13": [
+     1,
+     0
+    ],
+    "-7": [
+     1,
+     0
+    ]
+   },
+   "Galathura Oya (Ayagama)": {
+    "-53": [
+     1,
+     0
+    ],
+    "-23": [
+     1,
+     0
+    ],
+    "-7": [
+     1,
+     0
+    ]
+   },
+   "Kukule Ganga (Kalawana)": {
+    "-33": [
+     1,
+     0
+    ],
+    "-63": [
+     1,
+     0
+    ],
+    "-57": [
+     1,
+     0
+    ]
+   },
+   "Kuru Ganga (Kuruvita)": {
+    "0": [
+     1,
+     0
+    ],
+    "-3": [
+     1,
+     0
+    ],
+    "-7": [
+     1,
+     0
+    ]
+   },
+   "Mapitigama": {
+    "13": [
+     1,
+     0
+    ],
+    "-17": [
+     1,
+     0
+    ],
+    "-20": [
+     1,
+     0
+    ]
+   },
+   "Wattala": {
+    "3": [
+     1,
+     0
+    ],
+    "-33": [
+     1,
+     0
+    ],
+    "-30": [
+     1,
+     0
+    ]
+   },
+   "Niriella Ganga (Elapatha)": {
+    "10": [
+     1,
+     0
+    ],
+    "-30": [
+     1,
+     0
+    ],
+    "-3": [
+     1,
+     0
+    ]
+   },
+   "Wey Ganga (Kahawaththa)": {
+    "127": [
+     0,
+     1
+    ],
+    "-10": [
+     1,
+     0
+    ],
+    "-7": [
+     1,
+     0
+    ]
+   },
+   "Nawalapitiya": {
+    "1": [
+     1,
+     0
+    ],
+    "90": [
+     1,
+     0
+    ],
+    "-4": [
+     1,
+     0
+    ]
+   },
+   "Punani Anicut": {
+    "0": [
+     1,
+     0
+    ],
+    "17": [
+     1,
+     0
+    ]
+   },
+   "Thawalama": {
+    "75": [
+     1,
+     0
+    ],
+    "-174": [
+     1,
+     0
+    ]
+   },
+   "Kuda Oya": {
+    "0": [
+     2,
+     0
+    ]
+   },
+   "Baddegama": {
+    "17": [
+     1,
+     0
+    ],
+    "-24": [
+     1,
+     0
+    ]
+   },
+   "Manampitiya": {
+    "2": [
+     1,
+     0
+    ],
+    "-33": [
+     1,
+     0
+    ]
+   },
+   "Thanthirimale": {
+    "0": [
+     1,
+     0
+    ]
+   },
+   "Pitabeddara": {
+    "0": [
+     1,
+     0
+    ],
+    "-1": [
+     1,
+     0
+    ]
+   },
+   "Rathnapura": {
+    "-41": [
+     1,
+     0
+    ],
+    "-19": [
+     1,
+     0
+    ]
+   },
+   "Karawanella Bridge": {
+    "-14": [
+     1,
+     0
+    ],
+    "-48": [
+     0,
+     1
+    ]
+   },
+   "Miriswatta": {
+    "7": [
+     1,
+     0
+    ],
+    "-3": [
+     1,
+     0
+    ]
+   },
+   "Dunamale": {
+    "0": [
+     1,
+     0
+    ]
+   },
+   "Holombuwa": {
+    "0": [
+     1,
+     0
+    ]
+   },
+   "Galodaya Bridge": {
+    "3": [
+     1,
+     0
+    ]
+   },
+   "Pugoda": {
+    "-37": [
+     1,
+     0
+    ]
+   }
+  }
+ },
+ "kpiSpec": 3,
+ "generatedAt": "2026-11-24T20:11:43.500Z",
+ "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
+ "versionsHash": "16c87e3fa8acc553"
+}

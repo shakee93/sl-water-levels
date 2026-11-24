@@ -3433,14 +3433,16 @@
    }
   ]
  },
- "generatedAt": "2026-11-21T20:11:45.560Z",
- "nowUsed": "2026-11-21T20:11:45.560Z",
+ "generatedAt": "2026-11-24T20:11:43.500Z",
+ "nowUsed": "2026-11-24T20:11:43.500Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "kpiSpec": 1,
  "versionsHash": "16c87e3fa8acc553",
  "daysRequested": 30,
- "daysFound": 30,
- "daysMissing": [],
+ "daysFound": 29,
+ "daysMissing": [
+  "2026-11-22"
+ ],
  "outcomesFinal": true,
  "coverage": {
   "stationsWithRuns": 59,
