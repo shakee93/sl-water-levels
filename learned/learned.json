@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-24T04:06:34.361Z",
-  "asOf": "2026-11-24",
+  "updatedAt": "2026-11-24T18:51:10.559Z",
+  "asOf": "2026-11-25",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 299,
-    "feedback": 256,
-    "street": 27,
+    "total": 304,
+    "feedback": 259,
+    "street": 29,
     "flood3d": 16,
-    "newTonight": 1,
+    "newTonight": 5,
     "trusted": 16,
     "flagged": 0
   },
@@ -20,6 +20,14 @@
       "defaultFt": 5,
       "clamped": true,
       "dryBelowN": 8
+    },
+    "Dunamale": {
+      "ft": 11.4,
+      "n": 3,
+      "days": 3,
+      "defaultFt": 14.4,
+      "clamped": false,
+      "dryBelowN": 1
     }
   },
   "groundRain": {
@@ -160,37 +168,37 @@
   "forecast": {
     "window": {
       "from": "2026-11-16",
-      "to": "2026-11-23",
-      "points": 12545
+      "to": "2026-11-24",
+      "points": 12027
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 3719,
-          "maeBase": 0.11,
-          "maeFit": 0.11,
+          "n": 4019,
+          "maeBase": 0.12,
+          "maeFit": 0.12,
           "gainPct": 0,
-          "maePooled": 0.11,
-          "pooledGainPct": -1
+          "maePooled": 0.12,
+          "pooledGainPct": -2
         },
         "3": {
-          "n": 3723,
-          "maeBase": 0.24,
-          "maeFit": 0.24,
+          "n": 3970,
+          "maeBase": 0.27,
+          "maeFit": 0.28,
           "gainPct": -1,
-          "maePooled": 0.24,
+          "maePooled": 0.27,
           "pooledGainPct": -1
         },
         "6": {
-          "n": 3713,
-          "maeBase": 0.39,
-          "maeFit": 0.39,
-          "gainPct": 0,
-          "maePooled": 0.39,
-          "pooledGainPct": -2
+          "n": 3876,
+          "maeBase": 0.44,
+          "maeFit": 0.44,
+          "gainPct": -1,
+          "maePooled": 0.44,
+          "pooledGainPct": -1
         }
       },
-      "gaugesPassingOwnTest": 1,
+      "gaugesPassingOwnTest": 2,
       "useful": false,
       "wired": false
     },
@@ -358,5 +366,7 @@
       "missing": 2
     }
   ],
-  "changes": []
+  "changes": [
+    "Dunamale: people report road water from ~11.4 ft (3 reports, 3 days)"
+  ]
 }

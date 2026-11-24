@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-24T04:06:34.361Z",
-  "asOf": "2026-11-24",
+  "updatedAt": "2026-11-24T18:51:10.559Z",
+  "asOf": "2026-11-25",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,9 +13,9 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 237,
-    "people": 232,
-    "streetReports": 18,
+    "answers": 240,
+    "people": 235,
+    "streetReports": 20,
     "days": 30
   },
   "stations": {
@@ -53,12 +53,12 @@
     },
     "Hanwella": {
       "answers": {
-        "n": 58,
-        "days": 16,
+        "n": 59,
+        "days": 17,
         "yes": 34,
         "worse": 11,
         "better": 2,
-        "unsure": 11
+        "unsure": 12
       },
       "seen": {
         "n": 9,
@@ -111,9 +111,9 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 64,
+        "n": 65,
         "days": 25,
-        "yes": 20,
+        "yes": 21,
         "worse": 33,
         "better": 4,
         "unsure": 7
@@ -194,6 +194,14 @@
         "yes": 2,
         "worse": 1,
         "better": 0
+      },
+      "streetLevel": {
+        "ft": 11.4,
+        "n": 3,
+        "days": 3,
+        "defaultFt": 14.4,
+        "clamped": false,
+        "dryBelowN": 1
       }
     },
     "Peradeniya": {
@@ -563,9 +571,9 @@
     },
     "Mahiyangana Bridge": {
       "answers": {
-        "n": 2,
-        "days": 2,
-        "yes": 1,
+        "n": 3,
+        "days": 3,
+        "yes": 2,
         "worse": 1,
         "better": 0,
         "unsure": 0
@@ -647,11 +655,11 @@
       "dry": 1
     },
     "gampaha": {
-      "reports": 3,
-      "days": 2,
-      "deep": 0,
+      "reports": 5,
+      "days": 3,
+      "deep": 1,
       "little": 0,
-      "dry": 3
+      "dry": 4
     },
     "attanagalla": {
       "reports": 1,
@@ -707,14 +715,6 @@
     {
       "kind": "streetLevel",
       "station": "Hanwella",
-      "n": 2,
-      "days": 2,
-      "needN": 3,
-      "needDays": 2
-    },
-    {
-      "kind": "streetLevel",
-      "station": "Dunamale",
       "n": 2,
       "days": 2,
       "needN": 3,
@@ -780,36 +780,36 @@
   "forecast": {
     "window": {
       "from": "2026-11-16",
-      "to": "2026-11-23",
-      "points": 12545
+      "to": "2026-11-24",
+      "points": 12027
     },
     "horizons": {
       "1": {
-        "n": 3719,
-        "maeBase": 0.11,
-        "maeFit": 0.11,
+        "n": 4019,
+        "maeBase": 0.12,
+        "maeFit": 0.12,
         "gainPct": 0,
-        "maePooled": 0.11,
-        "pooledGainPct": -1
+        "maePooled": 0.12,
+        "pooledGainPct": -2
       },
       "3": {
-        "n": 3723,
-        "maeBase": 0.24,
-        "maeFit": 0.24,
+        "n": 3970,
+        "maeBase": 0.27,
+        "maeFit": 0.28,
         "gainPct": -1,
-        "maePooled": 0.24,
+        "maePooled": 0.27,
         "pooledGainPct": -1
       },
       "6": {
-        "n": 3713,
-        "maeBase": 0.39,
-        "maeFit": 0.39,
-        "gainPct": 0,
-        "maePooled": 0.39,
-        "pooledGainPct": -2
+        "n": 3876,
+        "maeBase": 0.44,
+        "maeFit": 0.44,
+        "gainPct": -1,
+        "maePooled": 0.44,
+        "pooledGainPct": -1
       }
     },
-    "gaugesPassingOwnTest": 1,
+    "gaugesPassingOwnTest": 2,
     "useful": false,
     "wired": false
   }
