@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-25T02:50:22.110Z",
-  "asOf": "2026-11-25",
+  "updatedAt": "2026-11-25T18:51:17.386Z",
+  "asOf": "2026-11-26",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 305,
-    "feedback": 260,
-    "street": 29,
+    "total": 309,
+    "feedback": 263,
+    "street": 30,
     "flood3d": 16,
-    "newTonight": 1,
+    "newTonight": 4,
     "trusted": 16,
     "flagged": 0
   },
@@ -27,7 +27,7 @@
       "days": 3,
       "defaultFt": 14.4,
       "clamped": false,
-      "dryBelowN": 1
+      "dryBelowN": 2
     }
   },
   "groundRain": {
@@ -169,32 +169,32 @@
     "window": {
       "from": "2026-11-17",
       "to": "2026-11-25",
-      "points": 12042
+      "points": 11982
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 3575,
-          "maeBase": 0.14,
-          "maeFit": 0.14,
+          "n": 3999,
+          "maeBase": 0.15,
+          "maeFit": 0.15,
           "gainPct": 0,
-          "maePooled": 0.14,
+          "maePooled": 0.15,
           "pooledGainPct": -2
         },
         "3": {
-          "n": 3535,
-          "maeBase": 0.32,
-          "maeFit": 0.32,
+          "n": 3956,
+          "maeBase": 0.35,
+          "maeFit": 0.35,
           "gainPct": 0,
-          "maePooled": 0.32,
-          "pooledGainPct": -1
+          "maePooled": 0.35,
+          "pooledGainPct": 0
         },
         "6": {
-          "n": 3458,
-          "maeBase": 0.52,
-          "maeFit": 0.53,
-          "gainPct": 0,
-          "maePooled": 0.53,
+          "n": 3872,
+          "maeBase": 0.57,
+          "maeFit": 0.58,
+          "gainPct": -1,
+          "maePooled": 0.58,
           "pooledGainPct": -1
         }
       },
@@ -205,12 +205,12 @@
     "worseFeature": {
       "horizons": {
         "1": {
-          "rowsWithReports": 6,
-          "testN": 6,
-          "testDays": 2,
-          "maeBase": 0.02,
-          "maeFit": 0.02,
-          "gainPct": -6,
+          "rowsWithReports": 8,
+          "testN": 8,
+          "testDays": 3,
+          "maeBase": 0.17,
+          "maeFit": 0.17,
+          "gainPct": 0,
           "beta": 0
         },
         "3": {
@@ -223,7 +223,7 @@
           "beta": 0
         }
       },
-      "reports": 17,
+      "reports": 18,
       "useful": false,
       "wired": false
     }
@@ -360,7 +360,7 @@
     },
     {
       "kind": "streetLevel",
-      "name": "Kalawellawa (Millakanda)",
+      "name": "Peradeniya",
       "have": 1,
       "need": 3,
       "missing": 2
