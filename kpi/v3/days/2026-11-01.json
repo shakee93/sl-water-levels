@@ -11,28 +11,8 @@
  },
  "notice": {
   "hours": {
-   "Panadugama|alert": {
-    "15": 11.41,
-    "20": 1.68,
-    "25": 1.064,
-    "30": 2.006,
-    "35": 5.038,
-    "40": 1.863,
-    "45": 0.981
-   },
-   "Panadugama|minor": {
-    "5": 10.952
-   },
    "Thawalama|alert": {
     "5": 1.086
-   },
-   "Kithulgala|alert": {
-    "15": 0.968
-   },
-   "Magura|alert": {
-    "5": 9.603,
-    "10": 0.361,
-    "15": 1.256
    },
    "Glencourse|alert": {
     "10": 0.85
@@ -40,8 +20,10 @@
    "Glencourse|minor": {
     "10": 0.85
    },
-   "Norwood|alert": {
-    "5": 3.003
+   "Magura|alert": {
+    "5": 9.603,
+    "10": 0.361,
+    "15": 1.256
    },
    "Holombuwa|alert": {
     "10": 1.045
@@ -49,8 +31,11 @@
    "Holombuwa|minor": {
     "5": 1.045
    },
-   "Nagalagam Street|alert": {
-    "10": 0.996
+   "Norwood|alert": {
+    "5": 3.003
+   },
+   "Kithulgala|alert": {
+    "15": 0.968
    },
    "Hanwella|alert": {
     "15": 0.989
@@ -63,6 +48,21 @@
    },
    "Baddegama|alert": {
     "5": 8.898
+   },
+   "Nagalagam Street|alert": {
+    "10": 0.996
+   },
+   "Panadugama|alert": {
+    "15": 11.41,
+    "20": 1.68,
+    "25": 1.064,
+    "30": 2.006,
+    "35": 5.038,
+    "40": 1.863,
+    "45": 0.981
+   },
+   "Panadugama|minor": {
+    "5": 10.952
    },
    "Thalgahagoda|minor": {
     "5": 1.712,
@@ -134,14 +134,14 @@
      1.1,
      0
     ],
-    "2-4in10": [
-     13,
-     4.25,
-     0
-    ],
     "1in10": [
      17,
      2.35,
+     0
+    ],
+    "2-4in10": [
+     13,
+     4.25,
      0
     ]
    },
@@ -1785,7 +1785,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-24T20:11:43.500Z",
+ "generatedAt": "2026-11-25T20:11:40.803Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

@@ -1,7 +1,7 @@
 {
  "schema": "slwl-level-trial/report@1/day",
  "day": "2026-11-12",
- "generatedAt": "2026-11-24T20:11:53.927Z",
+ "generatedAt": "2026-11-25T20:11:56.996Z",
  "coverage": {
   "liveRuns": 651,
   "withTrial": 139,

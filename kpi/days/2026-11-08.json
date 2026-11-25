@@ -3289,8 +3289,8 @@
    }
   ]
  },
- "generatedAt": "2026-11-24T20:11:43.500Z",
- "nowUsed": "2026-11-24T20:11:43.500Z",
+ "generatedAt": "2026-11-25T20:11:40.803Z",
+ "nowUsed": "2026-11-25T20:11:40.803Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "kpiSpec": 1,
  "versionsHash": "16c87e3fa8acc553",
@@ -3304,10 +3304,10 @@
   "stationsWithRuns": 50,
   "stationsWithReadings": 49,
   "stationsWithSteps": 30,
-  "stationsExpected": 60,
+  "stationsExpected": 61,
   "gaugeHoursPresent": 1118,
-  "gaugeHoursExpected": 1440,
-  "gaugeHourShare": 77.6,
+  "gaugeHoursExpected": 1464,
+  "gaugeHourShare": 76.4,
   "duplicateStationHours": 37
  }
 }

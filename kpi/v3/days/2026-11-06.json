@@ -11,6 +11,15 @@
  },
  "notice": {
   "hours": {
+   "Thawalama|alert": {
+    "35": 0.959
+   },
+   "Thawalama|minor": {
+    "15": 0.959
+   },
+   "Thawalama|major": {
+    "5": 0.959
+   },
    "Nawalapitiya|alert": {
     "60": 0.99,
     "70": 2.023,
@@ -26,27 +35,6 @@
     "35": 2.023,
     "40": 0.99
    },
-   "Panadugama|alert": {
-    "5": 9.614,
-    "10": 0.981,
-    "15": 4.846
-   },
-   "Thawalama|alert": {
-    "35": 0.959
-   },
-   "Thawalama|minor": {
-    "15": 0.959
-   },
-   "Thawalama|major": {
-    "5": 0.959
-   },
-   "Rathnapura|alert": {
-    "5": 3.137
-   },
-   "Magura|alert": {
-    "5": 11.056,
-    "10": 6
-   },
    "Glencourse|alert": {
     "10": 2.039,
     "15": 2.02
@@ -54,22 +42,23 @@
    "Glencourse|minor": {
     "10": 4.059
    },
+   "Magura|alert": {
+    "5": 11.056,
+    "10": 6
+   },
+   "Dunamale|minor": {
+    "15": 1.037,
+    "20": 0.913,
+    "25": 2.045,
+    "40": 0.981
+   },
+   "Dunamale|major": {
+    "5": 1.95,
+    "10": 3.026
+   },
    "Holombuwa|major": {
     "5": 1.046,
     "10": 0.913
-   },
-   "Nagalagam Street|alert": {
-    "5": 3.97
-   },
-   "Hanwella|alert": {
-    "20": 2.047,
-    "25": 1.977
-   },
-   "Hanwella|minor": {
-    "15": 4.024
-   },
-   "Hanwella|major": {
-    "5": 4.024
    },
    "Badalgama|alert": {
     "5": 0.943,
@@ -81,20 +70,31 @@
    "Badalgama|major": {
     "15": 2.922
    },
+   "Hanwella|alert": {
+    "20": 2.047,
+    "25": 1.977
+   },
+   "Hanwella|minor": {
+    "15": 4.024
+   },
+   "Hanwella|major": {
+    "5": 4.024
+   },
+   "Rathnapura|alert": {
+    "5": 3.137
+   },
+   "Nagalagam Street|alert": {
+    "5": 3.97
+   },
+   "Panadugama|alert": {
+    "5": 9.614,
+    "10": 0.981,
+    "15": 4.846
+   },
    "Thalgahagoda|alert": {
     "5": 8.232,
     "10": 5.02,
     "25": 1.006
-   },
-   "Dunamale|minor": {
-    "15": 1.037,
-    "20": 0.913,
-    "25": 2.045,
-    "40": 0.981
-   },
-   "Dunamale|major": {
-    "5": 1.95,
-    "10": 3.026
    }
   },
   "floods": [
@@ -228,6 +228,11 @@
      2.15,
      33
     ],
+    "2-4in10": [
+     10,
+     2.95,
+     4
+    ],
     "5+in10": [
      10,
      6.7,
@@ -237,11 +242,6 @@
      19,
      2.15,
      5
-    ],
-    "2-4in10": [
-     10,
-     2.95,
-     4
     ]
    },
    "atLimit": [
@@ -2724,7 +2724,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-24T20:11:43.500Z",
+ "generatedAt": "2026-11-25T20:11:40.803Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

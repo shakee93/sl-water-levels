@@ -1,13 +1,13 @@
 {
- "generatedAt": "2026-11-24T20:11:43.500Z",
- "from": "2026-10-26",
- "to": "2026-11-24",
+ "generatedAt": "2026-11-25T20:11:40.803Z",
+ "from": "2026-10-27",
+ "to": "2026-11-25",
  "note": "missing = days in the last 30 with no file, counted from the first day the folder has any file",
  "folders": {
   "forecasts": {
    "exists": true,
    "firstDay": "2026-10-22",
-   "lastDay": "2026-11-24",
+   "lastDay": "2026-11-25",
    "daysPresentInLast30": 29,
    "missing": [
     "2026-11-22"
@@ -16,8 +16,8 @@
   "hmis/rain": {
    "exists": true,
    "firstDay": "2026-10-27",
-   "lastDay": "2026-11-25",
-   "daysPresentInLast30": 28,
+   "lastDay": "2026-11-26",
+   "daysPresentInLast30": 29,
    "missing": [
     "2026-11-08"
    ]
@@ -25,7 +25,7 @@
   "hmis/levels": {
    "exists": true,
    "firstDay": "2026-10-26",
-   "lastDay": "2026-11-25",
+   "lastDay": "2026-11-26",
    "daysPresentInLast30": 30,
    "missing": []
   },
@@ -33,41 +33,43 @@
    "exists": true,
    "firstDay": "2026-10-26",
    "lastDay": "2026-11-18",
-   "daysPresentInLast30": 24,
+   "daysPresentInLast30": 23,
    "missing": [
     "2026-11-19",
     "2026-11-20",
     "2026-11-21",
     "2026-11-22",
     "2026-11-23",
-    "2026-11-24"
+    "2026-11-24",
+    "2026-11-25"
    ]
   },
   "gsmap/archive": {
    "exists": true,
    "firstDay": "2026-10-22",
    "lastDay": "2026-11-18",
-   "daysPresentInLast30": 24,
+   "daysPresentInLast30": 23,
    "missing": [
     "2026-11-19",
     "2026-11-20",
     "2026-11-21",
     "2026-11-22",
     "2026-11-23",
-    "2026-11-24"
+    "2026-11-24",
+    "2026-11-25"
    ]
   },
   "rivernet": {
    "exists": true,
    "firstDay": "2026-10-27",
-   "lastDay": "2026-11-24",
-   "daysPresentInLast30": 29,
+   "lastDay": "2026-11-25",
+   "daysPresentInLast30": 30,
    "missing": []
   },
   "rain": {
    "exists": true,
    "firstDay": "2026-10-19",
-   "lastDay": "2026-11-25",
+   "lastDay": "2026-11-26",
    "daysPresentInLast30": 30,
    "missing": []
   }
