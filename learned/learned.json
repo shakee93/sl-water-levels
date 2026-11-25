@@ -1,22 +1,22 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-24T18:51:10.559Z",
+  "updatedAt": "2026-11-25T02:50:22.110Z",
   "asOf": "2026-11-25",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
-    "total": 304,
-    "feedback": 259,
+    "total": 305,
+    "feedback": 260,
     "street": 29,
     "flood3d": 16,
-    "newTonight": 5,
+    "newTonight": 1,
     "trusted": 16,
     "flagged": 0
   },
   "streetLevel": {
     "Nagalagam Street": {
       "ft": 3,
-      "n": 9,
-      "days": 8,
+      "n": 10,
+      "days": 9,
       "defaultFt": 5,
       "clamped": true,
       "dryBelowN": 8
@@ -45,8 +45,8 @@
       "wired": false,
       "steps": 745,
       "stepDays": 22,
-      "events": 11,
-      "eventDays": 9,
+      "events": 12,
+      "eventDays": 10,
       "metrics": {
         "mm1h": {
           "current": {
@@ -167,34 +167,34 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-16",
-      "to": "2026-11-24",
-      "points": 12027
+      "from": "2026-11-17",
+      "to": "2026-11-25",
+      "points": 12042
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 4019,
-          "maeBase": 0.12,
-          "maeFit": 0.12,
+          "n": 3575,
+          "maeBase": 0.14,
+          "maeFit": 0.14,
           "gainPct": 0,
-          "maePooled": 0.12,
+          "maePooled": 0.14,
           "pooledGainPct": -2
         },
         "3": {
-          "n": 3970,
-          "maeBase": 0.27,
-          "maeFit": 0.28,
-          "gainPct": -1,
-          "maePooled": 0.27,
+          "n": 3535,
+          "maeBase": 0.32,
+          "maeFit": 0.32,
+          "gainPct": 0,
+          "maePooled": 0.32,
           "pooledGainPct": -1
         },
         "6": {
-          "n": 3876,
-          "maeBase": 0.44,
-          "maeFit": 0.44,
-          "gainPct": -1,
-          "maePooled": 0.44,
+          "n": 3458,
+          "maeBase": 0.52,
+          "maeFit": 0.53,
+          "gainPct": 0,
+          "maePooled": 0.53,
           "pooledGainPct": -1
         }
       },
@@ -366,7 +366,5 @@
       "missing": 2
     }
   ],
-  "changes": [
-    "Dunamale: people report road water from ~11.4 ft (3 reports, 3 days)"
-  ]
+  "changes": []
 }

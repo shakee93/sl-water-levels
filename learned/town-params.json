@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-24T18:51:10.559Z",
+  "updatedAt": "2026-11-25T02:50:22.110Z",
   "asOf": "2026-11-25",
   "minimums": {
     "answers": 3,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 240,
-    "people": 235,
+    "answers": 241,
+    "people": 236,
     "streetReports": 20,
-    "days": 30
+    "days": 31
   },
   "stations": {
     "Badalgama": {
@@ -111,16 +111,16 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 65,
-        "days": 25,
+        "n": 66,
+        "days": 26,
         "yes": 21,
-        "worse": 33,
+        "worse": 34,
         "better": 4,
         "unsure": 7
       },
       "seen": {
-        "n": 15,
-        "higher": 13,
+        "n": 16,
+        "higher": 14,
         "same": 2,
         "lower": 0
       },
@@ -132,18 +132,18 @@
         "better": 2
       },
       "falling": {
-        "n": 28,
-        "days": 17,
+        "n": 29,
+        "days": 18,
         "yes": 11,
-        "worse": 16,
+        "worse": 17,
         "better": 1,
-        "errN": 2,
-        "meanErrFt": -0.19
+        "errN": 3,
+        "meanErrFt": -0.37
       },
       "streetLevel": {
         "ft": 3,
-        "n": 9,
-        "days": 8,
+        "n": 10,
+        "days": 9,
         "defaultFt": 5,
         "clamped": true,
         "dryBelowN": 8
@@ -779,33 +779,33 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-11-16",
-      "to": "2026-11-24",
-      "points": 12027
+      "from": "2026-11-17",
+      "to": "2026-11-25",
+      "points": 12042
     },
     "horizons": {
       "1": {
-        "n": 4019,
-        "maeBase": 0.12,
-        "maeFit": 0.12,
+        "n": 3575,
+        "maeBase": 0.14,
+        "maeFit": 0.14,
         "gainPct": 0,
-        "maePooled": 0.12,
+        "maePooled": 0.14,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 3970,
-        "maeBase": 0.27,
-        "maeFit": 0.28,
-        "gainPct": -1,
-        "maePooled": 0.27,
+        "n": 3535,
+        "maeBase": 0.32,
+        "maeFit": 0.32,
+        "gainPct": 0,
+        "maePooled": 0.32,
         "pooledGainPct": -1
       },
       "6": {
-        "n": 3876,
-        "maeBase": 0.44,
-        "maeFit": 0.44,
-        "gainPct": -1,
-        "maePooled": 0.44,
+        "n": 3458,
+        "maeBase": 0.52,
+        "maeFit": 0.53,
+        "gainPct": 0,
+        "maePooled": 0.53,
         "pooledGainPct": -1
       }
     },
