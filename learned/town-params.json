@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-25T18:51:17.386Z",
+  "updatedAt": "2026-11-26T01:58:20.688Z",
   "asOf": "2026-11-26",
   "minimums": {
     "answers": 3,
@@ -13,10 +13,10 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 245,
-    "people": 240,
+    "answers": 246,
+    "people": 241,
     "streetReports": 21,
-    "days": 31
+    "days": 32
   },
   "stations": {
     "Badalgama": {
@@ -135,8 +135,8 @@
         "yes": 11,
         "worse": 17,
         "better": 1,
-        "errN": 3,
-        "meanErrFt": -0.37
+        "errN": 2,
+        "meanErrFt": -0.54
       },
       "streetLevel": {
         "ft": 3,
@@ -204,9 +204,9 @@
     },
     "Peradeniya": {
       "answers": {
-        "n": 14,
-        "days": 7,
-        "yes": 9,
+        "n": 15,
+        "days": 8,
+        "yes": 10,
         "worse": 4,
         "better": 0,
         "unsure": 1
@@ -231,7 +231,9 @@
         "days": 4,
         "yes": 3,
         "worse": 1,
-        "better": 0
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.52
       }
     },
     "Moragaswewa": {
@@ -787,33 +789,33 @@
   ],
   "forecast": {
     "window": {
-      "from": "2026-11-17",
-      "to": "2026-11-25",
-      "points": 11982
+      "from": "2026-11-18",
+      "to": "2026-11-26",
+      "points": 12016
     },
     "horizons": {
       "1": {
-        "n": 3999,
-        "maeBase": 0.15,
-        "maeFit": 0.15,
+        "n": 3528,
+        "maeBase": 0.17,
+        "maeFit": 0.17,
         "gainPct": 0,
-        "maePooled": 0.15,
+        "maePooled": 0.17,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 3956,
-        "maeBase": 0.35,
-        "maeFit": 0.35,
+        "n": 3484,
+        "maeBase": 0.39,
+        "maeFit": 0.39,
         "gainPct": 0,
-        "maePooled": 0.35,
+        "maePooled": 0.39,
         "pooledGainPct": 0
       },
       "6": {
-        "n": 3872,
-        "maeBase": 0.57,
-        "maeFit": 0.58,
-        "gainPct": -1,
-        "maePooled": 0.58,
+        "n": 3408,
+        "maeBase": 0.66,
+        "maeFit": 0.66,
+        "gainPct": 0,
+        "maePooled": 0.66,
         "pooledGainPct": -1
       }
     },
