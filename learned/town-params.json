@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-26T01:58:20.688Z",
-  "asOf": "2026-11-26",
+  "updatedAt": "2026-11-26T18:51:09.704Z",
+  "asOf": "2026-11-27",
   "minimums": {
     "answers": 3,
     "days": 2,
@@ -13,25 +13,25 @@
     "momentumGainPct": 5
   },
   "totals": {
-    "answers": 246,
-    "people": 241,
-    "streetReports": 21,
+    "answers": 251,
+    "people": 246,
+    "streetReports": 22,
     "days": 32
   },
   "stations": {
     "Badalgama": {
       "answers": {
-        "n": 12,
-        "days": 6,
-        "yes": 6,
+        "n": 14,
+        "days": 7,
+        "yes": 7,
         "worse": 3,
         "better": 1,
-        "unsure": 2
+        "unsure": 3
       },
       "seen": {
-        "n": 3,
+        "n": 4,
         "higher": 1,
-        "same": 1,
+        "same": 2,
         "lower": 1
       },
       "rising": {
@@ -44,11 +44,13 @@
         "meanErrFt": -0.25
       },
       "falling": {
-        "n": 4,
-        "days": 4,
-        "yes": 3,
+        "n": 5,
+        "days": 5,
+        "yes": 4,
         "worse": 1,
-        "better": 0
+        "better": 0,
+        "errN": 1,
+        "meanErrFt": -0.36
       }
     },
     "Hanwella": {
@@ -109,16 +111,16 @@
     },
     "Nagalagam Street": {
       "answers": {
-        "n": 66,
-        "days": 26,
+        "n": 67,
+        "days": 27,
         "yes": 21,
-        "worse": 34,
+        "worse": 35,
         "better": 4,
         "unsure": 7
       },
       "seen": {
-        "n": 16,
-        "higher": 14,
+        "n": 17,
+        "higher": 15,
         "same": 2,
         "lower": 0
       },
@@ -140,8 +142,8 @@
       },
       "streetLevel": {
         "ft": 3,
-        "n": 10,
-        "days": 9,
+        "n": 11,
+        "days": 10,
         "defaultFt": 5,
         "clamped": true,
         "dryBelowN": 8
@@ -286,10 +288,10 @@
     },
     "Giriulla": {
       "answers": {
-        "n": 4,
-        "days": 3,
+        "n": 5,
+        "days": 4,
         "yes": 3,
-        "worse": 0,
+        "worse": 1,
         "better": 0,
         "unsure": 1
       },
@@ -301,10 +303,10 @@
         "better": 0
       },
       "falling": {
-        "n": 2,
-        "days": 2,
+        "n": 3,
+        "days": 3,
         "yes": 2,
-        "worse": 0,
+        "worse": 1,
         "better": 0
       }
     },
@@ -573,9 +575,9 @@
     },
     "Mahiyangana Bridge": {
       "answers": {
-        "n": 3,
-        "days": 3,
-        "yes": 2,
+        "n": 4,
+        "days": 4,
+        "yes": 3,
         "worse": 1,
         "better": 0,
         "unsure": 0
@@ -711,6 +713,13 @@
       "deep": 0,
       "little": 0,
       "dry": 1
+    },
+    "gampola": {
+      "reports": 1,
+      "days": 1,
+      "deep": 1,
+      "little": 0,
+      "dry": 0
     }
   },
   "pending": [
@@ -785,41 +794,49 @@
       "days": 1,
       "needN": 3,
       "needDays": 2
+    },
+    {
+      "kind": "streetLevel",
+      "station": "Nawalapitiya",
+      "n": 1,
+      "days": 1,
+      "needN": 3,
+      "needDays": 2
     }
   ],
   "forecast": {
     "window": {
       "from": "2026-11-18",
       "to": "2026-11-26",
-      "points": 12016
+      "points": 11975
     },
     "horizons": {
       "1": {
-        "n": 3528,
-        "maeBase": 0.17,
-        "maeFit": 0.17,
-        "gainPct": 0,
-        "maePooled": 0.17,
+        "n": 3995,
+        "maeBase": 0.18,
+        "maeFit": 0.18,
+        "gainPct": -1,
+        "maePooled": 0.18,
         "pooledGainPct": -2
       },
       "3": {
-        "n": 3484,
-        "maeBase": 0.39,
-        "maeFit": 0.39,
+        "n": 3946,
+        "maeBase": 0.43,
+        "maeFit": 0.43,
         "gainPct": 0,
-        "maePooled": 0.39,
-        "pooledGainPct": 0
+        "maePooled": 0.43,
+        "pooledGainPct": -1
       },
       "6": {
-        "n": 3408,
-        "maeBase": 0.66,
-        "maeFit": 0.66,
+        "n": 3859,
+        "maeBase": 0.71,
+        "maeFit": 0.71,
         "gainPct": 0,
-        "maePooled": 0.66,
+        "maePooled": 0.72,
         "pooledGainPct": -1
       }
     },
-    "gaugesPassingOwnTest": 2,
+    "gaugesPassingOwnTest": 1,
     "useful": false,
     "wired": false
   }
