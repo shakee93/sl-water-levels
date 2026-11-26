@@ -1,8 +1,8 @@
 {
  "version": 1,
  "kpiSpec": 3,
- "generatedAt": "2026-11-25T20:11:40.803Z",
- "nowUsed": "2026-11-25T20:11:40.803Z",
+ "generatedAt": "2026-11-26T20:11:45.564Z",
+ "nowUsed": "2026-11-26T20:11:45.564Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553",
  "daysRequested": 30,
@@ -10,20 +10,19 @@
  "daysMissing": [
   "2026-11-22"
  ],
- "asOf": "2026-11-25",
+ "asOf": "2026-11-26",
  "note": "Spec 3, side by side with kpi/latest.json (spec 1) and kpi/v2/latest.json (spec 2); not read by the page. window = the days of this run that are final (24 h outcomes read) and complete; rolling = the day files of the last 365 days.",
  "window": {
-  "from": "2026-10-27",
-  "to": "2026-11-24",
+  "from": "2026-10-28",
+  "to": "2026-11-25",
   "days": 28,
   "requested": 30,
   "notFinal": [
-   "2026-11-25"
+   "2026-11-26"
   ],
   "edge": []
  },
  "days": [
-  "2026-10-27",
   "2026-10-28",
   "2026-10-29",
   "2026-10-30",
@@ -50,33 +49,34 @@
   "2026-11-20",
   "2026-11-21",
   "2026-11-23",
-  "2026-11-24"
+  "2026-11-24",
+  "2026-11-25"
  ],
  "spanDays": 29,
  "calendarDays": 28,
  "sources": {
-  "runs": 17376,
-  "shownArchive": 18624,
-  "shownRecomputed": 31547,
-  "chancePModel": 18624,
-  "chanceProbability": 31547
+  "runs": 17332,
+  "shownArchive": 20511,
+  "shownRecomputed": 29813,
+  "chancePModel": 20511,
+  "chanceProbability": 29813
  },
  "lab": {
   "notice": {
    "big": {
     "leadH": 12,
-    "value": 14.5,
-    "floods": 28,
-    "scored": 19,
-    "missed": 5,
-    "alreadyAtStep": 4,
+    "value": 6.6,
+    "floods": 23,
+    "scored": 16,
+    "missed": 2,
+    "alreadyAtStep": 5,
     "source": "runs"
    },
    "fast": {
     "leadH": 6,
-    "value": 14.5,
-    "floods": 30,
-    "scored": 30,
+    "value": 21.7,
+    "floods": 31,
+    "scored": 31,
     "missed": 0,
     "alreadyAtStep": 0,
     "source": "runs"
@@ -89,17 +89,17 @@
    "cls": "big",
    "leadH": 12,
    "target": 45,
-   "value": 14.5,
-   "floods": 28,
-   "scored": 19,
-   "missed": 5,
-   "alreadyAtStep": 4,
-   "storms": 4,
-   "largestStormShare": 0.63,
-   "valueWithoutLargestStorm": 22.2,
+   "value": 6.6,
+   "floods": 23,
+   "scored": 16,
+   "missed": 2,
+   "alreadyAtStep": 5,
+   "storms": 3,
+   "largestStormShare": 0.83,
+   "valueWithoutLargestStorm": 0,
    "pointAtOrAboveTarget": false,
    "met": null,
-   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 29 days, 24 floods, 4 storms)",
+   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 29 days, 18 floods, 3 storms)",
    "labConfirmation": "paired interval against river height alone, lab"
   },
   {
@@ -107,264 +107,22 @@
    "cls": "fast",
    "leadH": 6,
    "target": 37,
-   "value": 14.5,
-   "floods": 30,
-   "scored": 30,
+   "value": 21.7,
+   "floods": 31,
+   "scored": 31,
    "missed": 0,
    "alreadyAtStep": 0,
-   "storms": 3,
-   "largestStormShare": 0.87,
-   "valueWithoutLargestStorm": 25,
+   "storms": 4,
+   "largestStormShare": 0.84,
+   "valueWithoutLargestStorm": 20,
    "pointAtOrAboveTarget": false,
    "met": null,
-   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 29 days, 30 floods, 3 storms)",
+   "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 29 days, 31 floods, 4 storms)",
    "labConfirmation": "paired interval against river height alone, lab"
   }
  ],
  "public": {
   "p1": {
-   "big": {
-    "1": {
-     "any": {
-      "rises": 23,
-      "alreadyAtLevel": 0,
-      "noLeadRun": 1,
-      "scored": 22,
-      "warned": 18,
-      "pct": 78.3,
-      "coverage": 95.7,
-      "judgeable": true
-     },
-     "byLevel": {
-      "alert": {
-       "rises": 19,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 1,
-       "scored": 18,
-       "warned": 14,
-       "pct": 73.7,
-       "coverage": 94.7,
-       "judgeable": true
-      },
-      "minor": {
-       "rises": 4,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 4,
-       "warned": 4,
-       "pct": 100,
-       "coverage": 100,
-       "judgeable": true
-      }
-     }
-    },
-    "3": {
-     "any": {
-      "rises": 23,
-      "alreadyAtLevel": 0,
-      "noLeadRun": 0,
-      "scored": 23,
-      "warned": 17,
-      "pct": 73.9,
-      "coverage": 100,
-      "judgeable": true
-     },
-     "byLevel": {
-      "alert": {
-       "rises": 19,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 19,
-       "warned": 13,
-       "pct": 68.4,
-       "coverage": 100,
-       "judgeable": true
-      },
-      "minor": {
-       "rises": 4,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 4,
-       "warned": 4,
-       "pct": 100,
-       "coverage": 100,
-       "judgeable": true
-      }
-     }
-    },
-    "6": {
-     "any": {
-      "rises": 23,
-      "alreadyAtLevel": 1,
-      "noLeadRun": 0,
-      "scored": 22,
-      "warned": 13,
-      "pct": 59.1,
-      "coverage": 100,
-      "judgeable": true
-     },
-     "byLevel": {
-      "alert": {
-       "rises": 19,
-       "alreadyAtLevel": 1,
-       "noLeadRun": 0,
-       "scored": 18,
-       "warned": 9,
-       "pct": 50,
-       "coverage": 100,
-       "judgeable": true
-      },
-      "minor": {
-       "rises": 4,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 4,
-       "warned": 4,
-       "pct": 100,
-       "coverage": 100,
-       "judgeable": true
-      }
-     }
-    },
-    "12": {
-     "any": {
-      "rises": 23,
-      "alreadyAtLevel": 3,
-      "noLeadRun": 2,
-      "scored": 18,
-      "warned": 6,
-      "pct": 30,
-      "coverage": 90,
-      "judgeable": true
-     },
-     "byLevel": {
-      "alert": {
-       "rises": 19,
-       "alreadyAtLevel": 2,
-       "noLeadRun": 2,
-       "scored": 15,
-       "warned": 4,
-       "pct": 23.5,
-       "coverage": 88.2,
-       "judgeable": false
-      },
-      "minor": {
-       "rises": 4,
-       "alreadyAtLevel": 1,
-       "noLeadRun": 0,
-       "scored": 3,
-       "warned": 2,
-       "pct": 66.7,
-       "coverage": 100,
-       "judgeable": true
-      }
-     }
-    }
-   },
-   "tidal": {
-    "1": {
-     "any": {
-      "rises": 8,
-      "alreadyAtLevel": 0,
-      "noLeadRun": 0,
-      "scored": 8,
-      "warned": 7,
-      "pct": 87.5,
-      "coverage": 100,
-      "judgeable": true
-     },
-     "byLevel": {
-      "alert": {
-       "rises": 6,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 6,
-       "warned": 5,
-       "pct": 83.3,
-       "coverage": 100,
-       "judgeable": true
-      },
-      "minor": {
-       "rises": 2,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 2,
-       "warned": 2,
-       "pct": 100,
-       "coverage": 100,
-       "judgeable": true
-      }
-     }
-    },
-    "3": {
-     "any": {
-      "rises": 8,
-      "alreadyAtLevel": 1,
-      "noLeadRun": 1,
-      "scored": 6,
-      "warned": 4,
-      "pct": 57.1,
-      "coverage": 85.7,
-      "judgeable": false
-     },
-     "byLevel": {
-      "alert": {
-       "rises": 6,
-       "alreadyAtLevel": 1,
-       "noLeadRun": 1,
-       "scored": 4,
-       "warned": 3,
-       "pct": 60,
-       "coverage": 80,
-       "judgeable": false
-      },
-      "minor": {
-       "rises": 2,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 2,
-       "warned": 1,
-       "pct": 50,
-       "coverage": 100,
-       "judgeable": true
-      }
-     }
-    },
-    "6": {
-     "any": {
-      "rises": 8,
-      "alreadyAtLevel": 1,
-      "noLeadRun": 0,
-      "scored": 7,
-      "warned": 4,
-      "pct": 57.1,
-      "coverage": 100,
-      "judgeable": true
-     },
-     "byLevel": {
-      "alert": {
-       "rises": 6,
-       "alreadyAtLevel": 1,
-       "noLeadRun": 0,
-       "scored": 5,
-       "warned": 3,
-       "pct": 60,
-       "coverage": 100,
-       "judgeable": true
-      },
-      "minor": {
-       "rises": 2,
-       "alreadyAtLevel": 0,
-       "noLeadRun": 0,
-       "scored": 2,
-       "warned": 1,
-       "pct": 50,
-       "coverage": 100,
-       "judgeable": true
-      }
-     }
-    }
-   },
    "fast": {
     "1": {
      "any": {
@@ -468,38 +226,280 @@
       }
      }
     }
+   },
+   "tidal": {
+    "1": {
+     "any": {
+      "rises": 7,
+      "alreadyAtLevel": 0,
+      "noLeadRun": 0,
+      "scored": 7,
+      "warned": 5,
+      "pct": 71.4,
+      "coverage": 100,
+      "judgeable": true
+     },
+     "byLevel": {
+      "alert": {
+       "rises": 6,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 6,
+       "warned": 4,
+       "pct": 66.7,
+       "coverage": 100,
+       "judgeable": true
+      },
+      "minor": {
+       "rises": 1,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 1,
+       "warned": 1,
+       "pct": 100,
+       "coverage": 100,
+       "judgeable": true
+      }
+     }
+    },
+    "3": {
+     "any": {
+      "rises": 7,
+      "alreadyAtLevel": 1,
+      "noLeadRun": 1,
+      "scored": 5,
+      "warned": 3,
+      "pct": 50,
+      "coverage": 83.3,
+      "judgeable": false
+     },
+     "byLevel": {
+      "alert": {
+       "rises": 6,
+       "alreadyAtLevel": 1,
+       "noLeadRun": 1,
+       "scored": 4,
+       "warned": 2,
+       "pct": 40,
+       "coverage": 80,
+       "judgeable": false
+      },
+      "minor": {
+       "rises": 1,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 1,
+       "warned": 1,
+       "pct": 100,
+       "coverage": 100,
+       "judgeable": true
+      }
+     }
+    },
+    "6": {
+     "any": {
+      "rises": 7,
+      "alreadyAtLevel": 1,
+      "noLeadRun": 0,
+      "scored": 6,
+      "warned": 3,
+      "pct": 50,
+      "coverage": 100,
+      "judgeable": true
+     },
+     "byLevel": {
+      "alert": {
+       "rises": 6,
+       "alreadyAtLevel": 1,
+       "noLeadRun": 0,
+       "scored": 5,
+       "warned": 2,
+       "pct": 40,
+       "coverage": 100,
+       "judgeable": true
+      },
+      "minor": {
+       "rises": 1,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 1,
+       "warned": 1,
+       "pct": 100,
+       "coverage": 100,
+       "judgeable": true
+      }
+     }
+    }
+   },
+   "big": {
+    "1": {
+     "any": {
+      "rises": 20,
+      "alreadyAtLevel": 0,
+      "noLeadRun": 1,
+      "scored": 19,
+      "warned": 15,
+      "pct": 75,
+      "coverage": 95,
+      "judgeable": true
+     },
+     "byLevel": {
+      "alert": {
+       "rises": 17,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 1,
+       "scored": 16,
+       "warned": 12,
+       "pct": 70.6,
+       "coverage": 94.1,
+       "judgeable": true
+      },
+      "minor": {
+       "rises": 3,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 3,
+       "warned": 3,
+       "pct": 100,
+       "coverage": 100,
+       "judgeable": true
+      }
+     }
+    },
+    "3": {
+     "any": {
+      "rises": 20,
+      "alreadyAtLevel": 0,
+      "noLeadRun": 0,
+      "scored": 20,
+      "warned": 14,
+      "pct": 70,
+      "coverage": 100,
+      "judgeable": true
+     },
+     "byLevel": {
+      "alert": {
+       "rises": 17,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 17,
+       "warned": 11,
+       "pct": 64.7,
+       "coverage": 100,
+       "judgeable": true
+      },
+      "minor": {
+       "rises": 3,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 3,
+       "warned": 3,
+       "pct": 100,
+       "coverage": 100,
+       "judgeable": true
+      }
+     }
+    },
+    "6": {
+     "any": {
+      "rises": 20,
+      "alreadyAtLevel": 1,
+      "noLeadRun": 0,
+      "scored": 19,
+      "warned": 10,
+      "pct": 52.6,
+      "coverage": 100,
+      "judgeable": true
+     },
+     "byLevel": {
+      "alert": {
+       "rises": 17,
+       "alreadyAtLevel": 1,
+       "noLeadRun": 0,
+       "scored": 16,
+       "warned": 7,
+       "pct": 43.8,
+       "coverage": 100,
+       "judgeable": true
+      },
+      "minor": {
+       "rises": 3,
+       "alreadyAtLevel": 0,
+       "noLeadRun": 0,
+       "scored": 3,
+       "warned": 3,
+       "pct": 100,
+       "coverage": 100,
+       "judgeable": true
+      }
+     }
+    },
+    "12": {
+     "any": {
+      "rises": 20,
+      "alreadyAtLevel": 4,
+      "noLeadRun": 2,
+      "scored": 14,
+      "warned": 3,
+      "pct": 18.8,
+      "coverage": 87.5,
+      "judgeable": false
+     },
+     "byLevel": {
+      "alert": {
+       "rises": 17,
+       "alreadyAtLevel": 3,
+       "noLeadRun": 2,
+       "scored": 12,
+       "warned": 2,
+       "pct": 14.3,
+       "coverage": 85.7,
+       "judgeable": false
+      },
+      "minor": {
+       "rises": 3,
+       "alreadyAtLevel": 1,
+       "noLeadRun": 0,
+       "scored": 2,
+       "warned": 1,
+       "pct": 50,
+       "coverage": 100,
+       "judgeable": true
+      }
+     }
+    }
    }
   },
   "p2": {
    "big": {
     "gauges": 17,
     "days": 28,
-    "warningHours": 797,
-    "notComeTrue": 678,
-    "unknownOutcome": 9,
-    "perGaugePer30Days": 42.7,
-    "shareNotComeTrue": 86,
-    "coverage": 98.9
+    "warningHours": 743,
+    "notComeTrue": 623,
+    "unknownOutcome": 14,
+    "perGaugePer30Days": 39.3,
+    "shareNotComeTrue": 85.5,
+    "coverage": 98.1
    },
    "fast": {
     "gauges": 9,
     "days": 28,
-    "warningHours": 509,
-    "notComeTrue": 363,
-    "unknownOutcome": 3,
-    "perGaugePer30Days": 43.2,
-    "shareNotComeTrue": 71.7,
-    "coverage": 99.4
+    "warningHours": 474,
+    "notComeTrue": 329,
+    "unknownOutcome": 2,
+    "perGaugePer30Days": 39.2,
+    "shareNotComeTrue": 69.7,
+    "coverage": 99.6
    },
    "tidal": {
     "gauges": 3,
     "days": 28,
-    "warningHours": 182,
-    "notComeTrue": 118,
+    "warningHours": 157,
+    "notComeTrue": 100,
     "unknownOutcome": 2,
-    "perGaugePer30Days": 42.1,
-    "shareNotComeTrue": 65.6,
-    "coverage": 98.9
+    "perGaugePer30Days": 35.7,
+    "shareNotComeTrue": 64.5,
+    "coverage": 98.7
    }
   },
   "p3": {
@@ -508,34 +508,34 @@
      "tiers": [
       {
        "tier": "<1in10",
-       "hours": 14087,
+       "hours": 14284,
        "stated": 0.2,
-       "cameTrue": 3.3,
-       "gap": 3.1,
+       "cameTrue": 3.4,
+       "gap": 3.2,
        "verdict": "passes"
       },
       {
        "tier": "1in10",
-       "hours": 518,
-       "stated": 12.1,
-       "cameTrue": 14.7,
-       "gap": 2.6,
+       "hours": 512,
+       "stated": 12,
+       "cameTrue": 15.4,
+       "gap": 3.4,
        "verdict": "passes"
       },
       {
        "tier": "2-4in10",
-       "hours": 690,
-       "stated": 29.5,
-       "cameTrue": 22.5,
-       "gap": -7,
+       "hours": 666,
+       "stated": 29.4,
+       "cameTrue": 23.7,
+       "gap": -5.7,
        "verdict": "passes"
       },
       {
        "tier": "5+in10",
-       "hours": 284,
-       "stated": 65.1,
-       "cameTrue": 37.3,
-       "gap": -27.8,
+       "hours": 266,
+       "stated": 65.2,
+       "cameTrue": 36.8,
+       "gap": -28.4,
        "verdict": "too few hours"
       }
      ],
@@ -550,7 +550,7 @@
      "tiers": [
       {
        "tier": "<1in10",
-       "hours": 15516,
+       "hours": 15645,
        "stated": 0.1,
        "cameTrue": 0.3,
        "gap": 0.3,
@@ -558,18 +558,18 @@
       },
       {
        "tier": "1in10",
-       "hours": 293,
-       "stated": 12.3,
-       "cameTrue": 11.9,
-       "gap": -0.4,
+       "hours": 285,
+       "stated": 12.4,
+       "cameTrue": 7,
+       "gap": -5.4,
        "verdict": "too few hours"
       },
       {
        "tier": "2-4in10",
-       "hours": 176,
-       "stated": 22.1,
-       "cameTrue": 10.2,
-       "gap": -11.9,
+       "hours": 177,
+       "stated": 22.3,
+       "cameTrue": 8.5,
+       "gap": -13.9,
        "verdict": "too few hours"
       },
       {
@@ -578,8 +578,8 @@
       }
      ],
      "atLimit": {
-      "hours": 599,
-      "cameTrue": 17,
+      "hours": 509,
+      "cameTrue": 17.3,
       "note": "the page prints its limit, not the forecaster's chance: not judged"
      },
      "verdict": "passes"
@@ -588,7 +588,7 @@
      "tiers": [
       {
        "tier": "<1in10",
-       "hours": 16514,
+       "hours": 16566,
        "stated": 0.1,
        "cameTrue": 0,
        "gap": -0.1,
@@ -608,7 +608,7 @@
       }
      ],
      "atLimit": {
-      "hours": 504,
+      "hours": 410,
       "cameTrue": 0,
       "note": "the page prints its limit, not the forecaster's chance: not judged"
      },
@@ -619,60 +619,60 @@
    "judgedAsPassFail": false
   },
   "p4": {
-   "big": {
-    "rises": 23,
-    "alreadyAtLevel": 0,
-    "surprises": 5,
-    "pct": 21.7
-   },
-   "tidal": {
-    "rises": 8,
-    "alreadyAtLevel": 0,
-    "surprises": 1,
-    "pct": 12.5
-   },
    "fast": {
     "rises": 27,
     "alreadyAtLevel": 0,
     "surprises": 3,
     "pct": 11.1
+   },
+   "tidal": {
+    "rises": 7,
+    "alreadyAtLevel": 0,
+    "surprises": 2,
+    "pct": 28.6
+   },
+   "big": {
+    "rises": 20,
+    "alreadyAtLevel": 0,
+    "surprises": 5,
+    "pct": 25
    }
   }
  },
  "nextHour": {
   "riseCatchAt10PctFalseHours": {
-   "value": 73.6,
+   "value": 74.6,
    "chance": 10,
    "perfect": 100,
-   "fastRises": 1652,
-   "falseHours": 23235,
-   "hours": 29184,
+   "fastRises": 1727,
+   "falseHours": 23419,
+   "hours": 29522,
    "source": "runs",
    "target": null
   },
   "records": {
    "R1_risingWhenRoseTenCm": {
-    "pct": 76.8,
-    "n": 1652
+    "pct": 77.8,
+    "n": 1727
    },
    "R2_risingFollowedByRise": {
-    "pct": 59.9,
-    "n": 5863
+    "pct": 59.8,
+    "n": 6112
    },
    "R3_hoursShowingRising": {
-    "pct": 20.1,
-    "n": 29184,
-    "pctOfHoursWithoutARise": 10.1
+    "pct": 20.7,
+    "n": 29522,
+    "pctOfHoursWithoutARise": 10.5
    }
   },
   "wordSource": {
-   "archived": 5463,
-   "rebuiltByRulesOfTheDay": 23721
+   "archived": 6002,
+   "rebuiltByRulesOfTheDay": 23520
   }
  },
  "rolling": {
   "from": "2026-10-23",
-  "to": "2026-11-24",
+  "to": "2026-11-25",
   "days": [
    "2026-10-23",
    "2026-10-24",
@@ -705,33 +705,34 @@
    "2026-11-20",
    "2026-11-21",
    "2026-11-23",
-   "2026-11-24"
+   "2026-11-24",
+   "2026-11-25"
   ],
-  "spanDays": 33,
-  "calendarDays": 32,
+  "spanDays": 34,
+  "calendarDays": 33,
   "sources": {
-   "runs": 18353,
-   "shownArchive": 18624,
+   "runs": 18989,
+   "shownArchive": 20511,
    "shownRecomputed": 34334,
-   "chancePModel": 18624,
+   "chancePModel": 20511,
    "chanceProbability": 34334
   },
   "lab": {
    "notice": {
     "big": {
      "leadH": 12,
-     "value": 13.6,
-     "floods": 37,
+     "value": 13.3,
+     "floods": 38,
      "scored": 27,
      "missed": 6,
-     "alreadyAtStep": 4,
+     "alreadyAtStep": 5,
      "source": "day files, 1% bins"
     },
     "fast": {
      "leadH": 6,
-     "value": 20.8,
-     "floods": 42,
-     "scored": 38,
+     "value": 21.2,
+     "floods": 43,
+     "scored": 39,
      "missed": 4,
      "alreadyAtStep": 0,
      "source": "day files, 1% bins"
@@ -744,17 +745,17 @@
     "cls": "big",
     "leadH": 12,
     "target": 45,
-    "value": 13.6,
-    "floods": 37,
+    "value": 13.3,
+    "floods": 38,
     "scored": 27,
     "missed": 6,
-    "alreadyAtStep": 4,
+    "alreadyAtStep": 5,
     "storms": 4,
     "largestStormShare": 0.45,
-    "valueWithoutLargestStorm": 9.9,
+    "valueWithoutLargestStorm": 8.8,
     "pointAtOrAboveTarget": false,
     "met": null,
-    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 33 days, 33 floods, 4 storms)",
+    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 34 days, 33 floods, 4 storms)",
     "labConfirmation": "paired interval against river height alone, lab"
    },
    {
@@ -762,17 +763,17 @@
     "cls": "fast",
     "leadH": 6,
     "target": 37,
-    "value": 20.8,
-    "floods": 42,
-    "scored": 38,
+    "value": 21.2,
+    "floods": 43,
+    "scored": 39,
     "missed": 4,
     "alreadyAtStep": 0,
-    "storms": 3,
-    "largestStormShare": 0.62,
-    "valueWithoutLargestStorm": 32.4,
+    "storms": 4,
+    "largestStormShare": 0.6,
+    "valueWithoutLargestStorm": 30.9,
     "pointAtOrAboveTarget": false,
     "met": null,
-    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 33 days, 42 floods, 3 storms)",
+    "status": "not judged: needs a rolling 12 months with at least 30 scored floods from 8 storms (this window: 34 days, 43 floods, 4 storms)",
     "labConfirmation": "paired interval against river height alone, lab"
    }
   ],
@@ -781,24 +782,24 @@
     "big": {
      "1": {
       "any": {
-       "rises": 31,
+       "rises": 32,
        "alreadyAtLevel": 0,
        "noLeadRun": 3,
-       "scored": 28,
-       "warned": 24,
-       "pct": 77.4,
-       "coverage": 90.3,
+       "scored": 29,
+       "warned": 25,
+       "pct": 78.1,
+       "coverage": 90.6,
        "judgeable": true
       },
       "byLevel": {
        "alert": {
-        "rises": 25,
+        "rises": 26,
         "alreadyAtLevel": 0,
         "noLeadRun": 3,
-        "scored": 22,
-        "warned": 18,
-        "pct": 72,
-        "coverage": 88,
+        "scored": 23,
+        "warned": 19,
+        "pct": 73.1,
+        "coverage": 88.5,
         "judgeable": false
        },
        "minor": {
@@ -815,24 +816,24 @@
      },
      "3": {
       "any": {
-       "rises": 31,
+       "rises": 32,
        "alreadyAtLevel": 0,
        "noLeadRun": 2,
-       "scored": 29,
-       "warned": 23,
-       "pct": 74.2,
-       "coverage": 93.5,
+       "scored": 30,
+       "warned": 24,
+       "pct": 75,
+       "coverage": 93.8,
        "judgeable": true
       },
       "byLevel": {
        "alert": {
-        "rises": 25,
+        "rises": 26,
         "alreadyAtLevel": 0,
         "noLeadRun": 2,
-        "scored": 23,
-        "warned": 17,
-        "pct": 68,
-        "coverage": 92,
+        "scored": 24,
+        "warned": 18,
+        "pct": 69.2,
+        "coverage": 92.3,
         "judgeable": true
        },
        "minor": {
@@ -849,24 +850,24 @@
      },
      "6": {
       "any": {
-       "rises": 31,
+       "rises": 32,
        "alreadyAtLevel": 1,
        "noLeadRun": 2,
-       "scored": 28,
-       "warned": 19,
-       "pct": 63.3,
-       "coverage": 93.3,
+       "scored": 29,
+       "warned": 20,
+       "pct": 64.5,
+       "coverage": 93.5,
        "judgeable": true
       },
       "byLevel": {
        "alert": {
-        "rises": 25,
+        "rises": 26,
         "alreadyAtLevel": 1,
         "noLeadRun": 2,
-        "scored": 22,
-        "warned": 13,
-        "pct": 54.2,
-        "coverage": 91.7,
+        "scored": 23,
+        "warned": 14,
+        "pct": 56,
+        "coverage": 92,
         "judgeable": true
        },
        "minor": {
@@ -883,8 +884,8 @@
      },
      "12": {
       "any": {
-       "rises": 31,
-       "alreadyAtLevel": 3,
+       "rises": 32,
+       "alreadyAtLevel": 4,
        "noLeadRun": 6,
        "scored": 22,
        "warned": 8,
@@ -894,8 +895,8 @@
       },
       "byLevel": {
        "alert": {
-        "rises": 25,
-        "alreadyAtLevel": 2,
+        "rises": 26,
+        "alreadyAtLevel": 3,
         "noLeadRun": 5,
         "scored": 18,
         "warned": 5,
@@ -1023,23 +1024,23 @@
     "tidal": {
      "1": {
       "any": {
-       "rises": 10,
+       "rises": 11,
        "alreadyAtLevel": 0,
        "noLeadRun": 0,
-       "scored": 10,
+       "scored": 11,
        "warned": 9,
-       "pct": 90,
+       "pct": 81.8,
        "coverage": 100,
        "judgeable": true
       },
       "byLevel": {
        "alert": {
-        "rises": 8,
+        "rises": 9,
         "alreadyAtLevel": 0,
         "noLeadRun": 0,
-        "scored": 8,
+        "scored": 9,
         "warned": 7,
-        "pct": 87.5,
+        "pct": 77.8,
         "coverage": 100,
         "judgeable": true
        },
@@ -1057,24 +1058,24 @@
      },
      "3": {
       "any": {
-       "rises": 10,
+       "rises": 11,
        "alreadyAtLevel": 1,
        "noLeadRun": 1,
-       "scored": 8,
+       "scored": 9,
        "warned": 6,
-       "pct": 66.7,
-       "coverage": 88.9,
-       "judgeable": false
+       "pct": 60,
+       "coverage": 90,
+       "judgeable": true
       },
       "byLevel": {
        "alert": {
-        "rises": 8,
+        "rises": 9,
         "alreadyAtLevel": 1,
         "noLeadRun": 1,
-        "scored": 6,
+        "scored": 7,
         "warned": 5,
-        "pct": 71.4,
-        "coverage": 85.7,
+        "pct": 62.5,
+        "coverage": 87.5,
         "judgeable": false
        },
        "minor": {
@@ -1091,24 +1092,24 @@
      },
      "6": {
       "any": {
-       "rises": 10,
+       "rises": 11,
        "alreadyAtLevel": 1,
        "noLeadRun": 1,
-       "scored": 8,
+       "scored": 9,
        "warned": 5,
-       "pct": 55.6,
-       "coverage": 88.9,
-       "judgeable": false
+       "pct": 50,
+       "coverage": 90,
+       "judgeable": true
       },
       "byLevel": {
        "alert": {
-        "rises": 8,
+        "rises": 9,
         "alreadyAtLevel": 1,
         "noLeadRun": 1,
-        "scored": 6,
+        "scored": 7,
         "warned": 4,
-        "pct": 57.1,
-        "coverage": 85.7,
+        "pct": 50,
+        "coverage": 87.5,
         "judgeable": false
        },
        "minor": {
@@ -1128,32 +1129,32 @@
    "p2": {
     "big": {
      "gauges": 17,
-     "days": 32,
-     "warningHours": 943,
-     "notComeTrue": 789,
-     "unknownOutcome": 9,
-     "perGaugePer30Days": 43.5,
-     "shareNotComeTrue": 84.5,
-     "coverage": 99
+     "days": 33,
+     "warningHours": 997,
+     "notComeTrue": 830,
+     "unknownOutcome": 14,
+     "perGaugePer30Days": 44.4,
+     "shareNotComeTrue": 84.4,
+     "coverage": 98.6
     },
     "fast": {
      "gauges": 9,
-     "days": 32,
-     "warningHours": 598,
-     "notComeTrue": 423,
+     "days": 33,
+     "warningHours": 602,
+     "notComeTrue": 427,
      "unknownOutcome": 3,
-     "perGaugePer30Days": 44.1,
-     "shareNotComeTrue": 71.1,
+     "perGaugePer30Days": 43.1,
+     "shareNotComeTrue": 71.3,
      "coverage": 99.5
     },
     "tidal": {
      "gauges": 3,
-     "days": 32,
-     "warningHours": 236,
-     "notComeTrue": 147,
+     "days": 33,
+     "warningHours": 237,
+     "notComeTrue": 148,
      "unknownOutcome": 4,
-     "perGaugePer30Days": 45.9,
-     "shareNotComeTrue": 63.4,
+     "perGaugePer30Days": 44.8,
+     "shareNotComeTrue": 63.5,
      "coverage": 98.3
     }
    },
@@ -1163,34 +1164,34 @@
       "tiers": [
        {
         "tier": "<1in10",
-        "hours": 14609,
+        "hours": 15147,
         "stated": 0.2,
-        "cameTrue": 3.3,
-        "gap": 3.1,
+        "cameTrue": 3.4,
+        "gap": 3.2,
         "verdict": "passes"
        },
        {
         "tier": "1in10",
-        "hours": 608,
-        "stated": 12,
+        "hours": 630,
+        "stated": 12.1,
         "cameTrue": 14.6,
-        "gap": 2.6,
+        "gap": 2.5,
         "verdict": "passes"
        },
        {
         "tier": "2-4in10",
-        "hours": 818,
-        "stated": 29.6,
-        "cameTrue": 24.4,
-        "gap": -5.1,
+        "hours": 851,
+        "stated": 29.7,
+        "cameTrue": 24,
+        "gap": -5.7,
         "verdict": "passes"
        },
        {
         "tier": "5+in10",
-        "hours": 380,
-        "stated": 67.4,
-        "cameTrue": 50.3,
-        "gap": -17.1,
+        "hours": 392,
+        "stated": 67.1,
+        "cameTrue": 50.5,
+        "gap": -16.6,
         "verdict": "fails: came true LESS"
        }
       ],
@@ -1205,7 +1206,7 @@
       "tiers": [
        {
         "tier": "<1in10",
-        "hours": 16238,
+        "hours": 16816,
         "stated": 0.1,
         "cameTrue": 0.4,
         "gap": 0.3,
@@ -1213,18 +1214,18 @@
        },
        {
         "tier": "1in10",
-        "hours": 356,
+        "hours": 373,
         "stated": 12.3,
-        "cameTrue": 12.4,
-        "gap": 0.1,
+        "cameTrue": 11.8,
+        "gap": -0.5,
         "verdict": "passes"
        },
        {
         "tier": "2-4in10",
-        "hours": 198,
-        "stated": 22.1,
-        "cameTrue": 10.1,
-        "gap": -12,
+        "hours": 208,
+        "stated": 22.2,
+        "cameTrue": 9.6,
+        "gap": -12.6,
         "verdict": "too few hours"
        },
        {
@@ -1233,8 +1234,8 @@
        }
       ],
       "atLimit": {
-       "hours": 727,
-       "cameTrue": 17.9,
+       "hours": 746,
+       "cameTrue": 17.4,
        "note": "the page prints its limit, not the forecaster's chance: not judged"
       },
       "verdict": "passes"
@@ -1243,7 +1244,7 @@
       "tiers": [
        {
         "tier": "<1in10",
-        "hours": 17329,
+        "hours": 17923,
         "stated": 0.1,
         "cameTrue": 0,
         "gap": -0.1,
@@ -1263,7 +1264,7 @@
        }
       ],
       "atLimit": {
-       "hours": 646,
+       "hours": 676,
        "cameTrue": 0,
        "note": "the page prints its limit, not the forecaster's chance: not judged"
       },
@@ -1275,10 +1276,10 @@
    },
    "p4": {
     "big": {
-     "rises": 31,
+     "rises": 32,
      "alreadyAtLevel": 0,
      "surprises": 7,
-     "pct": 22.6
+     "pct": 21.9
     },
     "fast": {
      "rises": 38,
@@ -1287,42 +1288,42 @@
      "pct": 10.5
     },
     "tidal": {
-     "rises": 10,
+     "rises": 11,
      "alreadyAtLevel": 0,
-     "surprises": 1,
-     "pct": 10
+     "surprises": 2,
+     "pct": 18.2
     }
    }
   },
   "nextHour": {
    "riseCatchAt10PctFalseHours": {
-    "value": 74.2,
+    "value": 74.8,
     "chance": 10,
     "perfect": 100,
-    "fastRises": 1786,
-    "falseHours": 23880,
-    "hours": 30199,
+    "fastRises": 1880,
+    "falseHours": 24704,
+    "hours": 31330,
     "source": "day files, 1 mm/h bins",
     "target": null
    },
    "records": {
     "R1_risingWhenRoseTenCm": {
-     "pct": 77.2,
-     "n": 1786
+     "pct": 77.7,
+     "n": 1880
     },
     "R2_risingFollowedByRise": {
      "pct": 60.7,
-     "n": 6208
+     "n": 6575
     },
     "R3_hoursShowingRising": {
-     "pct": 20.6,
-     "n": 30199,
-     "pctOfHoursWithoutARise": 10.2
+     "pct": 21,
+     "n": 31330,
+     "pctOfHoursWithoutARise": 10.5
     }
    },
    "wordSource": {
-    "archived": 5463,
-    "rebuiltByRulesOfTheDay": 24736
+    "archived": 6002,
+    "rebuiltByRulesOfTheDay": 25328
    }
   }
  }

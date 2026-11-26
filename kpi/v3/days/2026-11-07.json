@@ -11,18 +11,23 @@
  },
  "notice": {
   "hours": {
-   "Thawalama|alert": {
-    "35": 1.001,
-    "40": 1.082
+   "Ellagawa|alert": {
+    "10": 2.964
    },
-   "Thawalama|minor": {
-    "15": 2.083,
-    "20": 1.054,
-    "25": 0.87
+   "Ellagawa|minor": {
+    "5": 2.964
    },
-   "Thawalama|major": {
-    "5": 1.001,
-    "10": 3.006
+   "Moragaswewa|alert": {
+    "30": 5.006
+   },
+   "Moragaswewa|minor": {
+    "15": 5.006
+   },
+   "Moragaswewa|major": {
+    "10": 5.006
+   },
+   "Panadugama|alert": {
+    "5": 1.311
    },
    "Glencourse|alert": {
     "15": 3.939,
@@ -35,13 +40,6 @@
    "Glencourse|major": {
     "5": 1.962
    },
-   "Magura|minor": {
-    "15": 2.06,
-    "20": 0.945
-   },
-   "Magura|major": {
-    "5": 3.005
-   },
    "Dunamale|minor": {
     "15": 3.002,
     "35": 1.052,
@@ -52,17 +50,6 @@
    "Dunamale|major": {
     "10": 5.052,
     "15": 15.94
-   },
-   "Holombuwa|minor": {
-    "15": 2.975,
-    "35": 1.067
-   },
-   "Holombuwa|alert": {
-    "5": 3.518,
-    "10": 2.41,
-    "25": 1.146,
-    "30": 0.984,
-    "35": 1.991
    },
    "Badalgama|alert": {
     "5": 1,
@@ -79,14 +66,26 @@
    "Badalgama|major": {
     "15": 1.018
    },
-   "Norwood|alert": {
-    "5": 1.921
+   "Thalgahagoda|alert": {
+    "5": 2.775
    },
-   "Ellagawa|alert": {
-    "10": 2.964
+   "Thawalama|alert": {
+    "35": 1.001,
+    "40": 1.082
    },
-   "Ellagawa|minor": {
-    "5": 2.964
+   "Thawalama|minor": {
+    "15": 2.083,
+    "20": 1.054,
+    "25": 0.87
+   },
+   "Thawalama|major": {
+    "5": 1.001,
+    "10": 3.006
+   },
+   "Urawa|minor": {
+    "20": 2.921,
+    "80": 1.028,
+    "100": 0.94
    },
    "Hanwella|alert": {
     "25": 1.935,
@@ -102,23 +101,28 @@
     "5": 1.935,
     "15": 4.032
    },
-   "Moragaswewa|alert": {
-    "30": 5.006
+   "Nagalagam Street|alert": {
+    "5": 1.006,
+    "10": 1.006,
+    "15": 0.926
    },
-   "Moragaswewa|minor": {
-    "15": 5.006
-   },
-   "Moragaswewa|major": {
-    "10": 5.006
+   "Nagalagam Street|minor": {
+    "5": 0.926
    },
    "Baddegama|alert": {
     "5": 1.013,
     "10": 1.004
    },
-   "Urawa|minor": {
-    "20": 2.921,
-    "80": 1.028,
-    "100": 0.94
+   "Holombuwa|minor": {
+    "15": 2.975,
+    "35": 1.067
+   },
+   "Holombuwa|alert": {
+    "5": 3.518,
+    "10": 2.41,
+    "25": 1.146,
+    "30": 0.984,
+    "35": 1.991
    },
    "Rathnapura|alert": {
     "5": 3.816,
@@ -130,19 +134,15 @@
    "Rathnapura|major": {
     "15": 2.831
    },
-   "Nagalagam Street|alert": {
-    "5": 1.006,
-    "10": 1.006,
-    "15": 0.926
+   "Magura|minor": {
+    "15": 2.06,
+    "20": 0.945
    },
-   "Nagalagam Street|minor": {
-    "5": 0.926
+   "Magura|major": {
+    "5": 3.005
    },
-   "Panadugama|alert": {
-    "5": 1.311
-   },
-   "Thalgahagoda|alert": {
-    "5": 2.775
+   "Norwood|alert": {
+    "5": 1.921
    }
   },
   "floods": [
@@ -301,6 +301,11 @@
      1.7,
      65
     ],
+    "1in10": [
+     30,
+     3.55,
+     14
+    ],
     "2-4in10": [
      31,
      10.2,
@@ -310,11 +315,6 @@
      12,
      7.1,
      8
-    ],
-    "1in10": [
-     30,
-     3.55,
-     14
     ]
    },
    "atLimit": [
@@ -2965,7 +2965,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-25T20:11:40.803Z",
+ "generatedAt": "2026-11-26T20:11:45.564Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

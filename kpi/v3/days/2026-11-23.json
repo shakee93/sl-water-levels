@@ -11,13 +11,13 @@
  },
  "notice": {
   "hours": {
-   "Magura|alert": {
-    "5": 3
-   },
    "Panadugama|alert": {
     "5": 3,
     "6": 3,
     "26": 3
+   },
+   "Magura|alert": {
+    "5": 3
    }
   },
   "floods": []
@@ -661,7 +661,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-25T20:11:40.803Z",
+ "generatedAt": "2026-11-26T20:11:45.564Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }
