@@ -11,8 +11,23 @@
  },
  "notice": {
   "hours": {
+   "Hanwella|alert": {
+    "11": 1.017,
+    "12": 0.992
+   },
+   "Hanwella|minor": {
+    "6": 1.017,
+    "7": 0.992
+   },
    "Peradeniya|alert": {
     "5": 0.914
+   },
+   "Nagalagam Street|alert": {
+    "7": 0.987
+   },
+   "Kithulgala|alert": {
+    "6": 1.02,
+    "8": 0.956
    },
    "Glencourse|alert": {
     "7": 1.025,
@@ -22,9 +37,8 @@
     "6": 1.025,
     "7": 1.036
    },
-   "Kithulgala|alert": {
-    "6": 1.02,
-    "8": 0.956
+   "Holombuwa|alert": {
+    "10": 1.967
    },
    "Thawalama|alert": {
     "32": 1.036,
@@ -40,20 +54,6 @@
     "6": 1.036,
     "9": 1.016,
     "11": 1.125
-   },
-   "Hanwella|alert": {
-    "11": 1.017,
-    "12": 0.992
-   },
-   "Hanwella|minor": {
-    "6": 1.017,
-    "7": 0.992
-   },
-   "Nagalagam Street|alert": {
-    "7": 0.987
-   },
-   "Holombuwa|alert": {
-    "10": 1.967
    }
   },
   "floods": []
@@ -2038,7 +2038,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-26T20:11:45.564Z",
+ "generatedAt": "2026-11-27T20:11:38.063Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }

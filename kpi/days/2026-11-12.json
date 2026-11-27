@@ -3587,8 +3587,8 @@
    }
   ]
  },
- "generatedAt": "2026-11-26T20:11:45.564Z",
- "nowUsed": "2026-11-26T20:11:45.564Z",
+ "generatedAt": "2026-11-27T20:11:38.063Z",
+ "nowUsed": "2026-11-27T20:11:38.063Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "kpiSpec": 1,
  "versionsHash": "16c87e3fa8acc553",
@@ -3601,7 +3601,7 @@
  "coverage": {
   "stationsWithRuns": 60,
   "stationsWithReadings": 59,
-  "stationsWithSteps": 30,
+  "stationsWithSteps": 29,
   "stationsExpected": 61,
   "gaugeHoursPresent": 1310,
   "gaugeHoursExpected": 1464,

@@ -11,6 +11,9 @@
  },
  "notice": {
   "hours": {
+   "Baddegama|alert": {
+    "5": 6.887
+   },
    "Panadugama|minor": {
     "5": 12.941,
     "10": 5.836
@@ -24,9 +27,6 @@
     "45": 0.949,
     "50": 0.885
    },
-   "Dunamale|alert": {
-    "5": 4.954
-   },
    "Thalgahagoda|minor": {
     "10": 3.111,
     "15": 2.994,
@@ -36,8 +36,8 @@
     "35": 1.209,
     "40": 1.921
    },
-   "Baddegama|alert": {
-    "5": 6.887
+   "Dunamale|alert": {
+    "5": 4.954
    },
    "Magura|alert": {
     "5": 10.186,
@@ -1700,7 +1700,7 @@
   }
  },
  "kpiSpec": 3,
- "generatedAt": "2026-11-26T20:11:45.564Z",
+ "generatedAt": "2026-11-27T20:11:38.063Z",
  "codeSha": "e896af7e11c76a24462d7c8857284a49d20e1ea6",
  "versionsHash": "16c87e3fa8acc553"
 }
