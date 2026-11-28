@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-27T18:51:07.917Z",
+  "updatedAt": "2026-11-28T01:42:09.287Z",
   "asOf": "2026-11-28",
   "rules": "Notes, proposals and flags only. No learned value changes an official step, a verdict, a push level or a live rule; proposals carry wired = false until the owner switches them.",
   "counts": {
@@ -8,7 +8,7 @@
     "feedback": 277,
     "street": 36,
     "flood3d": 17,
-    "newTonight": 7,
+    "newTonight": 0,
     "trusted": 17,
     "flagged": 0
   },
@@ -167,34 +167,34 @@
   },
   "forecast": {
     "window": {
-      "from": "2026-11-19",
-      "to": "2026-11-27",
-      "points": 11953
+      "from": "2026-11-20",
+      "to": "2026-11-28",
+      "points": 12009
     },
     "momentum": {
       "horizons": {
         "1": {
-          "n": 3993,
-          "maeBase": 0.2,
-          "maeFit": 0.2,
+          "n": 3540,
+          "maeBase": 0.22,
+          "maeFit": 0.22,
           "gainPct": 0,
-          "maePooled": 0.2,
+          "maePooled": 0.23,
           "pooledGainPct": -1
         },
         "3": {
-          "n": 3941,
-          "maeBase": 0.5,
-          "maeFit": 0.5,
+          "n": 3488,
+          "maeBase": 0.55,
+          "maeFit": 0.55,
           "gainPct": 0,
-          "maePooled": 0.5,
-          "pooledGainPct": 0
+          "maePooled": 0.55,
+          "pooledGainPct": -1
         },
         "6": {
-          "n": 3854,
-          "maeBase": 0.84,
-          "maeFit": 0.84,
+          "n": 3408,
+          "maeBase": 0.93,
+          "maeFit": 0.93,
           "gainPct": 0,
-          "maePooled": 0.84,
+          "maePooled": 0.92,
           "pooledGainPct": 0
         }
       },
